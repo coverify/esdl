@@ -919,6 +919,12 @@ vpiHandle vpiGetHandleByName (string name, vpiHandle scope_handle) {
   assert(false, "Kindly link to a Verilog compiler that supports VPI");
 }
 
+string vpiGetStr(vpiPropertyT prop, vpiHandle obj) {
+  import std.conv;
+  auto cstr = vpi_get_str(prop, obj);
+  return cstr.to!string;
+}
+
 /* delay processing */
 @weak extern(C) void vpi_get_delays (vpiHandle object, p_vpi_delay delay_p) {
   assert(false, "Kindly link to a Verilog compiler that supports VPI");
@@ -1100,9 +1106,27 @@ void vpiGetValue(T)(vpiHandle handle, ref T t) {
   import std.traits; // isIntegral
   import std.conv;
   static if(isIntegral!T) {
-    val.format = vpiIntVal;
-    vpi_get_value(handle, &val);
-    t = cast(T) val.value.integer;
+    uint size = vpi_get(vpiPropertyT.vpiSize, handle);
+    auto hname = vpi_get_str(vpiFullName, handle);
+    assert(size == T.sizeof*8,
+	   hname[0..hname.strlen] ~ " is " ~ size.to!string() ~
+	   " long; vpiPutValue received a Integer of size: " ~
+	   T.sizeof.stringof ~ "(bytes)\n");
+    static if(T.sizeof <= 32) {
+      val.format = vpiIntVal;
+      vpi_get_value(handle, &val);
+      t = cast(T) val.value.integer;
+    }
+    else {
+      alias TT = _bvec!T;
+      enum VECLEN = T.sizeof / 4;
+      s_vpi_vecval[VECLEN] vecval;
+      val.format = vpiVectorVal;
+      val.value.vector = vecval.ptr;
+      vpi_get_value(handle, &val);
+      TT tt = vecval;
+      t = tt;
+    }
   }
   else static if(is(T: bool)) {
     uint size = vpi_get(vpiPropertyT.vpiSize, handle);
@@ -1147,9 +1171,27 @@ void vpiPutValue(T)(vpiHandle handle, T t,
   import std.traits; // isIntegral
   import std.conv;
   static if(isIntegral!T) {
-    val.format = vpiIntVal;
-    val.value.integer = t;
-    vpi_put_value(handle, &val, null, flag);
+    uint size = vpi_get(vpiPropertyT.vpiSize, handle);
+    auto hname = vpi_get_str(vpiFullName, handle);
+    assert(size == T.sizeof*8,
+	   hname[0..hname.strlen] ~ " is " ~ size.to!string() ~
+	   " long; vpiPutValue received a BitVector of size: " ~
+	   T.sizeof.stringof ~ "(bytes)\n");
+    static if(T.sizeof <= 32) {
+      val.format = vpiIntVal;
+      val.value.integer = t;
+      vpi_put_value(handle, &val, null, flag);
+    }
+    else {
+      alias TT = _bvec!T;
+      enum VECLEN = T.sizeof / 4;
+      s_vpi_vecval[VECLEN] vecval;
+      TT tt = t;
+      tt.toVpiVecValue(vecval);
+      val.format = vpiVectorVal;
+      val.value.vector = vecval.ptr;
+      vpi_put_value(handle, &val, null, vpiNoDelay);
+    }
   }
   else static if(is(T: bool)) {
     uint size = vpi_get(vpiPropertyT.vpiSize, handle);
@@ -1221,92 +1263,163 @@ void vpiPutValues(T...)(vpiHandle iter, T t) {
   }
 }
 
-int vpiCbNextSimTimeProc(p_cb_data cb) {
-  s_vpi_time  now;
-  now.type = vpiSimTime;
-  vpi_get_time(null, &now);
-  long time = now.high;
-  time <<= 32;
-  time += now.low;
-
-  // import std.stdio;
-
-  // writeln("vpiCbNextSimTimeProc: Running simulation till ", time);
-  simulateAllRootsUpto(time.psec);
-
-  // writeln("Done simulation till ", time);
-
-  auto new_cb = new s_cb_data();
-  new_cb.reason = vpiCbReadOnlySynch;
-  new_cb.cb_rtn = &vpiCbReadOnlySynchProc;//next callback address
-  new_cb.time = &now;
-  new_cb.obj = null;
-  new_cb.value = null;
-  new_cb.user_data = null;
-  vpi_register_cb(new_cb);
-  return 0;
-}
-
-int vpiCbReadOnlySynchProc(p_cb_data cb) {
-  s_vpi_time  now;
-  now.type = vpiSimTime;
-  vpi_get_time(null, &now);
-  long time = now.high;
-  time <<= 32;
-  time += now.low;
-
-  // writeln("callback_cbReadOnlySync: Running simulation till ", time);
-  simulateAllRootsUpto(time.psec);
-
-  auto new_cb = new s_cb_data();
-  new_cb.reason = vpiCbNextSimTime;
-  new_cb.cb_rtn = &vpiCbNextSimTimeProc;//next callback address
-  new_cb.time = null;
-  new_cb.obj = null;
-  new_cb.value = null;
-  new_cb.user_data = null;
-  vpi_register_cb(new_cb);
-  return 0;
-}
-
-int vpiCbStartSignalCosim(p_cb_data cb) {
-  import std.random: uniform;
-  s_vpi_time  now;
-  now.type = vpiSimTime;
-  vpi_get_time(null, &now);
-  long time = now.high;
-  time <<= 32;
-  time += now.low;
-
-  simulateAllRootsUpto(time.nsec);
-
-  auto new_cb = new s_cb_data();
-  new_cb.reason = vpiCbReadOnlySynch;
-  new_cb.cb_rtn = &vpiCbReadOnlySynchProc;//next callback address
-  new_cb.time = &now;
-  new_cb.obj = null;
-  new_cb.value = null;
-  new_cb.user_data = null;
-  vpi_register_cb(new_cb);
-  return 0;
-}
-
-int vpiTerminateESDL(p_cb_data cb) {
-  terminateAllRoots();
-  import core.runtime;  
-  Runtime.terminate();
-  return 0;
-}
-
-void vpiStartSignalCosim() {
-  auto new_cb = new s_cb_data();
+struct Vpi {
+  static void startCosim() {
+    auto new_cb = new s_cb_data();
     
-  new_cb.reason = vpiCbStartOfSimulation;
-  new_cb.cb_rtn = &vpiCbStartSignalCosim;//next callback address
-  vpi_register_cb(new_cb);
+    new_cb.reason = vpiCbStartOfSimulation;
+    new_cb.cb_rtn = &cbStartCosim;
+    vpi_register_cb(new_cb);
 
-  auto end_cb = new s_cb_data();
-  end_cb.reason = vpiCbEndOfSimulation;
-  end_cb.cb_rtn = &vpiTerminateESDL;//next callback address
-  vpi_register_cb(end_cb);
+    auto end_cb = new s_cb_data();
+    end_cb.reason = vpiCbEndOfSimulation;
+    end_cb.cb_rtn = &terminateESDL;//next callback address
+    vpi_register_cb(end_cb);
+  }
+
+  static int cbNextSimTime(p_cb_data cb) {
+    s_vpi_time  now;
+    now.type = vpiSimTime;
+    vpi_get_time(null, &now);
+    long time = now.high;
+    time <<= 32;
+    time += now.low;
+
+    // import std.stdio;
+
+    // writeln("vpiCbNextSimTimeProc: Running simulation till ", time);
+    simulateAllRootsUpto(time.psec);
+
+    // writeln("Done simulation till ", time);
+
+    auto new_cb = new s_cb_data();
+    new_cb.reason = vpiCbReadOnlySynch;
+    new_cb.cb_rtn = &cbReadOnlySynch;//next callback address
+    new_cb.time = &now;
+    new_cb.obj = null;
+    new_cb.value = null;
+    new_cb.user_data = null;
+    vpi_register_cb(new_cb);
+    return 0;
+  }
+
+  static int cbReadOnlySynch(p_cb_data cb) {
+    s_vpi_time  now;
+    now.type = vpiSimTime;
+    vpi_get_time(null, &now);
+    long time = now.high;
+    time <<= 32;
+    time += now.low;
+
+    // writeln("callback_cbReadOnlySync: Running simulation till ", time);
+    simulateAllRootsUpto(time.psec);
+
+    auto new_cb = new s_cb_data();
+    new_cb.reason = vpiCbNextSimTime;
+    new_cb.cb_rtn = &cbNextSimTime;
+    new_cb.time = null;
+    new_cb.obj = null;
+    new_cb.value = null;
+    new_cb.user_data = null;
+    vpi_register_cb(new_cb);
+    return 0;
+  }
+
+  static int cbStartCosim(p_cb_data cb) {
+    import std.random: uniform;
+    s_vpi_time  now;
+    now.type = vpiSimTime;
+    vpi_get_time(null, &now);
+    long time = now.high;
+    time <<= 32;
+    time += now.low;
+
+    simulateAllRootsUpto(time.nsec);
+
+    auto new_cb = new s_cb_data();
+    new_cb.reason = vpiCbReadOnlySynch;
+    new_cb.cb_rtn = &cbReadOnlySynch;//next callback address
+    new_cb.time = &now;
+    new_cb.obj = null;
+    new_cb.value = null;
+    new_cb.user_data = null;
+    vpi_register_cb(new_cb);
+    return 0;
+  }
+
+  static int terminateESDL(p_cb_data cb) {
+    terminateAllRoots();
+    import core.runtime;  
+    Runtime.terminate();
+    return 0;
+  }
+
+  static void initialize() {
+    import core.runtime;
+    Runtime.initialize();
+
+    s_cb_data end_cb;
+    end_cb.reason = vpiCbEndOfSimulation;
+    end_cb.cb_rtn = &finalize;
+    vpi_register_cb(&end_cb);
+  }
+
+  static int finalize(p_cb_data cb) {
+    import core.runtime;
+    Runtime.terminate();
+    return 0;
+  }
+
+  static int getTimeUnit() {
+    auto hndl = vpi_handle(vpiScope, vpi_handle(vpiSysTfCall, null));
+    return vpi_get(vpiTimeUnit, hndl);
+  }
+  
+  static int getTimePrecision() {
+    return vpi_get(vpiTimePrecision, null);
+  }
+
+  static ulong getSimTime() {
+    s_vpi_time stime;
+    stime.type = vpiSimTime;
+    vpi_get_time(null, &stime);
+    ulong ltime = stime.high;
+    ltime = (ltime << 32) + stime.low;
+    return ltime;
+  }
+
+  static Time getTime() {
+    s_vpi_time stime;
+    stime.type = vpiSimTime;
+    vpi_get_time(null, &stime);
+    ulong ltime = stime.high;
+    ltime = (ltime << 32) + stime.low;
+    Time t = Time(ltime, cast(byte) getTimePrecision());
+    return t;
+  }
+}
+
+enum VpiStatus: int {
+    SUCCESS = 0x0,
+    FAILURE = 0x1,
+    DISABLED = 0x2,
+    UNKNOWN = 0x3,
+    FINISHED = 0x4
+}
+
+void vpiReturnVal(T)(T t) {
+  static if (is (T: int)) {
+    vpiHandle systf_handle = vpi_handle(vpiSysTfCall, null);
+    s_vpi_value value;
+    value.format = vpiIntVal;
+    value.value.integer = t;
+    vpi_put_value(systf_handle, &value, null, vpiNoDelay);
+  }
+  else {
+    static assert ("vpiReturnVal undefined for non int values");
+  }
+}
+
+void vpi_finish() {
+  vpi_control(vpiFinish);
 }

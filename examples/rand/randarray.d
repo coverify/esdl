@@ -5,7 +5,7 @@
 // Authors:   Puneet Goel <puneet@coverify.com>
 
 import std.stdio;
-import esdl.data.rand;
+import esdl.rand;
 import esdl.data.obdd;
 import esdl.data.bvec;
 
@@ -14,35 +14,27 @@ int FFFF = 20;
 class Foo
 {
   mixin Randomization;
-  @rand!(2,2,2,2) byte[][][][] foo;
+  @rand!8 byte[] foo;
+  @rand ubyte baz = 12;
   void display() {
-    import std.stdio;
-    writeln(foo);
+    writeln("foo: ", foo);
+    writeln("baz: ", baz);
   }
-  Constraint!q{
-    foo.length >= 1;
-    foreach(ff; foo) {
-      ff.length >= 1;
-      foreach(f; ff) {
-	f.length >= 1;
-	foreach(a; f) {
-	  a.length == 2;
-	  foreach(b; a) {
-	    b > 2;
-	    b < 8;
-	  }
-	}
-      }
+  Constraint! q{
+    foo.length > 2;
+    baz < 32;
+    foreach(i, f; foo) {
+      f < 64;
+      foo[i] > 16;
     }
-  } aconst;
+  } cstFooLength;
 }
+
 
 void main() {
   Foo foo = new Foo;
-  for (size_t i=0; i!=400; ++i) {
+  for (size_t i=0; i!=20; ++i) {
     foo.randomize();
     foo.display();
   }
-  import std.stdio;
-  writeln("End of program");
 }

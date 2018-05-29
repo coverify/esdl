@@ -18,6 +18,7 @@ class Foo
 }
 
 
+byte foo = -10;
 
 
 class Bar: Foo
@@ -38,8 +39,6 @@ class Bar: Foo
 
   // @rand!(16) ubyte[] bar;
   
-  byte foo = -10;
-
   void display() {
     import std.stdio;
     writeln("bro: ", bro, " sis: ", sis, " pop: ", pop, " mom: ", mom,
@@ -56,8 +55,8 @@ class Bar: Foo
   // }
 
   Constraint! q{
-    foo /* + boo*/ + pop + mom == 64;
-    pop % 3 == 0;
+    foo + pop + mom == 64;
+    // pop % 3 == 0;
 
     pun1[0..4] == 0;
 
@@ -88,8 +87,8 @@ class Bar: Foo
     pop > 40;
     if(pop <= 48) {
       bro == pop;
-      if(sis <= 1) pun2 == mom + 5;
-      else pun2 == mom << 4;
+      // if(sis <= 1) pun2 == mom + 5;
+      // else pun2 == mom << 4;
     }
     // pop + kid3 == 24;
   } cst10;
@@ -117,7 +116,7 @@ class Bar: Foo
 void main()
 {
   auto foo = new Bar;
-  for (size_t i=0; i!=320; ++i)
+  for (size_t i=0; i!=10; ++i)
     {
       foo.randomize();
       foo.display();

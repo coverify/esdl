@@ -1,5 +1,5 @@
 import std.stdio;
-import esdl.data.rand;
+import esdl.rand;
 
 class Base {
   @rand uint a;

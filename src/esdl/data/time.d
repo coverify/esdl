@@ -28,20 +28,28 @@ alias TimeUnit.USEC USEC;
 alias TimeUnit.MSEC MSEC;
 alias TimeUnit.SEC  SEC;
 
-public struct Time
+struct Time
 {
-  public ulong _value;
-  public byte _unit;
+  ulong _value;
+  byte _unit;
 
-  public this(long value, byte unit) {
+  ulong value() {
+    return _value;
+  }
+
+  byte unit() {
+    return _unit;
+  }
+
+  this(long value, byte unit) {
     _value = value;
     _unit = unit;
   }
 
-  public Time normalize() {
-    if(_unit is 0) return this;
+  Time normalize() {
+    if (_unit is 0) return this;
     auto du = _unit % 3;
-    if(du != 0 || _value % 1000 == 0) {
+    if (du != 0 || _value % 1000 == 0) {
       ulong value = _value;
       byte unit = _unit;
       if(du != 0) {
@@ -49,7 +57,7 @@ public struct Time
 	unit -= du;
 	value *= 10 ^^ du;
       }
-      if(value % 1000 == 0) {
+      if (value % 1000 == 0) {
 	value /= 1000;
 	unit  = cast(byte) (unit + 3);
       }
@@ -58,12 +66,12 @@ public struct Time
     else return this;
   }
   
-  public bool isZero() {
+  bool isZero() {
     if(_value is 0) return true;
     else return false;
   }
 
-  public int opCmp(Time other) {
+  int opCmp(Time other) {
     if(other._unit > this._unit) {
       int p = other._unit - this._unit;
       if(other._value * 10L^^p > this._value) return -1;
@@ -78,7 +86,7 @@ public struct Time
     }
   }
 
-  public bool opEquals(Time other) {
+  bool opEquals(Time other) {
     if(other._unit > this._unit) {
       int p = other._unit - this._unit;
       if(other._value * 10L^^p == this._value) return true;
@@ -91,7 +99,7 @@ public struct Time
     }
   }
 
-  public Time opBinary(string OP)(Time rhs) {
+  Time opBinary(string OP)(Time rhs) {
     TimeUnit unit;
     ulong value;
     Time _lhs = this.normalize();
@@ -120,7 +128,7 @@ public struct Time
       }
   }
 
-  public Time opBinary(string OP)(long rhs) {
+  Time opBinary(string OP)(long rhs) {
     Time _lhs = this.normalize();
     static if(OP == "*") {
       _lhs._value *= rhs;
@@ -128,7 +136,7 @@ public struct Time
     return _lhs.normalize();
   }
 
-  public Time opBinaryRight(string OP)(long rhs) {
+  Time opBinaryRight(string OP)(long rhs) {
     Time _lhs = this.normalize();
     static if(OP == "*") {
       _lhs._value *= rhs;
@@ -136,10 +144,14 @@ public struct Time
     return _lhs.normalize();
   }
 
-  public S to(S)() if(is(S == string)) {
+  S to(S)() if(is(S == string)) {
     import std.conv: to;
     import std.string: toLower;
-    Time t = this.normalize();
+    Time t = this;
+    if (_unit % 3 != 0) {
+      t._unit = (_unit/3) * 3;
+      t._value = _value * 10 ^ (_unit - t._unit);
+    }
     string value_ = t._value.to!string;
     string unit_ = (cast(TimeUnit) t._unit).to!string;
     if(t._unit >= -15 && t._unit <= 0) {
@@ -148,37 +160,37 @@ public struct Time
     return value_ ~ "." ~ unit_;
   }
 
-  public R to(R)() if(is(R: real)) {
+  R to(R)() if(is(R: real)) {
     import std.conv: to;
     return _value * ((cast(R) 10) ^^ _unit);
   }
 
-  public string toString() {
+  string toString() {
     return this.to!string;
   }
 }
 
-public Time fsec(ulong value) {
+Time fsec(ulong value) {
   return Time(value, FSEC);
 }
 
-public Time psec(ulong value) {
+Time psec(ulong value) {
   return Time(value, PSEC);
 }
 
-public Time nsec(ulong value) {
+Time nsec(ulong value) {
   return Time(value, NSEC);
 }
 
-public Time usec(ulong value) {
+Time usec(ulong value) {
   return Time(value, USEC);
 }
 
-public Time msec(ulong value) {
+Time msec(ulong value) {
   return Time(value, MSEC);
 }
 
-public Time sec(ulong value) {
+Time sec(ulong value) {
   return Time(value, SEC);
 }
 
@@ -188,4 +200,3 @@ unittest {
   assert(100.usec < 10.msec);
   assert(10.msec == 10000.usec);
 }
-

@@ -21,12 +21,12 @@ struct packer
   alias data this;
 
   private size_t _unpackIndex;
-  public size_t unpackIndex() {
+  size_t unpackIndex() {
     return _unpackIndex;
   }
 
   private size_t _packIndex;
-  public size_t packIndex() {
+  size_t packIndex() {
     return _packIndex;
   }
 

@@ -686,7 +686,7 @@ class MutexObj: MutexIF, NamedComp
       }
       if(parent !is null) this._esdl__parent = parent;
       _mutex = new core.sync.mutex.Mutex();
-      _event.initialize(this);
+      _event.initialize("_event", this);
     }
   }
 
@@ -809,7 +809,7 @@ class MutexObj: MutexIF, NamedComp
   public final void initialize(string name, NamedComp parent=null) {
     synchronized {
       if(RootThread.self !is null && parent is null) {
-	assert(false, "Must provide parent for MutexObj being "
+	assert(false, "Must provide parent for MutexObj being " ~
 	       "\"initialize\" during elaboration");
       }
       if(_mutexObj is null) {
@@ -867,7 +867,7 @@ class SemaphoreObj: SemaphoreIF, NamedComp
   this(ptrdiff_t n=1, NamedComp parent=null) {
     synchronized(this) {
       this._esdl__setParent(parent);
-      _event.initialize(this);
+      _event.initialize("_event", this);
       _value = n;
     }
   }
@@ -1099,8 +1099,8 @@ class FifoObj(T, size_t N=0): Channel, FifoInIF!T, FifoOutIF!T
  public:
   this(string name="", NamedComp parent=null) {
     synchronized(this) {
-      _readEvent.initialize(this);
-      _writeEvent.initialize(this);
+      _readEvent.initialize("_readEvent", this);
+      _writeEvent.initialize("_writeEvent", this);
       static if(N == 0) {_buffer.length = 4;}
       _free = _buffer.length;
       _esdl__setName(name);
@@ -1649,8 +1649,8 @@ template Signal(uint WIDTH) {
 	  import esdl.data.bvec;
 
 	  static if(is(T == bool) || (isBitVector!T && T.SIZE == 1)) {
-	    _signalObj._posedgeEvent.initialize();
-	    _signalObj._negedgeEvent.initialize();
+	    _signalObj._posedgeEvent.initialize("_posedgeEvent");
+	    _signalObj._negedgeEvent.initialize("_negedgeEvent");
 	  }
 	}
       }
@@ -1767,6 +1767,10 @@ class HdlSignalObj(T, bool MULTI_DRIVER = false): SignalObj!(T, MULTI_DRIVER)
 
   alias read this;
 
+  public final T read() {
+    return super.read();
+  }
+
   vpiHandle vpiNetHandle = null;
 
   override final void updateBindings() {
@@ -1777,6 +1781,18 @@ class HdlSignalObj(T, bool MULTI_DRIVER = false): SignalObj!(T, MULTI_DRIVER)
     }
   }
   
+  public int opCmp(string file = __FILE__,
+		   size_t line = __LINE__, V)(const V other) const
+    if(isIntegral!V || isBitVector!V || isBoolean!V) {
+      return this.read().opCmp(other);
+    }
+
+  public bool opEquals(string file = __FILE__,
+		       size_t line = __LINE__, V)(const V other)
+    if(isIntegral!V || isBitVector!V || isBoolean!V) {
+      return this.read().opEquals(other);
+    }
+
   final private void hdlPut() {
     assert(vpiIsUsable);
     synchronized(this) {
@@ -1871,19 +1887,19 @@ class HdlSignalObj(T, bool MULTI_DRIVER = false): SignalObj!(T, MULTI_DRIVER)
       auto size = vpi_get(vpiSize, vpiNetHandle);
       static if(isBitVector!T) {
 	if(size !is T.SIZE) {
-	  assert(false, "hdlBind: Signal size does not match with the size"
+	  assert(false, "hdlBind: Signal size does not match with the size " ~
 		 "of the net " ~ net);
 	}
       }
       else static if(isBoolean!T) {
 	if(size !is 1) {
-	  assert(false, "hdlBind: Signal size does not match with the size"
+	  assert(false, "hdlBind: Signal size does not match with the size " ~
 		 "of the net" ~ net);
 	}
       }
       else {
 	if(size !is 8 * T.sizeof) {
-	  assert(false, "hdlBind: Signal size does not match with the size"
+	  assert(false, "hdlBind: Signal size does not match with the size " ~
 		 "of the net" ~ net);
 	}
       }
@@ -1961,8 +1977,8 @@ template HdlSignal(uint WIDTH) {
 	  import esdl.data.bvec;
 
 	  static if(is(T == bool) || (isBitVector!T && T.SIZE == 1)) {
-	    _signalObj._posedgeEvent.initialize();
-	    _signalObj._negedgeEvent.initialize();
+	    _signalObj._posedgeEvent.initialize("_posedgeEvent");
+	    _signalObj._negedgeEvent.initialize("_posedgeEvent");
 	  }
 	}
       }

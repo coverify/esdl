@@ -47,6 +47,10 @@ public struct Queue(T) {
     this.pushBack(values);
   }
 
+  public this()(T[] values) @safe {
+    this.pushBack(values);
+  }
+
   /** This can be considered the copy constructor of the Queue. A deep copy
       of the array as well as any other internal data is created.
 
@@ -2345,25 +2349,25 @@ unittest { 	// benchmark against appender, slist, dlist for appending at the
     }
   }
 
-  enum numIterations = 300;
-  auto r = benchmark!(fillAppender, fillSList, fillDList, fillQueue,
-		      fillArray)(numIterations);	
-  writeln("Append 4097 elements at the end at run foreach once");
-  writefln("Milliseconds to call %8s %11s %d times: %5s average: %7.3f", "Appender", "put",
-	   numIterations, r[0].to!("msecs",int),
-	   r[0].to!("msecs",int)/to!float(numIterations));
-  writefln("Milliseconds to call %8s %11s %d times: %5s average: %7.3f", "SList", "insertBack",
-	   numIterations, r[1].to!("msecs",int),
-	   r[1].to!("msecs",int)/to!float(numIterations));
-  writefln("Milliseconds to call %8s %11s %d times: %5s average: %7.3f", "DList", "insertBack",
-	   numIterations, r[2].to!("msecs",int),
-	   r[2].to!("msecs",int)/to!float(numIterations));
-  writefln("Milliseconds to call %8s %11s %d times: %5s average: %7.3f", "Queue", "pushBack",
-	   numIterations, r[3].to!("msecs",int),
-	   r[3].to!("msecs",int)/to!float(numIterations));
-  writefln("Milliseconds to call %8s %11s %d times: %5s average: %7.3f", "int[]", "a ~ []",
-	   numIterations, r[4].to!("msecs",int),
-	   r[4].to!("msecs",int)/to!float(numIterations));
+  // enum numIterations = 300;
+  // auto r = benchmark!(fillAppender, fillSList, fillDList, fillQueue,
+  // 		      fillArray)(numIterations);	
+  // writeln("Append 4097 elements at the end at run foreach once");
+  // writefln("Milliseconds to call %8s %11s %d times: %5s average: %7.3f", "Appender", "put",
+  // 	   numIterations, r[0].to!("msecs",int),
+  // 	   r[0].to!("msecs",int)/to!float(numIterations));
+  // writefln("Milliseconds to call %8s %11s %d times: %5s average: %7.3f", "SList", "insertBack",
+  // 	   numIterations, r[1].to!("msecs",int),
+  // 	   r[1].to!("msecs",int)/to!float(numIterations));
+  // writefln("Milliseconds to call %8s %11s %d times: %5s average: %7.3f", "DList", "insertBack",
+  // 	   numIterations, r[2].to!("msecs",int),
+  // 	   r[2].to!("msecs",int)/to!float(numIterations));
+  // writefln("Milliseconds to call %8s %11s %d times: %5s average: %7.3f", "Queue", "pushBack",
+  // 	   numIterations, r[3].to!("msecs",int),
+  // 	   r[3].to!("msecs",int)/to!float(numIterations));
+  // writefln("Milliseconds to call %8s %11s %d times: %5s average: %7.3f", "int[]", "a ~ []",
+  // 	   numIterations, r[4].to!("msecs",int),
+  // 	   r[4].to!("msecs",int)/to!float(numIterations));
 }
 
 unittest {
@@ -2438,22 +2442,22 @@ unittest {
     }
   }
 
-  enum numIterations = 300;
-  auto r = benchmark!(fillSList, fillDList, fillQueue,fillArray)(numIterations);	
-  writeln();
-  writeln("Append 4097 elements at the begining at run foreach once");
-  writefln("Milliseconds to call %8s %11s %d times: %5s average: %7.3f", "SList",
-	   "insertFront", numIterations, r[0].to!("msecs",int),
-	   r[0].to!("msecs",int)/to!float(numIterations));
-  writefln("Milliseconds to call %8s %11s %d times: %5s average: %7.3f", "DList",
-	   "insertFront", numIterations, r[1].to!("msecs",int),
-	   r[1].to!("msecs",int)/to!float(numIterations));
-  writefln("Milliseconds to call %8s %11s %d times: %5s average: %7.3f", "Queue",
-	   "pushFront", numIterations, r[2].to!("msecs",int),
-	   r[2].to!("msecs",int)/to!float(numIterations));
-  writefln("Milliseconds to call %8s %11s %d times: %5s average: %7.3f", "int[]",
-	   "[] ~ a", numIterations, r[3].to!("msecs",int),
-	   r[3].to!("msecs",int)/to!float(numIterations));
+  // enum numIterations = 300;
+  // auto r = benchmark!(fillSList, fillDList, fillQueue,fillArray)(numIterations);	
+  // writeln();
+  // writeln("Append 4097 elements at the begining at run foreach once");
+  // writefln("Milliseconds to call %8s %11s %d times: %5s average: %7.3f", "SList",
+  // 	   "insertFront", numIterations, r[0].to!("msecs",int),
+  // 	   r[0].to!("msecs",int)/to!float(numIterations));
+  // writefln("Milliseconds to call %8s %11s %d times: %5s average: %7.3f", "DList",
+  // 	   "insertFront", numIterations, r[1].to!("msecs",int),
+  // 	   r[1].to!("msecs",int)/to!float(numIterations));
+  // writefln("Milliseconds to call %8s %11s %d times: %5s average: %7.3f", "Queue",
+  // 	   "pushFront", numIterations, r[2].to!("msecs",int),
+  // 	   r[2].to!("msecs",int)/to!float(numIterations));
+  // writefln("Milliseconds to call %8s %11s %d times: %5s average: %7.3f", "int[]",
+  // 	   "[] ~ a", numIterations, r[3].to!("msecs",int),
+  // 	   r[3].to!("msecs",int)/to!float(numIterations));
 }
 
 unittest { // sort test

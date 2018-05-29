@@ -385,12 +385,18 @@ private template VecParams(size_t SIZE, bool S=true) {
   static if(MSWSIZE == WORDSIZE)	// All ones
     // Shift by WORDSIZE is erroneous -- D gives compile time error
     {
-      private enum StoreT UMASK =(cast(StoreT) -1);
-      private enum StoreT SMASK = ~UMASK;
+      private enum StoreT UMASK = (cast(StoreT) -1);
+      private enum StoreT SMASK = 0;
     }
   else {
-    private enum StoreT UMASK =((cast(StoreT) 1) << MSWSIZE) - 1;
-    private enum StoreT SMASK = ~UMASK;
+    static if (StoreT.sizeof >= 4) {
+      private enum StoreT UMASK = ((cast(StoreT) 1) << MSWSIZE) - 1;
+      private enum StoreT SMASK = cast(StoreT) (~UMASK);
+    }
+    else {
+      private enum StoreT UMASK = cast(StoreT) ((1 << MSWSIZE) - 1);
+      private enum StoreT SMASK = cast(StoreT) ~((1 << MSWSIZE) - 1);
+    }
   }
 }
 
@@ -654,6 +660,30 @@ struct _bvec(bool S, bool L, string VAL, size_t RADIX) {
   }
 }
 
+template ToBitSize(alias N) if (isIntegral!(typeof(N)) && N >= 0) {
+  static if (N == 0 || N == 1) enum ToBitSize = 1;
+  else enum ToBitSize = ToBitSize!(N/2) + 1;
+}
+
+template ToBitSize(alias N) if (isIntegral!(typeof(N)) && N < 0) {
+  static if (N == 0) enum ToBitSize = 1;
+  static if (N == -1) enum ToBitSize = 2;
+  else enum ToBitSize = ToBitSize!(N/2) + 1;
+}
+
+auto toBit(alias N)() if (isIntegral!(typeof(N))) {
+  static if (N >= 0) {
+    UBit!(ToBitSize!N) val;
+    val._from(N);
+    return val;
+  }
+  else {
+    Bit!(ToBitSize!N) val;
+    val._from(N);
+    return val;
+  }
+}
+
 enum UBit!1 BIT_0   = UBit!1(0);
 enum UBit!1 BIT_1   = UBit!1(1);
 alias _0 = BIT_0;
@@ -856,7 +886,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
     }
 
     // Primarily for the ease of constraint solver to set value
-    package void _setNthWord(T)(T v, int word = 0) if(isIntegral!T) {
+    void _setNthWord(T)(T v, int word = 0) if(isIntegral!T) {
       // make sure that we are not going over the boundary
       assert(word <= (SIZE-1)/(T.sizeof*8));
       static if (T.sizeof * 8 >= WORDSIZE) {
@@ -1246,8 +1276,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	static if(L) _bval[0] = 0;
 	static if(STORESIZE > 1) {
 	  for(size_t i=1; i != STORESIZE; ++i) {
-	    rhs >>= store_t.sizeof*4; // '>>' is sign-extending shift
-	    rhs >>= store_t.sizeof*4; // '>>' is sign-extending shift
+	    rhs >>= store_t.sizeof*8; // '>>' is sign-extending shift
 	    _aval[i] = cast(store_t) rhs;
 	    static if(L) _bval[i] = 0;
 	  }
@@ -1485,11 +1514,11 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       }
     }
 
-    string toString() {
+    string toString()() {
       return this.to!(string, 2);
     }
 
-    void toString(scope void delegate(const(char)[]) sink, ref FormatSpec!char f) {
+    void toString(scope void delegate(const(char)[]) sink, FormatSpec!char f) {
       char[] buff;
       switch(f.spec) {
       case 'd'     : buff = this.toDecimalString(); break;
@@ -1589,9 +1618,8 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 
     char [] toDecimalString() const {
       static if(STORESIZE == 1) {
-	import std.conv;
 	auto val = this._aval[0];
-	string str = val.to!string();
+	string str = format("%d", val);
 	char[] buff;
 	foreach(c; str) buff ~= c;
 	return buff;
@@ -1750,6 +1778,10 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
     public auto opBinary(string op, V)(V other) const if(isIntegral!V) {
       return this.opBinary!op(other.toBitVec());
     }
+
+    // public auto opBinaryRight(string op, V)(V other) const if(isIntegral!V) {
+    //   return this.opBinaryRight!op(other.toBitVec());
+    // }
 
     // And/Or/Xor
     public auto opBinary(string op, V)(V other) const if(isBitVector!V &&
@@ -1968,7 +2000,12 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 
     public V opCast(V)() const if(isIntegral!V || isBoolean!V) {
       static if(L) {
-	V value = cast(V)(this._aval[0] & ~this._bval[0]);
+	static if (store_t.sizeof >= 4) {
+	  V value = cast(V)(this._aval[0] & ~this._bval[0]);
+	}
+	else {
+	  V value = cast(V)(this._aval[0] & ~(cast(int) this._bval[0]));
+	}
       }
       else {
 	V value = cast(V) this._aval[0];
@@ -2038,8 +2075,14 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	    }
 	    else {
 	      // X and Z values reduce to 0
-	      static if(L) result._aval[i] &=
-			     ~(cast(V.store_t) this._bval[i]);
+	      static if (V.store_t.sizeof >= 4) {
+		static if(L) result._aval[i] &=
+			       ~(cast(V.store_t) this._bval[i]);
+	      }
+	      else {
+		static if(L) result._aval[i] &=
+			       cast(V.store_t) ~(cast(int) this._bval[i]);
+	      }
 	    }
 	  }
 	  // sign extension
@@ -2398,7 +2441,12 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       // compliment every bit
       _bvec!(S,L,SIZE) result = this;
       for(size_t i; i != STORESIZE; ++i) {
-	result._aval[i] = ~_aval[i];
+	static if (store_t.sizeof >= 4) {
+	  result._aval[i] = ~_aval[i];
+	}
+	else {
+	  result._aval[i] = cast(store_t) ~(cast(int) _aval[i]);
+	}
       }
       // UMASK out the unused bits
       result._aval[$-1] &= UMASK;

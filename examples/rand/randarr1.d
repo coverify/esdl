@@ -5,8 +5,7 @@
 // Authors:   Puneet Goel <puneet@coverify.com>
 
 import std.stdio;
-import esdl.data.rand;
-import esdl.data.obdd;
+import esdl.rand;
 import esdl.data.bvec;
 
 class Bar
@@ -28,7 +27,7 @@ class Bar
     foo.length > 1;
     foo[1] == 24;
     // baz < 32;
-  } cstFooLength;
+  } cst_foo;
 
   // Constraint! q{
   //   //    foreach(i, f; bar) f <= i;
@@ -43,11 +42,13 @@ class Bar
   //     }
   //   }
 
-  //   foreach(i, f; foo) {
-  //     f < 64;
-  //     foo[i] > 16;
-  //   }
-  // } cstFoo;
+  Constraint! q{
+    foreach(i, f; foo) {
+      // if (i == 1) f == 24;
+      f < 64;
+      foo[i] > 16;
+    }
+  } cstFoo;
 
 }
 

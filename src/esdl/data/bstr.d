@@ -1340,9 +1340,8 @@ struct BitString(bool L)
 
   char [] toDecimalString() const {
     if(dim is 1) {
-      import std.conv;
       auto val = this.aptr[0];
-      string str = val.to!string();
+      string str = format("%d", val);
       char[] buff;
       foreach(c; str) buff ~= c;
       return buff;
@@ -1434,10 +1433,10 @@ struct BitString(bool L)
       }
     }
 
-  public void toStr(bool BIGENDIAN=false, T)(out string str) if((! L)) {
-    char[] cstr;
+  // public void toStr(bool BIGENDIAN=false, T)(out string str) if((! L)) {
+  //   char[] cstr;
 
-  }
+  // }
 }
 
 

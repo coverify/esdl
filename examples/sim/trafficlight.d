@@ -14,22 +14,22 @@ class TrafficLight: Entity
   // mixin(entityMixin());
 
   enum POLES = 4;
-  Event red[POLES];
-  Event yellow[POLES];
-  Event green[POLES];
-  long  foo[10];
+  Event[POLES] red;
+  Event[POLES] yellow;
+  Event[POLES] green;
+  long[10]     foo;
   int count = 0;
 
 
   void susLight() {
     wait(1000);
     import std.stdio;
-    // writeln("Suspending Operations");
+    writeln("Suspending Operations");
     foreach(l; tLightTT) {
       l.suspend;
     }
-    wait(200);
-    // writeln("Resuming Operations");
+    wait(50);
+    writeln("Resuming Operations");
     foreach(l; tLightTT) {
       l.resume;
     }
@@ -62,9 +62,9 @@ class TrafficLight: Entity
 	// writeln("I am here: ", index);
 	red[index].notify(25);
 	wait(yellow[index]);
-	writeln("Green -> Yellow ", index);
+	// writeln("Green -> Yellow ", index);
 	wait(red[index]);
-	writeln("Yellow -> Red ", index);
+	//writeln("Yellow -> Red ", index);
 	green[(index + 1)%POLES].notify();
 	wait(green[index]);
 	synchronized(this) {
@@ -76,7 +76,7 @@ class TrafficLight: Entity
   }
   public int x;
   // Task!("light()",0)  tLightTT[POLES];
-  Task!(light, 5)  tLightTT[POLES];
+  Task!(light, 5)[POLES]   tLightTT;
   // Task!(testPhase, -1)  test_1;
   // Task!(testPhase, 10)  test2;
   // Task!(testPhase, 11)  test11;
@@ -99,14 +99,14 @@ class Dummy: Entity
   // }
   // Task!(etrigger, 0) trigE;
 
-  private TrafficLightWrapper traffic[10];
+  private TrafficLightWrapper[1] traffic;
 }
 
 @timeUnit(100.psec)
 @timePrecision(10.psec)
 class TrafficRoot: RootEntity
 {
-  Inst!Dummy[4] dummy;
+  @multicore(0, 4) Inst!Dummy[2] dummy;
 }
 
 void main()
@@ -114,8 +114,8 @@ void main()
   import std.stdio;
   // top level module
   TrafficRoot theRoot = new TrafficRoot;
+  theRoot.multicore(0, 4);
   theRoot.elaborate("theRoot");
-  theRoot.multiCore(0, 0);
   // theRoot.waitElab();
   // theRoot.simulate(100.nsec);
   // theRoot.waitSim();
@@ -128,7 +128,7 @@ void main()
 
   // theRoot.doSim(25.nsec);
   // theRoot.waitSim();
-  theRoot.simulateUpto(2500.nsec);
+  theRoot.simulateUpto(25.nsec);
   // theRoot.simulate(2500.nsec);
   // theRoot.simulate(0.nsec);
   theRoot.finish();

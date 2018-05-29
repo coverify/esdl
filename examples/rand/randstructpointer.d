@@ -1,4 +1,4 @@
-import esdl.data.rand;
+import esdl.rand;
 
 import randstructfoo;
 
@@ -38,9 +38,9 @@ public:
 void main() {
   Foo* foo;
   Bar bar = new Bar(null);
-  foo = new Foo;
-  bar.setFoo(foo);
   for (size_t i=0; i!=20; ++i) {
+    foo = new Foo;
+    bar.setFoo(foo);
     bar.randomize();
     foo.display();
   }

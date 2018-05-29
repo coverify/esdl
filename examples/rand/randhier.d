@@ -1,11 +1,29 @@
-import esdl.data.rand;
+import esdl.rand;
 
-import randstructfoo;
+class Foo {
+  mixin Randomization;
+  @rand int frop;
+  Constraint!q{
+    frop >= 0;
+    frop < 128;
+  } frop_cst;
+public:
+  void display() {
+    import std.stdio;
+    writeln("frop is: ", frop);
+  }
+  this() {
+  };
+}
 
 class Bar {
   mixin Randomization;
   @rand Foo foo;
+  this() {
+    foo = new Foo();
+  }
   void preRandomize() {
+    // foo = new Foo();
     frop++;
   }
   int frop = 64;

@@ -16,8 +16,8 @@ class Foo: Entity {
     Bit!233 foo = urandom!(Bit!233);
     writeln(foo);
   }
-  Task!hello greet[2];
-  Worker!hello greetWorld[2];
+  Task!hello[2] greet;
+  Worker!hello[2] greetWorld;
   static this() {
     // import std.stdio;
     // writeln("hehe");
@@ -26,7 +26,7 @@ class Foo: Entity {
 @timeUnit(1.nsec)
 @timePrecision(1.psec)
 class Top: Entity {
-  Foo foo[4];
+  Foo[4] foo;
 }
 void main() {
   simulate!Top("root");
