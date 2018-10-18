@@ -6,7 +6,6 @@
 
 import std.stdio;
 import esdl.rand;
-import esdl.data.obdd;
 import esdl.data.bvec;
 
 class Bar
@@ -19,10 +18,11 @@ class Bar
 
   void display() {
     writeln("foo: ", foo);
+    writeln("bar: ", bar);
   }
 
   Constraint! q{
-    foo.length == 6;
+    foo.length > bar.length;
     foreach (i, b; bar) foo[i] == bar[i];
   } cst_arr;
 

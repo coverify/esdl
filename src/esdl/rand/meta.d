@@ -17,8 +17,8 @@ import esdl.data.bstr;
 import std.exception: enforce;
 import std.range: ElementType;
 
-import esdl.rand.base;
-import esdl.rand.expr: CstVarExpr, CstBlock;
+import esdl.rand.misc;
+import esdl.rand.base: CstBlock;
 import esdl.rand.vecx: CstVec, CstVecArr;
 import esdl.rand.solver;
 
@@ -105,7 +105,7 @@ template _esdl__RandInits(T, int I=0)
 	enum _esdl__RandInits =
 	  "    _esdl__" ~ NAME ~ " = new typeof(_esdl__" ~
 	  NAME ~ ")(\"" ~ NAME ~ "\", this._esdl__outer.tupleof[" ~
-	  II ~ "]);\n" ~ "    _esdl__randsList ~= _esdl__" ~
+	  II ~ "], this);\n" ~ "    _esdl__randsList ~= _esdl__" ~
 	  NAME ~ ";\n" ~ _esdl__RandInits!(T, I+1);
       }
       else static if(is(L == class)) {
@@ -146,7 +146,7 @@ template _esdl__RandInits(T, int I=0)
 	enum _esdl__RandInits =
 	  "    _esdl__" ~ NAME ~ " = new typeof(_esdl__" ~ NAME ~
 	  ")(\"" ~ NAME ~ "\", this._esdl__outer.tupleof[" ~ II ~
-	  "]);\n" ~ "    _esdl__randsList ~= _esdl__" ~ NAME ~
+	  "], this);\n" ~ "    _esdl__randsList ~= _esdl__" ~ NAME ~
 	  ";\n" ~ _esdl__RandInits!(T, I+1);
       }
       /* else { */
@@ -241,7 +241,8 @@ template _esdl__RandDeclFuncs(T, int I=0)
       alias L = typeof(T.tupleof[I]);
       enum NAME = __traits(identifier, T.tupleof[I]);
       // skip the constraints and _esdl__ variables
-      static if(is(L f == Constraint!C, immutable (char)[] C) ||
+      static if(is(L f == Constraint!(C, F, N),
+		   immutable (char)[] C, immutable (char)[] F, size_t N) ||
 		(NAME.length > 8 && NAME[0..7] == "_esdl__")) {
 	enum _esdl__RandDeclFuncs = _esdl__RandDeclFuncs!(T, I+1);
       }
@@ -275,7 +276,7 @@ template _esdl__RandDeclFuncs(T, int I=0)
 
 template _esdl__ConstraintsDefDecl(T)
 {
-  enum _esdl__ConstraintsDefDecl = "  Constraint!(_esdl__ConstraintDefaults!(_esdl__T, 0)) _esdl__defaultConstraint;\n";
+  enum _esdl__ConstraintsDefDecl = "  Constraint!(_esdl__ConstraintDefaults!(_esdl__T, 0), \"#DEFAULT#\", 0) _esdl__defaultConstraint;\n";
 }
 
 template _esdl__ConstraintDefaults(T, int I=0)
@@ -337,13 +338,22 @@ template _esdl__ConstraintsDecl(T, int I=0)
       alias L = typeof(T.tupleof[I]);
       enum NAME = __traits(identifier, T.tupleof[I]);
       // skip the constraints and _esdl__ variables
-      static if(is(L f == Constraint!C, immutable (char)[] C)) {
-	enum CST = _esdl__constraintString!(T, I);
+      static if(is(L f == Constraint!(C, F, N),
+		   immutable (char)[] C, immutable (char)[] F, size_t N)) {
+	enum CONSTRAINT = _esdl__constraintParams!(T, I).CONSTRAINT;
+	enum FILE = _esdl__constraintParams!(T, I).FILE;
+	enum LINE = _esdl__constraintParams!(T, I).LINE;
 	enum _esdl__ConstraintsDecl =
-	  "  enum string _esdl__string_" ~ NAME ~
-	  " = _esdl__constraintString!(_esdl__T, " ~ I.stringof ~ ");\n" ~
-	  cast(string) constraintXlate(CST, "_esdl__cst_func_" ~ NAME) ~
-	  "  Constraint!(_esdl__string_" ~ NAME ~ ") " ~
+	  "  enum string _esdl__CONSTRAINT_" ~ NAME ~
+	  " = _esdl__constraintParams!(_esdl__T, " ~ I.stringof ~ ").CONSTRAINT;\n" ~
+	  "  enum string _esdl__FILE_" ~ NAME ~
+	  " = _esdl__constraintParams!(_esdl__T, " ~ I.stringof ~ ").FILE;\n" ~
+	  "  enum size_t _esdl__LINE_" ~ NAME ~
+	  " = _esdl__constraintParams!(_esdl__T, " ~ I.stringof ~ ").LINE;\n" ~
+	  "  CstBlock _esdl__cst_block_" ~ NAME ~ ";\n" ~
+	  cast(string) constraintXlate("this", CONSTRAINT, FILE, LINE, NAME) ~
+	  "  Constraint!(_esdl__CONSTRAINT_" ~ NAME ~
+	  ", _esdl__FILE_" ~ NAME ~ ", _esdl__LINE_" ~ NAME ~ ") " ~
 	  NAME ~ ";\n" ~ _esdl__ConstraintsDecl!(T, I+1);
       }
       else {
@@ -352,11 +362,14 @@ template _esdl__ConstraintsDecl(T, int I=0)
     }
 }
 
-template _esdl__constraintString(T, int I)
+template _esdl__constraintParams(T, int I)
 {
   alias L = typeof(T.tupleof[I]);
-  static if(is(L f == Constraint!C, immutable (char)[] C)) {
-    enum string _esdl__constraintString = C;
+  static if(is(L f == Constraint!(C, F, N),
+	       immutable (char)[] C, immutable (char)[] F, size_t N)) {
+    enum string CONSTRAINT = C;
+    enum string FILE = F;
+    enum size_t LINE = N;
   }
   else {
     static assert(false);
@@ -366,7 +379,7 @@ template _esdl__constraintString(T, int I)
 template _esdl__CstInits(T, int I=0)
 {
   static if(I == T.tupleof.length) {
-    enum _esdl__CstInits = "    _esdl__defaultConstraint = new _esdl__Constraint!(_esdl__ConstraintDefaults!(_esdl__T, 0))(\"_esdl__defaultConstraint\");
+    enum _esdl__CstInits = "    _esdl__defaultConstraint = new _esdl__Constraint!(_esdl__ConstraintDefaults!(_esdl__T, 0), \"#DEFAULT#\", 0)(\"_esdl__defaultConstraint\");
     _esdl__cstsList ~= _esdl__defaultConstraint;\n";
   }
   else static if(is(getRandAttr!(T, I) == rand!false)) {
@@ -375,10 +388,12 @@ template _esdl__CstInits(T, int I=0)
     else {
       alias L = typeof(T.tupleof[I]);
       enum string NAME = __traits(identifier, T.tupleof[I]);
-      static if(is(L f == Constraint!C, immutable (char)[] C)) {
+      static if(is(L f == Constraint!(C, F, N),
+		   immutable (char)[] C, immutable (char)[] F, size_t N)) {
 	enum string _esdl__CstInits = "    " ~ NAME ~
-	  " = new _esdl__Constraint!(_esdl__string_" ~ NAME ~
-	  ",\"" ~ NAME ~ "\")();\n    _esdl__cstsList ~= " ~
+	  " = new _esdl__Constraint!(_esdl__CONSTRAINT_" ~ NAME ~
+	  ", _esdl__FILE_" ~ NAME ~ ", _esdl__LINE_" ~ NAME ~
+	  ", \"" ~ NAME ~ "\")();\n    _esdl__cstsList ~= " ~
 	  NAME ~ // ";\n    this._esdl__outer." ~ NAME ~ " = " ~ NAME ~
 	  ";\n" ~ _esdl__CstInits!(T, I+1);
       }
@@ -544,12 +559,20 @@ mixin template Randomization()
     void seedRandom(int seed) {
       _esdl__randSeed = seed;
       _esdl__randSeeded = true;
-      if(_esdl__solverInst !is null) {
-	_esdl__solverInst._esdl__rGen.seed(seed);
+      if (_esdl__solverInst !is null) {
+	_esdl__solverInst.seedRandom(seed);
       }
     }
     bool _esdl__isRandSeeded() {
       return _esdl__randSeeded;
+    }
+    uint _esdl__getRandomSeed() {
+      if (_esdl__solverInst !is null) {
+	return _esdl__solverInst.getRandomSeed();
+      }
+      else {
+	return _esdl__randSeed;
+      }
     }
     alias srandom = seedRandom;	// SV names the similar method srandom
     void _esdl__initSolver() {
@@ -597,25 +620,25 @@ class _esdl__SolverStruct(_esdl__T): _esdl__SolverBase!_esdl__T
 
 mixin template _esdl__SolverMixin()
 {
-  class _esdl__Constraint(string _esdl__CstString):
-    Constraint!_esdl__CstString
+  class _esdl__Constraint(string _esdl__CstString, string FILE, size_t LINE):
+    Constraint!(_esdl__CstString, FILE, LINE)
   {
     this(string name) {
       super(this.outer, name, cast(uint) this.outer._esdl__cstsList.length);
     }
     // This mixin writes out the bdd functions after parsing the
     // constraint string at compile time
-    mixin(constraintXlate(_esdl__CstString));
+    CstBlock _esdl__cst_block;
     debug(CONSTRAINTS) {
       pragma(msg, "// constraintXlate! STARTS\n");
-      pragma(msg, constraintXlate(_esdl__CstString));
+      pragma(msg, constraintXlate("this.outer", _esdl__CstString, FILE, LINE));
       pragma(msg, "// constraintXlate! ENDS\n");
-      
     }
+    mixin(constraintXlate("this.outer", _esdl__CstString, FILE, LINE));
   }
 
-  class _esdl__Constraint(string _esdl__CstString, string NAME):
-    Constraint!_esdl__CstString
+  class _esdl__Constraint(string _esdl__CstString, string FILE, size_t LINE, string NAME):
+    Constraint!(_esdl__CstString, FILE, LINE)
   {
     this() {
       super(this.outer, NAME,
@@ -628,15 +651,15 @@ mixin template _esdl__SolverMixin()
       mixin("return this.outer._esdl__cst_func_" ~ NAME ~ "();");
     }
 	
-    debug(CONSTRAINTS) {
-      pragma(msg, "// constraintXlate! STARTS\n");
-      pragma(msg, constraintXlate(_esdl__CstString));
-      pragma(msg, "// constraintXlate! ENDS\n");
-    }
+    // debug(CONSTRAINTS) {
+    //   pragma(msg, "// constraintXlate! STARTS\n");
+    //   pragma(msg, constraintXlate(_esdl__CstString, FILE, LINE));
+    //   pragma(msg, "// constraintXlate! ENDS\n");
+    // }
   }
 
-  class _esdl__Constraint(string _esdl__CstString, ARGS...): // size_t N):
-    Constraint!_esdl__CstString
+  class _esdl__ConstraintWith(string _esdl__CstString, string FILE, size_t LINE, ARGS...): // size_t N):
+    Constraint!(_esdl__CstString, FILE, LINE)
   {
     import std.typecons;
 
@@ -665,16 +688,17 @@ mixin template _esdl__SolverMixin()
 
     // This mixin writes out the bdd functions after parsing the
     // constraint string at compile time
-    mixin(constraintXlate(_esdl__CstString));
+    CstBlock _esdl__cst_block;
+    mixin(constraintXlate("this.outer", _esdl__CstString, FILE, LINE));
     debug(CONSTRAINTS) {
       pragma(msg, "// randomizeWith! STARTS\n");
-      pragma(msg, constraintXlate(_esdl__CstString));
+      pragma(msg, constraintXlate("this.outer", _esdl__CstString, FILE, LINE));
       pragma(msg, "// randomizeWith! ENDS\n");
     }
   }
 
-  void _esdl__with(string _esdl__CstString, ARGS...)(ARGS values) {
-    auto cstWith = new _esdl__Constraint!(_esdl__CstString, ARGS)("randWith", values);
+  void _esdl__with(string _esdl__CstString, string FILE, size_t LINE, ARGS...)(ARGS values) {
+    auto cstWith = new _esdl__ConstraintWith!(_esdl__CstString, FILE, LINE, ARGS)("randWith", values);
     // cstWith.withArgs(values);
     _esdl__cstWith = cstWith;
   }
@@ -684,12 +708,12 @@ mixin template _esdl__SolverMixin()
     static if (isIntegral!L || isBitVector!L || isBoolean!L) {
       // import std.stdio;
       // writeln("Creating VarVec, ", name);
-      return new CstVec!(L, _esdl__norand, 0)(name, l);
+      return new CstVec!(L, _esdl__norand, 0)(name, l, this);
     }
     else static if (isArray!L) {
       // import std.stdio;
       // writeln("Creating VarVecArr, ", name);
-      return new CstVec!(L, _esdl__norand, 0)(name, l);
+      return new CstVec!(L, _esdl__norand, 0)(name, l, this);
     }
     else {
       return l;
@@ -701,12 +725,12 @@ mixin template _esdl__SolverMixin()
     static if (isIntegral!L || isBitVector!L || isBoolean!L) {
       // import std.stdio;
       // writeln("Creating VarVec, ", name);
-      return new CstVec!(L, _esdl__norand, 0)(name, l);
+      return new CstVec!(L, _esdl__norand, 0)(name, l, this);
     }
     else static if (isArray!L) {
       // import std.stdio;
       // writeln("Creating VarVecArr, ", name);
-      return new CstVec!(L, _esdl__norand, 0)(name, l);
+      return new CstVec!(L, _esdl__norand, 0)(name, l, this);
     }
     else {
       return l;
@@ -725,13 +749,14 @@ mixin template _esdl__SolverMixin()
     }
   }
   
-  mixin(_esdl__randsMixin!_esdl__T);
-
   debug(CONSTRAINTS) {
     pragma(msg, "// _esdl__randsMixin!" ~ _esdl__T.stringof ~ " STARTS \n");
     pragma(msg, _esdl__randsMixin!_esdl__T);
     pragma(msg, "// _esdl__randsMixin!" ~ _esdl__T.stringof ~ " ENDS \n");
   }
+
+  mixin(_esdl__randsMixin!_esdl__T);
+
 }
 
 template _esdl__SolverResolve(T) {
@@ -769,7 +794,7 @@ template _esdl__SolverBase(T) {
   }
 }
 
-void randomizeWith(string C, T, ARGS...)(ref T t, ARGS values)
+void randomizeWith(string C, string FILE=__FILE__, size_t LINE=__LINE__, T, ARGS...)(ref T t, ARGS values)
   if(is(T == class) && allIntengral!ARGS) {
     t._esdl__initSolver();
     // The idea is that if the end-user has used the randomization
@@ -779,7 +804,7 @@ void randomizeWith(string C, T, ARGS...)(ref T t, ARGS values)
     // static if(is(typeof(t._esdl__RandType) == T)) {
     if(t._esdl__solverInst._esdl__cstWith is null ||
        t._esdl__solverInst._esdl__cstWith._constraint != C) {
-      t._esdl__getSolver()._esdl__with!(C)(values);
+      t._esdl__getSolver()._esdl__with!(C, FILE, LINE)(values);
       t._esdl__solverInst._esdl__cstWithChanged = true;
       // auto withCst =
       //	new Constraint!(C, "_esdl__withCst",
@@ -788,8 +813,8 @@ void randomizeWith(string C, T, ARGS...)(ref T t, ARGS values)
       // t._esdl__solverInst._esdl__cstWith = withCst;
     }
     else {
-      alias CST = _esdl__SolverResolve!T._esdl__Constraint!(C, ARGS);
-      auto cstWith = _esdl__staticCast!CST(t._esdl__solverInst._esdl__cstWith);
+      alias CONSTRAINT = _esdl__SolverResolve!T._esdl__ConstraintWith!(C, FILE, LINE, ARGS);
+      auto cstWith = _esdl__staticCast!CONSTRAINT(t._esdl__solverInst._esdl__cstWith);
       cstWith.withArgs(values);
       t._esdl__solverInst._esdl__cstWithChanged = false;
     }

@@ -51,7 +51,7 @@ class Bar: Foo
     }
     foo == 2 -> pop == 4;
     pop <= 4 -> bro == 0;
-    if(foo[3..5]) {
+    if(foo[3..5] != 0) {
       bro == 5;
     }
     else {

@@ -500,7 +500,7 @@ struct timePrecision
 // wants to create a NamedComp, he needs to implement NamedComp
 // interface and for that purpose, the NamedMixin is provided.
 
-package interface NamedComp: EsdlObj, TimeContext
+interface NamedComp: EsdlObj, TimeContext
 {
   // Elaboration and Hierarchy related interface functions
   void _esdl__setParent(NamedComp parent);
@@ -4444,9 +4444,13 @@ interface Procedure: NamedComp
   // Functions for Random Stability
   ref Random getRandGen();
 
-  final void srandom(uint _seed) {
+  void setRandSeed(uint seed);
+
+  uint getRandSeed();
+
+  final void srandom(uint seed) {
     synchronized(this) {
-      getRandGen().seed(_seed);
+      getRandGen().seed(seed);
     }
   }
 
@@ -5969,7 +5973,7 @@ abstract class Process: Procedure, HierComp, EventClient
       _timed._esdl__setObjId();
 
       state = ProcState.STARTING;
-      this.setRandomSeed();
+      this.setRandSeed();
       if(Process.self) {
 	this._esdl__fixParent();
 	this.reqRegisterProcess(stage);
@@ -5992,7 +5996,7 @@ abstract class Process: Procedure, HierComp, EventClient
       _timed._esdl__setObjId();
 
       state = ProcState.STARTING;
-      this.setRandomSeed();
+      this.setRandSeed();
       if(Process.self) {
 	this._esdl__fixParent();
 	this.reqRegisterProcess(stage);
@@ -6172,8 +6176,29 @@ abstract class Process: Procedure, HierComp, EventClient
     assert(false, "A task can have only processes as childObjs");
   }
 
-  Random _randGen;
+  @_esdl__ignore Random _randGen;
+  uint _randSeed;
 
+  private final void setRandSeed() {
+    synchronized(this) {
+      _randSeed = urandom();
+      this._randGen.seed(_randSeed);
+    }
+  }
+
+  final override void setRandSeed(uint seed) {
+    synchronized(this) {
+      _randSeed = seed;
+      _randGen.seed(_randSeed);
+    }
+  }
+  
+  final override uint getRandSeed() {
+    synchronized(this) {
+      return _randSeed;
+    }
+  }
+  
   final override ref Random getRandGen() {
     synchronized(this) {
       return _randGen;
@@ -6394,13 +6419,6 @@ abstract class Process: Procedure, HierComp, EventClient
     yield();
     if(this._isKilled()) {
       throw new TermException();
-    }
-  }
-
-  private final void setRandomSeed() {
-    synchronized(this) {
-      uint seed = urandom();
-      this._randGen.seed(seed);
     }
   }
 
@@ -7066,7 +7084,21 @@ class RootThread: Procedure
 
 
   @_esdl__ignore Random _randGen;
+  uint _randSeed;
 
+  final override void setRandSeed(uint seed) {
+    synchronized(this) {
+      _randSeed = seed;
+      _randGen.seed(seed);
+    }
+  }
+  
+  final override uint getRandSeed() {
+    synchronized(this) {
+      return _randSeed;
+    }
+  }
+  
   final override ref Random getRandGen() {
     synchronized(this) {
       return _randGen;

@@ -22,12 +22,12 @@ class Bar
     // writeln("baz: ", baz);
   }
 
-  Constraint! q{
-    foo.length <= 8;
-    foo.length > 1;
-    foo[1] == 24;
-    // baz < 32;
-  } cst_foo;
+  // Constraint! q{
+  //   foo.length <= 8;
+  //   foo.length > 1;
+  //   // foo[1] == 24;
+  //   // baz < 32;
+  // } cst_foo;
 
   // Constraint! q{
   //   //    foreach(i, f; bar) f <= i;

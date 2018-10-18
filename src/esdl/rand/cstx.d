@@ -52,11 +52,17 @@ import std.conv;
 struct CstParser {
 
   immutable string CST;
+  immutable string FILE;
+  immutable size_t LINE;
+  
   bool dryRun = true;
 
   char[] outBuffer;
   
   string dummy;			// sometimes required in dryRun
+
+  string _solver;
+  
   size_t outCursor = 0;
   size_t dclCursor = 0;
 
@@ -69,6 +75,9 @@ struct CstParser {
   size_t[] indexTag;
 
   VarPair[] varMap = [];
+
+  string[] iterators;
+  
 
   // list of if conditions that are currently active
   Condition[] ifConds = [];
@@ -85,10 +94,18 @@ struct CstParser {
     dryRun = false;
   }
 
-  this(string CST) {
+  this(string CST, string FILE, size_t LINE) {
     this.CST = CST;
+    this.FILE = FILE;
+    this.LINE = LINE;
   }
 
+  size_t retreat(size_t step) {
+    size_t start = outCursor;
+    outCursor -= step;
+    return start;
+  }
+  
   size_t fill(in string source) {
     size_t start = outCursor;
     if(! dryRun) {
@@ -137,10 +154,10 @@ struct CstParser {
     return start;
   }
 
-  CstParser exprParser(size_t cursor) {
-    CstParser dup = CstParser(CST[cursor..$]);
-    return dup;
-  }
+  // CstParser exprParser(size_t cursor) {
+  //   CstParser dup = CstParser(CST[cursor..$]);
+  //   return dup;
+  // }
 
   enum OpToken: byte
     {   NONE = 0,
@@ -378,14 +395,14 @@ struct CstParser {
     auto srcTag = srcCursor;
     int[MaxHierDepth * 2] idChain = parseIdentifierChain();
     if(idChain[0] != -1) {
-      int idx = idMatch(CST[srcTag+idChain[0]..srcTag+idChain[1]]);
-      if(idx == -1) {
+      int indx = idMatch(CST[srcTag+idChain[0]..srcTag+idChain[1]]);
+      if(indx == -1) {
 	fill(CST[srcTag+idChain[0]..srcTag+idChain[1]]);
 	fillDeclaration(CST[srcTag+idChain[0]..srcTag+idChain[1]]);
       }
       else {
-	fill(varMap[idx].xLat);
-	fillDeclaration(varMap[idx].xLatBase);
+	fill(varMap[indx].xLat);
+	fillDeclaration(varMap[indx].xLatBase);
       }
       if(idChain[2] != -1) {
 	fill(".");
@@ -394,12 +411,11 @@ struct CstParser {
 	    fill(CST[srcTag+idChain[2*i]..srcTag+idChain[2*i+1]]);
 	  }
 	  else {
-	    auto savedCursor = srcCursor;
-	    srcCursor = srcTag+idChain[2*i]+1;
+	    indexTag ~= outCursor-1;
 	    fill("opIndex(");
-	    procExpr();
+	    ++numIndex;
+	    procSubExpr(srcTag+idChain[2*i]+1);
 	    fill(")");
-	    srcCursor = savedCursor;
 	  }
 	  if(idChain[2*i+2] == -1) break;
 	  else fill(".");
@@ -575,7 +591,7 @@ struct CstParser {
       // Look for long/short specifier
       while(srcCursor < CST.length) {
 	char c = CST[srcCursor];
-	if(c == 'L' || c == 'S' ||  c == 'U') {
+	if(c == 'L' || c == 'u' ||  c == 'U') {
 	  ++srcCursor;
 	}
 	else {
@@ -759,33 +775,43 @@ struct CstParser {
     assert(curs == 11);
   }
 
-  char[] translate(string name) {
-    if (name == "") {
-      fill("override CstBlock getCstExpr() {" ~
-	   "\n  auto cstExpr = new CstBlock;\n");
-    }
-    else {
-      fill("CstBlock " ~ name ~ "() {" ~
-	   "\n  auto cstExpr = new CstBlock;\n");
-    }
-      
+  char[] translate(string solver, string name) {
+    _solver = solver;
 
-    procBlock();
+    translateBlock(name);
 
     setupBuffer();
 
-    if (name == "") {
-      fill("override CstBlock getCstExpr() {" ~
-	   "\n  auto cstExpr = new CstBlock;\n");
-    }
-    else {
-      fill("CstBlock " ~ name ~ "() {" ~
-	   "\n  auto cstExpr = new CstBlock;\n");
-    }
-      
-    procBlock();
+    translateBlock(name);
 
     return outBuffer;
+  }
+
+  void translateBlock(string name) {
+    string blockName;
+    import std.conv: to;
+    fill("// Constraint @ File: " ~ FILE ~ " Line: " ~ LINE.to!string ~ "\n\n");
+    if (name == "") {
+      fill("override CstBlock getCstExpr() {\n"//  ~
+	   // "\n  auto cstExpr = new CstBlock;\n"
+	   );
+      blockName = "_esdl__cst_block";
+    }
+    else {
+      fill("CstBlock _esdl__cst_func_" ~ name ~ "() {\n"//  ~
+	   // "\n  auto cstExpr = new CstBlock;\n"
+	   );
+      blockName = "_esdl__cst_block_" ~ name;
+    }
+
+    fill("  if (" ~ blockName ~ " !is null) return " ~
+	 blockName ~ ";\n");
+
+    fill("  CstBlock _esdl__block = new CstBlock();\n");
+
+    procBlock();
+    fill("  " ~ blockName ~ " = _esdl__block;\n");
+    fill("  return _esdl__block;\n}\n");
   }
 
   char[] translateExpr() {
@@ -924,13 +950,15 @@ struct CstParser {
       errorToken();
     }
 
-    int idx = idMatch(array);
-    if(idx != -1) {
-      array = varMap[idx].xLat;
-      arrayBase = varMap[idx].xLatBase;
+    int indx = idMatch(array);
+    if(indx != -1) {
+      array = varMap[indx].xLat;
+      arrayBase = varMap[indx].xLatBase;
     }
 
     // add index
+    iterators ~= array ~ ".iterator()";
+    
     if(index.length != 0) {
       VarPair x;
       x.varName  = index;
@@ -952,6 +980,8 @@ struct CstParser {
     else {
       procStmt();
     }
+
+    iterators = iterators[0..$-1];
 
     if(index.length != 0) {
       varMap = varMap[0..$-2];
@@ -1119,19 +1149,39 @@ struct CstParser {
     // if a left parenthesis has been found at the beginning it can only
     // be a normal statement
     if(srcCursor > srcTag) return StmtToken.STMT;
-    srcTag = parseIdentifier();
-    if(srcCursor > srcTag) {
-      if(CST[srcTag..srcCursor] == "foreach") return StmtToken.FOREACH;
-      if(CST[srcTag..srcCursor] == "if") return StmtToken.IFCOND;
-      if(CST[srcTag..srcCursor] == "solve") return StmtToken.BEFORE;
-      // not a keyword
-      return StmtToken.STMT;
+
+    if ((CST[srcCursor] >= 'A' && CST[srcCursor] <= 'Z') ||
+	(CST[srcCursor] >= 'a' && CST[srcCursor] <= 'z') ||
+	(CST[srcCursor] == '_')) {
+	
+      srcTag = parseIdentifier();
+      if(srcCursor > srcTag) {
+	if(CST[srcTag..srcCursor] == "foreach") return StmtToken.FOREACH;
+	if(CST[srcTag..srcCursor] == "if") return StmtToken.IFCOND;
+	if(CST[srcTag..srcCursor] == "solve") return StmtToken.BEFORE;
+	// not a keyword
+	return StmtToken.STMT;
+      }
     }
-    if(CST[srcCursor] is '{') return StmtToken.BLOCK;
-    if(CST[srcCursor] is '}') return StmtToken.ENDBLOCK;
-    return StmtToken.ERROR;
+    if (CST[srcCursor] is '{') return StmtToken.BLOCK;
+    if (CST[srcCursor] is '}') return StmtToken.ENDBLOCK;
+    return StmtToken.STMT;
+      // return StmtToken.ERROR;
   }
 
+
+  void procSubExpr(size_t cursor) {
+    auto savedCursor = srcCursor;
+    auto savedNumIndex = numIndex;
+    auto savedNumParen = numParen;
+    srcCursor = cursor;
+    numIndex = 0;
+    numParen = 0;
+    procExpr();
+    numIndex = savedNumIndex;
+    numParen = savedNumParen;
+    srcCursor = savedCursor;
+  }
 
   void procExpr() {
     bool cmpRHS;
@@ -1333,7 +1383,7 @@ struct CstParser {
 
   // translate the expression and also consume the semicolon thereafter
   void procExprStmt() {
-    fill("  cstExpr ~= ");
+    fill("  _esdl__block ~= new CstPredicate(" ~ _solver ~ ", ");
 
     if(ifConds.length !is 0) {
       fill("// Conditions \n        ( ");
@@ -1367,11 +1417,19 @@ struct CstParser {
 	     srcCursor.to!string);
     }
     if(ifConds.length !is 0) {
-      fill(");\n");
+      fill(")");
     }
-    else {
-      fill(";\n");
+
+    // no parent CstPredicate
+    fill(", null");
+
+    if (iterators.length != 0) {
+      foreach (iterator; iterators) {
+	fill(", " ~ iterator);
+      }
     }
+
+    fill(");\n");
   }
 
   void procStmt() {
@@ -1414,7 +1472,7 @@ struct CstParser {
 
       switch(stmtToken) {
       case StmtToken.ENDCST:
-	fill("  return cstExpr;\n}\n");
+	fill("    // END OF CONSTRAINT BLOCK \n");
 	return;
       case StmtToken.ENDBLOCK:
 	fill("    // END OF BLOCK \n");

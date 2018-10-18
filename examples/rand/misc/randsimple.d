@@ -1,11 +1,26 @@
 import std.stdio;
 import esdl.rand;
 
+enum e1 {
+	 A = 0,
+	 B = 1,
+	 C = 2
+}
+
+enum e2 {
+	 A = 0,
+	 B = 1,
+	 C = 2,
+	 D = 3
+}
+
 class Base {
   @rand uint a;
-  @rand uint xx;
+  @rand e1 xx;
+  @rand e2 yy;
   mixin Randomization;
-  Constraint! q{xx < 28;} cstx;
+  Constraint! q{xx < 28;} cst1;
+  Constraint! q{yy < 28;} cst2;
 }
 
 class Simple: Base {

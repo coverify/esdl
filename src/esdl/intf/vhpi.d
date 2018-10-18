@@ -21,6 +21,13 @@ static string declareEnums (alias E)()
   return res;
 }
 
+version(LDC) {
+  import ldc.attributes;
+}
+ else {
+   enum weak;
+ }
+
 alias vhpiHandleT = uint*;
 alias vhpiEnumT = uint;
 alias vhpiSmallEnumT = ubyte;
@@ -977,59 +984,79 @@ extern(C) int vhpi_get_cb_info (vhpiHandleT object,
 // alias VHPI_SENS_ISSET = vhpi_sens_isset;
 // alias VHPI_SENS_FIRST = vhpi_sens_first;
 
-  /* for obtaining handles */
+/* for obtaining handles */
 
-extern(C) vhpiHandleT vhpi_handle_by_name (const char *name,
-					   vhpiHandleT hier);
+@weak extern(C) vhpiHandleT vhpi_handle_by_name (const char *name,
+						 vhpiHandleT hier) {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 
 vhpiHandleT vhpiHandleByName(string name, vhpiHandleT hier) {
   import std.string;
   return vhpi_handle_by_name(name.toStringz, hier);
 }
     
-extern(C) vhpiHandleT vhpi_handle_by_index (vhpiOneToManyT itRel,
-					    vhpiHandleT parent,
-					    int indx);
+@weak extern(C) vhpiHandleT vhpi_handle_by_index (vhpiOneToManyT itRel,
+						  vhpiHandleT parent,
+						  int indx) {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiHandleByIndex = vhpi_handle_by_index;
 
-  /* for traversing relationships */
+/* for traversing relationships */
 
-extern(C) vhpiHandleT vhpi_handle (vhpiOneToOneT type,
-			 vhpiHandleT referenceHandle);
+@weak extern(C) vhpiHandleT vhpi_handle (vhpiOneToOneT type,
+					 vhpiHandleT referenceHandle) {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiHandle = vhpi_handle;
 
-extern(C) vhpiHandleT vhpi_iterator (vhpiOneToManyT type,
-				     vhpiHandleT referenceHandle);
+@weak extern(C) vhpiHandleT vhpi_iterator (vhpiOneToManyT type,
+					   vhpiHandleT referenceHandle)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiIterator = vhpi_iterator;
 
-extern(C) vhpiHandleT vhpi_scan (vhpiHandleT iterator);
+@weak extern(C) vhpiHandleT vhpi_scan (vhpiHandleT iterator)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiScan = vhpi_scan;
     
-  /* for processsing properties */
+/* for processsing properties */
 
-extern(C) vhpiIntT vhpi_get (vhpiIntPropertyT property,
-			     vhpiHandleT object);
+@weak extern(C) vhpiIntT vhpi_get (vhpiIntPropertyT property,
+				   vhpiHandleT object)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiGet = vhpi_get;
 
-extern(C) const(vhpiCharT) * vhpi_get_str (vhpiStrPropertyT property,
-					   vhpiHandleT object);
+@weak extern(C) const(vhpiCharT) * vhpi_get_str (vhpiStrPropertyT property,
+						 vhpiHandleT object)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiGetStr = vhpi_get_str;
 
-extern(C) vhpiRealT vhpi_get_real (vhpiRealPropertyT property,
-				   vhpiHandleT object);
+@weak extern(C) vhpiRealT vhpi_get_real (vhpiRealPropertyT property,
+					 vhpiHandleT object)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiGetReal = vhpi_get_real;
 
-extern(C) vhpiPhysT vhpi_get_phys (vhpiPhysPropertyT property,
-				   vhpiHandleT object);
+@weak extern(C) vhpiPhysT vhpi_get_phys (vhpiPhysPropertyT property,
+					 vhpiHandleT object)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiGetPhys = vhpi_get_phys;
     
 /* for access to protected types */
 
 alias vhpiUserFctT = int function();
 
-extern(C) int vhpi_protected_call (vhpiHandleT varHdl,
-				   vhpiUserFctT userFct,
-				   void *userData);
+@weak extern(C) int vhpi_protected_call (vhpiHandleT varHdl,
+					 vhpiUserFctT userFct,
+					 void *userData)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiProtectedCall = vhpi_protected_call;
 
 /* value processing */
@@ -1055,13 +1082,17 @@ enum vhpiDelayModeT
 
 mixin(declareEnums!vhpiDelayModeT());
 
-extern(C) int vhpi_get_value (vhpiHandleT expr,
-			      vhpiValueT *value_p);
+@weak extern(C) int vhpi_get_value (vhpiHandleT expr,
+				    vhpiValueT *value_p)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiGetValue = vhpi_get_value;
 
-extern(C) int vhpi_put_value (vhpiHandleT object,
-			      vhpiValueT *value_p,
-			      vhpiPutValueModeT flags);
+@weak extern(C) int vhpi_put_value (vhpiHandleT object,
+				    vhpiValueT *value_p,
+				    vhpiPutValueModeT flags)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 
     
 alias vhpiPutValue = vhpi_put_value;
@@ -1075,32 +1106,40 @@ alias vhpiPutValue = vhpi_put_value;
 // 			   vhpiSizeConstraint
 // }
 
-extern(C) int vhpi_schedule_transaction (vhpiHandleT drivHdl,
-					 vhpiValueT *value_p,
-					 uint numValues,
-					 vhpiTimeT *delayp,
-					 uint delayMode,
-					 vhpiTimeT *pulseRejp);
+@weak extern(C) int vhpi_schedule_transaction (vhpiHandleT drivHdl,
+					       vhpiValueT *value_p,
+					       uint numValues,
+					       vhpiTimeT *delayp,
+					       uint delayMode,
+					       vhpiTimeT *pulseRejp)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 
 alias vhpiScheduleTransaction = vhpi_schedule_transaction;
 
     
-extern(C) int vhpi_format_value (const vhpiValueT *in_value_p,
-				 vhpiValueT *out_value_p);
+@weak extern(C) int vhpi_format_value (const vhpiValueT *in_value_p,
+				       vhpiValueT *out_value_p)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiFormatValue = vhpi_format_value;
 
-  /* time processing */
+/* time processing */
 
-extern(C) void vhpi_get_time (vhpiTimeT *time_p,
-			      long *cycles);
+@weak extern(C) void vhpi_get_time (vhpiTimeT *time_p,
+				    long *cycles)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiGetTime = vhpi_get_time;
 
 enum vhpiNoActivity = -1;
 
-extern(C) int vhpi_get_next_time (vhpiTimeT *time_p);
+@weak extern(C) int vhpi_get_next_time (vhpiTimeT *time_p)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiGetNextTime = vhpi_get_next_time;
 
-  /* simulation control */
+/* simulation control */
 
 enum vhpiSimControlT
   {
@@ -1112,14 +1151,18 @@ enum vhpiSimControlT
 
 mixin(declareEnums!vhpiSimControlT());
 
-extern(C) int vhpi_sim_control (vhpiSimControlT command,
-		      ...);
+@weak extern(C) int vhpi_sim_control (vhpiSimControlT command,
+				      ...)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiSimControl = vhpi_sim_control;
 
 /* I/O routine */
 
-extern(C) int vhpi_printf (const char *format,
-			   ...);
+@weak extern(C) int vhpi_printf (const char *format,
+				 ...)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 
 int vhpiPrintf(string format, ...) {
   va_list argp;
@@ -1128,7 +1171,9 @@ int vhpiPrintf(string format, ...) {
 }
 
 int vhpi_vprintf (const char *format,
-		  va_list args);
+		  va_list args)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 int vhpiVprintf(string formatmsg, va_list args) {
   import std.string;	// toStringz
   return vhpi_vprintf(formatmsg.toStringz, args);
@@ -1136,27 +1181,37 @@ int vhpiVprintf(string formatmsg, va_list args) {
 
 /* utilities to print VHDL strings */
 
-extern(C) int vhpi_is_printable(char ch);
+@weak extern(C) int vhpi_is_printable(char ch)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiIsPrintable = vhpi_is_printable;
 
 
 /* utility routines */
 
-extern(C) int vhpi_compare_handles (vhpiHandleT handle1,
-				    vhpiHandleT handle2);
+@weak extern(C) int vhpi_compare_handles (vhpiHandleT handle1,
+					  vhpiHandleT handle2)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiCompareHandles = vhpi_compare_handles;
 
-extern(C) int vhpi_check_error (vhpiErrorInfoT *error_info_p);
+@weak extern(C) int vhpi_check_error (vhpiErrorInfoT *error_info_p)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiCheckError = vhpi_check_error;
 
-extern(C) int vhpi_release_handle (vhpiHandleT object);
+@weak extern(C) int vhpi_release_handle (vhpiHandleT object)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiReleaseHandle = vhpi_release_handle;
 
 /* creation functions */
 
-extern(C) vhpiHandleT vhpi_create (vhpiClassKindT kind,
-				   vhpiHandleT handle1,
-				   vhpiHandleT handle2);
+@weak extern(C) vhpiHandleT vhpi_create (vhpiClassKindT kind,
+					 vhpiHandleT handle1,
+					 vhpiHandleT handle2)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiCreate = vhpi_create;
 
 /* Foreign model data structures and functions */
@@ -1187,27 +1242,37 @@ struct vhpiForeignDataT
   execf_func_type *execf;
 };
 
-extern(C) vhpiHandleT vhpi_register_foreignf (vhpiForeignDataT *foreignDatap);
+@weak extern(C) vhpiHandleT vhpi_register_foreignf (vhpiForeignDataT *foreignDatap)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiRegisterForeignf = vhpi_register_foreignf;
 
-extern(C) int vhpi_get_foreignf_info (vhpiHandleT hdl,
-				      vhpiForeignDataT *foreignDatap);
+@weak extern(C) int vhpi_get_foreignf_info (vhpiHandleT hdl,
+					    vhpiForeignDataT *foreignDatap)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiGetForeignfInfo = vhpi_get_foreignf_info;
 
 /* vhpi_get_foreign_info is DEPRECATED */
-extern(C) int vhpi_get_foreign_info (vhpiHandleT hdl,
-				     vhpiForeignDataT *foreignDatap);
+@weak extern(C) int vhpi_get_foreign_info (vhpiHandleT hdl,
+					   vhpiForeignDataT *foreignDatap)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiGetForeignInfo = vhpi_get_foreign_info;
 
-  /* for saving and restoring foreign models data */
+/* for saving and restoring foreign models data */
 
-extern(C) size_t vhpi_get_data (int id,
-				void *dataLoc,
-				uint numBytes);
+@weak extern(C) size_t vhpi_get_data (int id,
+				      void *dataLoc,
+				      uint numBytes)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiGetData = vhpi_get_data;
 
-extern(C) size_t vhpi_put_data (int id,
-				void *dataLoc,
-				uint numBytes);
+@weak extern(C) size_t vhpi_put_data (int id,
+				      void *dataLoc,
+				      uint numBytes)  {
+  assert(false, "Kindly link to a VHDL compiler that supports VHPI");
+}
 alias vhpiPutData = vhpi_put_data;
 

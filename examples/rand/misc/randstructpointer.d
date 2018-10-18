@@ -19,7 +19,7 @@ class Bar {
   }
   int frop = 64;
 
-  Constraint!q{
+  Constraint! q{
     foo.frop < frop;
     foo.frop > frop - 4;
   } frop_cst;
