@@ -1,6 +1,6 @@
-Vlang
+ESDL
 =====
-Verification Language Vlang.
+Electronic System Description Language.
 
 This package has the base simulator and the data modules, which include the constrained randomization unit. UVM package is available separately because it comes with a different opensource license.
 
