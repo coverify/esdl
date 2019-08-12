@@ -324,6 +324,7 @@ enum CstBinVecOp: byte
       REM,
       LSH,
       RSH,
+      RANGE, 			// for bitvec slice
       BITINDEX,
       }
 

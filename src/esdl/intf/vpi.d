@@ -1312,7 +1312,7 @@ struct Vpi {
     time += now.low;
 
     // writeln("callback_cbReadOnlySync: Running simulation till ", time);
-    simulateAllRootsUpto(time.psec);
+    simulateAllRootsUpto(time.nsec);
 
     auto new_cb = new s_cb_data();
     new_cb.reason = vpiCbNextSimTime;

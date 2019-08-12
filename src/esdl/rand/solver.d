@@ -4,7 +4,7 @@ import esdl.rand.obdd;
 import esdl.rand.base: CstVecPrim, CstStage, CstBddExpr,
   CstDomain, CstPredicate, CstBlock, _esdl__Solver;
 import esdl.rand.misc;
-import esdl.data.bin;
+import esdl.data.folder;
 import std.container: Array;
 import std.array;
 
@@ -93,9 +93,8 @@ abstract class _esdl__SolverRoot: _esdl__Solver
 
   Array!ulong _solveValue;
   
-  this(uint seed, bool isSeeded, string name,
-       _esdl__SolverRoot parent) {
-    super(seed, isSeeded, name, parent);
+  this(string name, _esdl__SolverRoot parent, bool isSeeded, uint seed) {
+    super(name, parent, isSeeded, seed);
     if (parent is null) {
       _esdl__cstExprs = new CstBlock();
     }
@@ -190,14 +189,12 @@ abstract class _esdl__SolverRoot: _esdl__Solver
   //   }
   // }
 
-  Bin!CstPredicate _allPreds;
+  Folder!CstPredicate _allPreds;
 
-  Bin!CstStage _solveStages;
+  Folder!CstStage _solveStages;
 
   void initPreds() {
     assert(_root is this);
-    CstDomain[] unresolvedIndxs;
-
     _esdl__cstExprs._esdl__reset(); // start empty
 
     // take all the constraints -- even if disabled
@@ -207,10 +204,6 @@ abstract class _esdl__SolverRoot: _esdl__Solver
 
     if(_esdl__cstWith !is null) {
       _esdl__cstExprs ~= _esdl__cstWith.getCstExpr();
-    }
-
-    foreach (pred; _esdl__cstExprs._preds) {
-      unresolvedIndxs ~= pred._expr.unresolvedIndxs();
     }
 
     foreach (pred; _esdl__cstExprs._preds) {
@@ -351,7 +344,7 @@ abstract class _esdl__SolverRoot: _esdl__Solver
 
     // foreach (pred; preds) {
     //   import std.stdio;
-    //   writeln("Solver: ", pred.name());
+    //   writeln("Solver: ", pred.name(), " update: ", pred.hasUpdate());
     // }
     BDD solveBDD = _esdl__buddy.one();
     foreach(vec; stage._domVars) {
@@ -426,9 +419,9 @@ abstract class _esdl__SolverRoot: _esdl__Solver
       if (_solveValue.length < NUMWORDS) {
 	_solveValue.length = NUMWORDS;
       }
-      foreach (uint i, ref j; bitvals) {
-	uint pos = i % WORDSIZE;
-	uint word = i / WORDSIZE;
+      foreach (i, ref j; bitvals) {
+	uint pos = (cast(uint) i) % WORDSIZE;
+	uint word = (cast(uint) i) / WORDSIZE;
 	if (bits.length == 0 || bits[j] == -1) {
 	  v = v + ((cast(size_t) _esdl__rGen.flip()) << pos);
 	}
@@ -474,7 +467,8 @@ abstract class _esdl__SolverRoot: _esdl__Solver
 
   void addCstStage(CstPredicate pred) {
     // uint stage = cast(uint) _solveStages.length;
-    auto vecs = pred.getExpr().getRndDomains(true);
+    // auto vecs = pred.getExpr().getRndDomains(true);
+    auto vecs = pred.getDomains();
     // auto vecs = pred._vars;
     // import std.stdio;
     // foreach (vec; vecs) writeln(vec.name());

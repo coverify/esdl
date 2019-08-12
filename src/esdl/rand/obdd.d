@@ -9886,7 +9886,7 @@ class Buddy
       {
 	static if(is(T: GCCallback))
 	  {
-	    foreach(int i, ref c; gc_callbacks)
+	    foreach(i, ref c; gc_callbacks)
 	      {
 		if(c == cb)
 		  {
@@ -9898,7 +9898,7 @@ class Buddy
 	  }
 	static if(is(T: ReorderCallback))
 	  {
-	    foreach(int i, ref c; reorder_callbacks)
+	    foreach(i, ref c; reorder_callbacks)
 	      {
 		if(c == cb)
 		  {
@@ -9910,7 +9910,7 @@ class Buddy
 	  }
 	static if(is(T: ResizeCallback))
 	  {
-	    foreach(int i, ref c; resize_callbacks)
+	    foreach(i, ref c; resize_callbacks)
 	      {
 		if(c == cb)
 		  {

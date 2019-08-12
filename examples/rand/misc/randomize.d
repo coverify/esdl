@@ -59,6 +59,7 @@ class Bar: Foo
     foo /* + boo*/ + pop + mom == 64;
     pop % 3 == 0;
 
+    pun1[0] == 0;
     pun1[0..4] == 0;
 
     // foo + pop + mom == 64 ? pop > 40 : mom > 24;

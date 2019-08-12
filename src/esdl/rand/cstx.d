@@ -88,8 +88,8 @@ struct CstParser {
     srcCursor = 0;
     dclCursor = 0;
     dcls.length = 0;
-    if(varMap.length !is 0) {
-      assert(false, "varMap has not been unrolled completely");
+    if (varMap.length !is 0) {
+      assert (false, "varMap has not been unrolled completely");
     }
     dryRun = false;
   }
@@ -108,8 +108,8 @@ struct CstParser {
   
   size_t fill(in string source) {
     size_t start = outCursor;
-    if(! dryRun) {
-      foreach(i, c; source) {
+    if (! dryRun) {
+      foreach (i, c; source) {
 	outBuffer[outCursor+i] = c;
       }
     }
@@ -118,7 +118,7 @@ struct CstParser {
   }
 
   void place(in char c, size_t cursor = 0) {
-    if(! dryRun) outBuffer[cursor] = c;
+    if (! dryRun) outBuffer[cursor] = c;
   }
 
   string[] dcls;
@@ -145,8 +145,8 @@ struct CstParser {
 
   size_t fillDcl(in string source) {
     size_t start = dclCursor;
-    if(! dryRun) {
-      foreach(i, c; source) {
+    if (! dryRun) {
+      foreach (i, c; source) {
 	outBuffer[dclCursor+i] = c;
       }
     }
@@ -160,45 +160,45 @@ struct CstParser {
   // }
 
   enum OpToken: byte
-    {   NONE = 0,
-	AND,
-	OR,
-	XOR,
-	ADD,
-	SUB,
-	MUL,
-	DIV,
-	REM,			// remainder
-	LSH,
-	RSH,
-	EQU,
-	GTE,
-	LTE,
-	NEQ,
-	GTH,
-	LTH,
-	LOGICIMP,		// Implication operator
-	LOGICAND,
-	LOGICOR,
-	INDEX,
-	SLICE,
-	}
+  {   NONE = 0,
+      AND,
+      OR,
+      XOR,
+      ADD,
+      SUB,
+      MUL,
+      DIV,
+      REM,			// remainder
+      LSH,
+      RSH,
+      EQU,
+      GTE,
+      LTE,
+      NEQ,
+      GTH,
+      LTH,
+      LOGICIMP,		// Implication operator
+      LOGICAND,
+      LOGICOR,
+      // INDEX,
+      SLICE,
+      }
 
   enum OpUnaryToken: byte
-    {   NONE = 0,
-	NEG,
-	INV,
-	NOT,
-	}
+  {   NONE = 0,
+      NEG,
+      INV,
+      NOT,
+      }
 
   OpUnaryToken parseUnaryOperator() {
     OpUnaryToken tok = OpUnaryToken.NONE;
-    if(srcCursor < CST.length) {
-      if(CST[srcCursor] == '~') tok = OpUnaryToken.INV;
-      if(CST[srcCursor] == '!') tok = OpUnaryToken.NOT;
-      if(CST[srcCursor] == '-') tok = OpUnaryToken.NEG;
+    if (srcCursor < CST.length) {
+      if (CST[srcCursor] == '~') tok = OpUnaryToken.INV;
+      if (CST[srcCursor] == '!') tok = OpUnaryToken.NOT;
+      if (CST[srcCursor] == '-') tok = OpUnaryToken.NEG;
     }
-    if(tok !is OpUnaryToken.NONE) {
+    if (tok !is OpUnaryToken.NONE) {
       srcCursor += 1;
       return tok;
     }
@@ -207,37 +207,37 @@ struct CstParser {
 
   OpToken parseOperator() {
     OpToken tok = OpToken.NONE;
-    if(srcCursor < CST.length - 1) {
-      if(CST[srcCursor] == '<' && CST[srcCursor+1] == '<') tok = OpToken.LSH;
-      if(CST[srcCursor] == '>' && CST[srcCursor+1] == '>') tok = OpToken.RSH;
-      if(CST[srcCursor] == '=' && CST[srcCursor+1] == '=') tok = OpToken.EQU;
-      if(CST[srcCursor] == '>' && CST[srcCursor+1] == '=') tok = OpToken.GTE;
-      if(CST[srcCursor] == '<' && CST[srcCursor+1] == '=') tok = OpToken.LTE;
-      if(CST[srcCursor] == '!' && CST[srcCursor+1] == '=') tok = OpToken.NEQ;
-      if(CST[srcCursor] == '&' && CST[srcCursor+1] == '&') tok = OpToken.LOGICAND;
-      if(CST[srcCursor] == '|' && CST[srcCursor+1] == '|') tok = OpToken.LOGICOR;
-      if(CST[srcCursor] == '-' && CST[srcCursor+1] == '>') tok = OpToken.LOGICIMP;
-      if(CST[srcCursor] == '.' && CST[srcCursor+1] == '.') tok = OpToken.SLICE;
+    if (srcCursor < CST.length - 1) {
+      if (CST[srcCursor] == '<' && CST[srcCursor+1] == '<') tok = OpToken.LSH;
+      if (CST[srcCursor] == '>' && CST[srcCursor+1] == '>') tok = OpToken.RSH;
+      if (CST[srcCursor] == '=' && CST[srcCursor+1] == '=') tok = OpToken.EQU;
+      if (CST[srcCursor] == '>' && CST[srcCursor+1] == '=') tok = OpToken.GTE;
+      if (CST[srcCursor] == '<' && CST[srcCursor+1] == '=') tok = OpToken.LTE;
+      if (CST[srcCursor] == '!' && CST[srcCursor+1] == '=') tok = OpToken.NEQ;
+      if (CST[srcCursor] == '&' && CST[srcCursor+1] == '&') tok = OpToken.LOGICAND;
+      if (CST[srcCursor] == '|' && CST[srcCursor+1] == '|') tok = OpToken.LOGICOR;
+      if (CST[srcCursor] == '-' && CST[srcCursor+1] == '>') tok = OpToken.LOGICIMP;
+      if (CST[srcCursor] == '.' && CST[srcCursor+1] == '.') tok = OpToken.SLICE;
     }
-    if(tok !is OpToken.NONE) {
+    if (tok !is OpToken.NONE) {
       srcCursor += 2;
       return tok;
     }
-    if(srcCursor < CST.length) {
-      if(CST[srcCursor] == '&') tok = OpToken.AND;
-      if(CST[srcCursor] == '|') tok = OpToken.OR;
-      if(CST[srcCursor] == '^') tok = OpToken.XOR;
-      if(CST[srcCursor] == '+') tok = OpToken.ADD;
-      if(CST[srcCursor] == '-') tok = OpToken.SUB;
-      if(CST[srcCursor] == '*') tok = OpToken.MUL;
-      if(CST[srcCursor] == '/') tok = OpToken.DIV;
-      if(CST[srcCursor] == '%') tok = OpToken.REM;
-      if(CST[srcCursor] == '<') tok = OpToken.LTH;
-      if(CST[srcCursor] == '>') tok = OpToken.GTH;
-      if(CST[srcCursor] == '[') tok = OpToken.INDEX;
-      // if(CST[srcCursor] == ';') tok = OpToken.END;
+    if (srcCursor < CST.length) {
+      if (CST[srcCursor] == '&') tok = OpToken.AND;
+      if (CST[srcCursor] == '|') tok = OpToken.OR;
+      if (CST[srcCursor] == '^') tok = OpToken.XOR;
+      if (CST[srcCursor] == '+') tok = OpToken.ADD;
+      if (CST[srcCursor] == '-') tok = OpToken.SUB;
+      if (CST[srcCursor] == '*') tok = OpToken.MUL;
+      if (CST[srcCursor] == '/') tok = OpToken.DIV;
+      if (CST[srcCursor] == '%') tok = OpToken.REM;
+      if (CST[srcCursor] == '<') tok = OpToken.LTH;
+      if (CST[srcCursor] == '>') tok = OpToken.GTH;
+      // if (CST[srcCursor] == '[') tok = OpToken.INDEX;
+      // if (CST[srcCursor] == ';') tok = OpToken.END;
     }
-    if(tok !is OpToken.NONE) {
+    if (tok !is OpToken.NONE) {
       srcCursor += 1;
       return tok;
     }
@@ -247,39 +247,39 @@ struct CstParser {
   void errorToken() {
     import std.conv;
     size_t start = srcCursor;
-    while(srcCursor < CST.length) {
+    while (srcCursor < CST.length) {
       char c = CST[srcCursor];
-      if(c !is ' ' && c !is '\n' && c !is '\t' && c !is '\r' && c !is '\f') {
+      if (c !is ' ' && c !is '\n' && c !is '\t' && c !is '\r' && c !is '\f') {
 	++srcCursor;
       }
       else break;
     }
-    if(srcCursor == start) {
-      assert(false, "EOF while parsing!");
+    if (srcCursor == start) {
+      assert (false, "EOF while parsing!");
     }
-    assert(false, "Unrecognized token: " ~ "'" ~
-	   CST[start..srcCursor] ~ "' -- at: " ~ srcCursor.to!string);
+    assert (false, "Unrecognized token: " ~ "'" ~
+	    CST[start..srcCursor] ~ "' -- at: " ~ srcCursor.to!string);
   }
 
   size_t parseIdentifier() {
     size_t start = srcCursor;
-    if(srcCursor < CST.length) {
+    if (srcCursor < CST.length) {
       char c = CST[srcCursor];
-      if((c >= 'A' && c <= 'Z') ||
-	 (c >= 'a' && c <= 'z') ||
-	 (c == '_')) {
+      if ((c >= 'A' && c <= 'Z') ||
+	  (c >= 'a' && c <= 'z') ||
+	  (c == '_')) {
 	++srcCursor;
       }
       else {
 	return start;
       }
     }
-    while(srcCursor < CST.length) {
+    while (srcCursor < CST.length) {
       char c = CST[srcCursor];
-      if((c >= 'A' && c <= 'Z') ||
-	 (c >= 'a' && c <= 'z') ||
-	 (c >= '0' && c <= '9') ||
-	 c == '_') {
+      if ((c >= 'A' && c <= 'Z') ||
+	  (c >= 'a' && c <= 'z') ||
+	  (c >= '0' && c <= '9') ||
+	  c == '_') {
 	++srcCursor;
       }
       else {
@@ -309,19 +309,19 @@ struct CstParser {
     parseIdentifier();
 
     for (size_t i=0; i != MaxHierDepth-1; ++i) {
-      if(srcCursor > srcTag) {
+      if (srcCursor > srcTag) {
 	fill(CST[wTag..srcTag]);
 	result[2*i] = cast(int) (srcTag - start);
 	result[2*i + 1] = cast(int) (srcCursor - start);
       }
       else {
-	if(i != 0) srcCursor = wTag - 1;
+	if (i != 0) srcCursor = wTag - 1;
 	result[2*i] = -1;
 	break;
       }
       srcTag = srcCursor;
       parseSpace();
-      if(CST[srcCursor] == '.') {
+      if (CST[srcCursor] == '.') {
 	fill(CST[srcTag..srcCursor]);
 	++srcCursor;
 	wTag = srcCursor;
@@ -382,7 +382,7 @@ struct CstParser {
     }
 
     if (bracketCount != 0) {
-      assert(false, "Unbalanced backet");
+      assert (false, "Unbalanced backet");
     }
      
     return start;
@@ -394,9 +394,10 @@ struct CstParser {
     auto start = srcCursor;
     auto srcTag = srcCursor;
     int[MaxHierDepth * 2] idChain = parseIdentifierChain();
-    if(idChain[0] != -1) {
+    if (idChain[0] != -1) {
+      fill("_esdl__rand_proxy(");
       int indx = idMatch(CST[srcTag+idChain[0]..srcTag+idChain[1]]);
-      if(indx == -1) {
+      if (indx == -1) {
 	fill(CST[srcTag+idChain[0]..srcTag+idChain[1]]);
 	fillDeclaration(CST[srcTag+idChain[0]..srcTag+idChain[1]]);
       }
@@ -404,34 +405,52 @@ struct CstParser {
 	fill(varMap[indx].xLat);
 	fillDeclaration(varMap[indx].xLatBase);
       }
-      if(idChain[2] != -1) {
-	fill(".");
-	for (size_t i=1; i != MaxHierDepth-1; ++i) {
-	  if (CST[srcTag+idChain[2*i]] != '[') {
-	    fill(CST[srcTag+idChain[2*i]..srcTag+idChain[2*i+1]]);
-	  }
-	  else {
-	    indexTag ~= outCursor-1;
-	    fill("opIndex(");
-	    ++numIndex;
-	    procSubExpr(srcTag+idChain[2*i]+1);
-	    fill(")");
-	  }
-	  if(idChain[2*i+2] == -1) break;
-	  else fill(".");
+      fill(", \"");
+      fill(CST[srcTag+idChain[0]..srcTag+idChain[1]]);
+      fill("\")");
+      if (idChain[2] != -1) {
+	fill("._esdl__rand_term_chain!(");
+      }
+      for (size_t i=1; i != MaxHierDepth-1; ++i) {
+	if (idChain[2*i] == -1) break;
+	if (i == 1) fill("\"");
+	else fill(", \"");
+	if (CST[srcTag+idChain[2*i]] is '[') {
 	}
-	// fill("}(_outer)");
+	else {
+	  fill(CST[srcTag+idChain[2*i]..srcTag+idChain[2*i+1]]);
+	}
+	fill("\"");
+      }
+      if (idChain[2] != -1) {
+	fill(")(");
+      }
+      for (size_t i=1; i != MaxHierDepth-1; ++i) {
+	if (idChain[2*i] == -1) break;
+	if (i != 1) fill(", ");
+	if (CST[srcTag+idChain[2*i]] is '[') {
+	  indexTag ~= outCursor-1;
+	  ++numIndex;
+	  procSubExpr(srcTag+idChain[2*i]+1);
+	}
+	else {
+	  fill("null");
+	}
+      }
+      if (idChain[2] != -1) {
+	fill(")");
       }
     }
     else {
+      fill("_esdl__rand_proxy(");
       srcTag = parseLiteral();
-      if(srcCursor > srcTag) {
+      if (srcCursor > srcTag) {
 	fill(CST[srcTag..srcCursor]);
 	fillDeclaration(CST[srcTag..srcCursor]);
       }
       else {
 	srcTag = parseWithArg();
-	if(srcCursor > srcTag) {
+	if (srcCursor > srcTag) {
 	  fill("_esdl__arg!");
 	  fill(CST[srcTag+1..srcCursor]);
 	}
@@ -439,24 +458,27 @@ struct CstParser {
 	  errorToken();
 	}
       }
+      fill(", \"");
+      fill(CST[start..srcCursor]);
+      fill("\")");
     }
     return start;
   }
 
   size_t parseLineComment() {
     size_t start = srcCursor;
-    if(srcCursor >= CST.length - 2 ||
-       CST[srcCursor] != '/' || CST[srcCursor+1] != '/') return start;
+    if (srcCursor >= CST.length - 2 ||
+	CST[srcCursor] != '/' || CST[srcCursor+1] != '/') return start;
     else {
       srcCursor += 2;
-      while(srcCursor < CST.length) {
-	if(CST[srcCursor] == '\n') {
+      while (srcCursor < CST.length) {
+	if (CST[srcCursor] == '\n') {
 	  break;
 	}
 	else {
-	  if(srcCursor == CST.length) {
+	  if (srcCursor == CST.length) {
 	    // commment unterminated
-	    assert(false, "Line comment not terminated");
+	    assert (false, "Line comment not terminated");
 	  }
 	}
 	srcCursor += 1;
@@ -468,24 +490,24 @@ struct CstParser {
 
   unittest {
     size_t curs = 4;
-    assert(parseLineComment("Foo // Bar;\n\n", curs) == 8);
-    assert(curs == 12);
+    assert (parseLineComment("Foo // Bar;\n\n", curs) == 8);
+    assert (curs == 12);
   }
 
   size_t parseBlockComment() {
     size_t start = srcCursor;
-    if(srcCursor >= CST.length - 2 ||
-       CST[srcCursor] != '/' || CST[srcCursor+1] != '*') return start;
+    if (srcCursor >= CST.length - 2 ||
+	CST[srcCursor] != '/' || CST[srcCursor+1] != '*') return start;
     else {
       srcCursor += 2;
-      while(srcCursor < CST.length - 1) {
-	if(CST[srcCursor] == '*' && CST[srcCursor+1] == '/') {
+      while (srcCursor < CST.length - 1) {
+	if (CST[srcCursor] == '*' && CST[srcCursor+1] == '/') {
 	  break;
 	}
 	else {
-	  if(srcCursor == CST.length - 1) {
+	  if (srcCursor == CST.length - 1) {
 	    // commment unterminated
-	    assert(false, "Block comment not terminated");
+	    assert (false, "Block comment not terminated");
 	  }
 	}
 	srcCursor += 1;
@@ -497,24 +519,24 @@ struct CstParser {
 
   unittest {
     size_t curs = 4;
-    assert(parseBlockComment("Foo /* Bar;\n\n */", curs) == 4);
-    assert(curs == 16);
+    assert (parseBlockComment("Foo /* Bar;\n\n */", curs) == 4);
+    assert (curs == 16);
   }
 
   size_t parseNestedComment() {
     size_t nesting = 0;
     size_t start = srcCursor;
-    if(srcCursor >= CST.length - 2 ||
-       CST[srcCursor] != '/' || CST[srcCursor+1] != '+') return start;
+    if (srcCursor >= CST.length - 2 ||
+	CST[srcCursor] != '/' || CST[srcCursor+1] != '+') return start;
     else {
       srcCursor += 2;
-      while(srcCursor < CST.length - 1) {
-	if(CST[srcCursor] == '/' && CST[srcCursor+1] == '+') {
+      while (srcCursor < CST.length - 1) {
+	if (CST[srcCursor] == '/' && CST[srcCursor+1] == '+') {
 	  nesting += 1;
 	  srcCursor += 1;
 	}
-	else if(CST[srcCursor] == '+' && CST[srcCursor+1] == '/') {
-	  if(nesting == 0) {
+	else if (CST[srcCursor] == '+' && CST[srcCursor+1] == '/') {
+	  if (nesting == 0) {
 	    break;
 	  }
 	  else {
@@ -523,9 +545,9 @@ struct CstParser {
 	  }
 	}
 	srcCursor += 1;
-	if(srcCursor >= CST.length - 1) {
+	if (srcCursor >= CST.length - 1) {
 	  // commment unterminated
-	  assert(false, "Block comment not terminated");
+	  assert (false, "Block comment not terminated");
 	}
       }
       srcCursor += 2;
@@ -536,23 +558,23 @@ struct CstParser {
   unittest {
     size_t curs = 4;
     parseNestedComment("Foo /+ Bar;/+// \n+/+*/ +/", curs);
-    assert(curs == 25);
+    assert (curs == 25);
   }
 
   size_t parseLiteral() {
     size_t start = srcCursor;
     // look for 0b or 0x
-    if(srcCursor + 2 <= CST.length &&
-       CST[srcCursor] == '0' &&
-       (CST[srcCursor+1] == 'x' ||
-	CST[srcCursor+1] == 'X')) { // hex numbers
+    if (srcCursor + 2 <= CST.length &&
+	CST[srcCursor] == '0' &&
+	(CST[srcCursor+1] == 'x' ||
+	 CST[srcCursor+1] == 'X')) { // hex numbers
       srcCursor += 2;
-      while(srcCursor < CST.length) {
+      while (srcCursor < CST.length) {
 	char c = CST[srcCursor];
-	if((c >= '0' && c <= '9') ||
-	   (c >= 'a' && c <= 'f') ||
-	   (c >= 'A' && c <= 'F') ||
-	   (c == '_')) {
+	if ((c >= '0' && c <= '9') ||
+	    (c >= 'a' && c <= 'f') ||
+	    (c >= 'A' && c <= 'F') ||
+	    (c == '_')) {
 	  ++srcCursor;
 	}
 	else {
@@ -560,14 +582,14 @@ struct CstParser {
 	}
       }
     }
-    else if(srcCursor + 2 <= CST.length &&
-	    CST[srcCursor] == '0' &&
-	    (CST[srcCursor+1] == 'b' ||
-	     CST[srcCursor+1] == 'B')) { // binary numbers
+    else if (srcCursor + 2 <= CST.length &&
+	     CST[srcCursor] == '0' &&
+	     (CST[srcCursor+1] == 'b' ||
+	      CST[srcCursor+1] == 'B')) { // binary numbers
       srcCursor += 2;
-      while(srcCursor < CST.length) {
+      while (srcCursor < CST.length) {
 	char c = CST[srcCursor];
-	if((c == '0' || c == '1' || c == '_')) {
+	if ((c == '0' || c == '1' || c == '_')) {
 	  ++srcCursor;
 	}
 	else {
@@ -576,10 +598,10 @@ struct CstParser {
       }
     }
     else {			// decimals
-      while(srcCursor < CST.length) {
+      while (srcCursor < CST.length) {
 	char c = CST[srcCursor];
-	if((c >= '0' && c <= '9') ||
-	   (c == '_')) {
+	if ((c >= '0' && c <= '9') ||
+	    (c == '_')) {
 	  ++srcCursor;
 	}
 	else {
@@ -587,11 +609,11 @@ struct CstParser {
 	}
       }
     }
-    if(srcCursor > start) {
+    if (srcCursor > start) {
       // Look for long/short specifier
-      while(srcCursor < CST.length) {
+      while (srcCursor < CST.length) {
 	char c = CST[srcCursor];
-	if(c == 'L' || c == 'u' ||  c == 'U') {
+	if (c == 'L' || c == 'u' ||  c == 'U') {
 	  ++srcCursor;
 	}
 	else {
@@ -604,14 +626,14 @@ struct CstParser {
 
   size_t parseWithArg() {
     size_t start = srcCursor;
-    if(srcCursor < CST.length &&
-       CST[srcCursor == '@']) {
+    if (srcCursor < CST.length &&
+	CST[srcCursor == '@']) {
       ++srcCursor;
     }
     else return start;
-    while(srcCursor < CST.length) {
+    while (srcCursor < CST.length) {
       char c = CST[srcCursor];
-      if((c >= '0' && c <= '9')) {
+      if ((c >= '0' && c <= '9')) {
 	++srcCursor;
       }
       else {
@@ -623,18 +645,18 @@ struct CstParser {
 
   unittest {
     size_t curs = 4;
-    assert(parseIdentifier("Foo Bar;", curs) == 0);
-    assert(curs == 7);
+    assert (parseIdentifier("Foo Bar;", curs) == 0);
+    assert (curs == 7);
   }
 
 
   size_t parseWhiteSpace() {
     auto start = srcCursor;
-    while(srcCursor < CST.length) {
+    while (srcCursor < CST.length) {
       auto c = CST[srcCursor];
       // eat up whitespaces
-      if(c is '\n') ++srcLine;
-      if(c is ' ' || c is '\n' || c is '\t' || c is '\r' || c is '\f') {
+      if (c is '\n') ++srcLine;
+      if (c is ' ' || c is '\n' || c is '\t' || c is '\r' || c is '\f') {
 	++srcCursor;
 	continue;
       }
@@ -647,7 +669,7 @@ struct CstParser {
 
   size_t parseLeftParens() {
     auto start = srcCursor;
-    while(srcCursor < CST.length) {
+    while (srcCursor < CST.length) {
       auto srcTag = srcCursor;
 
       parseLineComment();
@@ -655,11 +677,11 @@ struct CstParser {
       parseNestedComment();
       parseWhiteSpace();
 
-      if(srcCursor > srcTag) {
+      if (srcCursor > srcTag) {
 	continue;
       }
       else {
-	if(srcCursor < CST.length && CST[srcCursor] == '(') {
+	if (srcCursor < CST.length && CST[srcCursor] == '(') {
 	  ++numParen;
 	  ++srcCursor;
 	  continue;
@@ -677,7 +699,7 @@ struct CstParser {
   // conditional we want to know where to stop parsing.
   size_t parseRightParens() {
     auto start = srcCursor;
-    while(srcCursor < CST.length) {
+    while (srcCursor < CST.length) {
       auto srcTag = srcCursor;
 
       parseLineComment();
@@ -685,18 +707,18 @@ struct CstParser {
       parseNestedComment();
       parseWhiteSpace();
 
-      if(srcCursor > srcTag) {
+      if (srcCursor > srcTag) {
 	continue;
       }
       else {
-	if(srcCursor < CST.length && CST[srcCursor] == ')') {
-	  if(numParen is 0) break;
+	if (srcCursor < CST.length && CST[srcCursor] == ')') {
+	  if (numParen is 0) break;
 	  --numParen;
 	  ++srcCursor;
 	  continue;
 	}
-	if(srcCursor < CST.length && CST[srcCursor] == ']') {
-	  if(numIndex is 0) break;
+	if (srcCursor < CST.length && CST[srcCursor] == ']') {
+	  if (numIndex is 0) break;
 	  indexTag.length -= 1;
 	  --numIndex;
 	  ++srcCursor;
@@ -713,7 +735,7 @@ struct CstParser {
 
   size_t moveToRightParens() {
     auto start = srcCursor;
-    while(srcCursor < CST.length) {
+    while (srcCursor < CST.length) {
       auto srcTag = srcCursor;
 
       parseLineComment();
@@ -721,20 +743,20 @@ struct CstParser {
       parseNestedComment();
       parseWhiteSpace();
 
-      if(srcCursor > srcTag) {
+      if (srcCursor > srcTag) {
 	fill(CST[srcTag..srcCursor]);
 	continue;
       }
       else {
-	if(srcCursor < CST.length && CST[srcCursor] == ')') {
-	  if(numParen is 0) break;
+	if (srcCursor < CST.length && CST[srcCursor] == ')') {
+	  if (numParen is 0) break;
 	  --numParen;
 	  ++srcCursor;
 	  fill(")");
 	  continue;
 	}
-	if(srcCursor < CST.length && CST[srcCursor] == ']') {
-	  if(numIndex is 0) break;
+	if (srcCursor < CST.length && CST[srcCursor] == ']') {
+	  if (numIndex is 0) break;
 	  --numIndex;
 	  ++srcCursor;
 	  fill(")");
@@ -751,7 +773,7 @@ struct CstParser {
 
   size_t parseSpace() {
     auto start = srcCursor;
-    while(srcCursor < CST.length) {
+    while (srcCursor < CST.length) {
       auto srcTag = srcCursor;
 
       parseLineComment();
@@ -759,7 +781,7 @@ struct CstParser {
       parseNestedComment();
       parseWhiteSpace();
 
-      if(srcCursor > srcTag) {
+      if (srcCursor > srcTag) {
 	continue;
       }
       else {
@@ -771,8 +793,8 @@ struct CstParser {
 
   unittest {
     size_t curs = 0;
-    assert(parseLeftParens("    // foo\nFoo Bar;", curs) == 11);
-    assert(curs == 11);
+    assert (parseLeftParens("    // foo\nFoo Bar;", curs) == 11);
+    assert (curs == 11);
   }
 
   char[] translate(string solver, string name) {
@@ -822,8 +844,8 @@ struct CstParser {
   }
 
   int idMatch(string id) {
-    foreach(int i, var; varMap) {
-      if(var.varName == id) return i;
+    foreach (i, var; varMap) {
+      if (var.varName == id) return cast(int) i;
     }
     return -1;
   }
@@ -863,15 +885,15 @@ struct CstParser {
     fill(CST[srcTag..srcCursor]);
 
     srcTag = parseIdentifier();
-    if(CST[srcTag..srcCursor] != "foreach") {
+    if (CST[srcTag..srcCursor] != "foreach") {
       import std.conv: to;
-      assert(false, "Not a FOREACH block at: " ~ srcTag.to!string);
+      assert (false, "Not a FOREACH block at: " ~ srcTag.to!string);
     }
 
     srcTag = parseSpace();
     fill(CST[srcTag..srcCursor]);
 
-    if(CST[srcCursor] != '(') {
+    if (CST[srcCursor] != '(') {
       errorToken();
     }
 
@@ -882,7 +904,7 @@ struct CstParser {
 
     // Parse the index
     srcTag = parseIdentifier();
-    if(srcCursor > srcTag) {
+    if (srcCursor > srcTag) {
       // FIXME -- check if the variable names do not shadow earlier
       // names in the table
       index = CST[srcTag..srcCursor];
@@ -890,11 +912,11 @@ struct CstParser {
       srcTag = parseSpace();
       fill(CST[srcTag..srcCursor]);
 
-      if(CST[srcCursor] == ';') {
+      if (CST[srcCursor] == ';') {
 	elem = index;
 	index = "";
       }
-      else if(CST[srcCursor] != ',') {
+      else if (CST[srcCursor] != ',') {
 	errorToken();
       }
       ++srcCursor;
@@ -907,9 +929,9 @@ struct CstParser {
     }
 
     // Parse elem
-    if(elem.length is 0) {
+    if (elem.length is 0) {
       srcTag = parseIdentifier();
-      if(srcCursor > srcTag) {
+      if (srcCursor > srcTag) {
 	// FIXME -- check if the variable names do not shadow earlier
 	// names in the table
 	elem = CST[srcTag..srcCursor];
@@ -917,7 +939,7 @@ struct CstParser {
 	srcTag = parseSpace();
 	fill(CST[srcTag..srcCursor]);
 
-	if(CST[srcCursor] != ';') {
+	if (CST[srcCursor] != ';') {
 	  errorToken();
 	}
 	++srcCursor;
@@ -932,14 +954,14 @@ struct CstParser {
 
     // Parse array
     srcTag = parseIdentifier();
-    if(srcCursor > srcTag) {
+    if (srcCursor > srcTag) {
       // FIXME -- check if the variable names do not shadow earlier
       // names in the table
       array = CST[srcTag..srcCursor];
       arrayBase = CST[srcTag..srcCursor];
       srcTag = parseSpace();
       fill(CST[srcTag..srcCursor]);
-      if(CST[srcCursor] != ')') {
+      if (CST[srcCursor] != ')') {
 	errorToken();
       }
       ++srcCursor;
@@ -951,29 +973,32 @@ struct CstParser {
     }
 
     int indx = idMatch(array);
-    if(indx != -1) {
+    if (indx != -1) {
       array = varMap[indx].xLat;
       arrayBase = varMap[indx].xLatBase;
     }
 
     // add index
-    iterators ~= array ~ ".iterator()";
+    iterators ~= array ~ "._esdl__iter()";
     
-    if(index.length != 0) {
+    if (index.length != 0) {
       VarPair x;
       x.varName  = index;
-      x.xLat     = array ~ ".iterator()";
+      x.xLat     = array ~ "._esdl__iter()";
       x.xLatBase = arrayBase;
       varMap ~= x;
     }
 
     VarPair x;
     x.varName  = elem;
-    x.xLat     = array ~ ".elements()";
+    x.xLat     = array ~ "._esdl__elems()";
     x.xLatBase = arrayBase;
     varMap ~= x;
 
-    if(CST[srcCursor] is '{') {
+    // start of foreach
+    // fill("    // Start of Foreach: " ~ array ~ ".iterator() \n");
+    fill("    " ~ _solver ~ ".pushScope(" ~ array ~ "._esdl__iter());\n");
+    if (CST[srcCursor] is '{') {
       ++srcCursor;
       procBlock();
     }
@@ -981,9 +1006,12 @@ struct CstParser {
       procStmt();
     }
 
+    fill("    " ~ _solver ~ ".popScope();\n");
+    // fill("    // End of Foreach \n");
+    
     iterators = iterators[0..$-1];
 
-    if(index.length != 0) {
+    if (index.length != 0) {
       varMap = varMap[0..$-2];
     }
     else {
@@ -999,15 +1027,15 @@ struct CstParser {
     fill(CST[srcTag..srcCursor]);
 
     srcTag = parseIdentifier();
-    if(CST[srcTag..srcCursor] != "if") {
+    if (CST[srcTag..srcCursor] != "if") {
       import std.conv: to;
-      assert(false, "Not a IF block at: " ~ srcTag.to!string);
+      assert (false, "Not a IF block at: " ~ srcTag.to!string);
     }
 
     srcTag = parseSpace();
     fill(CST[srcTag..srcCursor]);
 
-    if(CST[srcCursor] != '(') {
+    if (CST[srcCursor] != '(') {
       errorToken();
     }
 
@@ -1017,7 +1045,7 @@ struct CstParser {
     auto outTag = outCursor;
     procExpr();
 
-    if(dryRun) {
+    if (dryRun) {
       dummy.length = outCursor-outTag;
       Condition ifCond = dummy;
       ifConds ~= ifCond;
@@ -1031,14 +1059,14 @@ struct CstParser {
 
     srcTag = parseSpace();
     fill(CST[srcTag..srcCursor]);
-    if(CST[srcCursor] != ')') {
+    if (CST[srcCursor] != ')') {
       errorToken();
     }
     ++srcCursor;
     srcTag = parseSpace();
     fill(CST[srcTag..srcCursor]);
 
-    if(CST[srcCursor] is '{') {
+    if (CST[srcCursor] is '{') {
       ++srcCursor;
       procBlock();
     }
@@ -1051,7 +1079,7 @@ struct CstParser {
     fill(CST[srcTag..srcCursor]);
 
     srcTag = parseIdentifier();
-    if(CST[srcTag..srcCursor] != "else") { // no else
+    if (CST[srcTag..srcCursor] != "else") { // no else
       srcCursor = srcTag;		   // revert the cursor
       ifConds = ifConds[0..$-1];
       return;
@@ -1063,7 +1091,7 @@ struct CstParser {
       srcTag = parseSpace();
       fill(CST[srcTag..srcCursor]);
 
-      if(CST[srcCursor] is '{') {
+      if (CST[srcCursor] is '{') {
 	++srcCursor;
 	procBlock();
       }
@@ -1080,9 +1108,9 @@ struct CstParser {
     fill(CST[srcTag..srcCursor]);
 
     srcTag = parseIdentifier();
-    if(CST[srcTag..srcCursor] != "solve") {
+    if (CST[srcTag..srcCursor] != "solve") {
       import std.conv: to;
-      assert(false, "Not a solve statement at: " ~ srcTag.to!string);
+      assert (false, "Not a solve statement at: " ~ srcTag.to!string);
     }
 
     srcTag = parseSpace();
@@ -1095,9 +1123,9 @@ struct CstParser {
     fill(CST[srcTag..srcCursor]);
 
     srcTag = parseIdentifier();
-    if(CST[srcTag..srcCursor] != "before") {
+    if (CST[srcTag..srcCursor] != "before") {
       import std.conv: to;
-      assert(false, "Expected keyword \"before\" at: " ~ srcTag.to!string);
+      assert (false, "Expected keyword \"before\" at: " ~ srcTag.to!string);
     }
 
     srcTag = parseSpace();
@@ -1108,26 +1136,26 @@ struct CstParser {
     srcTag = parseSpace();
     fill(CST[srcTag..srcCursor]);
 
-    if(CST[srcCursor++] !is ';') {
-      assert(false, "Error: -- ';' missing at end of statement; at " ~
-	     srcCursor.to!string);
+    if (CST[srcCursor++] !is ';') {
+      assert (false, "Error: -- ';' missing at end of statement; at " ~
+	      srcCursor.to!string);
     }
 
     fill(");\n");
   }
 
   enum StmtToken: byte
-    {   STMT    = 0,
-	FOREACH,
-	IFCOND,
-	ENDCST,		// end of text
-	BEFORE,
-	BLOCK,
-	ENDBLOCK,
-	// ANYTHING ELSE COMES HERE
+  {   STMT    = 0,
+      FOREACH,
+      IFCOND,
+      ENDCST,		// end of text
+      BEFORE,
+      BLOCK,
+      ENDBLOCK,
+      // ANYTHING ELSE COMES HERE
 
-	ERROR,
-	}
+      ERROR,
+      }
 
   // Just return whether the next statement is a normal statement
   // FOREACH or IFCOND etc
@@ -1144,21 +1172,21 @@ struct CstParser {
     srcTag = parseSpace();
     fill(CST[srcTag..srcCursor]);
 
-    if(srcCursor == CST.length) return StmtToken.ENDCST;
+    if (srcCursor == CST.length) return StmtToken.ENDCST;
     srcTag = parseLeftParens();
     // if a left parenthesis has been found at the beginning it can only
     // be a normal statement
-    if(srcCursor > srcTag) return StmtToken.STMT;
+    if (srcCursor > srcTag) return StmtToken.STMT;
 
     if ((CST[srcCursor] >= 'A' && CST[srcCursor] <= 'Z') ||
 	(CST[srcCursor] >= 'a' && CST[srcCursor] <= 'z') ||
 	(CST[srcCursor] == '_')) {
 	
       srcTag = parseIdentifier();
-      if(srcCursor > srcTag) {
-	if(CST[srcTag..srcCursor] == "foreach") return StmtToken.FOREACH;
-	if(CST[srcTag..srcCursor] == "if") return StmtToken.IFCOND;
-	if(CST[srcTag..srcCursor] == "solve") return StmtToken.BEFORE;
+      if (srcCursor > srcTag) {
+	if (CST[srcTag..srcCursor] == "foreach") return StmtToken.FOREACH;
+	if (CST[srcTag..srcCursor] == "if") return StmtToken.IFCOND;
+	if (CST[srcTag..srcCursor] == "solve") return StmtToken.BEFORE;
 	// not a keyword
 	return StmtToken.STMT;
       }
@@ -1166,7 +1194,7 @@ struct CstParser {
     if (CST[srcCursor] is '{') return StmtToken.BLOCK;
     if (CST[srcCursor] is '}') return StmtToken.ENDBLOCK;
     return StmtToken.STMT;
-      // return StmtToken.ERROR;
+    // return StmtToken.ERROR;
   }
 
 
@@ -1197,11 +1225,11 @@ struct CstParser {
     size_t impDstAnchor = fill(" ");
 
   loop:
-    while(srcCursor < CST.length) {
+    while (srcCursor < CST.length) {
       srcTag = parseSpace();
       fill(CST[srcTag..srcCursor]);
 
-      if(srcCursor == CST.length) break;
+      if (srcCursor == CST.length) break;
 
       // Parse any left braces now
       srcTag = parseLeftParens();
@@ -1217,12 +1245,7 @@ struct CstParser {
       }
       srcTag = parseSpace();
       fill(CST[srcTag..srcCursor]);
-      fill("_esdl__vec(");
       srcTag = procIdentifier();
-      fill(", \"");
-      fill(CST[srcTag..srcCursor]);
-      fill("\"");
-      fill(")");
       // fillDeclaration(CST[srcTag..srcCursor]);
       srcTag = parseSpace();
       fill(CST[srcTag..srcCursor]);
@@ -1238,34 +1261,34 @@ struct CstParser {
 	//   errorToken();
 	//   break;
 	// case OpToken.END:
-	if(cmpRHS is true) {
+	if (cmpRHS is true) {
 	  fill(")");
 	  cmpRHS = false;
 	}
-	if(andRHS is true) {
+	if (andRHS is true) {
 	  fill(")");
 	  andRHS = false;
 	}
-	if(orRHS is true) {
+	if (orRHS is true) {
 	  fill(")");
 	  orRHS = false;
 	}
-	if(impRHS is true) {
+	if (impRHS is true) {
 	  fill(")");
 	  impRHS = false;
 	}
 	return;
 	// break;
       case OpToken.LOGICIMP:
-	if(cmpRHS is true) {
+	if (cmpRHS is true) {
 	  fill(")");
 	  cmpRHS = false;
 	}
-	if(andRHS is true) {
+	if (andRHS is true) {
 	  fill(")");
 	  andRHS = false;
 	}
-	if(orRHS is true) {
+	if (orRHS is true) {
 	  fill(")");
 	  orRHS = false;
 	}
@@ -1277,15 +1300,15 @@ struct CstParser {
 	impRHS = true;
 	break;
       case OpToken.LOGICOR:		// take care of cmp/and
-	if(cmpRHS is true) {
+	if (cmpRHS is true) {
 	  fill(")");
 	  cmpRHS = false;
 	}
-	if(andRHS is true) {
+	if (andRHS is true) {
 	  fill(")");
 	  andRHS = false;
 	}
-	if(orRHS !is true) {
+	if (orRHS !is true) {
 	  place('(', orDstAnchor);
 	  orRHS = true;
 	}
@@ -1294,11 +1317,11 @@ struct CstParser {
 	andDstAnchor = fill(" ");
 	break;
       case OpToken.LOGICAND:		// take care of cmp
-	if(cmpRHS is true) {
+	if (cmpRHS is true) {
 	  fill(")");
 	  cmpRHS = false;
 	}
-	if(andRHS !is true) {
+	if (andRHS !is true) {
 	  place('(', andDstAnchor);
 	  andRHS = true;
 	}
@@ -1365,17 +1388,12 @@ struct CstParser {
       case OpToken.RSH:
 	fill(" >> ");
 	break;
-      case OpToken.INDEX:
-	indexTag ~= outCursor;
-	fill(".opIndex(");
-	++numIndex;
-	break;
       case OpToken.SLICE:
-	if(!dryRun) {
-	  size_t tag = indexTag[$-1];
-	  outBuffer[tag..tag+8] = ".opSlice";
-	}
-	fill(",");
+	// if (!dryRun) {
+	//   size_t tag = indexTag[$-1];
+	//   outBuffer[tag..tag+8] = ".opSlice";
+	// }
+	fill(" ~ ");
 	break;
       }
     }
@@ -1385,14 +1403,14 @@ struct CstParser {
   void procExprStmt() {
     fill("  _esdl__block ~= new CstPredicate(" ~ _solver ~ ", ");
 
-    if(ifConds.length !is 0) {
+    if (ifConds.length !is 0) {
       fill("// Conditions \n        ( ");
-      foreach(ifCond; ifConds[0..$-1]) {
-	if(ifCond.isInverse()) fill("*");
+      foreach (ifCond; ifConds[0..$-1]) {
+	if (ifCond.isInverse()) fill("*");
 	fill(ifCond.cond);
 	fill(" &\n          ");
       }
-      if(ifConds[$-1].isInverse()) fill("*");
+      if (ifConds[$-1].isInverse()) fill("*");
       fill(ifConds[$-1].cond);
       fill(").implies( // End of Conditions\n");
       fill("       ( ");
@@ -1403,31 +1421,31 @@ struct CstParser {
       procExpr();
     }
 
-    if(numParen !is 0) {
+    if (numParen !is 0) {
       import std.conv: to;
-      assert(false, "Unbalanced parenthesis on line: " ~
-	     srcLine.to!string);
+      assert (false, "Unbalanced parenthesis on line: " ~
+	      srcLine.to!string);
     }
 
     auto srcTag = parseSpace();
     fill(CST[srcTag..srcCursor]);
 
-    if(CST[srcCursor++] !is ';') {
-      assert(false, "Error: -- ';' missing at end of statement; at " ~
-	     srcCursor.to!string);
+    if (CST[srcCursor++] !is ';') {
+      assert (false, "Error: -- ';' missing at end of statement; at " ~
+	      srcCursor.to!string);
     }
-    if(ifConds.length !is 0) {
+    if (ifConds.length !is 0) {
       fill(")");
     }
 
     // no parent CstPredicate
-    fill(", null");
+    // fill(", null, null, 0");
 
-    if (iterators.length != 0) {
-      foreach (iterator; iterators) {
-	fill(", " ~ iterator);
-      }
-    }
+    // if (iterators.length != 0) {
+    //   foreach (iterator; iterators) {
+    // 	fill(", " ~ iterator);
+    //   }
+    // }
 
     fill(");\n");
   }
@@ -1451,20 +1469,20 @@ struct CstParser {
       procBeforeStmt();
       return;
     case StmtToken.ERROR:
-      assert(false, "Unidentified symbol in constraints at: " ~
-	     srcCursor.to!string);
+      assert (false, "Unidentified symbol in constraints at: " ~
+	      srcCursor.to!string);
     case StmtToken.BLOCK:
-      assert(false, "Unidentified symbol in constraints");
+      assert (false, "Unidentified symbol in constraints");
     case StmtToken.ENDBLOCK:
     case StmtToken.ENDCST:
-      assert(false, "Unexpeceted end of constraint block");
+      assert (false, "Unexpeceted end of constraint block");
     case StmtToken.STMT:
       procExprStmt();
     }
   }
   
   void procBlock() {
-    while(srcCursor <= CST.length) {
+    while (srcCursor <= CST.length) {
       size_t srcTag = parseSpace();
       fill(CST[srcTag..srcCursor]);
 
@@ -1486,11 +1504,11 @@ struct CstParser {
 
 
   unittest {
-    // assert(translate("FOO;"));
-    // assert(translate("FOO > BAR;"));
-    // assert(translate("FOO > BAR || FOO == BAR;"));
+    // assert (translate("FOO;"));
+    // assert (translate("FOO > BAR;"));
+    // assert (translate("FOO > BAR || FOO == BAR;"));
     //                012345678901234567890123456789012345678901234567890123456789
-    assert(translate("_num_seq <= 2 || seq_kind1 >= 2 ;  seq_kind2 <  _num_seq || seq_kind3 == 0;
+    assert (translate("_num_seq <= 2 || seq_kind1 >= 2 ;  seq_kind2 <  _num_seq || seq_kind3 == 0;
 		   "));
   }
 }

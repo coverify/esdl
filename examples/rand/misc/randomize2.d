@@ -7,6 +7,7 @@
 import std.stdio;
 import esdl.rand;
 import esdl.data.bvec;
+import std.string: format;
 
 class Foo: Randomizable
 {
@@ -31,7 +32,7 @@ class Bar: Foo
 
   void display() {
     import std.stdio;
-    writeln("bro: ", bro, " pop: ", pop, " foo: ", foo, " mode: ", mode);
+    writeln("bro: ", bro, " pop: ", pop, " foo: ", format("%08b", foo), " mode: ", mode);
   }
 
   void preRandomize() {
@@ -51,7 +52,7 @@ class Bar: Foo
     }
     foo == 2 -> pop == 4;
     pop <= 4 -> bro == 0;
-    if(foo[3..5] != 0) {
+    if(foo[3..5] == 0) {
       bro == 5;
     }
     else {
@@ -65,7 +66,7 @@ void main()
   auto foo = new Bar;
   
   auto myMode = AhbMode.NONE;
-  for (size_t i=0; i != 1000; ++i)
+  for (size_t i=0; i != 100; ++i)
     {
       if(myMode == AhbMode.NONE) {
 	myMode = AhbMode.BURST;

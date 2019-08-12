@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
-// Copyright: Copyright Digital Mars 2007 - 2011.
-//            Coverify Systems Technology 2012 - 2014
+// Copyright: Coverify Systems Technology 2012 - 2019
+//            Copyright Digital Mars 2007 - 2011.
 // License:   Distributed under the Boost Software License, Version 1.0.
 //            (See accompanying file LICENSE_1_0.txt or copy at
 //            http://www.boost.org/LICENSE_1_0.txt)
@@ -25,6 +25,7 @@ import esdl.data.bvec;
 alias BitString!true  lstr;
 alias BitString!false bstr;
 
+// required by toCharString
 private ubyte _log2(size_t n) {
   if(n == 1) return 0;
   else return cast(ubyte)(1 + _log2(n/2));
@@ -196,166 +197,101 @@ struct BitString(bool L)
   }
 
   // Will include later -- not required for mow.
-  // /**********************************************
-  //  * Support for $(D foreach) loops for $(D BitArray).
-  //  */
-  // static if(L)
-  //   {
-  //     int opApply(scope int delegate(ref ULogic!1) dg)
-  //     {
-  //    int result;
+  /**********************************************
+   * Support for $(D foreach) loops for $(D BitArray).
+   */
+  int opApply(T)(scope int delegate(ref T) dg)
+  {
+    int result;
 
-  //    for (size_t i = 0; i < len; i++)
-  //      {
-  //        auto b = opIndex(i);
-  //        result = dg(b);
-  //        this[i] = b;
-  //        if (result)
-  //          break;
-  //      }
-  //    return result;
-  //     }
+    for (size_t i = 0; i < len; i++)
+      {
+	auto b = opIndex(i);
+	result = dg(b);
+	this[i] = b;
+	if (result)
+	  break;
+      }
+    return result;
+  }
 
-  //     /** ditto */
-  //     int opApply(scope int delegate(ULogic!1) dg) const
-  //     {
-  //    int result;
+  /** ditto */
+  int opApply(T)(scope int delegate(T) dg) const
+  {
+    int result;
 
-  //    for (size_t i = 0; i < len; i++)
-  //      {
-  //        auto b = opIndex(i);
-  //        result = dg(b);
-  //        if (result)
-  //          break;
-  //      }
-  //    return result;
-  //     }
+    for (size_t i = 0; i < len; i++)
+      {
+	auto b = opIndex(i);
+	result = dg(b);
+	if (result)
+	  break;
+      }
+    return result;
+  }
 
-  //     /** ditto */
-  //     int opApply(scope int delegate(ref size_t, ref ULogic!1) dg)
-  //     {
-  //    int result;
+  /** ditto */
+  int opApply(T)(scope int delegate(ref size_t, ref T) dg)
+  {
+    int result;
 
-  //    for (size_t i = 0; i < len; i++)
-  //      {
-  //        auto b = opIndex(i);
-  //        result = dg(i, b);
-  //        this[i] = b;
-  //        if (result)
-  //          break;
-  //      }
-  //    return result;
-  //     }
+    for (size_t i = 0; i < len; i++)
+      {
+	auto b = opIndex(i);
+	result = dg(i, b);
+	this[i] = b;
+	if (result)
+	  break;
+      }
+    return result;
+  }
 
-  //     /** ditto */
-  //     int opApply(scope int delegate(size_t, ULogic!1) dg) const
-  //     {
-  //    int result;
+  /** ditto */
+  int opApply(T)(scope int delegate(size_t, T) dg) const
+  {
+    int result;
 
-  //    for (size_t i = 0; i < len; i++)
-  //      {
-  //        auto b = opIndex(i);
-  //        result = dg(i, b);
-  //        if (result)
-  //          break;
-  //      }
-  //    return result;
-  //     }
-  //   }
-  //   {
-  //     int opApply(scope int delegate(ref bool) dg)
-  //     {
-  //    int result;
+    for (size_t i = 0; i < len; i++)
+      {
+	auto b = opIndex(i);
+	result = dg(i, b);
+	if (result)
+	  break;
+      }
+    return result;
+  }
+  unittest
+  {
+    debug(bitstring) printf("BitString.opApply unittest\n");
 
-  //    for (size_t i = 0; i < len; i++)
-  //      {
-  //        bool b = opIndex(i);
-  //        result = dg(b);
-  //        this[i] = b;
-  //        if (result)
-  //          break;
-  //      }
-  //    return result;
-  //     }
+    static bool[] ba = [1,0,1];
 
-  //     /** ditto */
-  //     int opApply(scope int delegate(bool) dg) const
-  //     {
-  //    int result;
+    BitArray a; a.init(ba);
 
-  //    for (size_t i = 0; i < len; i++)
-  //      {
-  //        bool b = opIndex(i);
-  //        result = dg(b);
-  //        if (result)
-  //          break;
-  //      }
-  //    return result;
-  //     }
+    int i;
+    foreach (b;a)
+      {
+     switch (i)
+       {
+       case 0: assert(b is true); break;
+       case 1: assert(b is false); break;
+       case 2: assert(b is true); break;
+       default: assert(0);
+       }
+     i++;
+      }
 
-  //     /** ditto */
-  //     int opApply(scope int delegate(ref size_t, ref bool) dg)
-  //     {
-  //    int result;
-
-  //    for (size_t i = 0; i < len; i++)
-  //      {
-  //        bool b = opIndex(i);
-  //        result = dg(i, b);
-  //        this[i] = b;
-  //        if (result)
-  //          break;
-  //      }
-  //    return result;
-  //     }
-
-  //     /** ditto */
-  //     int opApply(scope int delegate(size_t, bool) dg) const
-  //     {
-  //    int result;
-
-  //    for (size_t i = 0; i < len; i++)
-  //      {
-  //        bool b = opIndex(i);
-  //        result = dg(i, b);
-  //        if (result)
-  //          break;
-  //      }
-  //    return result;
-  //     }
-  //   }
-  // unittest
-  // {
-  //   debug(bitstring) printf("BitString.opApply unittest\n");
-
-  //   static bool[] ba = [1,0,1];
-
-  //   BitArray a; a.init(ba);
-
-  //   int i;
-  //   foreach (b;a)
-  //     {
-  //    switch (i)
-  //      {
-  //      case 0: assert(b is true); break;
-  //      case 1: assert(b is false); break;
-  //      case 2: assert(b is true); break;
-  //      default: assert(0);
-  //      }
-  //    i++;
-  //     }
-
-  //   foreach (j,b;a)
-  //     {
-  //    switch (j)
-  //      {
-  //      case 0: assert(b is true); break;
-  //      case 1: assert(b is false); break;
-  //      case 2: assert(b is true); break;
-  //      default: assert(0);
-  //      }
-  //     }
-  // }
+    foreach (j,b;a)
+      {
+     switch (j)
+       {
+       case 0: assert(b is true); break;
+       case 1: assert(b is false); break;
+       case 2: assert(b is true); break;
+       default: assert(0);
+       }
+      }
+  }
 
 
   /**********************************************
@@ -396,553 +332,6 @@ struct BitString(bool L)
   }
 
 
-  // /***************************************
-  //  * Support for operators == and != for $(D BitArray).
-  //  */
-  // const bool opEquals(const ref BitArray a2)
-  // {
-  //   int i;
-
-  //   if (this.length != a2.length)
-  //     return 0;                // not equal
-  //   byte *p1 = cast(byte*)this.ptr;
-  //   byte *p2 = cast(byte*)a2.ptr;
-  //   auto n = this.length / 8;
-  //   for (i = 0; i < n; i++)
-  //     {
-  //    if (p1[i] != p2[i])
-  //      return 0;                // not equal
-  //     }
-
-  //   ubyte mask;
-
-  //   n = this.length & 7;
-  //   mask = cast(ubyte)((1 << n) - 1);
-  //   //printf("i = %d, n = %d, mask = %x, %x, %x\n", i, n, mask, p1[i], p2[i]);
-  //   return (mask == 0) || (p1[i] & mask) == (p2[i] & mask);
-  // }
-
-  // unittest
-  // {
-  //   debug(bitarray) printf("BitArray.opEquals unittest\n");
-
-  //   static bool[] ba = [1,0,1,0,1];
-  //   static bool[] bb = [1,0,1];
-  //   static bool[] bc = [1,0,1,0,1,0,1];
-  //   static bool[] bd = [1,0,1,1,1];
-  //   static bool[] be = [1,0,1,0,1];
-
-  //   BitArray a; a.init(ba);
-  //   BitArray b; b.init(bb);
-  //   BitArray c; c.init(bc);
-  //   BitArray d; d.init(bd);
-  //   BitArray e; e.init(be);
-
-  //   assert(a != b);
-  //   assert(a != c);
-  //   assert(a != d);
-  //   assert(a == e);
-  // }
-
-  // /***************************************
-  //  * Supports comparison operators for $(D BitArray).
-  //  */
-  // int opCmp(BitArray a2) const
-  // {
-  //   uint i;
-
-  //   auto len = this.length;
-  //   if (a2.length < len)
-  //     len = a2.length;
-  //   ubyte* p1 = cast(ubyte*)this.ptr;
-  //   ubyte* p2 = cast(ubyte*)a2.ptr;
-  //   auto n = len / 8;
-  //   for (i = 0; i < n; i++)
-  //     {
-  //    if (p1[i] != p2[i])
-  //      break;                // not equal
-  //     }
-  //   for (uint j = i * 8; j < len; j++)
-  //     {
-  //    ubyte mask = cast(ubyte)(1 << j);
-  //    int c;
-
-  //    c = cast(int)(p1[i] & mask) - cast(int)(p2[i] & mask);
-  //    if (c)
-  //      return c;
-  //     }
-  //   return cast(int)this.len - cast(int)a2.length;
-  // }
-
-  // unittest
-  // {
-  //   debug(bitarray) printf("BitArray.opCmp unittest\n");
-
-  //   static bool[] ba = [1,0,1,0,1];
-  //   static bool[] bb = [1,0,1];
-  //   static bool[] bc = [1,0,1,0,1,0,1];
-  //   static bool[] bd = [1,0,1,1,1];
-  //   static bool[] be = [1,0,1,0,1];
-
-  //   BitArray a; a.init(ba);
-  //   BitArray b; b.init(bb);
-  //   BitArray c; c.init(bc);
-  //   BitArray d; d.init(bd);
-  //   BitArray e; e.init(be);
-
-  //   assert(a >  b);
-  //   assert(a >= b);
-  //   assert(a <  c);
-  //   assert(a <= c);
-  //   assert(a <  d);
-  //   assert(a <= d);
-  //   assert(a == e);
-  //   assert(a <= e);
-  //   assert(a >= e);
-  // }
-
-  // /***************************************
-  //  * Support for hashing for $(D BitArray).
-  //  */
-  // size_t toHash() const pure nothrow
-  // {
-  //   size_t hash = 3557;
-  //   auto n  = len / 8;
-  //   for (int i = 0; i < n; i++)
-  //     {
-  //    hash *= 3559;
-  //    hash += (cast(byte*)this.ptr)[i];
-  //     }
-  //   for (size_t i = 8*n; i < len; i++)
-  //     {
-  //    hash *= 3571;
-  //    hash += bt(this.ptr, i);
-  //     }
-  //   return hash;
-  // }
-
-  // /***************************************
-  //  * Set this $(D BitArray) to the contents of $(D ba).
-  //  */
-  // void init(bool[] ba)
-  // {
-  //   length = ba.length;
-  //   foreach (i, b; ba)
-  //     {
-  //    this[i] = b;
-  //     }
-  // }
-
-
-  // /***************************************
-  //  * Map the $(D BitArray) onto $(D v), with $(D numbits) being the number of bits
-  //  * in the array. Does not copy the data.
-  //  *
-  //  * This is the inverse of $(D opCast).
-  //  */
-  // void init(void[] v, size_t numbits)
-  //   in
-  //     {
-  //       assert(numbits <= v.length * 8);
-  //       assert((v.length & 3) == 0);
-  //     }
-  // body
-  //   {
-  //     ptr = cast(size_t*)v.ptr;
-  //     len = numbits;
-  //   }
-
-  // unittest
-  // {
-  //   debug(bitarray) printf("BitArray.init unittest\n");
-
-  //   static bool[] ba = [1,0,1,0,1];
-
-  //   BitArray a; a.init(ba);
-  //   BitArray b;
-  //   void[] v;
-
-  //   v = cast(void[])a;
-  //   b.init(v, a.length);
-
-  //   assert(b[0] == 1);
-  //   assert(b[1] == 0);
-  //   assert(b[2] == 1);
-  //   assert(b[3] == 0);
-  //   assert(b[4] == 1);
-
-  //   a[0] = 0;
-  //   assert(b[0] == 0);
-
-  //   assert(a == b);
-  // }
-
-  // /***************************************
-  //  * Convert to $(D void[]).
-  //  */
-  // void[] opCast(T : void[])()
-  // {
-  //   return cast(void[])ptr[0 .. dim];
-  // }
-
-  // /***************************************
-  //  * Convert to $(D size_t[]).
-  //  */
-  // size_t[] opCast(T : size_t[])()
-  // {
-  //   return ptr[0 .. dim];
-  // }
-
-  // unittest
-  // {
-  //   debug(bitarray) printf("BitArray.opCast unittest\n");
-
-  //   static bool[] ba = [1,0,1,0,1];
-
-  //   BitArray a; a.init(ba);
-  //   void[] v = cast(void[])a;
-
-  //   assert(v.length is a.dim * size_t.sizeof);
-  // }
-
-  // /***************************************
-  //  * Support for unary operator ~ for $(D BitArray).
-  //  */
-  // BitArray opCom()
-  // {
-  //   auto dim = this.dim;
-
-  //   BitArray result;
-
-  //   result.length = len;
-  //   for (size_t i = 0; i < dim; i++)
-  //     result.ptr[i] = ~this.ptr[i];
-  //   if (len & (bitsPerSizeT-1))
-  //     result.ptr[dim - 1] &= ~(~0 << (len & (bitsPerSizeT-1)));
-  //   return result;
-  // }
-
-  // unittest
-  // {
-  //   debug(bitarray) printf("BitArray.opCom unittest\n");
-
-  //   static bool[] ba = [1,0,1,0,1];
-
-  //   BitArray a; a.init(ba);
-  //   BitArray b = ~a;
-
-  //   assert(b[0] is 0);
-  //   assert(b[1] is 1);
-  //   assert(b[2] is 0);
-  //   assert(b[3] is 1);
-  //   assert(b[4] is 0);
-  // }
-
-
-  // /***************************************
-  //  * Support for binary operator & for $(D BitArray).
-  //  */
-  // BitArray opAnd(BitArray e2)
-  //   in
-  //     {
-  //       assert(len is e2.length);
-  //     }
-  // body
-  //   {
-  //     auto dim = this.dim;
-
-  //     BitArray result;
-
-  //     result.length = len;
-  //     for (size_t i = 0; i < dim; i++)
-  //    result.ptr[i] = this.ptr[i] & e2.ptr[i];
-  //     return result;
-  //   }
-
-  // unittest
-  // {
-  //   debug(bitarray) printf("BitArray.opAnd unittest\n");
-
-  //   static bool[] ba = [1,0,1,0,1];
-  //   static bool[] bb = [1,0,1,1,0];
-
-  //   BitArray a; a.init(ba);
-  //   BitArray b; b.init(bb);
-
-  //   BitArray c = a & b;
-
-  //   assert(c[0] is 1);
-  //   assert(c[1] is 0);
-  //   assert(c[2] is 1);
-  //   assert(c[3] is 0);
-  //   assert(c[4] is 0);
-  // }
-
-
-  // /***************************************
-  //  * Support for binary operator | for $(D BitArray).
-  //  */
-  // BitArray opOr(BitArray e2) const
-  //   in
-  //     {
-  //       assert(len is e2.length);
-  //     }
-  // body
-  //   {
-  //     auto dim = this.dim;
-
-  //     BitArray result;
-
-  //     result.length = len;
-  //     for (size_t i = 0; i < dim; i++)
-  //    result.ptr[i] = this.ptr[i] | e2.ptr[i];
-  //     return result;
-  //   }
-
-  // unittest
-  // {
-  //   debug(bitarray) printf("BitArray.opOr unittest\n");
-
-  //   static bool[] ba = [1,0,1,0,1];
-  //   static bool[] bb = [1,0,1,1,0];
-
-  //   BitArray a; a.init(ba);
-  //   BitArray b; b.init(bb);
-
-  //   BitArray c = a | b;
-
-  //   assert(c[0] is 1);
-  //   assert(c[1] is 0);
-  //   assert(c[2] is 1);
-  //   assert(c[3] is 1);
-  //   assert(c[4] is 1);
-  // }
-
-
-  // /***************************************
-  //  * Support for binary operator ^ for $(D BitArray).
-  //  */
-  // BitArray opXor(BitArray e2) const
-  //   in
-  //     {
-  //       assert(len is e2.length);
-  //     }
-  // body
-  //   {
-  //     auto dim = this.dim;
-
-  //     BitArray result;
-
-  //     result.length = len;
-  //     for (size_t i = 0; i < dim; i++)
-  //    result.ptr[i] = this.ptr[i] ^ e2.ptr[i];
-  //     return result;
-  //   }
-
-  // unittest
-  // {
-  //   debug(bitarray) printf("BitArray.opXor unittest\n");
-
-  //   static bool[] ba = [1,0,1,0,1];
-  //   static bool[] bb = [1,0,1,1,0];
-
-  //   BitArray a; a.init(ba);
-  //   BitArray b; b.init(bb);
-
-  //   BitArray c = a ^ b;
-
-  //   assert(c[0] is 0);
-  //   assert(c[1] is 0);
-  //   assert(c[2] is 0);
-  //   assert(c[3] is 1);
-  //   assert(c[4] is 1);
-  // }
-
-
-  // /***************************************
-  //  * Support for binary operator - for $(D BitArray).
-  //  *
-  //  * $(D a - b) for $(D BitArray) means the same thing as $(D a &amp; ~b).
-  //  */
-  // BitArray opSub(BitArray e2) const
-  //   in
-  //     {
-  //       assert(len is e2.length);
-  //     }
-  // body
-  //   {
-  //     auto dim = this.dim;
-
-  //     BitArray result;
-
-  //     result.length = len;
-  //     for (size_t i = 0; i < dim; i++)
-  //    result.ptr[i] = this.ptr[i] & ~e2.ptr[i];
-  //     return result;
-  //   }
-
-  // unittest
-  // {
-  //   debug(bitarray) printf("BitArray.opSub unittest\n");
-
-  //   static bool[] ba = [1,0,1,0,1];
-  //   static bool[] bb = [1,0,1,1,0];
-
-  //   BitArray a; a.init(ba);
-  //   BitArray b; b.init(bb);
-
-  //   BitArray c = a - b;
-
-  //   assert(c[0] is 0);
-  //   assert(c[1] is 0);
-  //   assert(c[2] is 0);
-  //   assert(c[3] is 0);
-  //   assert(c[4] is 1);
-  // }
-
-
-  // /***************************************
-  //  * Support for operator &= for $(D BitArray).
-  //  */
-  // BitArray opAndAssign(BitArray e2)
-  //   in
-  //     {
-  //       assert(len is e2.length);
-  //     }
-  // body
-  //   {
-  //     auto dim = this.dim;
-
-  //     for (size_t i = 0; i < dim; i++)
-  //    ptr[i] &= e2.ptr[i];
-  //     return this;
-  //   }
-
-  // unittest
-  // {
-  //   debug(bitarray) printf("BitArray.opAndAssign unittest\n");
-
-  //   static bool[] ba = [1,0,1,0,1];
-  //   static bool[] bb = [1,0,1,1,0];
-
-  //   BitArray a; a.init(ba);
-  //   BitArray b; b.init(bb);
-
-  //   a &= b;
-  //   assert(a[0] is 1);
-  //   assert(a[1] is 0);
-  //   assert(a[2] is 1);
-  //   assert(a[3] is 0);
-  //   assert(a[4] is 0);
-  // }
-
-
-  // /***************************************
-  //  * Support for operator |= for $(D BitArray).
-  //  */
-  // BitArray opOrAssign(BitArray e2)
-  //   in
-  //     {
-  //       assert(len is e2.length);
-  //     }
-  // body
-  //   {
-  //     auto dim = this.dim;
-
-  //     for (size_t i = 0; i < dim; i++)
-  //    ptr[i] |= e2.ptr[i];
-  //     return this;
-  //   }
-
-  // unittest
-  // {
-  //   debug(bitarray) printf("BitArray.opOrAssign unittest\n");
-
-  //   static bool[] ba = [1,0,1,0,1];
-  //   static bool[] bb = [1,0,1,1,0];
-
-  //   BitArray a; a.init(ba);
-  //   BitArray b; b.init(bb);
-
-  //   a |= b;
-  //   assert(a[0] is 1);
-  //   assert(a[1] is 0);
-  //   assert(a[2] is 1);
-  //   assert(a[3] is 1);
-  //   assert(a[4] is 1);
-  // }
-
-  // /***************************************
-  //  * Support for operator ^= for $(D BitArray).
-  //  */
-  // BitArray opXorAssign(BitArray e2)
-  //   in
-  //     {
-  //       assert(len is e2.length);
-  //     }
-  // body
-  //   {
-  //     auto dim = this.dim;
-
-  //     for (size_t i = 0; i < dim; i++)
-  //    ptr[i] ^= e2.ptr[i];
-  //     return this;
-  //   }
-
-  // unittest
-  // {
-  //   debug(bitarray) printf("BitArray.opXorAssign unittest\n");
-
-  //   static bool[] ba = [1,0,1,0,1];
-  //   static bool[] bb = [1,0,1,1,0];
-
-  //   BitArray a; a.init(ba);
-  //   BitArray b; b.init(bb);
-
-  //   a ^= b;
-  //   assert(a[0] is 0);
-  //   assert(a[1] is 0);
-  //   assert(a[2] is 0);
-  //   assert(a[3] is 1);
-  //   assert(a[4] is 1);
-  // }
-
-  // /***************************************
-  //  * Support for operator -= for $(D BitArray).
-  //  *
-  //  * $(D a -= b) for $(D BitArray) means the same thing as $(D a &amp;= ~b).
-  //  */
-  // BitArray opSubAssign(BitArray e2)
-  //   in
-  //     {
-  //       assert(len is e2.length);
-  //     }
-  // body
-  //   {
-  //     auto dim = this.dim;
-
-  //     for (size_t i = 0; i < dim; i++)
-  //    ptr[i] &= ~e2.ptr[i];
-  //     return this;
-  //   }
-
-  // unittest
-  // {
-  //   debug(bitarray) printf("BitArray.opSubAssign unittest\n");
-
-  //   static bool[] ba = [1,0,1,0,1];
-  //   static bool[] bb = [1,0,1,1,0];
-
-  //   BitArray a; a.init(ba);
-  //   BitArray b; b.init(bb);
-
-  //   a -= b;
-  //   assert(a[0] is 0);
-  //   assert(a[1] is 0);
-  //   assert(a[2] is 0);
-  //   assert(a[3] is 0);
-  //   assert(a[4] is 1);
-  // }
 
   /***************************************
    * Support for operator ~= for $(D BitArray).
@@ -1044,65 +433,25 @@ struct BitString(bool L)
       length = len - V.SIZE;
     }
 
-  static if(! L) {
-    void popBackA(T)(ref T t, bool bigEndian=false)
-      if(isBitVector!T && T.IS4STATE) {
-        alias vec!(T.ISSIGNED, false, T.SIZE) V;
-        assert(len >= V.SIZE);
-        V v;
-        if(bigEndian) {
-          for (size_t i=0; i != V.SIZE; ++i) {
-            v[i] = this[$-1-i];
-          }
-        }
-        else {
-          for (size_t i=0; i != V.SIZE; ++i) {
-            v[$-1-i] = this[$-1-i];
-          }
-        }
-        length = len - V.SIZE;
-        t.setAval(v);
-      }
+  unittest
+  {
+    debug(bitarray) printf("BitArray.opCatAssign unittest\n");
 
-    void popBackB(T)(ref T t, bool bigEndian=false)
-      if(isBitVector!T && T.IS4STATE) {
-        alias vec!(T.ISSIGNED, false, T.SIZE) V;
-        assert(len >= V.SIZE);
-        V v;
-        if(bigEndian) {
-          for (size_t i=0; i != V.SIZE; ++i) {
-            v[i] = this[$-1-i];
-          }
-        }
-        else {
-          for (size_t i=0; i != V.SIZE; ++i) {
-            v[$-1-i] = this[$-1-i];
-          }
-        }
-        length = len - V.SIZE;
-        t.setBval(v);
-      }
+    static bool[] ba = [1,0,1,0,1];
+
+    BitArray a; a.init(ba);
+    BitArray b;
+
+    b = (a ~= true);
+    assert(a[0] is 1);
+    assert(a[1] is 0);
+    assert(a[2] is 1);
+    assert(a[3] is 0);
+    assert(a[4] is 1);
+    assert(a[5] is 1);
+
+    assert(b is a);
   }
-
-  // unittest
-  // {
-  //   debug(bitarray) printf("BitArray.opCatAssign unittest\n");
-
-  //   static bool[] ba = [1,0,1,0,1];
-
-  //   BitArray a; a.init(ba);
-  //   BitArray b;
-
-  //   b = (a ~= true);
-  //   assert(a[0] is 1);
-  //   assert(a[1] is 0);
-  //   assert(a[2] is 1);
-  //   assert(a[3] is 0);
-  //   assert(a[4] is 1);
-  //   assert(a[5] is 1);
-
-  //   assert(b is a);
-  // }
 
   // /***************************************
   //  * ditto
@@ -1119,27 +468,27 @@ struct BitString(bool L)
     return this;
   }
 
-  // unittest
-  // {
-  //   debug(bitarray) printf("BitArray.opCatAssign unittest\n");
+  unittest
+  {
+    debug(bitarray) printf("BitArray.opCatAssign unittest\n");
 
-  //   static bool[] ba = [1,0];
-  //   static bool[] bb = [0,1,0];
+    static bool[] ba = [1,0];
+    static bool[] bb = [0,1,0];
 
-  //   BitArray a; a.init(ba);
-  //   BitArray b; b.init(bb);
-  //   BitArray c;
+    BitArray a; a.init(ba);
+    BitArray b; b.init(bb);
+    BitArray c;
 
-  //   c = (a ~= b);
-  //   assert(a.length is 5);
-  //   assert(a[0] is 1);
-  //   assert(a[1] is 0);
-  //   assert(a[2] is 0);
-  //   assert(a[3] is 1);
-  //   assert(a[4] is 0);
+    c = (a ~= b);
+    assert(a.length is 5);
+    assert(a[0] is 1);
+    assert(a[1] is 0);
+    assert(a[2] is 0);
+    assert(a[3] is 1);
+    assert(a[4] is 0);
 
-  //   assert(c is a);
-  // }
+    assert(c is a);
+  }
 
   // /***************************************
   //  * Support for binary operator ~ for $(D BitArray).
@@ -1188,37 +537,37 @@ struct BitString(bool L)
     return r;
   }
 
-  // unittest
-  // {
-  //   debug(bitarray) printf("BitArray.opCat unittest\n");
+  unittest
+  {
+    debug(bitarray) printf("BitArray.opCat unittest\n");
 
-  //   static bool[] ba = [1,0];
-  //   static bool[] bb = [0,1,0];
+    static bool[] ba = [1,0];
+    static bool[] bb = [0,1,0];
 
-  //   BitArray a; a.init(ba);
-  //   BitArray b; b.init(bb);
-  //   BitArray c;
+    BitArray a; a.init(ba);
+    BitArray b; b.init(bb);
+    BitArray c;
 
-  //   c = (a ~ b);
-  //   assert(c.length is 5);
-  //   assert(c[0] is 1);
-  //   assert(c[1] is 0);
-  //   assert(c[2] is 0);
-  //   assert(c[3] is 1);
-  //   assert(c[4] is 0);
+    c = (a ~ b);
+    assert(c.length is 5);
+    assert(c[0] is 1);
+    assert(c[1] is 0);
+    assert(c[2] is 0);
+    assert(c[3] is 1);
+    assert(c[4] is 0);
 
-  //   c = (a ~ true);
-  //   assert(c.length is 3);
-  //   assert(c[0] is 1);
-  //   assert(c[1] is 0);
-  //   assert(c[2] is 1);
+    c = (a ~ true);
+    assert(c.length is 3);
+    assert(c[0] is 1);
+    assert(c[1] is 0);
+    assert(c[2] is 1);
 
-  //   c = (false ~ a);
-  //   assert(c.length is 3);
-  //   assert(c[0] is 0);
-  //   assert(c[1] is 1);
-  //   assert(c[2] is 0);
-  // }
+    c = (false ~ a);
+    assert(c.length is 3);
+    assert(c[0] is 0);
+    assert(c[1] is 1);
+    assert(c[2] is 0);
+  }
 
   T to(T, size_t RADIX = 2)() if((is(T == string) ||
                                   is(T == char[]))
@@ -1237,7 +586,7 @@ struct BitString(bool L)
     return this.to!(string, 2);
   }
 
-  void toString(scope void delegate(const(char)[]) sink, ref FormatSpec!char f) {
+  void toString(void delegate(scope const(char)[]) pure nothrow @safe sink, const(FormatSpec!char) f) {
     char[] buff;
     switch(f.spec) {
     case 'd'     : buff = this.toDecimalString(); break;

@@ -38,7 +38,7 @@ void main() {
   Foo foo = new Foo;
   int bar = 10;
   for (size_t i=0; i!=32; ++i) {
-    foo.randomizeWith!q{bar == 10;}();
+    foo.randomizeWith!q{bar == $0;}(i);
     foo.display();
   }
   import std.stdio;

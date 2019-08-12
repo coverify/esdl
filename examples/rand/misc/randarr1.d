@@ -12,7 +12,7 @@ class Bar
 {
   mixin Randomization;
 
-  @rand!8 byte[] foo;
+  @rand byte[] foo;
   // @rand ubyte baz = 12;
   //   @rand ubyte[8] bar;
 
@@ -43,10 +43,12 @@ class Bar
   //   }
 
   Constraint! q{
+    foo.length < 1000;
+    foo.length >= 0;
     foreach(i, f; foo) {
       // if (i == 1) f == 24;
-      f < 64;
-      foo[i] > 16;
+      f < 64 && f > 16 ||
+	f < 100 && f > 80;
     }
   } cstFoo;
 
@@ -54,7 +56,7 @@ class Bar
 
 void main() {
   Bar foo = new Bar;
-  for (size_t i=0; i!=16; ++i) {
+  for (size_t i=0; i!=10; ++i) {
     foo.randomize();
     foo.display();
   }

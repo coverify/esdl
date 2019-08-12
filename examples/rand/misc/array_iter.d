@@ -6,14 +6,13 @@
 
 import std.stdio;
 import esdl.rand;
-import esdl.data.obdd;
 import esdl.data.bvec;
 
 class Bar
 {
   mixin Randomization;
 
-  byte[] bar;
+  byte[] bar = [0, 42, 17, 29];
 
   @rand!8 byte[] foo;
 
@@ -27,10 +26,7 @@ class Bar
   } cst_arr;
 
   void preRandomize() {
-    bar.length = 4;
-    foreach (i, ref b; bar)  {
-      b = cast(byte) i;
-    }
+    bar[0] += 1;
   }
 }
 

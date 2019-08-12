@@ -13,7 +13,7 @@ int FFFF = 20;
 class Foo
 {
   mixin Randomization;
-  @rand!(4,4,4,4,4,4) byte[][][][][][] foo;
+  @rand!(4,4,4,4,4,16) byte[][][][][][] foo;
   void display() {
     import std.stdio;
     writeln(foo);
@@ -31,11 +31,11 @@ class Foo
 	  foreach(b; a) {
 	    b.length >= 2;
 	    foreach(j, c; b) {
-	      c.length >= 2;
 	      foreach(i, d; c) // {
 		d == (j + 4) * i;
 		// d < 8;
 	      // }
+	      c.length >= 10;
 	    }
 	  }
 	}
@@ -46,9 +46,12 @@ class Foo
 
 void main() {
   Foo foo = new Foo;
-  for (size_t i=0; i!=400; ++i) {
+  foo.seedRandom(0);
+  for (size_t i=0; i!=1000; ++i) {
     foo.randomize();
-    foo.display();
+    if (i % 100 == 1) {
+      foo.display();
+    }
   }
   import std.stdio;
   writeln("End of program");

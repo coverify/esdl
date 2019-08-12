@@ -308,8 +308,8 @@ struct _esdl__Multicore
     uint[] threadPool;
     threadPool.length = rCfg._threadPool.length;
 
-    foreach (uint i, ref index; threadPool) {
-      index = i;
+    foreach (i, ref index; threadPool) {
+      index = cast(uint) i;
     }
     cfg._threadPool = threadPool;
     return cfg;
@@ -6261,7 +6261,7 @@ abstract class Process: Procedure, HierComp, EventClient
   }
 
   final void caughtException() {
-    import std.c.stdlib;
+    import core.stdc.stdlib : exit;
     _nextState = ProcState.EXCEPTION;
     exit(22);
     // _execLock.notify();
@@ -6304,7 +6304,7 @@ abstract class Process: Procedure, HierComp, EventClient
     }
     catch(Throwable e) {
       import std.stdio: stderr;
-      import std.c.stdlib;
+      import core.stdc.stdlib : exit;
       stderr.writefln("Thread threw exception %s:%s - %s",
 		      e.file, e.line, e.msg);
       debug(PROC) {
@@ -6359,7 +6359,7 @@ abstract class Process: Procedure, HierComp, EventClient
       }
     }
     catch(Throwable e) {
-      import std.c.stdlib;
+      import core.stdc.stdlib : exit;
       import std.stdio: stderr;
       stderr.writefln("Thread threw exception %s:%s - %s",
 		      e.file, e.line, e.msg);
