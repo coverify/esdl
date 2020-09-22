@@ -19,13 +19,13 @@ void main()
       }, __FILE__, __LINE__));
   
   writeln(constraintXlate("solver", q{
-  	foreach (i, x; a) {
-  	  a[i] == 0;
+  	@soft foreach (i, x; a) {
+  	  @soft!2 a[i] == 0;
   	}
       }, __FILE__, __LINE__));
   
   writeln(constraintXlate("solver", q{
-  	a.b == 4;
+  	@soft!4 a.b == 4;
       }, __FILE__, __LINE__));
   
   writeln(constraintXlate("solver", q{
@@ -35,6 +35,15 @@ void main()
   writeln(constraintXlate("solver", q{
   	foreach (i, x; a) {
   	  a[i].b == 0;
+  	}
+  	foreach (i, x; a) {
+  	  a[i] == 0;
+  	}
+  	foreach (i, x; a) {
+  	  a[i].b == 0;
+  	}
+  	foreach (i, x; a) {
+  	  a[i] == 0;
   	}
       }, __FILE__, __LINE__));
   

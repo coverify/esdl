@@ -5,16 +5,14 @@
 // Authors:   Puneet Goel <puneet@coverify.com>
 
 import std.stdio;
-import esdl.rand;
-import esdl.data.obdd;
-import esdl.data.bvec;
+import esdl;
 
 int FFFF = 20;
 
 class Foo
 {
   mixin Randomization;
-  @rand!32 byte[] foo;
+  @rand(32) byte[] foo;
   @rand ubyte baz = 12;
   void display() {}
 }
@@ -43,7 +41,7 @@ class Bar : Foo
 
     // this is a comment
     foreach(i, f; foo) {
-      if(i < 2) {
+      if (i < 2) {
 	f < 24;
       }
       else {

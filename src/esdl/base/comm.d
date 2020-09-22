@@ -765,7 +765,7 @@ class MutexObj: MutexIF, NamedComp
   // enum bool _thisIsMutex = true;
   public MutexObj _mutexObj = void;
 
-  package final ref MutexObj _esdl__objRef() {
+  package final ref MutexObj _esdl__objRef() return {
     return _mutexObj;
   }
 
@@ -816,7 +816,7 @@ class MutexObj: MutexIF, NamedComp
 	_mutexObj = new MutexObj(parent);
       }
       if(name !is null) {
-	_mutexObj._esdl__nomenclate(name);
+	_mutexObj._esdl__nomenclate_inst(name);
       }
     }
   }
@@ -927,7 +927,7 @@ class SemaphoreObj: SemaphoreIF, NamedComp
   // enum bool _thisIsSemaphore = true;
   public SemaphoreObj _semaphoreObj = void;
 
-  package ref SemaphoreObj _esdl__objRef() {
+  package ref SemaphoreObj _esdl__objRef() return {
     return _semaphoreObj;
   }
 

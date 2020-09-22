@@ -8,70 +8,61 @@
 
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
-module esdl.data.folder;
+module esdl.data.charbuf;
 
 import core.stdc.string : memcpy, memmove, memset;
-import core.memory: pureMalloc, pureRealloc, pureFree, GC;
+import core.memory: pureMalloc, pureRealloc, pureFree;
 alias malloc = pureMalloc;
 alias free = pureFree;
 alias realloc = pureRealloc;
 
 enum MINCAP = 4;
 
-struct Folder(T, string NAME="") if (is (T == class))
+struct Charbuf
 {
   // total capacity of memory allocate
   size_t _capacity;
   // current size
   size_t _size;
 
-  T *_load;
+  char *_load;
 
   ~this() {
-    GC.removeRange(_load);
     free(_load);
   }
 
   @disable this(this);
   
 
-  void swap(F)(ref F other) if (is (F: Folder!(T, S), string S)) {
-    ubyte[(Folder!T).sizeof] temp;
+  void swap(ref Charbuf other) {
+    ubyte[(Charbuf).sizeof] temp;
     
-    memcpy(cast(void*) temp.ptr, cast(void*) &other, (Folder!T).sizeof);
-    memcpy(cast(void*) &other, cast(void*) &this, (Folder!T).sizeof);
-    memcpy(cast(void*) &this, cast(void*) temp.ptr, (Folder!T).sizeof);
+    memcpy(cast(void*) temp.ptr, cast(void*) &other, (Charbuf).sizeof);
+    memcpy(cast(void*) &other, cast(void*) &this, (Charbuf).sizeof);
+    memcpy(cast(void*) &this, cast(void*) temp.ptr, (Charbuf).sizeof);
   }
 
   // grow minimum to size
   void growCapacity(size_t cap) {
     import core.checkedint : mulu;
 
-    // import std.stdio;
-    // if (cap > 1000) {
-    //   writeln("Folder ", NAME, ": ", cap);
-    // }
-
     size_t newcap = cap;
     if (newcap < MINCAP) newcap = MINCAP;
     else if (newcap < _capacity * 2) newcap = _capacity * 2;
     
     bool overflow;
-    const nbytes = mulu(newcap, T.sizeof, overflow);
+    const nbytes = mulu(newcap, 1, overflow);
     if (overflow) assert(0);
 
     if (_capacity == 0) {
-      _load = cast(T*) malloc(nbytes);
-      memset(_load, 0, newcap * T.sizeof);
-      GC.addRange(_load, nbytes);
+      _load = cast(char*) malloc(nbytes);
+      memset(_load, 0, newcap);
     }
     else {
-      auto newload = cast(T*) malloc(nbytes);
-      memcpy(newload, _load, _capacity * T.sizeof);
+      auto newload = cast(char*) malloc(nbytes);
+      memcpy(newload, _load, _capacity);
       memset(newload + _capacity, 0,
-	     (newcap - _capacity) * T.sizeof);
-      GC.addRange(newload, nbytes);
-      GC.removeRange(_load);
+	     (newcap - _capacity));
       free(_load);
       _load = newload;
     }
@@ -79,7 +70,7 @@ struct Folder(T, string NAME="") if (is (T == class))
     _capacity = newcap;
   }
   
-  void opOpAssign(string op)(T elem) if (op == "~") {
+  void opOpAssign(string op)(char elem) if (op == "~") {
     if (_size + 1 >= _capacity) {
       growCapacity(_size + 1);
     }
@@ -87,26 +78,27 @@ struct Folder(T, string NAME="") if (is (T == class))
     _size += 1;
   }
 
-  void opOpAssign(string op)(T[] elems) if (op == "~") {
-    if (_size + elems.length >= _capacity) {
-      growCapacity(_size + elems.length);
-    }
+  void opOpAssign(string op, T)(T elems)
+    if (op == "~" && (is (T == string) || is (T == char[]))) {
+      if (_size + elems.length >= _capacity) {
+	growCapacity(_size + elems.length);
+      }
 
-    foreach (ref elem; elems) {
-      _load[_size] = elem;
-      _size += 1;
+      foreach (ref elem; elems) {
+	_load[_size] = elem;
+	_size += 1;
+      }
     }
-  }
-
-  ref T opIndex(size_t index) {
+  
+  ref char opIndex(size_t index) {
     return _load[index];
   }
 
-  T[] opSlice(size_t i, size_t j) {
+  char[] opSlice(size_t i, size_t j) {
     return _load[i..j];
   }
 
-  T[] opSlice() {
+  char[] opSlice() {
     return _load[0.._size];
   }
 
@@ -114,7 +106,7 @@ struct Folder(T, string NAME="") if (is (T == class))
     return this._size;
   }
 
-  int opApply(int delegate(ref size_t, ref const T) dg) const {
+  int opApply(int delegate(ref size_t, ref const char) dg) const {
     for (size_t i = 0; i < this._size; ++i) {
       if (int r = dg(i, this._load[i])) {
 	return r;
@@ -123,7 +115,7 @@ struct Folder(T, string NAME="") if (is (T == class))
     return 0;
   }
 
-  int opApply(int delegate(ref size_t, ref T) dg) {
+  int opApply(int delegate(ref size_t, ref char) dg) {
     for (size_t i = 0; i < this._size; ++i) {
       if (int r = dg(i, this._load[i])) {
 	return r;
@@ -132,7 +124,7 @@ struct Folder(T, string NAME="") if (is (T == class))
     return 0;
   }
 
-  int opApply(int delegate(ref const T) dg) const {
+  int opApply(int delegate(ref const char) dg) const {
     for (size_t i = 0; i < this._size; ++i) {
       if (int r = dg(this._load[i])) {
 	return r;
@@ -141,7 +133,7 @@ struct Folder(T, string NAME="") if (is (T == class))
     return 0;
   }
 
-  int opApply(int delegate(ref T) dg) {
+  int opApply(int delegate(ref char) dg) {
     for (size_t i = 0; i < this._size; ++i) {
       if (int r = dg(this._load[i])) {
 	return r;
@@ -152,7 +144,7 @@ struct Folder(T, string NAME="") if (is (T == class))
 
   void clear() {
     for (size_t i=0; i != _size; ++i) {
-      _load[i] = T.init;
+      _load[i] = char.init;
     }
     _size = 0;
   }
@@ -172,7 +164,7 @@ struct Folder(T, string NAME="") if (is (T == class))
 
     if (newsize > _size) {
       for (size_t i=_size; i!=newsize; ++i) {
-	_load[i] = T.init;
+	_load[i] = char.init;
       }
     }
 
@@ -181,7 +173,7 @@ struct Folder(T, string NAME="") if (is (T == class))
 
   alias length = size;
 
-  V to(V)() if(is(V == string) || is(V == char[])) {
+  V to(V)() if (is(V == string) || is(V == char[])) {
     V v = cast(V) this.opSlice.to!string;
     return v;
   }

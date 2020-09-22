@@ -75,8 +75,13 @@ class TrafficLight: Entity
       }
   }
   public int x;
+  void weee() {
+    import std.stdio;
+    writeln("This is Worker");
+  }
+  Worker!(weee) thisWork;
   // Task!("light()",0)  tLightTT[POLES];
-  Task!(light, 5)[POLES]   tLightTT;
+  Work!(light, 5)[POLES]   tLightTT;
   // Task!(testPhase, -1)  test_1;
   // Task!(testPhase, 10)  test2;
   // Task!(testPhase, 11)  test11;
@@ -114,7 +119,8 @@ void main()
   import std.stdio;
   // top level module
   TrafficRoot theRoot = new TrafficRoot;
-  theRoot.multicore(0, 4);
+  theRoot.multicore(0, 4, 2);
+  // theRoot.multicore(0, 4);
   theRoot.elaborate("theRoot");
   // theRoot.waitElab();
   // theRoot.simulate(100.nsec);
@@ -131,11 +137,51 @@ void main()
   theRoot.simulateUpto(25.nsec);
   // theRoot.simulate(2500.nsec);
   // theRoot.simulate(0.nsec);
+
+  import core.thread;
+  Thread[] all = Thread.getAll();
+
+  // foreach (th; all) {
+  //   if (th.isRunning()) {
+  //     SimThread sth = cast(SimThread) th;
+  //     if (sth !is null) {
+  // 	writeln("Thread ", sth.getName(), " is RUNNING");
+  //     }
+  //     else {
+  // 	writeln("Not a SimThread");
+  //     }
+  //   }
+  // }
+  
+
   theRoot.finish();
   // theRoot.simulate();
   // theRoot.terminate();
   // theRoot.simulate(250.nsec);
 
+
+
+
+  // foreach (th; all) {
+  //   if (th.isRunning()) {
+  //     writeln("Thread ", th, " is running");
+  //   }
+  // }
+  
+  // Thread.sleep( dur!("seconds")( 5 ) ); // sleep for 5 seconds
+  
+  // foreach (th; all) {
+  //   if (th.isRunning()) {
+  //     SimThread sth = cast(SimThread) th;
+  //     if (sth !is null) {
+  // 	writeln("Thread ", sth.getName(), " is running");
+  //     }
+  //     else {
+  // 	writeln("Not a SimThread");
+  //     }
+  //   }
+  // }
+  
   // for (size_t i=1; i!=20; ++i) {
   //   theRoot.doSim((i*100).nsec);
   //   theRoot.waitSim();

@@ -6,7 +6,6 @@
 
 import std.stdio;
 import esdl.rand;
-import esdl.data.obdd;
 import esdl.data.bvec;
 
 int FFFF = 20;
@@ -14,7 +13,7 @@ int FFFF = 20;
 class Foo
 {
   mixin Randomization;
-  @rand!(2,2,2,2,4) byte[][][][][] foo;
+  @rand(4,4,4,4,4) byte[][][][][] foo;
   void display() {
     import std.stdio;
     writeln(foo);
@@ -31,8 +30,8 @@ class Foo
 	  foreach(b; a) {
 	    b.length >= 2;
 	    foreach(c; b) {
-	      c > 2;
-	      c < 8;
+	      c > 120;
+	      c < 128;
 	    }
 	  }
 	}
@@ -43,7 +42,7 @@ class Foo
 
 void main() {
   Foo foo = new Foo;
-  for (size_t i=0; i!=400; ++i) {
+  for (size_t i=0; i!=4000; ++i) {
     foo.randomize();
     foo.display();
   }

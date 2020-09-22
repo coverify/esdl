@@ -7,8 +7,11 @@ import core.sys.posix.sys.types: pthread_t;
 import core.sys.posix.unistd;
 
 extern(C) pthread_t pthread_self();
-extern(C) int pthread_setaffinity_np(pthread_t thread, size_t cpusetsize,
-				     cpu_set_t *cpuset);
+version (Android) { }
+ else {
+   extern(C) int pthread_setaffinity_np(pthread_t thread, size_t cpusetsize,
+					cpu_set_t *cpuset);
+ }
 extern(C) void sched_getaffinity(pthread_t thread, size_t cpusetsize,
 				 cpu_set_t *cpuset);
   
@@ -69,20 +72,23 @@ void CPU_ZERO(cpu_set_t* cpusetp) {
 }
 
 public int stickToCpuCore(size_t coreId) {
-  import std.stdio;
-  import core.cpuid: threadsPerCPU;
+  version (Android) { return 0; }
+  else {
+    import std.stdio;
+    import core.cpuid: threadsPerCPU;
 
-  assert(coreId >= 0 && coreId < CPU_COUNT());
+    assert(coreId >= 0 && coreId < CPU_COUNT());
 
-  cpu_set_t cpuset;
-  CPU_ZERO(&cpuset);
-  // writeln(cpuset.__bits);
-  CPU_SET(coreId, &cpuset);
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    // writeln(cpuset.__bits);
+    CPU_SET(coreId, &cpuset);
 
-  // writeln(cpuset.__bits);
+    // writeln(cpuset.__bits);
 
-  pthread_t current_thread = pthread_self();
-  return pthread_setaffinity_np(current_thread, cpu_set_t.sizeof, &cpuset);
+    pthread_t current_thread = pthread_self();
+    return pthread_setaffinity_np(current_thread, cpu_set_t.sizeof, &cpuset);
+  }
 }
 
 // }

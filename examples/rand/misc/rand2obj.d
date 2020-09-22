@@ -42,8 +42,6 @@ void bar()
 void main()
 {
   import core.memory: GC;
-  GC.disable;
   foo();
-  GC.collect;
   bar();
 }

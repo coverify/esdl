@@ -8,3 +8,4 @@ public import esdl.data.packer;
 public import esdl.data.queue;
 public import esdl.data.sync;
 public import esdl.data.time;
+public import esdl.data.charbuf;

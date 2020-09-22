@@ -47,8 +47,8 @@ class Bar
     foo.length >= 0;
     foreach(i, f; foo) {
       // if (i == 1) f == 24;
-      f < 64 && f > 16 ||
-	f < 100 && f > 80;
+      f < 20 && f > 16 ||
+	f < 100 && f > 90;
     }
   } cstFoo;
 

@@ -6,12 +6,12 @@ class Bar {
   mixin Randomization;
   @rand Foo foo;
   void preRandomize() {
-    frop++;
+    zoo++;
   }
-  int frop = 64;
+  int zoo = 64;
 
   Constraint!q{
-    foo.frop == frop;
+    foo.frop == zoo;
   } frop_cst;
 public:
   void display() {

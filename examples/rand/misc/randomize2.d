@@ -66,7 +66,7 @@ void main()
   auto foo = new Bar;
   
   auto myMode = AhbMode.NONE;
-  for (size_t i=0; i != 100; ++i)
+  for (size_t i=0; i != 1; ++i)
     {
       if(myMode == AhbMode.NONE) {
 	myMode = AhbMode.BURST;

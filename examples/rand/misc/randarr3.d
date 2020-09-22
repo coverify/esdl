@@ -13,7 +13,7 @@ int FFFF = 20;
 class Foo
 {
   mixin Randomization;
-  @rand!(4,4,4) byte[][][] foo;
+  @rand(4,4,4) byte[][][] foo;
   void display() {
     import std.stdio;
     writeln(foo);

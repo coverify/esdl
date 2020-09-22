@@ -23,7 +23,7 @@ class Foo
     foo.length <= 4;
     foo.length >= 2;
     // foo.length > 0;
-    foo[0].length == 2;
+    // foo[0].length == 2;
     // bar.length == 3;
     foreach(i, ff; foo) {
       // if (i == 0) ff.length == 2;
@@ -39,12 +39,14 @@ class Foo
 }
 
 void main() {
-  Foo foo = new Foo;
-  foo.seedRandom(0);
-  for (size_t i=0; i!=32; ++i) {
-    foo.randomize();
-    foo.display();
+  for (size_t j=0; j!=1; ++j) {
+    Foo foo = new Foo;
+    foo.seedRandom(0);
+    for (size_t i=0; i!=32; ++i) {
+      foo.randomize();
+      foo.display();
+    }
+    import std.stdio;
+    writeln("End of program");
   }
-  import std.stdio;
-  writeln("End of program");
 }

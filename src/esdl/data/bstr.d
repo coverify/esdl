@@ -155,10 +155,10 @@ struct BitString(bool L)
     }
   body {
     static if(L) {
-      if (b.bVal) bts(bptr, i);
+      if (b.getValueVec) bts(bptr, i);
       else        btr(bptr, i);
     }
-    if (b.aVal)   bts(aptr, i);
+    if (b.getMetaVec)   bts(aptr, i);
     else          btr(aptr, i);
     return b;
   }

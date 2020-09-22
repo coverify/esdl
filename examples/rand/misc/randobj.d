@@ -2,18 +2,26 @@ import std.stdio;
 import esdl.rand;
 import esdl.data.bvec;
 
+// @rand(false)
+class Foo
+{
+  // mixin Randomization;
+  @rand byte bar;
+}
 
-class Bar
+
+class Bar: Foo
 {
   mixin Randomization;
 
-  @rand!8 byte[] foo;
+  byte frop;
+  @rand(8) byte[] foo;
   // @rand ubyte baz = 12;
   //   @rand ubyte[8] bar;
 
   void display() {
     writeln("foo: ", foo);
-    //     writeln("bar: ", bar);
+    writeln("bar: ", bar);
     // writeln("baz: ", baz);
   }
 

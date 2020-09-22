@@ -11,7 +11,7 @@ class Foo
 {
   mixin Randomization;
   @rand int roo;
-  private @rand ubyte pop;
+  @rand ubyte pop;
   Constraint! q{
     roo > 2;
   } rooc;
@@ -57,10 +57,7 @@ class Bar: Foo
 
   Constraint! q{
     foo /* + boo*/ + pop + mom == 64;
-    pop % 3 == 0;
-
-    pun1[0] == 0;
-    pun1[0..4] == 0;
+    // pop % 3 == 0;
 
     // foo + pop + mom == 64 ? pop > 40 : mom > 24;
 
@@ -78,22 +75,33 @@ class Bar: Foo
     // bar.length > 8;
     // bar.length < 16;
     
-  } cst01;
+    pun1[11] == 0;
+    pun1[10] == 0;
+    pun1[9] == 0;
+    pun1[8] == 0;
+    pun1[0..4] == 0;
+    // pun1 < 64;
+    // pun1 >= 32;
+
+  } cst02;
 
   Constraint! q{
     // this is a comment
     foo + bro + sis == 64;
+    pop > 40;
     bro > 40;
     bro < 80;
     sis < 24;
-    pop > 40;
-    if (pop <= 48) {
-      bro == pop;
-      if (sis <= 1) pun2 == mom + 5;
-      else pun2 == mom << 4;
+    if (pop >= 48) {
+      // bro == pop;
+      // if (sis <= 1) pun2 == mom + 5;
+      pun2 == 2;
+    }
+    else {
+      pun2 == 4;
     }
     // pop + kid3 == 24;
-  } cst10;
+  } cst01;
 
   // Constraint! q{
   //   foo > bar;
@@ -115,12 +123,16 @@ class Bar: Foo
 
 }
 
-void main()
-{
-  auto foo = new Bar;
-  for (size_t i=0; i!=40; ++i)
-    {
+void main() {
+  for (size_t j=0; j!=1; ++j) {
+    auto foo = new Bar;
+    foo.seedRandom(100);
+    for (size_t i=0; i!=1000; ++i) {
       foo.randomize();
       foo.display();
     }
+  }
+  import std.stdio;
+  writeln("DONE MAIN");
 }
+
