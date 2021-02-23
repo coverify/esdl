@@ -447,6 +447,9 @@ void _esdl__randomize(T) (T t, _esdl__ConstraintBase withCst = null) {
   static if(__traits(compiles, t.preRandomize())) {
     t.preRandomize();
   }
+  else static if(__traits(compiles, t.pre_randomize())) {
+    t.pre_randomize();
+  }
 
   t._esdl__proxyInst.reset();
 
@@ -462,6 +465,9 @@ void _esdl__randomize(T) (T t, _esdl__ConstraintBase withCst = null) {
 
   static if(__traits(compiles, t.postRandomize())) {
     t.postRandomize();
+  }
+  else static if(__traits(compiles, t.post_randomize())) {
+    t.post_randomize();
   }
 
 }
