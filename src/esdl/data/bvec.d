@@ -2986,10 +2986,16 @@ public void fromBits(T, B)(ref T val, B bv)
   }
 
 
-alias BitVec Bit;
-alias UBitVec UBit;
-alias LogicVec Logic;
-alias ULogicVec ULogic;
+alias Bit = BitVec;
+alias UBit = UBitVec;
+alias Logic = LogicVec;
+alias ULogic = ULogicVec;
+
+alias bvec = BitVec;
+alias ubvec = UBitVec;
+alias lvec = LogicVec;
+alias ulvec = ULogicVec;
+
 
 /*    */
 unittest {
