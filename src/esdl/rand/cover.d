@@ -6,7 +6,8 @@
 //            http://www.boost.org/LICENSE_1_0.txt)
 // Authors:   Puneet Goel <puneet@coverify.com>
 
-module esdl.data.cover;		// Coverage
+module esdl.rand.cover;		// Coverage
+import esdl.rand.misc;
 
 // mixin template Coverage {
 // }
@@ -80,7 +81,7 @@ struct CoverPoint(alias t, string BINS="") {
   }
 }
 
-class CoverGroup {		// Base Class
+class CoverGroup: _esdl__Norand {		// Base Class
   bool _isInitialized;		// true if the CoverGroup has been initialized
 }
 

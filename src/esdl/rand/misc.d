@@ -1,9 +1,10 @@
 module esdl.rand.misc;
 
 import esdl.data.bvec: isBitVector;
+import esdl.data.queue;
 import esdl.data.charbuf;
 import std.traits: isIntegral, isBoolean, isArray,
-  isStaticArray, isDynamicArray, EnumMembers, isSomeChar;
+  EnumMembers, isSomeChar;
 import std.meta: AliasSeq;
 
 interface _esdl__Norand { } 	// classes derived from this interface shall not have a proxy
@@ -125,8 +126,11 @@ template LeafElementType(T)
   static if (is (T == string)) {
     alias LeafElementType = immutable(char);
   }
-  else static if(isArray!T) {
+  else static if (isArray!T) {
     alias LeafElementType = LeafElementType!(ElementType!T);
+  }
+  else static if (isQueue!T) {
+    alias LeafElementType = LeafElementType!(T.ElementType);
   }
   else {
     alias LeafElementType = T;
@@ -160,17 +164,21 @@ template PointersOf(ARGS...) {
 template _esdl__ArrOrder(T, int N=0) {
   import std.traits;
   import std.range;
-  static if(isArray!T) {
+  static if (isArray!T) {
     enum int _esdl__ArrOrder = 1 + _esdl__ArrOrder!(ElementType!T) - N;
   }
+  else static if (isQueue!T) {
+    enum int _esdl__ArrOrder = 1 + _esdl__ArrOrder!(T.ElementType) - N;
+  }
   else {
+    static assert (N == 0);
     enum int _esdl__ArrOrder = 0;
   }
 }
 
-template _esdl__ArrOrder(T, int I, int N=0) {
-  enum int _esdl__ArrOrder = _esdl__ArrOrder!(typeof(T.tupleof[I])) - N;
-}
+// template _esdl__ArrOrder(T, int I, int N=0) {
+//   enum int _esdl__ArrOrder = _esdl__ArrOrder!(typeof(T.tupleof[I])) - N;
+// }
 
 // Make sure that all the parameters are of type size_t
 // template CheckRandParamsLoop(N...) {
@@ -443,5 +451,33 @@ enum CstLogicOp: byte
     LOGICNOT,
     }
 
+
+enum CstVectorOp: byte
+{   NONE,
+    BEGIN_INT,
+    BEGIN_UINT,
+    BEGIN_LONG,
+    BEGIN_ULONG,
+    SUM,
+    MULT
+    }
+
+enum CstUniqueOp: byte
+{   INIT,
+    INT,
+    UINT,
+    LONG,
+    ULONG,
+    UNIQUE
+    }
+
+
+enum CstInsideOp: byte
+{   INSIDE,
+    EQUAL,
+    RANGE,
+    RANGEINCL,
+    DONE
+    }
 
 enum isLvalue(alias A) = is(typeof((ref _){}(A)));

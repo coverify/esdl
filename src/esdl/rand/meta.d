@@ -8,21 +8,22 @@
 
 module esdl.rand.meta;
 
-import std.traits: isIntegral, isBoolean, isArray, isStaticArray,
-  isDynamicArray, isSomeChar, PointerTarget;
+import std.traits: isIntegral, isBoolean, isArray, isSomeChar, PointerTarget;
 import esdl.data.bvec: isBitVector;
+import esdl.data.queue: isQueue, Queue;
 import esdl.data.bstr;
 
 import std.exception: enforce;
 import std.range: ElementType;
 
 import esdl.rand.misc;
-import esdl.rand.expr: CstVecValue, CstObjVisitorExpr;
+import esdl.rand.expr: CstVecValue, CstVarVisitorExpr;
 import esdl.rand.base: CstBlock, CstVecPrim, CstPredicate,
-  CstVarIntf, CstObjectIntf, CstObjArrIntf, CstVisitorPredicate;
+  CstVarNodeIntf, CstObjectIntf, CstObjArrIntf, CstVisitorPredicate;
 import esdl.rand.vecx: CstVecIdx, CstVecArrIdx;
 import esdl.rand.objx: CstObjIdx, CstObjArrIdx;
 import esdl.rand.proxy;
+import esdl.rand.func;
 
 /// C++ type static_cast for down-casting when you are sure
 private import std.typetuple: staticIndexOf, TypeTuple;
@@ -53,26 +54,31 @@ template _esdl__RandProxyType(T, int I, P, int PI)
 {
   import std.traits;
   alias L = typeof(T.tupleof[I]);
-  static if (isArray!L) alias E = LeafElementType!L;
+  static if (isArray!L || isQueue!L) alias E = LeafElementType!L;
   enum rand RAND = getRandAttr!(T, I);
   static if ((! RAND.hasProxy()) ||
 	     _esdl__TypeHasNorandAttr!L ||
 	     (is (L: _esdl__Norand))) {
     alias _esdl__RandProxyType = _esdl__UNDEFINED;
   }
-  else static if (isArray!L && (isBitVector!E ||
-				isIntegral!E ||
-				isBoolean!E ||
-				isSomeChar!E ||
-				is (E == enum))) {
+  else static if ((isArray!L ||
+		   isQueue!L ) && (isBitVector!E ||
+				   isIntegral!E ||
+				   isBoolean!E ||
+				   // isSomeChar!E || // exclude strings
+				   is (E == enum))) {
     alias _esdl__RandProxyType = CstVecArrIdx!(L, RAND, 0, I, P, PI);
   }
-  else static if (isBitVector!L || isIntegral!L ||
-		  isBoolean!L || isSomeChar!L || is (L == enum)) {
+  else static if (isBitVector!L ||
+		  isIntegral!L ||
+		  isBoolean!L ||
+		  // isSomeChar!L || // exclude chars
+		  is (L == enum)) {
     alias _esdl__RandProxyType = CstVecIdx!(L, RAND, 0, I, P, PI);
   }
-  else static if (isArray!L && (is (E == class) || is (E == struct) ||
-			       (is (E == U*, U) && is (U == struct)))) {
+  else static if ((isArray!L || isQueue!L) &&
+		  (is (E == class) || is (E == struct) ||
+		   (is (E == U*, U) && is (U == struct)))) {
     alias _esdl__RandProxyType = CstObjArrIdx!(L, RAND, 0, I, P, PI);
   }
   else static if (is (L == class) || is (L == struct) ||
@@ -136,7 +142,7 @@ void _esdl__doRandomizeElems(P, int I=0)(P p, _esdl__RandGen randGen) {
   }
   else {
     alias Q = typeof (P.tupleof[I]);
-    static if (is (Q: CstVarIntf)) {
+    static if (is (Q: CstVarNodeIntf)) {
       static if (P.tupleof[I]._esdl__ISRAND) {
 	if (p.tupleof[I].isRand())
 	  p.tupleof[I]._esdl__doRandomize(randGen);
@@ -160,8 +166,10 @@ void _esdl__doInitRandsElems(P, int I=0)(P p) {
   else {
     alias Q = typeof (P.tupleof[I]);
     // pragma(msg, "#" ~ Q.stringof);
-    static if (is (Q: CstVarIntf)) {
-      static if (Q._esdl__HASPROXY && Q._esdl__ISRAND) {
+    static if (is (Q: CstVarNodeIntf)) {
+      static if (Q._esdl__HASPROXY // && Q._esdl__ISRAND // not just @rand
+		 ) {
+	// pragma(msg, "#" ~ Q.stringof);
 	alias T = typeof(p._esdl__outer);
 	static if (is (T == class)) { // class
 	  enum NAME = __traits(identifier, T.tupleof[Q._esdl__INDEX]);
@@ -171,7 +179,19 @@ void _esdl__doInitRandsElems(P, int I=0)(P p) {
 	  enum NAME = __traits(identifier, U.tupleof[Q._esdl__INDEX]);
 	}
 	T t = p._esdl__outer;
-	p.tupleof[I] = new Q(NAME, t.tupleof[Q._esdl__INDEX], p);
+	if (t !is null) {
+	  alias M = typeof(t.tupleof[Q._esdl__INDEX]);
+	  static if (is (M == class) ||
+		     (is (M == U*, U) && is (U == struct))) { // class or struct*
+	    p.tupleof[I] = new Q(NAME, p, t.tupleof[Q._esdl__INDEX]);
+	  }
+	  else {
+	    p.tupleof[I] = new Q(NAME, p, &(t.tupleof[Q._esdl__INDEX]));
+	  }
+	}
+	else {
+	  p.tupleof[I] = new Q(NAME, p, null);
+	}
       }
     }
     _esdl__doInitRandsElems!(P, I+1)(p);
@@ -218,7 +238,7 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 		   L, rand RAND, int N, int IDX, P, int PIDX)) {
       static if (Q._esdl__HASPROXY) {
 	if (p.tupleof[I] !is null) {
-	  p.tupleof[I]._esdl__setValRef(p._esdl__outer.tupleof[IDX]);
+	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
 	}
       }
     }
@@ -227,7 +247,7 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
       static if (Q._esdl__HASPROXY) {
 	static if (is (L == struct)) {
 	  if (p.tupleof[I] !is null) {
-	    p.tupleof[I]._esdl__setValRef(p._esdl__outer.tupleof[IDX]);
+	    p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
 	  }
 	}
 	else {
@@ -241,7 +261,7 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 		   L, rand RAND, int N, int IDX, P, int PIDX)) {
       static if (Q._esdl__HASPROXY) {
 	if (p.tupleof[I] !is null) {
-	  p.tupleof[I]._esdl__setValRef(p._esdl__outer.tupleof[IDX]);
+	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
 	}
       }
     }
@@ -249,7 +269,7 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 		   L, rand RAND, int N, int IDX, P, int PIDX)) {
       static if (Q._esdl__HASPROXY) {
 	if (p.tupleof[I] !is null) {
-	  p.tupleof[I]._esdl__setValRef(p._esdl__outer.tupleof[IDX]);
+	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
 	}
       }
     }
@@ -298,6 +318,7 @@ template _esdl__ConstraintsDecl(T, int I=0)
   }
   else {
     alias L = typeof(T.tupleof[I]);
+    static if (isArray!L || isQueue!L) alias E = LeafElementType!L;
     static if (is (T == U*, U) && is (U == struct)) {
       enum NAME = __traits(identifier, U.tupleof[I]);
     }
@@ -323,17 +344,12 @@ template _esdl__ConstraintsDecl(T, int I=0)
 	", _esdl__FILE_" ~ NAME ~ ", _esdl__LINE_" ~ NAME ~ ") " ~
 	NAME ~ ";\n" ~ _esdl__ConstraintsDecl!(T, I+1);
     }
-    else static if (isArray!L) {
-      alias E = LeafElementType!L;
-      static if (is (E == class) || is (E == struct) ||
-		 (is (E == U*, U) && is (U == struct))) {
-	enum _esdl__ConstraintsDecl =
-	  "  _esdl__Constraint!(\"" ~ NAME ~ "\") _esdl__visitorCst_"
-	  ~ NAME ~ ";\n"  ~ _esdl__ConstraintsDecl!(T, I+1);
-      }
-      else {
-	enum _esdl__ConstraintsDecl = _esdl__ConstraintsDecl!(T, I+1);
-      }
+    else static if ((isArray!L || isQueue!L) &&
+		    (isIntegral!E || is (E == bool) ||
+		     is (E == struct) || is (E == class))) {
+      enum _esdl__ConstraintsDecl =
+	"  _esdl__Constraint!(\"" ~ NAME ~ "\") _esdl__visitorCst_"
+	~ NAME ~ ";\n"  ~ _esdl__ConstraintsDecl!(T, I+1);
     }
     else {
       enum _esdl__ConstraintsDecl = _esdl__ConstraintsDecl!(T, I+1);
@@ -451,64 +467,73 @@ void _esdl__randomize(T) (T t, _esdl__ConstraintBase withCst = null) {
 }
 
 
-// generates the code for rand structure inside the class object getting
-// randomized
-string _esdl__randsMixin(T, PT)() {
-  string rand_decls = _esdl__RandDeclVars!(T, 0, PT, 0);
-  string cst_decls = _esdl__ConstraintsDefDecl!T ~ _esdl__ConstraintsDecl!T;
-
-
-  string randsMixin = rand_decls ~ cst_decls;
-
-  return randsMixin;
-}
-
 class Randomizable {
   mixin Randomization;
 }
 
 mixin template Randomization()
 {
-  alias _esdl__T = typeof(this);
-  alias _esdl__BASEPT = _esdl__ProxyBase!_esdl__T;
-  
+  enum bool _esdl__HasRandomizationMixin = true;
   // While making _esdl__ProxyRand class non-static nested class
   // also works as far as dlang compilers are concerned, do not do
   // that since in that case _esdl__outer object would have an
   // implicit pointer to the outer object which can not be changed
-  static class _esdl__ProxyRand: _esdl__BASEPT
-  {
-    mixin _esdl__ProxyMixin;
 
-    _esdl__T _esdl__outer;
-    _esdl__T _esdl__getRef()() {return _esdl__outer;}
+  static if (is (typeof(this) == class)) {
+    static class _esdl__ProxyRand(_esdl__T): _esdl__ProxyBase!_esdl__T
+    {
+      mixin _esdl__ProxyMixin!_esdl__T;
+
+      _esdl__T _esdl__outer;
+      _esdl__T _esdl__getRef()() {return _esdl__outer;}
       
-    void _esdl__setValRef()(_esdl__T outer) {
-      if (_esdl__outer !is outer) {
+      void _esdl__setValRef()(_esdl__T outer) {
+	if (_esdl__outer !is outer) {
+	  _esdl__outer = outer;
+	  this._esdl__doSetOuter(true);
+	}
+      }
+      this(_esdl__Proxy parent, _esdl__T outer) {
 	_esdl__outer = outer;
-	this._esdl__doSetOuter(true);
+	super(parent, outer);
+	_esdl__doInitRandsElems(this);
+	_esdl__doInitCstsElems(this);
       }
     }
-    this(_esdl__T outer, _esdl__Proxy parent) {
-      _esdl__outer = outer;
-      static if (is (_esdl__BASEPT == _esdl__Proxy))
+  }
+  else static if (is (typeof(this) == struct)) {
+    static class _esdl__ProxyRand(_esdl__T): _esdl__ProxyBase!_esdl__T
+    {
+      mixin _esdl__ProxyMixin!_esdl__T;
+      _esdl__T* _esdl__outer;
+      _esdl__T* _esdl__getRef() {return _esdl__outer;}
+      void _esdl__setValRef()(ref _esdl__T outer) {
+	if (_esdl__outer !is &outer) {
+	  _esdl__outer = &outer;
+	  this._esdl__doSetOuter(true);
+	}
+      }
+      void _esdl__setValRef()(_esdl__T* outer) {
+	if (_esdl__outer !is outer) {
+	  _esdl__outer = outer;
+	  this._esdl__doSetOuter(true);
+	}
+      }
+      this(_esdl__Proxy parent, _esdl__T* outer) {
+	_esdl__outer = outer;
 	super(parent);
-      else
-	super(outer, parent);
-      _esdl__doInitRandsElems(this);
-      _esdl__doInitCstsElems(this);
+	_esdl__doInitRandsElems(this);
+	_esdl__doInitCstsElems(this);
+      }
     }
-
+  }
+  else {
+    static assert (false, "mixin Randomization is allowed only inside a class or a struct; not " ~
+		   typeof(this).stringof);
   }
 
-  enum bool _esdl__hasRandomization = true;
-  alias _esdl__Type = typeof(this);
 
-  static _esdl__Type _esdl__thisHasRandomization()() {
-    return null;
-  }
-
-  alias _esdl__ProxyType = _esdl__ProxyResolve!_esdl__Type;
+  alias _esdl__ProxyType = _esdl__ProxyResolve!(typeof(this));
 
   // final auto _esdl__randEval(string NAME)() {
   //   return mixin(NAME);
@@ -516,6 +541,8 @@ mixin template Randomization()
 
   static if(// is(_esdl__T: Randomizable) ||
 	    __traits(compiles, _esdl__proxyInst)) {
+    static assert (is (typeof(this) == class),
+		   typeof(this).stringof ~ " is not a class"); // only classes can have a base class
     override void _esdl__virtualRandomize(_esdl__ConstraintBase withCst = null) {
       _esdl__randomize(this, withCst);
     }
@@ -526,7 +553,7 @@ mixin template Randomization()
       assert(this !is null);
       if (_esdl__proxyInst is null) {
 	_esdl__proxyInst =
-	  new _esdl__ProxyType(this, null);
+	  new _esdl__ProxyType(null, this);
 	static if(__traits(compiles, _esdl__seedRandom())) {
 	  _esdl__seedRandom();
 	}
@@ -569,8 +596,14 @@ mixin template Randomization()
     alias srandom = seedRandom;	// SV names the similar method srandom
     void _esdl__initProxy() {
       if (_esdl__proxyInst is null) {
-	_esdl__proxyInst =
-	  new _esdl__ProxyType(this, null);
+	static if (is (typeof(this) == class)) {
+	  _esdl__proxyInst =
+	    new _esdl__ProxyType(null, this);
+	}
+	else {
+	  _esdl__proxyInst =
+	    new _esdl__ProxyType(null, &this);
+	}
 	static if(__traits(compiles, _esdl__seedRandom())) {
 	  _esdl__seedRandom();
 	}
@@ -580,8 +613,6 @@ mixin template Randomization()
       }
     }
   }
-  // static if(_esdl__baseHasRandomization!_esdl__Type) {
-  // }
 }
 
 class _esdl__ProxyNoRand(_esdl__T)
@@ -589,7 +620,7 @@ class _esdl__ProxyNoRand(_esdl__T)
       (is (_esdl__T == U*, U) && is (U == struct))):
     _esdl__ProxyBase!_esdl__T
       {
-	mixin _esdl__ProxyMixin;
+	mixin _esdl__ProxyMixin!_esdl__T;
 
 	_esdl__T _esdl__outer;
 	_esdl__T _esdl__getRef()() {return _esdl__outer;}
@@ -599,12 +630,9 @@ class _esdl__ProxyNoRand(_esdl__T)
 	    this._esdl__doSetOuter(true);
 	  }
 	}
-	this(_esdl__T outer, _esdl__Proxy parent) {
+	this(_esdl__Proxy parent, _esdl__T outer) {
 	  _esdl__outer = outer;
-	  static if (is (_esdl__ProxyBase!_esdl__T == _esdl__Proxy))
-	    super(parent);
-	  else
-	    super(outer, parent);
+	  super(parent, outer);
 	  _esdl__doInitRandsElems(this);
 	  _esdl__doInitCstsElems(this);
 	}
@@ -615,7 +643,7 @@ class _esdl__ProxyNoRand(_esdl__T)
   if (is (_esdl__T == struct)):
     _esdl__ProxyBase!_esdl__T
       {
-	mixin _esdl__ProxyMixin;
+	mixin _esdl__ProxyMixin!_esdl__T;
 
 	_esdl__T* _esdl__outer;
 	_esdl__T* _esdl__getRef() {return _esdl__outer;}
@@ -631,15 +659,15 @@ class _esdl__ProxyNoRand(_esdl__T)
 	    this._esdl__doSetOuter(true);
 	  }
 	}
-	this(ref _esdl__T outer, _esdl__Proxy parent) {
-	  _esdl__outer = &outer;
+	this(_esdl__Proxy parent, _esdl__T* outer) {
+	  _esdl__outer = outer;
 	  super(parent);
 	  _esdl__doInitRandsElems(this);
 	  _esdl__doInitCstsElems(this);
 	}
       }
 
-mixin template _esdl__ProxyMixin()
+mixin template _esdl__ProxyMixin(_esdl__T)
 {
   import std.traits: isIntegral, isBoolean;
   import esdl.data.bvec: isBitVector;
@@ -647,24 +675,26 @@ mixin template _esdl__ProxyMixin()
   alias _esdl__PROXYT = typeof(this);
 
   debug(CSTPARSER) {
-    pragma(msg, "// _esdl__randsMixin!" ~ _esdl__T.stringof ~ " STARTS \n");
-    pragma(msg, _esdl__randsMixin!(_esdl__T, _esdl__PROXYT));
-    pragma(msg, "// _esdl__randsMixin!" ~ _esdl__T.stringof ~ " ENDS \n");
+    pragma(msg, "// Proxy Declarations START \n");
+    pragma(msg, _esdl__RandDeclVars!(_esdl__T, 0, _esdl__PROXYT, 0));
+    pragma(msg, _esdl__ConstraintsDefDecl!_esdl__T);
+    pragma(msg, _esdl__ConstraintsDecl!_esdl__T);
+    pragma(msg, "// Proxy Declarations END \n");
   }
 
-  mixin(_esdl__randsMixin!(_esdl__T, _esdl__PROXYT));
+  mixin (_esdl__RandDeclVars!(_esdl__T, 0, _esdl__PROXYT, 0));
+  mixin (_esdl__ConstraintsDefDecl!_esdl__T);
+  mixin (_esdl__ConstraintsDecl!_esdl__T);
 
   class _esdl__Constraint(string OBJ): _esdl__ConstraintBase
   {
     this(_esdl__Proxy eng, string name) {
-      // import std.stdio;
-      // writeln("Creating a Visitor Constraint for: ", OBJ, " named: ", name);
       super(eng, name, OBJ);
     }
     override CstBlock makeCstBlock() {
       CstBlock _esdl__block = new CstBlock();
       _esdl__block ~= new CstVisitorPredicate(this, 0, this.outer, 0,
-					      new CstObjVisitorExpr(mixin(OBJ)));
+					      new CstVarVisitorExpr(mixin(OBJ)));
       return _esdl__block;
     }
   }
@@ -751,22 +781,23 @@ mixin template _esdl__ProxyMixin()
 }
 
 auto ref _esdl__sym(L)(ref L l, string name,
-			      _esdl__Proxy parent) {
+		       _esdl__Proxy parent) {
   import std.traits: isIntegral, isBoolean, isArray, isSomeChar;
+  import esdl.data.queue: Queue, isQueue;
   static if (isIntegral!L || isBitVector!L ||
 	     isBoolean!L || isSomeChar!L || is (L == enum)) {
     // import std.stdio;
     // writeln("Creating VarVec, ", name);
-    return new CstVecIdx!(L, rand(true, true), 0, -1, _esdl__VALUE)(name, l, parent);
+    return new CstVecIdx!(L, rand(true, true), 0, -1, _esdl__VALUE)(name, parent, l);
   }
-  else static if (isArray!L) {
+  else static if (isArray!L || isQueue!L) {
     // import std.stdio;
     // writeln("Creating VarVecArr, ", name);
-    return new CstVecArrIdx!(L, rand(true, true), 0, -1, _esdl__VALUE)(name, l, parent);
+    return new CstVecArrIdx!(L, rand(true, true), 0, -1, _esdl__VALUE)(name, parent, l);
   }
   else {
     if (l is null) {
-      l = new L(name, this._esdl__outer.tupleof[L._esdl__INDEX], this);
+      l = new L(name, parent, parent._esdl__outer.tupleof[L._esdl__INDEX]);
     }
     return l;
   }
@@ -789,7 +820,7 @@ struct _esdl__rand_type_proxy(T, P)
     _parent = parent;
   }
   
-  auto _esdl__sym(string S)() {
+  auto _esdl__dot(string S)() {
     return esdl.rand.meta._esdl__sym(__traits(getMember, T, S), S, _parent);
   }
 }
@@ -803,48 +834,68 @@ auto _esdl__sym(V, S)(string name, S parent) {
 auto _esdl__sym(alias V, S)(string name, S parent) {
   alias L = typeof(V);
   import std.traits: isIntegral, isBoolean, isArray, isSomeChar;
+  import esdl.data.queue: Queue, isQueue;
   static if (isIntegral!L || isBitVector!L ||
 	     isBoolean!L || isSomeChar!L || is (L == enum)) {
     static if (isLvalue!V) {
       // import std.stdio;
       // writeln("Creating VarVec, ", name);
-      return new CstVecIdx!(L, rand(true, true), 0, -1, _esdl__VALUE)(name, V, parent);
+      return new CstVecIdx!(L, rand(true, true), 0, -1, _esdl__VALUE)(name, parent, V);
     }
     else {
       return new CstVecValue!L(V); // CstVecValue!L.allocate(l);
     }
   }
-  else static if (isArray!L) {
+  else static if (isArray!L || isQueue!L) {
     // import std.stdio;
     // writeln("Creating VarVecArr, ", name);
-    return new CstVecArrIdx!(L, rand(true, true), 0, -1, _esdl__VALUE)(name, V, parent);
+    return new CstVecArrIdx!(L, rand(true, true), 0, -1, _esdl__VALUE)(name, parent, V);
   }
   else {
     // import std.stdio;
-    assert (parent !is null);
+    // assert (parent !is null);
     // writeln(V.stringof);
     // writeln(VS);
     // writeln(__traits(getMember, parent, VS).stringof);
     // if (__traits(getMember, parent, VS) is null) {
-    //   __traits(getMember, parent, VS) = new L(name, parent._esdl__outer.tupleof[L._esdl__INDEX], parent);
+    //   __traits(getMember, parent, VS) = new L(name, parent, parent._esdl__outer.tupleof[L._esdl__INDEX]);
     // }
     if (V is null) {
       L._esdl__PROXYT p = parent;
-      V = new L(name, p._esdl__outer.tupleof[L._esdl__INDEX], parent);
+      if (p is null) {
+	V = new L(name, parent, null);
+      }
+      else {
+	alias M = typeof(p._esdl__outer.tupleof[L._esdl__INDEX]);
+	static if (is (M == class) ||
+		   (is (M == U*, U) && is (U == struct))) {
+	  V = new L(name, parent, p._esdl__outer.tupleof[L._esdl__INDEX]);
+	}
+	else {
+	  V = new L(name, parent, &(p._esdl__outer.tupleof[L._esdl__INDEX]));
+	}
+      }
     }
     return V;
     // return __traits(getMember, parent, VS);
   }
 }
 
+auto _esdl__dot(string S, RV)(RV rv)
+{
+  return __traits(getMember, rv, S);
+}
+
+
 auto _esdl__arg_proxy(L, S)(string name, ref L arg, S parent) {
   import std.traits: isIntegral, isBoolean, isArray, isSomeChar;
+  import esdl.data.queue: Queue, isQueue;
   // pragma(msg, L.stringof);
   static if (isIntegral!L || isBitVector!L ||
 	     isBoolean!L || isSomeChar!L || is (L == enum)) {
     // import std.stdio;
     // writeln("Creating VarVec, ", name);
-    return new CstVecIdx!(L, rand(true, true), 0, -1, _esdl__ARG, -1)(name, arg, parent);
+    return new CstVecIdx!(L, rand(true, true), 0, -1, _esdl__ARG, -1)(name, parent, &arg);
   }
   else {
     static assert(false);
@@ -852,20 +903,27 @@ auto _esdl__arg_proxy(L, S)(string name, ref L arg, S parent) {
 }
 
 template _esdl__ProxyResolve(T) {
+  // pragma(msg, "_esdl__ProxyResolve called for: " ~ T.stringof);
   // static if(__traits(compiles, T._esdl__hasRandomization)) {
-  static if (is (T == class)) {
-    static if (__traits(compiles, T._esdl__ProxyRand)) {
-      alias _esdl__ProxyResolve = T._esdl__ProxyRand;
+  static if (is (T == class) || is (T == struct)) {
+    // pragma(msg, T.stringof);
+    static if (__traits(compiles, T._esdl__HasRandomizationMixin)) {
+      // pragma(msg, "ProxyRand: ", T.stringof);
+      alias _esdl__ProxyResolve = T._esdl__ProxyRand!T;
     }
     else {
+      // pragma(msg, "ProxyNoRand: ", T.stringof);
       alias _esdl__ProxyResolve = _esdl__ProxyNoRand!T;
     }
   }
-  else static if (is (T == struct)) {
-    alias _esdl__ProxyResolve = _esdl__ProxyNoRand!T;
-  }
+  // else static if (is (T == struct)) {
+  //   alias _esdl__ProxyResolve = _esdl__ProxyNoRand!T;
+  // }
   else static if (is (T == U*, U) && is (U == struct)) {
     alias _esdl__ProxyResolve = _esdl__ProxyNoRand!T;
+  }
+  else {
+    static assert(false, "Unable to resolve proxy for type: " ~ T.stringof);
   }
 }
 
@@ -879,15 +937,7 @@ template _esdl__ProxyBase(T) {
 	     (! _esdl__TypeHasNorandAttr!(B[0])) &&
 	     (! is (B[0] == Object))) {
     alias U = B[0];
-    // check if the base class has Randomization
-    // static if(__traits(compiles, _esdl__ProxyResolve!U)) {
-    // static if(__traits(compiles, U._esdl__thisHasRandomization()) &&
-    // 	      is(U == typeof(U._esdl__thisHasRandomization()))) {
     alias _esdl__ProxyBase = _esdl__ProxyResolve!U;
-    // }
-    // else {
-    //   alias _esdl__ProxyBase = _esdl__ProxyBase!U;
-    // }
   }
   else {
     alias _esdl__ProxyBase = _esdl__Proxy;

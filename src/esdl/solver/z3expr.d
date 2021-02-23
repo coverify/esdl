@@ -90,7 +90,7 @@ struct BvExpr
   }
 
   Z3_ast opCast(T)() if (is (T == Z3_ast)) {
-    return _ast._m_ast;
+    return _ast;
   }
   
   /**
@@ -686,6 +686,16 @@ bool promoteToCommonType(ref BvExpr a, ref BvExpr b,
   else rhs = rexpr;
 
   return signed;
+}
+
+// friend expr distinct(expr_vector const& args);
+BoolExpr distinct()(auto ref BvExprVector args) {
+  assert (args.size() > 0);
+  Context ctx = args.context();
+  Z3_ast[] _args = args.toArray!Z3_ast();
+  Z3_ast r = Z3_mk_distinct(args.context(), cast(uint) _args.length, _args.ptr);
+  args.checkError();
+  return BoolExpr(args.context(), r);
 }
 
 // friend expr concat(expr const& a, expr const& b);

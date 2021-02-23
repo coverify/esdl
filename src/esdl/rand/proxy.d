@@ -1,9 +1,9 @@
 module esdl.rand.proxy;
 import esdl.solver.base;
 
-import esdl.rand.base: CstVecPrim, CstLogicExpr,
-  CstScope, CstDomain, CstPredicate, CstBlock, CstPredGroup,
-  DomType, CstVecExpr, CstObjIntf, CstObjectIntf, CstIterator;
+import esdl.rand.base: CstVecPrim, CstLogicExpr, CstScope, CstDomain,
+  CstPredicate, CstBlock, CstPredGroup, DomType, CstVecExpr,
+  CstVarNodeIntf, CstObjectIntf, CstIterator, CstDomSet;
 
 import esdl.rand.misc;
 import esdl.data.folder;
@@ -21,9 +21,9 @@ abstract class _esdl__ConstraintBase: _esdl__Norand
     _constraint = constraint;
   }
   immutable @rand(false) string _constraint;
+  immutable @rand(false) string _name;
   protected @rand(false) bool _enabled = true;
   protected @rand(false) _esdl__Proxy _proxy;
-  protected @rand(false) string _name;
   protected @rand(false) CstBlock _cstBlock;
 
   bool isEnabled() {
@@ -76,21 +76,21 @@ abstract class Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=_
 };
 
 
-template _esdl__baseHasRandomization(T) {
-  static if(is(T B == super)
-	    && is(B[0] == class)) {
-    alias U = B[0];
-    static if(__traits(compiles, U._esdl__hasRandomization)) {
-      enum bool _esdl__baseHasRandomization = true;
-    }
-    else {
-      enum bool _esdl__baseHasRandomization = _esdl__baseHasRandomization!U;
-    }
-  }
-  else {
-    enum bool _esdl__baseHasRandomization = false;
-  }
-}
+// template _esdl__baseHasRandomization(T) {
+//   static if(is(T B == super)
+// 	    && is(B[0] == class)) {
+//     alias U = B[0];
+//     static if(__traits(compiles, U._esdl__hasRandomization)) {
+//       enum bool _esdl__baseHasRandomization = true;
+//     }
+//     else {
+//       enum bool _esdl__baseHasRandomization = _esdl__baseHasRandomization!U;
+//     }
+//   }
+//   else {
+//     enum bool _esdl__baseHasRandomization = false;
+//   }
+// }
 
 
 abstract class _esdl__Proxy: CstObjectIntf
@@ -114,10 +114,10 @@ abstract class _esdl__Proxy: CstObjectIntf
     else return _root;
   }
 
-  // CstObjIntf
+  // CstObjNodeIntf
   final bool _esdl__isObjArray() {return false;}
   final CstIterator _esdl__iter() {return null;}
-  final CstObjIntf _esdl__getChild(uint n) {assert (false);}
+  final CstVarNodeIntf _esdl__getChild(uint n) {assert (false);}
   void visit() {}		// when an object is unrolled
 
   CstSolver[string] _solvers;
@@ -140,6 +140,8 @@ abstract class _esdl__Proxy: CstObjectIntf
   Folder!(CstPredicate, "resolvedMonoPreds") _resolvedMonoPreds;
 
   Folder!(CstDomain, "solvedDomains") _solvedDomains;
+  Folder!(CstDomSet, "solvedDomainArrs") _solvedDomainArrs;
+  
   Folder!(CstPredGroup, "solvedGroups") _solvedGroups;
 
   void addSolvedDomain(CstDomain domain) {
@@ -230,17 +232,6 @@ abstract class _esdl__Proxy: CstObjectIntf
     return _currentScope;
   }
 
-  CstVecPrim[void*] _cstVecPrimes;
-
-  CstVecPrim getVecPrime(void* ptr) {
-    CstVecPrim* p = ptr in _cstVecPrimes;
-    return (p !is null) ? *p : null;
-  }
-  
-  void addVecPrime(void* ptr, CstVecPrim p) {
-    _cstVecPrimes[ptr] = p;
-  }
-
   abstract bool _esdl__debugSolver();
 
   _esdl__Proxy unroll(CstIterator iter, uint n) {
@@ -252,6 +243,10 @@ abstract class _esdl__Proxy: CstObjectIntf
     return true;
   }
 
+  bool isRolled() {
+    return false;
+  }
+
   // Keep a list of constraints in the class
   _esdl__ConstraintBase _esdl__cstWith;
 
@@ -261,7 +256,15 @@ abstract class _esdl__Proxy: CstObjectIntf
 
   // Array!ulong _solveValue;
   
-  this(_esdl__Proxy parent) { // for structs
+  this(_esdl__Proxy parent, Object outer) {
+    this(parent);
+  }
+
+  this(_esdl__Proxy parent, void* outer) {
+    this(parent);
+  }
+
+  this(_esdl__Proxy parent) {
     import std.random: Random, uniform;
     debug(NOCONSTRAINTS) {
       assert(false, "Constraint engine started");
@@ -285,6 +288,7 @@ abstract class _esdl__Proxy: CstObjectIntf
       // 	_esdl__buddy = new Buddy(400, 400);
       // }
       _root = this;
+      _esdl__cstExprs = new CstBlock();
     }
     else {
       _parent = parent;
@@ -295,9 +299,6 @@ abstract class _esdl__Proxy: CstObjectIntf
     _rootScope = new CstScope(null, null);
     _currentScope = _rootScope;
 
-    if (parent is null) {
-      _esdl__cstExprs = new CstBlock();
-    }
   }
 
   // overridden by Randomization mixin -- see meta.d
@@ -309,6 +310,10 @@ abstract class _esdl__Proxy: CstObjectIntf
     // _solvedDomains is from previous cycle
     foreach (dom; _solvedDomains) {
       dom.reset();
+    }
+
+    foreach (domArr; _solvedDomainArrs) {
+      domArr.reset();
     }
 
     // reset all bins
@@ -327,6 +332,7 @@ abstract class _esdl__Proxy: CstObjectIntf
     _resolvedMonoPreds.reset();
 
     _solvedDomains.reset();
+    _solvedDomainArrs.reset();
 
     updateValDomains();
   }
@@ -346,6 +352,7 @@ abstract class _esdl__Proxy: CstObjectIntf
 	   _resolvedPreds.length > 0 ||
 	   _unresolvedPreds.length > 0 ||
 	   _toRolledPreds.length > 0) {
+
       _solvedSome = false;
 
       // import std.stdio;
@@ -403,6 +410,7 @@ abstract class _esdl__Proxy: CstObjectIntf
 	  }
 	}
 	dist.uniform(distDom, _esdl__getRandGen());
+	_solvedDomains ~= distDom;
 	_solvedSome = true;
       }
       _resolvedDistPreds.reset();
@@ -435,41 +443,41 @@ abstract class _esdl__Proxy: CstObjectIntf
 	}
       }
 
-      _resolvedMonoPreds.swap(_toSolvePreds);
+      // _resolvedMonoPreds.swap(_toSolvePreds);
 
-      foreach (pred; _toSolvePreds) {
-	if (_esdl__debugSolver) {
-	  import std.stdio;
-	  writeln("Solving Mono Predicate: ", pred.describe());
-	}
-	if (! procMonoDomain(pred)) {
-	  // writeln("Mono Unsolved: ", pred.name());
-	  _resolvedPreds ~= pred;
-	}
-	else {
-	  _solvedSome = true;
-	}
-      }
-      _toSolvePreds.reset();
+      // foreach (pred; _toSolvePreds) {
+      // 	if (_esdl__debugSolver) {
+      // 	  import std.stdio;
+      // 	  writeln("Solving Mono Predicate: ", pred.describe());
+      // 	}
+      // 	if (! procMonoDomain(pred)) {
+      // 	  // writeln("Mono Unsolved: ", pred.name());
+      // 	  _resolvedPreds ~= pred;
+      // 	}
+      // 	else {
+      // 	  _solvedSome = true;
+      // 	}
+      // }
+      // _toSolvePreds.reset();
       
       // first handle _resolvedDynPreds
       _resolvedDynPreds.swap(_toSolvePreds);
 
       foreach (pred; _toSolvePreds) {
-	if (_esdl__debugSolver) {
-	  import std.stdio;
-	  writeln("Solving Maybe Mono Predicate: ", pred.describe());
-	}
+	// if (_esdl__debugSolver) {
+	//   import std.stdio;
+	//   writeln("Solving Maybe Mono Predicate: ", pred.describe());
+	// }
 	if (pred.isMarkedUnresolved(_lap)) {
 	  _resolvedDynPreds ~= pred;
 	}
 	else {
-	  if (! procMaybeMonoDomain(pred)) {
-	    _solvePreds ~= pred;
-	  }
-	  else {
-	    _solvedSome = true;
-	  }
+	  // if (! procMaybeMonoDomain(pred)) {
+	  _solvePreds ~= pred;
+	  // }
+	  //   else {
+	  //     _solvedSome = true;
+	  //   }
 	}
       }
       _toSolvePreds.reset();
@@ -482,7 +490,6 @@ abstract class _esdl__Proxy: CstObjectIntf
 	  _resolvedPreds ~= pred;
 	}
 	else {
-	  pred.reset();
 	  _solvePreds ~= pred;
 	}
       }
@@ -491,11 +498,22 @@ abstract class _esdl__Proxy: CstObjectIntf
 
       // Work on _solvePreds
       foreach (pred; _solvePreds) {
-	CstPredGroup group = pred.group();
-	if (group is null) {
-	  group = new CstPredGroup(this);
+	if (pred.isSolved()) {
+	  _solvedSome = true;
 	}
-	if (! group.isSolved()) {
+	else {
+	  import std.conv: to;
+	  CstPredGroup group = pred.group();
+	  if (group is null) {
+	    group = new CstPredGroup(this);
+	    if (_esdl__debugSolver) {
+	      import std.stdio;
+	      writeln("Created new group ", group._id, " for predicate: ", pred.name());
+	    }
+	  }
+	  assert (! group.isSolved(),
+		  "Group can not be solved when the predicate is still not solved; group id: " ~
+		  group._id.to!string() ~ " predicate id: " ~ pred._id.to!string());
 	  group.setGroupContext(pred);
 	  group.solve();
 	  _solvedGroups ~= group;
@@ -509,10 +527,10 @@ abstract class _esdl__Proxy: CstObjectIntf
 	  stderr.writeln("_resolvedDistPreds: ");
 	  foreach (pred; _resolvedDistPreds) stderr.writeln(pred.describe());
 	}
-	if (_resolvedMonoPreds.length > 0) {
-	  stderr.writeln("_resolvedMonoPreds: ");
-	  foreach (pred; _resolvedMonoPreds) stderr.writeln(pred.describe());
-	}
+	// if (_resolvedMonoPreds.length > 0) {
+	//   stderr.writeln("_resolvedMonoPreds: ");
+	//   foreach (pred; _resolvedMonoPreds) stderr.writeln(pred.describe());
+	// }
 	if (_resolvedDynPreds.length > 0) {
 	  stderr.writeln("_resolvedDynPreds: ");
 	  foreach (pred; _resolvedDynPreds) stderr.writeln(pred.describe());
@@ -535,60 +553,33 @@ abstract class _esdl__Proxy: CstObjectIntf
       _solvePreds.reset();
 
       
-      foreach (group; _solvedGroups) {
-	group.reset();
-	_solvedDomains ~= group.domains();
-      }
-      _solvedGroups.reset();
-      
       _unresolvedPreds.reset();
       _unresolvedPreds.swap(_toUnresolvedPreds);
     }
 
-  }
-
-  bool procMonoDomain(CstPredicate pred) {
-    assert (pred._rnds.length > 0);
-    auto dom = pred._rnds[0];
-    if (! dom.isSolved()) {
-      if (dom.solveRange(_esdl__getRandGen())) {
-	_solvedDomains ~= dom;
-	return true;
-      }
-      else return false;
+    foreach (group; _solvedGroups) {
+      group.reset();
+      _solvedDomains ~= group.domains();
+      _solvedDomainArrs ~= group.domainArrs();
     }
-    else return true;
-  }
-
-  bool procMaybeMonoDomain(CstPredicate pred) {
-    assert (pred._rnds.length > 0);
-    if (pred._rnds.length > 1) {
-      return false;
-    }
-    auto dom = pred._rnds[0];
-    if (! dom.isStatic()) {
-      dom = dom.getResolved();
-    }
-    if (! dom.isSolved()) {
-      if (dom.solveRange(_esdl__getRandGen())) {
-	_solvedDomains ~= dom;
-	return true;
-      }
-      else return false;
-    }
-    else return true;
+    _solvedGroups.reset();
+      
   }
 
   void procResolved(CstPredicate pred) {
-    assert (pred._rnds.length > 0, pred.describe());
+    assert (pred._rnds.length > 0 || pred._rndArrs.length > 0,
+	    pred.describe());
     if (pred.isDist()) {
       _resolvedDistPreds ~= pred;
     }
-    else if (pred._rnds.length == 1 &&
-	pred._rnds[0]._type <= DomType.LAZYMONO) {
-      _resolvedMonoPreds ~= pred;
-      // procMonoDomain(pred._rnds[0], pred);
-    }
+    // else if (pred._rnds.length == 1 &&
+    // 	     pred._rndArrs.length == 0 &&
+    // 	     pred._rnds[0]._type <= DomType.LAZYMONO//  &&
+    // 	     // pred._rnds[0]._esdl__parentIsConstrained is false
+    // 	     ) {
+    //   _resolvedMonoPreds ~= pred;
+    //   // procMonoDomain(pred._rnds[0], pred);
+    // }
     else if (pred._dynRnds.length > 0) {
       foreach (rnd; pred._dynRnds) {
 	auto dom = rnd.getResolved();
@@ -602,6 +593,8 @@ abstract class _esdl__Proxy: CstObjectIntf
   }
 
   void addNewPredicate(CstPredicate pred) {
+    // import std.stdio;
+    // writeln("Adding: ", pred.describe());
     _newPreds ~= pred;
   }
 

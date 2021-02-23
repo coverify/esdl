@@ -740,7 +740,9 @@ struct AstVectorTpl(T)
   
   alias _m_vector this;
   
-  void init(Z3_ast_vector v) {
+  @disable this();
+  
+  private void init(Z3_ast_vector v) {
     _m_vector = v;
     Z3_ast_vector_inc_ref(context(), _m_vector);
   }

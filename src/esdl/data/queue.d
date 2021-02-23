@@ -11,8 +11,24 @@
 module esdl.data.queue;
 import std.format: FormatSpec, FormatException;
 import std.conv: to;
-import std.range: ElementType;
+import std.range: RangeElementType = ElementType;
 
+
+template isQueue(T)
+{
+  static if (is (T: Queue!L, L))
+    enum bool isQueue = true;
+  else
+    enum bool isQueue = false;
+}
+
+template QueueElementType(T) if (isQueue!T)
+{
+  static if (is (T: Queue!L, L))
+    alias QueueElementType = L;
+  else
+    static assert (false);
+}
 
 /** The Queue class provides a random access container where appending and
     removing takes amortized O(1) for both ends. Internally it is a array with
@@ -23,6 +39,8 @@ import std.range: ElementType;
 public struct Queue(T) {
   import std.traits: isIterable, isArray;
   import std.string: format;
+
+  alias ElementType = T;
 
   private T[] data; /// the actual stored data
   private size_t head = 0; /// insert first than move
@@ -35,7 +53,7 @@ public struct Queue(T) {
   */
   // we do not cover arrays in isIterable, because empty array "[]" is not iteratble
   public this(R)(R values) @safe
-    if(isIterable!R && is(ElementType!R: T) && !(isArray!R)) {
+    if(isIterable!R && is(RangeElementType!R: T) && !(isArray!R)) {
       this.pushBack(values);
     }
 
@@ -75,7 +93,7 @@ public struct Queue(T) {
   }
 
   public Queue!T opAssign(R)(R values) @safe
-    if(isIterable!R && is(ElementType!R: T) && !(isArray!R)) {
+    if(isIterable!R && is(RangeElementType!R: T) && !(isArray!R)) {
       this.clear;
       this.pushBack(values);
       return this;
@@ -486,8 +504,8 @@ public struct Queue(T) {
     return this.to!(string);
   }
 
-  void toString(scope void delegate(const(char)[]) sink,
-  		ref FormatSpec!char f) {
+  void toString(void delegate(scope const(char)[]) sink,
+  		const FormatSpec!char f) {
     char[] buff;
     switch(f.spec) {
     case 's':
@@ -633,7 +651,7 @@ public struct Queue(T) {
   }
 
   public Queue!(T) insert(R)(ptrdiff_t idx, R range) @safe
-    if(isIterable!R && is(ElementType!R: T)) {
+    if(isIterable!R && is(RangeElementType!R: T)) {
       foreach(it; range) {
 	this.insert(idx, it);
 	if(idx >= 0) {
@@ -1110,7 +1128,7 @@ public struct Queue(T) {
   }
 
   public void pushFront(R)(R values) @safe
-    if(isIterable!R && is(ElementType!R: T)) {
+    if(isIterable!R && is(RangeElementType!R: T)) {
     foreach(it; values) {
       this.pushFront(it);
     }
@@ -1189,7 +1207,7 @@ public struct Queue(T) {
   }
 
   public void pushBack(R)(R values) @trusted
-    if(isIterable!R && is(ElementType!R: T) && !(isArray!R)) {
+    if(isIterable!R && is(RangeElementType!R: T) && !(isArray!R)) {
       foreach(it; values) {
 	this.pushBack(it);
       }
@@ -1202,7 +1220,7 @@ public struct Queue(T) {
   }
 
   public void opOpAssign(string op, R)(R values) @trusted
-    if(op == "~" && isIterable!R && is(ElementType!R: T)) {
+    if(op == "~" && isIterable!R && is(RangeElementType!R: T)) {
       foreach(it; values) {
 	this.pushBack(it);
       }
@@ -1214,7 +1232,7 @@ public struct Queue(T) {
     }
 
   public Queue!T opBinary(string op, R)(R values) @safe
-    if(op == "~" && isIterable!R && is(ElementType!R: T)) {
+    if(op == "~" && isIterable!R && is(RangeElementType!R: T)) {
       Queue!T ret = this;
       ret ~= values;
       return ret;
@@ -1228,7 +1246,7 @@ public struct Queue(T) {
     }
 
   public Queue!T opBinaryRight(string op, R)(R values) @safe
-    if(op == "~" && isIterable!R && is(ElementType!R: T)) {
+    if(op == "~" && isIterable!R && is(RangeElementType!R: T)) {
       Queue!T ret;
       ret ~= values;
       ret ~= this;
@@ -1856,6 +1874,15 @@ public struct Queue(T) {
   */
   @property public size_t length() const @safe nothrow { 
     return this.size;
+  }
+
+  @property public void length(size_t nsize) { 
+    if (nsize > size) {
+      while (nsize >= this.data.length) {
+	this.growCapacity();
+      }
+    }
+    this.size = nsize;
   }
 
   /** The size of the internal array -1 is returned by this function. This

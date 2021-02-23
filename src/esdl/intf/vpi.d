@@ -1177,7 +1177,7 @@ void vpiPutValue(T)(vpiHandle handle, T t,
 	   hname[0..hname.strlen] ~ " is " ~ size.to!string() ~
 	   " long; vpiPutValue received a BitVector of size: " ~
 	   T.sizeof.stringof ~ "(bytes)\n");
-    static if(T.sizeof <= 32) {
+    static if(T.sizeof <= 4) {
       val.format = vpiIntVal;
       val.value.integer = t;
       vpi_put_value(handle, &val, null, flag);

@@ -50,7 +50,7 @@ template isBitVector(T) {
   static if(is(T unused == _bvec!(S, L, N), bool S, bool L, N...))
     enum bool isBitVector = true;
   else
-  enum bool isBitVector = false;
+    enum bool isBitVector = false;
 }
 
 template BitLength(T) {
@@ -581,7 +581,7 @@ struct _bvec(bool S, bool L, string VAL, size_t RADIX) {
       // 			       store_t.sizeof, STORESIZE));
       foreach(i, n; (mixin(stringToBits(extractBits!(false, RADIX)(VAL),
 				        store_t.sizeof, STORESIZE)))) {
-	_aval[i] &= cast(store_t) ~n;
+	_aval[i] &= ~n;
       }
       if(this.aValMSB) {
 	_aval[$-1] |= SMASK;
@@ -873,9 +873,9 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
     static if(L) {
       private store_t[STORESIZE] _bval;
     }
-    else {
-      private enum store_t[STORESIZE] _bval = 0;
-    }
+    // else {
+    //   private store_t[STORESIZE] _bval = 0;
+    // }
 
     public ubyte getByte(size_t index) const {
       return (cast(ubyte*) _aval.ptr)[0..STORESIZE*store_t.sizeof][index];
@@ -920,7 +920,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	for (size_t i=0; i != scale; ++i) {
 	  if (word * scale + i < STORESIZE) {
 	    _aval[word * scale + i] = cast(store_t) v;
-	    _bval[word] = 0;
+	    static if (L) _bval[word] = 0;
 	    v >>= WORDSIZE;
 	  }
 	}
@@ -935,7 +935,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	_aval[n] &= ~mask;
 	_aval[n] |= w;
 	// bval
-	_bval[n] = 0;
+	static if (L) _bval[n] = 0;
       }
       // if MSB word
       if(word == (SIZE-1)/(T.sizeof*8)) {
@@ -2204,6 +2204,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
     }
 
     static if (SIZE % 8 == 0) {
+      alias swapEndian = byteReverse;
       public auto byteReverse() {
 	typeof(this) retval;
 	ubyte* aptr = cast (ubyte*) _aval;
@@ -2613,13 +2614,38 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	  result = getValue() / other.getValue();
 	}
 	else {
-	  pragma(msg, "Not implemented yet -- TBD (use std.internal.math.biguintcore");
+	  import std.internal.math.biguintcore;
+	  //pragma(msg, "Not implemented yet -- TBD (use std.internal.math.biguintcore");
+	  uint[] a = cast(uint[]) this._aval;
+	  uint[] b = cast(uint[]) other._aval;
+	  uint[] r = cast(uint[]) result._aval;
+	  divModInternal(r, null, a, b);
 	}
-
 	if (result.aValMSB) result._aval[$-1] |= result.SMASK;
 	return result;
       }
-
+    
+    public auto opBinary(string op, string file= __FILE__,
+			 size_t line = __LINE__, V)(V other) const
+      if(isBitVector!V && (op == "%")) {
+	reportX!(file, line)(other);
+	alias R = _bvec!(this_type, V, "%");
+	R result = 0;
+	static if(R.SIZE <= 64) {
+	  result = getValue() % other.getValue();
+	}
+	else {
+	  import std.internal.math.biguintcore;
+	  //pragma(msg, "Not implemented yet -- TBD (use std.internal.math.biguintcore");
+	  uint[] a = cast(uint[]) this._aval;
+	  uint[] b = cast(uint[]) other._aval;
+	  uint[] r = cast(uint[]) result._aval;
+	  uint[] temp = [];
+	  divModInternal(temp, r, a, b);
+	}
+	if (result.aValMSB) result._aval[$-1] |= result.SMASK;
+	return result;
+      }
 
     // Left Shift Assign
     public void opOpAssign(string op)(size_t shift)
@@ -5524,4 +5550,20 @@ unittest {
 
 }
 
+ubyte getByte(T)(T data, size_t n) if (isIntegral!T) {
+  import std.traits: Unconst;
+  assert (n < T.sizeof);
+  Unconst!T d = data;
+  d >>>= n * 8;
+  return cast(ubyte) d;
+ }
 
+void setByte(T)(ref T data, size_t n, ubyte b) if (isIntegral!T) {
+  assert (n < T.sizeof);
+  T mask = 0xff;
+  T byt = b;
+  mask <<= n * 8;
+  byt <<= n * 8;
+  data &= ~mask;
+  data |= byt;
+ }

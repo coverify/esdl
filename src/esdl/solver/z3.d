@@ -175,6 +175,8 @@ class CstZ3Solver: CstSolver
   
   Z3Term[] _evalStack;
 
+  Z3Term _term;
+
   BvExpr[] _domains;
   BvVar[] _variables;
 
@@ -196,6 +198,9 @@ class CstZ3Solver: CstSolver
 
   uint _seed;
 
+  Z3_ast[] _vector;
+
+  CstVectorOp _state;
   // the group is used only for the purpose of constructing the Z3 solver
   // otherwise the solver identifies with the signature only
   this(string signature, CstPredGroup group) {
@@ -209,6 +214,8 @@ class CstZ3Solver: CstSolver
     Config cfg = new Config();
     _context = new Context(cfg);
 
+    // _vector = BvExprVector(_context);
+    
     CstDomain[] doms = group.domains();
     _domains.length = doms.length;
 
@@ -287,6 +294,10 @@ class CstZ3Solver: CstSolver
     // writeln("smt.random_seed: ", getParam("smt.random_seed"));
     // writeln("sat.phase: ", getParam("sat.phase"));
     // writeln("sat.random_seed: ", getParam("sat.random_seed"));
+  }
+
+  override string describe() {
+    return "Z3 SMT Solver"  ~ super.describe();
   }
 
   // BvVar.State varState;
@@ -394,7 +405,7 @@ class CstZ3Solver: CstSolver
     return assumptions[];
   }
   
-  override void solve(CstPredGroup group) {
+  override bool solve(CstPredGroup group) {
     updateVars(group);
     if (_needOptimize) {
       if (updateOptimize() || (_optimizeInit is false)) {
@@ -437,9 +448,9 @@ class CstZ3Solver: CstSolver
       import std.stdio;
       writeln(_solver);
     }
+    _solver.check();
     // writeln(_solver.check());
     // writeln(_solver.getModel());
-    _solver.check();
     auto model = _solver.getModel();
     foreach (i, ref dom; _domains) {
       // import std.string: format;
@@ -454,6 +465,7 @@ class CstZ3Solver: CstSolver
       // writeln(value);
     }
 
+    return true;
   }
 
   void updateVarState(ref State state) {
@@ -603,29 +615,35 @@ class CstZ3Solver: CstSolver
   }
 
   override void pushToEvalStack(CstDomain domain) {
+    // import std.stdio;
     uint n = domain.annotation();
     // writeln("push: ", domain.name(), " annotation: ", n);
     // writeln("_domains has a length: ", _domains.length);
+
     if (domain.isSolved()) { // is a variable
-      _evalStack ~= Z3Term(_variables[n]);
+      pushToEvalStack(_variables[n]);
     }
     else {
-      _evalStack ~= Z3Term(_domains[n]);
+      pushToEvalStack(_domains[n]);
     }
+
   }
 
   override void pushToEvalStack(CstValue value) {
     // writeln("push: value ", value.value());
-    _evalStack ~= Z3Term(bvNumVal(_context, value.value(),
-				  value.bitcount(), value.signed()));
+    BvExpr bv = bvNumVal(_context, value.value(),
+			 value.bitcount(), value.signed());
+    pushToEvalStack(bv);
   }
 
   override void pushToEvalStack(ulong value, uint bitcount, bool signed) {
-    _evalStack ~= Z3Term(bvNumVal(_context, value, bitcount, signed));
+    BvExpr bv = bvNumVal(_context, value, bitcount, signed);
+    pushToEvalStack(bv);
   }
 
   override void pushToEvalStack(bool value) {
-    _evalStack ~= Z3Term(boolVal(_context, value));
+    BoolExpr bb = boolVal(_context, value);
+    pushToEvalStack(bb);
   }
 
   override void pushIndexToEvalStack(ulong value) {
@@ -638,13 +656,13 @@ class CstZ3Solver: CstSolver
     final switch (op) {
     case CstUnaryOp.NOT:
       BvExpr e = compliment(_evalStack[$-1].toBv());
-      _evalStack.length = _evalStack.length - 1;
-      _evalStack ~= Z3Term(e);
+      popEvalStack();
+      pushToEvalStack(e);
       break;
     case CstUnaryOp.NEG:
       BvExpr e = neg(_evalStack[$-1].toBv());
-      _evalStack.length = _evalStack.length - 1;
-      _evalStack ~= Z3Term(e);
+      popEvalStack();
+      pushToEvalStack(e);
       break;
     }
   }
@@ -654,58 +672,58 @@ class CstZ3Solver: CstSolver
     final switch (op) {
     case CstBinaryOp.AND:
       BvExpr e = bvand(_evalStack[$-2].toBv(), _evalStack[$-1].toBv());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     case CstBinaryOp.OR:
       BvExpr e = bvor(_evalStack[$-2].toBv(), _evalStack[$-1].toBv());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     case CstBinaryOp.XOR:
       BvExpr e = bvxor(_evalStack[$-2].toBv(), _evalStack[$-1].toBv());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     case CstBinaryOp.ADD:
       BvExpr e = add(_evalStack[$-2].toBv(), _evalStack[$-1].toBv());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     case CstBinaryOp.SUB:
       BvExpr e = sub(_evalStack[$-2].toBv(), _evalStack[$-1].toBv());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     case CstBinaryOp.MUL:
       BvExpr e = mul(_evalStack[$-2].toBv(), _evalStack[$-1].toBv());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     case CstBinaryOp.DIV:
       BvExpr e = div(_evalStack[$-2].toBv(), _evalStack[$-1].toBv());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     case CstBinaryOp.REM:
       BvExpr e = rem(_evalStack[$-2].toBv(), _evalStack[$-1].toBv());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     case CstBinaryOp.LSH:
       BvExpr e = lsh(_evalStack[$-2].toBv(), _evalStack[$-1].toBv());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     case CstBinaryOp.RSH:			// Arith shift right ">>"
       BvExpr e = rsh(_evalStack[$-2].toBv(), _evalStack[$-1].toBv());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     case CstBinaryOp.LRSH:			// Logic shift right ">>>"
       BvExpr e = lrsh(_evalStack[$-2].toBv(), _evalStack[$-1].toBv());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     }
   }
@@ -715,33 +733,33 @@ class CstZ3Solver: CstSolver
     final switch (op) {
     case CstCompareOp.LTH:
       BoolExpr e = lt(_evalStack[$-2].toBv(), _evalStack[$-1].toBv());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     case CstCompareOp.LTE:
       BoolExpr e = le(_evalStack[$-2].toBv(), _evalStack[$-1].toBv());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     case CstCompareOp.GTH:
       BoolExpr e = gt(_evalStack[$-2].toBv(), _evalStack[$-1].toBv());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     case CstCompareOp.GTE:
       BoolExpr e = ge(_evalStack[$-2].toBv(), _evalStack[$-1].toBv());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     case CstCompareOp.EQU:
       BoolExpr e = eq(_evalStack[$-2].toBv(), _evalStack[$-1].toBv());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     case CstCompareOp.NEQ:
       BoolExpr e = neq(_evalStack[$-2].toBv(), _evalStack[$-1].toBv());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     }
   }
@@ -751,23 +769,23 @@ class CstZ3Solver: CstSolver
     final switch (op) {
     case CstLogicOp.LOGICAND:
       BoolExpr e = and(_evalStack[$-2].toBool(), _evalStack[$-1].toBool());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     case CstLogicOp.LOGICOR:
       BoolExpr e = or(_evalStack[$-2].toBool(), _evalStack[$-1].toBool());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     case CstLogicOp.LOGICIMP:
       BoolExpr e = implies(_evalStack[$-2].toBool(), _evalStack[$-1].toBool());
-      _evalStack.length = _evalStack.length - 2;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(2);
+      pushToEvalStack(e);
       break;
     case CstLogicOp.LOGICNOT:
       BoolExpr e = not(_evalStack[$-1].toBool());
-      _evalStack.length = _evalStack.length - 1;
-      _evalStack ~= Z3Term(e);
+      popEvalStack();
+      pushToEvalStack(e);
       break;
     }
   }
@@ -778,17 +796,169 @@ class CstZ3Solver: CstSolver
     case CstSliceOp.SLICE:
       BvExpr e = _evalStack[$-3].toBv().extract(cast(uint) _evalStack[$-1].toUlong() - 1,
 						cast(uint) _evalStack[$-2].toUlong());
-      _evalStack.length = _evalStack.length - 3;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(3);
+      pushToEvalStack(e);
       break;
     case CstSliceOp.SLICEINC:
       BvExpr e = _evalStack[$-3].toBv().extract(cast(uint) _evalStack[$-1].toUlong(),
 						cast(uint) _evalStack[$-2].toUlong());
-      _evalStack.length = _evalStack.length - 3;
-      _evalStack ~= Z3Term(e);
+      popEvalStack(3);
+      pushToEvalStack(e);
       break;
     }
   }
-  
-}
 
+  override void processEvalStack(CstVectorOp op) {
+    // import std.conv: to;
+    // assert (false, "CstVectorOp is handled only by SMT solvers: " ~ op.to!string());
+    // final switch (op) {
+    // case CstVectorOp.NONE:
+    //   assert (false, "Unexpected op: CstVectorOp.NONE");
+    // case
+    //   CstVectorOp.BEGIN_INT,
+    //   CstVectorOp.BEGIN_UINT,
+    //   CstVectorOp.BEGIN_LONG,
+    //   CstVectorOp.BEGIN_ULONG:
+    //   assert (_state is CstVectorOp.NONE);
+    //   _state = op;
+    //   _vector.length = 0;
+    //   // BvExprVector vector = BvExprVector(_context);
+    //   // _vector = vector;
+    //   break;
+    // case CstVectorOp.SUM:
+    //   BvExpr e = sum(_vector);
+    //   pushToEvalStack(e);
+    //   _state = CstVectorOp.NONE;
+    //   break;
+    // case CstVectorOp.MULT:
+    //   // BoolExpr e = mul(_vector);
+    //   // pushToEvalStack(e);
+    //   // _state = CstVectorOp.NONE;
+    //   assert(false, "TBD");
+    //   // break;
+    // }
+  }
+
+  override void processEvalStack(CstInsideOp op) {
+    final switch (op) {
+    case CstInsideOp.INSIDE:
+      _term = _evalStack[$-1];
+      popEvalStack();
+      break;
+    case CstInsideOp.EQUAL:
+      BoolExpr e = eq(_term.toBv(), _evalStack[$-1].toBv());
+      popEvalStack();
+      pushToEvalStack(e);
+      processEvalStack(CstLogicOp.LOGICOR);
+      break;
+    case CstInsideOp.RANGE:
+      BoolExpr upper = lt(_term.toBv(), _evalStack[$-1].toBv());
+      BoolExpr lower = ge(_term.toBv(), _evalStack[$-2].toBv());
+      popEvalStack(2);
+      pushToEvalStack(upper);
+      pushToEvalStack(lower);
+      processEvalStack(CstLogicOp.LOGICAND);
+      processEvalStack(CstLogicOp.LOGICOR);
+      break;
+    case CstInsideOp.RANGEINCL:
+      BoolExpr upper = le(_term.toBv(), _evalStack[$-1].toBv());
+      BoolExpr lower = ge(_term.toBv(), _evalStack[$-2].toBv());
+      popEvalStack(2);
+      pushToEvalStack(upper);
+      pushToEvalStack(lower);
+      processEvalStack(CstLogicOp.LOGICAND);
+      processEvalStack(CstLogicOp.LOGICOR);
+      break;
+    case CstInsideOp.DONE:
+      _term = Z3Term.init;
+      break;
+    }
+  }
+
+  override void processEvalStack(CstUniqueOp op) {
+    import esdl.intf.z3.api;
+    final switch(op) {
+    case CstUniqueOp.INIT:
+      foreach (uv; _vector) {
+	Z3_dec_ref(_context, uv);
+      }
+      _vector.length = 0;
+      break;
+    case CstUniqueOp.INT:
+    case CstUniqueOp.UINT:
+      assert (_evalStack.length > 0);
+      BvExpr bv = _evalStack[$-1].toBv();
+      bool signed = bv.isSigned();
+      uint size = bv.size();
+      assert (size <= 32);
+      uint extBy = 32 - size;
+      popEvalStack();
+
+      Z3_ast uv = bv.getAST();
+      if (extBy > 0) {
+	if (signed) uv = Z3_mk_sign_ext(_context, extBy, uv);
+	else uv = Z3_mk_zero_ext(_context, extBy, uv);
+      }
+
+      Z3_inc_ref(_context, uv);
+      _vector ~= uv;
+      break;
+    case CstUniqueOp.LONG:
+    case CstUniqueOp.ULONG:
+      assert (_evalStack.length > 0);
+      BvExpr bv = _evalStack[$-1].toBv();
+      bool signed = bv.isSigned();
+      uint size = bv.size();
+      assert (size <= 64);
+      uint extBy = 64 - size;
+      popEvalStack();
+
+      Z3_ast uv = bv.getAST();
+      if (extBy > 0) {
+	if (signed) uv = Z3_mk_sign_ext(_context, extBy, uv);
+	else uv = Z3_mk_zero_ext(_context, extBy, uv);
+      }
+
+      Z3_inc_ref(_context, uv);
+      _vector ~= uv;
+      break;
+    case CstUniqueOp.UNIQUE:
+      if (_vector.length == 0) {
+	pushToEvalStack(true);
+      }
+      else {
+	Z3_ast r = Z3_mk_distinct(_context, cast(uint) _vector.length, _vector.ptr);
+	_context.checkError();
+	BoolExpr be = BoolExpr(_context, r);
+	pushToEvalStack(be);
+	// destroy the _vector
+	foreach (uv; _vector) {
+	  Z3_dec_ref(_context, uv);
+	}
+	_vector.length = 0;
+      }
+      break;
+    }
+  }
+
+  void popEvalStack(uint count = 1) {
+    assert (_evalStack.length >= count);
+    _evalStack.length = _evalStack.length - count;
+  }
+  
+  void pushToEvalStack(ref BvExpr vec) {
+    Z3Term term = Z3Term(vec);
+    pushToEvalStack(term);
+  }
+  
+  void pushToEvalStack(ref BoolExpr b) {
+    Z3Term term = Z3Term(b);
+    pushToEvalStack(term);
+  }  
+
+  void pushToEvalStack(ref Z3Term term) {
+    // writeln("Pushing on _evalStack: ", term.toString());
+    _evalStack ~= term;
+    // writeln("After PUSH _evalStack is of size: ", _evalStack.length);
+  }
+}

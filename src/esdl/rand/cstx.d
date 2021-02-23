@@ -197,6 +197,7 @@ struct CstParser {
       GTH,
       LTH,
       INSIDE,
+      NOTINSIDE,
       DIST,
   }
 
@@ -240,10 +241,14 @@ struct CstParser {
       SLICEINC,			// inclusive slice
       }
 
-  enum OpUnaryToken: byte
+  enum OpUnaryArithToken: byte
   {   NONE = 0,
       NEG,
       INV,
+      }
+
+  enum OpUnaryLogicToken: byte
+  {   NONE = 0,
       NOT,
       }
 
@@ -253,14 +258,25 @@ struct CstParser {
       RANGEWISE,
   }
 
-  OpUnaryToken parseUnaryOperator() {
-    OpUnaryToken tok = OpUnaryToken.NONE;
+  OpUnaryArithToken parseUnaryArithOperator() {
+    OpUnaryArithToken tok = OpUnaryArithToken.NONE;
     if (srcCursor < CST.length) {
-      if (CST[srcCursor] == '~') tok = OpUnaryToken.INV;
-      if (CST[srcCursor] == '!') tok = OpUnaryToken.NOT;
-      if (CST[srcCursor] == '-') tok = OpUnaryToken.NEG;
+      if (CST[srcCursor] == '~') tok = OpUnaryArithToken.INV;
+      if (CST[srcCursor] == '-') tok = OpUnaryArithToken.NEG;
     }
-    if (tok !is OpUnaryToken.NONE) {
+    if (tok !is OpUnaryArithToken.NONE) {
+      srcCursor += 1;
+      return tok;
+    }
+    return tok;			// None
+  }
+
+  OpUnaryLogicToken parseUnaryLogicOperator() {
+    OpUnaryLogicToken tok = OpUnaryLogicToken.NONE;
+    if (srcCursor < CST.length) {
+      if (CST[srcCursor] == '!') tok = OpUnaryLogicToken.NOT;
+    }
+    if (tok !is OpUnaryLogicToken.NONE) {
       srcCursor += 1;
       return tok;
     }
@@ -351,19 +367,26 @@ struct CstParser {
 
   OpCmpToken parseCmpOperator() {
     OpCmpToken tok = OpCmpToken.NONE;
-    if (srcCursor <= CST.length - 6) {
-      if (CST[srcCursor..srcCursor+6] == "inside") tok = OpCmpToken.INSIDE;
+    if (srcCursor <= CST.length - 7) {
+      if (CST[srcCursor..srcCursor+7] == "!inside") {
+	tok = OpCmpToken.NOTINSIDE;
+	srcCursor += 7;
+	return tok;
+      }
     }
-    if (tok !is OpCmpToken.NONE) {
-      srcCursor += 6;
-      return tok;
+    if (srcCursor <= CST.length - 6) {
+      if (CST[srcCursor..srcCursor+6] == "inside") {
+	tok = OpCmpToken.INSIDE;
+	srcCursor += 6;
+	return tok;
+      }
     }
     if (srcCursor <= CST.length - 4) {
-      if (CST[srcCursor..srcCursor+4] == "dist") tok = OpCmpToken.DIST;
-    }
-    if (tok !is OpCmpToken.NONE) {
-      srcCursor += 4;
-      return tok;
+      if (CST[srcCursor..srcCursor+4] == "dist") {
+	tok = OpCmpToken.DIST;
+	srcCursor += 4;
+	return tok;
+      }
     }
     if (srcCursor <= CST.length - 2) {
       if (CST[srcCursor] == '=' && CST[srcCursor+1] == '=') tok = OpCmpToken.EQU;
@@ -384,6 +407,17 @@ struct CstParser {
       return tok;
     }
     return tok;			// None
+  }
+
+  bool parseUniqueOperator() {
+    bool tok = false;
+    if (srcCursor <= CST.length - 6) {
+      if (CST[srcCursor..srcCursor+6] == "unique") {
+	tok = true;
+	srcCursor += 6;
+      }
+    }
+    return tok;
   }
 
   OpLogicToken parseLogicOperator() {
@@ -544,193 +578,99 @@ struct CstParser {
     return start;
   }
 
-  // I do not want to use any dynamic arrays here since this all is
-  // compile time and I do not want DMD to allocate memory for this at
-  // compile time.
-
-  enum MaxHierDepth = 20;
-
-  int[MaxHierDepth * 2] parseIdentifierChain() {
-    int[MaxHierDepth * 2] result;
-    size_t wTag = srcCursor;
-    size_t start = srcCursor;
-    size_t srcTag = srcCursor;
-    
-    result[0] = -1;
-
-    wTag = srcCursor;
-    parseSpace();
-    srcTag = srcCursor;
-    parseIdentifier();
-
-    for (size_t i=0; i != MaxHierDepth-1; ++i) {
-      if (srcCursor > srcTag) {
-	fill(CST[wTag..srcTag]);
-	result[2*i] = cast(int) (srcTag - start);
-	result[2*i + 1] = cast(int) (srcCursor - start);
-      }
-      else {
-	if (i != 0) srcCursor = wTag - 1;
-	result[2*i] = -1;
-	break;
-      }
-      srcTag = srcCursor;
-      parseSpace();
-      if (CST[srcCursor] == '.' &&
-	  srcCursor + 1 < CST.length &&
-	  CST[srcCursor+1] != '.' // that woucd be range expression
-	  ) {
-	fill(CST[srcTag..srcCursor]);
-	++srcCursor;
-	wTag = srcCursor;
-	parseSpace();
-	srcTag = srcCursor;
-	parseIdentifier();
-	continue;
-      }
-      else if (CST[srcCursor] == '[') {
-      	fill(CST[srcTag..srcCursor]);
-      	// ++srcCursor;
-	wTag = srcCursor;
-	// parseSpace();
-	srcTag = srcCursor;
-	moveToMatchingBracket();
-      	continue;
-      }
-      else {
-	srcCursor = srcTag;
-	result[2*i + 2] = -1;
-	break;
-      }
-    }
-    return result;
-  }
-
   bool parseMappedChain(string mapped, ref int cursor) {
     if (cursor >= mapped.length) return false;
     while (cursor < mapped.length && mapped[cursor] != '.') cursor += 1;
     return true;
   }
 
-  size_t moveToMatchingBracket() {
-    size_t start = srcCursor;
-    uint bracketCount = 0;
-    while (srcCursor < CST.length) {
-      if (CST[srcCursor] == '/' && CST[srcCursor+1] == '/') {
-	parseLineComment();
-	continue;
-      }
-      if (CST[srcCursor] == '/' && CST[srcCursor+1] == '*') {
-	parseBlockComment();
-	continue;
-      }
-      if (CST[srcCursor] == '/' && CST[srcCursor+1] == '+') {
-	parseNestedComment();
-	continue;
-      }
-      if (CST[srcCursor] == '[') {
-	bracketCount++;
-	srcCursor++;
-	continue;
-      }
-      if (CST[srcCursor] == ']') {
-	bracketCount--;
-	srcCursor++;
-	if (bracketCount == 0) {
-	  break;
-	}
-	continue;
-      }
-      srcCursor++;
-      continue;
-    }
-
-    if (bracketCount != 0) {
-      assert (false, "Unbalanced backet");
-    }
-     
-    return start;
-    
-  }
-  
   size_t procIdentifier() {
     // parse an identifier and the following '.' heirarcy if any
     auto start = srcCursor;
     auto srcTag = srcCursor;
-    int[MaxHierDepth * 2] idChain = parseIdentifierChain();
-    string mapped;
-    int mappedCursor = 0;
-    int mappedPrevCursor = 0;
-    if (idChain[0] != -1) {
+    
+    parseSpace();
+
+    fill(CST[srcTag..srcCursor]);
+
+    srcTag = srcCursor;
+    parseIdentifier();
+
+    if (srcCursor != srcTag) {	// some identifier
       fill("_esdl__sym!(");
-      int indx = idMatch(CST[srcTag+idChain[0]..srcTag+idChain[1]]);
+      string mapped;
+      int mappedCursor = 0;
+      int mappedPrevCursor = 0;
+      int indx = idMatch(CST[srcTag..srcCursor]);
       if (indx == -1) {
-	fill(CST[srcTag+idChain[0]..srcTag+idChain[1]]);
-	fillDeclaration(CST[srcTag+idChain[0]..srcTag+idChain[1]]);
-	// fill(", \"");
-	// fill(CST[srcTag+idChain[0]..srcTag+idChain[1]]);
-	// fill("\"");
+	fill(CST[srcTag..srcCursor]);
+	fillDeclaration(CST[srcTag..srcCursor]);
       }
       else {
 	mapped = varMap[indx].xLat;
 	parseMappedChain(mapped, mappedCursor);
 	fill(mapped[0..mappedCursor]);
 	fillDeclaration(varMap[indx].xLatBase);
-	// fill(", \"");
-	// fill(mapped[0..mappedCursor]);
-	// fill("\"");
 	mappedPrevCursor = ++mappedCursor;
       }
       fill(")(\"");
-      fill(CST[srcTag+idChain[0]..srcTag+idChain[1]]);
+      fill(CST[srcTag..srcCursor]);
       fill("\", this.outer)");
       while (parseMappedChain(mapped, mappedCursor)) {
-	fill("._esdl__sym!(\"");
+	fill("._esdl__dot!(\"");
 	fill(mapped[mappedPrevCursor..mappedCursor]);
 	fill("\")");
 	mappedPrevCursor = ++mappedCursor;
       }
-      if (idChain[2] != -1) {
-	fill("._esdl__sym!(");
-      }
-      for (size_t i=1; i != MaxHierDepth-1; ++i) {
-	if (idChain[2*i] == -1) break;
-	if (i == 1) fill('"');
-	else fill(", \"");
-	if (CST[srcTag+idChain[2*i]] is '[') {
-	  // in case of opIndex, empty string
+
+      while (true) {
+	srcTag = srcCursor;
+	parseSpace();
+	fill(CST[srcTag..srcCursor]);
+	srcTag = srcCursor;
+	if (CST[srcCursor] == '.' &&
+	    srcCursor + 1 < CST.length &&
+	    CST[srcCursor+1] != '.' // that woucd be range expression
+	    ) {
+	  fill(CST[srcTag..srcCursor]);
+	  srcCursor += 1;
+	  srcTag = srcCursor;
+	  parseSpace();
+	  srcTag = srcCursor;
+	  fill(CST[srcTag..srcCursor]);
+	  fill("._esdl__dot!(\"");
+	  srcTag = srcCursor;
+	  parseIdentifier();
+	  fill(CST[srcTag..srcCursor]);
+	  fill("\")");
+	  continue;
+	}
+	else if (CST[srcCursor] == '[') {
+	  fill(CST[srcTag..srcCursor]);
+	  fill("[");
+	  srcCursor += 1;
+	  srcTag = srcCursor;
+	  procIndexExpr(srcCursor);
+	  srcTag = srcCursor;
+	  parseSpace();
+	  fill(CST[srcTag..srcCursor]);
+	  srcTag = srcCursor;
+	  if (CST[srcCursor] == ']') {
+	    fill("]");
+	    srcCursor += 1;
+	  }
+	  else {
+	    assert (false, "Unrecognized token: " ~ "--> " ~
+		    CST[srcCursor..$]);
+	  }
+	  continue;
 	}
 	else {
-	  fill(CST[srcTag+idChain[2*i]..srcTag+idChain[2*i+1]]);
+	  srcCursor = srcTag;
+	  break;
 	}
-	fill('"');
       }
-      if (idChain[2] != -1) {
-	fill(")(");
-      }
-
-      bool isRange = false;
       
-      for (size_t i=1; i != MaxHierDepth-1; ++i) {
-	if (idChain[2*i] == -1) break;
-	if (i != 1) fill(", ");
-	if (CST[srcTag+idChain[2*i]] is '[') {
-	  if (isRange is false) {
-	    isRange = true;
-	    fill('[');
-	  }
-	  indexTag ~= outCursor-1;
-	  ++numIndex;
-	  procIndexExpr(srcTag+idChain[2*i]+1);
-	}
-	// else {
-	//   fill("null");
-	// }
-      }
-      if (idChain[2] != -1) {
-	if (isRange is true) fill(']');
-	fill(")");
-      }
     }
     else {
       srcTag = parseLiteral();
@@ -1515,12 +1455,32 @@ struct CstParser {
     numParen = savedNumParen;
   }
 
-  void procSetRangeExpr() {
+  void procInsideElem() {
     auto savedNumIndex = numIndex;
     auto savedNumParen = numParen;
     numIndex = 0;
     numParen = 0;
-    procRangeExpr();
+    procRangeTerm("inside_");
+    numIndex = savedNumIndex;
+    numParen = savedNumParen;
+  }
+
+  void procUniqueElem() {
+    auto savedNumIndex = numIndex;
+    auto savedNumParen = numParen;
+    numIndex = 0;
+    numParen = 0;
+    procUniqueTerm();
+    numIndex = savedNumIndex;
+    numParen = savedNumParen;
+  }
+
+  void procDistRangeExpr() {
+    auto savedNumIndex = numIndex;
+    auto savedNumParen = numParen;
+    numIndex = 0;
+    numParen = 0;
+    procRangeTerm("dist_");
     numIndex = savedNumIndex;
     numParen = savedNumParen;
   }
@@ -1532,13 +1492,14 @@ struct CstParser {
     srcCursor = cursor;
     numIndex = 0;
     numParen = 0;
-    procRangeExpr();
+    procRangeTerm("index_");
     numIndex = savedNumIndex;
     numParen = savedNumParen;
-    srcCursor = savedCursor;
+    // srcCursor = savedCursor;
   }
 
-  void procArithExpr() {
+  bool procArithExpr() {
+    bool identOnly = true;
     size_t startNumParen = numParen;
     size_t srcTag = 0;
     size_t startAnchor = outCursor;
@@ -1557,19 +1518,31 @@ struct CstParser {
 
       // Parse any unary operators
       // if (unaryLegal) {
-      auto uTok = parseUnaryOperator();
+      auto uTok = parseUnaryArithOperator();
       final switch(uTok) {
-      case OpUnaryToken.NEG: fill('-'); break;
-      case OpUnaryToken.NOT: fill('*'); break;
-      case OpUnaryToken.INV: fill('~'); break;
-      case OpUnaryToken.NONE: break;
+      case OpUnaryArithToken.NEG: fill('-');
+	srcTag = parseSpace();
+	fill(CST[srcTag..srcCursor]);
+	srcTag = srcCursor;
+	identOnly = false;
+	procArithExpr();
+	break;
+      case OpUnaryArithToken.INV: fill('~');
+	srcTag = parseSpace();
+	fill(CST[srcTag..srcCursor]);
+	srcTag = srcCursor;
+	identOnly = false;
+	procArithExpr();
+	break;
+      case OpUnaryArithToken.NONE:
+	srcTag = parseSpace();
+	fill(CST[srcTag..srcCursor]);
+	srcTag = procIdentifier();
+	break;
       }
       // }
       // unaryLegal = false;
 
-      srcTag = parseSpace();
-      fill(CST[srcTag..srcCursor]);
-      srcTag = procIdentifier();
       // fillDeclaration(CST[srcTag..srcCursor]);
       srcTag = parseSpace();
       fill(CST[srcTag..srcCursor]);
@@ -1582,7 +1555,7 @@ struct CstParser {
 
       final switch(opToken) {
       case OpArithToken.NONE:
-	return;
+	return identOnly;
 	// break;
       case OpArithToken.AND:
 	fill(" & ");
@@ -1617,10 +1590,12 @@ struct CstParser {
       case OpArithToken.SLICE:
 	assert(false); // FIXME
       }
+      identOnly = false;
     }
+    return false;
   }
 
-  void procRangeExpr() {
+  void procRangeTerm(string prefix) {
     size_t srcTag = 0;
 
     srcTag = parseSpace();
@@ -1646,13 +1621,19 @@ struct CstParser {
 
       final switch(opToken) {
       case OpRangeToken.RANGE:
-	fill(")._esdl__range(");
+	fill(")._esdl__");
+	fill(prefix);
+	fill("range(");
 	break;
       case OpRangeToken.RANGEINC:
-	fill(")._esdl__rangeinc(");
+	fill(")._esdl__");
+	fill(prefix);
+	fill("rangeinc(");
 	break;
       case OpRangeToken.NONE:
-	fill(")._esdl__range(null)");
+	fill(")._esdl__");
+	fill(prefix);
+	fill("range(null)");
 	return;
       }
       // RHS
@@ -1668,6 +1649,27 @@ struct CstParser {
     }
   }
 
+  void procUniqueTerm() {
+    size_t srcTag = 0;
+
+    srcTag = parseSpace();
+    fill(CST[srcTag..srcCursor]);
+
+    // LHS
+    if (srcCursor < CST.length) {
+      // size_t openingParenAnchor = fill(' ');
+      // size_t startAnchor = outCursor;
+      srcTag = srcCursor;
+      fill("_esdl__unique_elem(");
+      procArithExpr();
+      fill(")");
+      if (srcTag == srcCursor) {
+	assert(false, "Expecting an expression, got none");
+      }
+
+    }
+  }
+
   void procDistContainer() {
     size_t srcTag = parseSpace();
     fill(CST[srcTag..srcCursor]);
@@ -1676,7 +1678,7 @@ struct CstParser {
       fill('[');
       srcCursor += 1;
       while (srcCursor < CST.length) {
-	procSetRangeExpr();
+	procDistRangeExpr();
 	srcTag = parseSpace();
 	fill(CST[srcTag..srcCursor]);
 	OpDistToken token = parseDistOperator();
@@ -1720,7 +1722,7 @@ struct CstParser {
     }
   }
   
-  void procSetContainer() {
+  void procInsideSetContainer() {
     size_t srcTag = parseSpace();
     fill(CST[srcTag..srcCursor]);
 
@@ -1728,7 +1730,7 @@ struct CstParser {
       fill('[');
       srcCursor += 1;
       while (srcCursor < CST.length) {
-	procSetRangeExpr();
+	procInsideElem();
 	srcTag = parseSpace();
 	fill(CST[srcTag..srcCursor]);
 	if (srcCursor < CST.length && CST[srcCursor] == ',') {
@@ -1751,9 +1753,40 @@ struct CstParser {
     }
   }
 
+  void procUniqueSetContainer() {
+    size_t srcTag = parseSpace();
+    fill(CST[srcTag..srcCursor]);
+
+    if (srcCursor < CST.length && CST[srcCursor] == '[') {
+      fill('[');
+      srcCursor += 1;
+      while (srcCursor < CST.length) {
+	procUniqueElem();
+	srcTag = parseSpace();
+	fill(CST[srcTag..srcCursor]);
+	if (srcCursor < CST.length && CST[srcCursor] == ',') {
+	  srcCursor += 1;
+	  fill(',');
+	  continue;
+	}
+	else if (srcCursor < CST.length && CST[srcCursor] == ']') {
+	  fill(']');
+	  srcCursor += 1;
+	  break;
+	}
+	else {
+	  assert (false, "Unexpected token found: " ~ CST[srcCursor]);
+	}
+      }
+    }
+    else {
+      assert (false, "[ expected after 'unique', found: " ~ CST[srcCursor]);
+    }
+  }
+
   enum VEC2BOOL: byte  {COMPARE, INSIDE, DIST}
   
-  void procCmpExpr() {
+  bool procCmpExpr() {
     size_t srcTag = 0;
 
     VEC2BOOL opType = VEC2BOOL.COMPARE;
@@ -1766,7 +1799,8 @@ struct CstParser {
       // size_t openingParenAnchor = fill(' ');
       size_t startAnchor = outCursor;
       srcTag = srcCursor;
-      procArithExpr();
+      bool identOnly = procArithExpr();
+
       if (srcTag == srcCursor) {
 	assert(false, "Expecting an expression, got none");
       }
@@ -1807,13 +1841,19 @@ struct CstParser {
 	opType = VEC2BOOL.INSIDE;
 	fill(")._esdl__inside(");
 	break;
+      case OpCmpToken.NOTINSIDE:
+	insertOpeningParen(startAnchor);
+	opType = VEC2BOOL.INSIDE;
+	fill(")._esdl__notinside(");
+	break;
       case OpCmpToken.DIST:
 	insertOpeningParen(startAnchor);
 	opType = VEC2BOOL.DIST;
 	fill(")._esdl__dist(");
 	break;
       case OpCmpToken.NONE:
-	return;
+	fill("._esdl__bool()");
+	return true;
       }
       // RHS
       srcTag = parseSpace();
@@ -1828,7 +1868,7 @@ struct CstParser {
 	}
 	break;
       case VEC2BOOL.INSIDE:
-	procSetContainer();
+	procInsideSetContainer();
 	if (srcTag == srcCursor) {
 	  assert(false, "Expecting a set container on RHS, got none");
 	}
@@ -1841,9 +1881,50 @@ struct CstParser {
 	break;
       }
       fill(')');
+      return true;
+    }
+    else {
+      return false;
     }
   }
 
+  bool procUniqueExpr() {
+    // return false;
+    size_t srcTag = 0;
+
+    srcTag = parseSpace();
+    fill(CST[srcTag..srcCursor]);
+
+    // LHS
+    if (srcCursor < CST.length) {
+      // size_t openingParenAnchor = fill(' ');
+      size_t startAnchor = outCursor;
+      srcTag = srcCursor;
+
+      bool tok = parseUniqueOperator();
+
+      if (tok is false) {
+	return false;
+      }
+
+      srcTag = parseSpace();
+      fill(CST[srcTag..srcCursor]);
+
+      fill("_esdl__unique(");
+
+      procUniqueSetContainer();
+      if (srcTag == srcCursor) {
+	assert(false, "Expecting a set container on RHS, got none");
+      }
+
+      fill(')');
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
+  
   void procLogicExpr() {
     size_t startNumParen = numParen;
     size_t srcTag = 0;
@@ -1854,11 +1935,49 @@ struct CstParser {
 
       if (srcCursor == CST.length) break;
 
-      srcTag = srcCursor;
-      procCmpExpr();
-      if (srcTag == srcCursor) {
-	assert(false, "Expecting an expression, got none");
+      // Parse any left braces now
+      srcTag = parseLeftParens();
+      // if (srcCursor > srcTag) unaryLegal = true;
+      fill(CST[srcTag..srcCursor]);
+
+      // Parse any unary operators
+      // if (unaryLegal) {
+      auto uTok = parseUnaryLogicOperator();
+      final switch(uTok) {
+      case OpUnaryLogicToken.NOT: fill('*');
+	srcTag = parseSpace();
+	fill(CST[srcTag..srcCursor]);
+	srcTag = srcCursor;
+	procLogicExpr();
+	break;
+      case OpUnaryLogicToken.NONE:
+	srcTag = parseSpace();
+	fill(CST[srcTag..srcCursor]);
+	// srcTag = srcCursor;
+	if (procUniqueExpr() == true) {
+	  break;
+	}
+	else if (procCmpExpr() == true) {
+	  break;
+	}
+	else {
+	  assert(false, "Expecting an expression, got none");
+	}
+	// srcTag = procIdentifier();
       }
+      // }
+      // unaryLegal = false;
+
+      // fillDeclaration(CST[srcTag..srcCursor]);
+      srcTag = parseSpace();
+      fill(CST[srcTag..srcCursor]);
+      srcTag = moveToRightParens();
+      
+      // srcTag = srcCursor;
+      // procCmpExpr();
+      // if (srcTag == srcCursor) {
+      // 	assert(false, "Expecting an expression, got none");
+      // }
       
       srcTag = srcCursor;
       OpLogicToken opToken = parseLogicOperator();
@@ -1907,12 +2026,11 @@ struct CstParser {
   //     fill(CST[srcTag..srcCursor]);
 
   //     // Parse any unary operators
-  //     auto uTok = parseUnaryOperator();
+  //     auto uTok = parseUnaryArithOperator();
   //     final switch(uTok) {
-  //     case OpUnaryToken.NEG: fill('-'); continue loop;
-  //     case OpUnaryToken.NOT: fill('*'); continue loop;
-  //     case OpUnaryToken.INV: fill('~'); continue loop;
-  //     case OpUnaryToken.NONE: break;
+  //     case OpUnaryArithToken.NEG: fill('-'); continue loop;
+  //     case OpUnaryArithToken.INV: fill('~'); continue loop;
+  //     case OpUnaryArithToken.NONE: break;
   //     }
   //     srcTag = parseSpace();
   //     fill(CST[srcTag..srcCursor]);

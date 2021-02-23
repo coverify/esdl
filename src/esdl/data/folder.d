@@ -18,7 +18,7 @@ alias realloc = pureRealloc;
 
 enum MINCAP = 4;
 
-struct Folder(T, string NAME="") if (is (T == class))
+struct Folder(T, string NAME="") if (is (T == class) || is (T == interface))
 {
   // total capacity of memory allocate
   size_t _capacity;
