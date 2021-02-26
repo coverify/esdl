@@ -7,33 +7,89 @@ struct DistRange(T)
   T _min;
   T _max;
   T [] _purgeList;		// this should be sorted
-  uint _purgeLen;
+  size_t _purgeLen;
 
   uint _weight;			// per item weight
   bool _perItem;
   
-  uint _adjTotalWeight;
+  size_t _adjTotalWeight;
+
+  static if (is (T == enum)) {
+    static T[] _elems;
+
+    static this() {
+      getSortedMembers(_elems);
+    }
+
+    static void getSortedMembers(T)(out T[] foo) {
+      import std.algorithm.sorting;
+      import std.array;
+      import std.traits: EnumMembers;
+
+      T[] unordered;
+      static T[] ordered;
+  
+      if (ordered.length == 0) {
+	foreach (t; EnumMembers!T) {
+	  unordered ~= t;
+	}
+	ordered = array(unordered.sort());
+      }
+
+      foo = ordered;
+    }
+
+    static size_t distance(T max, T min) {
+      assert (max >= min);
+      size_t i, j;
+      for (i=0; i!=_elems.length; ++i) {
+	if (_elems[i] == min) break;
+      }
+      for (j=_elems.length; j!=0; --j) {
+	if (_elems[j-1] == max) break;
+      }
+      return j - i;
+    }
+
+    static T travel(T min, size_t distance) {
+      size_t j;
+      while (_elems[j] != min) j += 1;
+      return (_elems[j + distance]);
+    }
+  }
+  else {
+    static size_t distance(T max, T min) {
+      assert (max >= min);
+      return max - min + 1;
+    }
+
+    static T travel(T min, size_t distance) {
+      return cast(T) (min + distance);
+    }
+    
+  }
+
 
   this(T min, T max, uint weight, bool perItem=false) {
-    _min = min;
-    _max = max;
+    _min = min <= max ? min : max;
+    _max = min <= max ? max : min;
     _perItem = perItem;
     _weight = weight;
     reset();
   }
   
-  uint getWeight() {
+  size_t getWeight() {
     return _adjTotalWeight;
   }
 
   void adjustWeights() {
     if (_perItem) {
       _adjTotalWeight = _weight *
-	(_max - _min + 1 - cast(uint) _purgeLen);
+	(distance(_max, _min) - _purgeLen);
       // (_max - _min + 1 - cast(uint) _purgeList.length);
     }
     else {
-      if (_max - _min + 1 == _purgeLen) _adjTotalWeight = 0;
+      if (distance(_max, _min) == _purgeLen) _adjTotalWeight = 0;
       // if (_max - _min + 1 == _purgeList.length) _adjTotalWeight = 0;
       else _adjTotalWeight = _weight;
     }
@@ -66,7 +122,7 @@ struct DistRange(T)
       }
       else if (_purgeList[pos] != elem) {
 	// _purgeList.length += 1;
-	addPurgeElem(0);	// this also increments _purgeLen
+	addPurgeElem(T.init);	// this also increments _purgeLen
 	// for (size_t i=_purgeList.length-1; i!=pos; --i) {
 	for (size_t i=_purgeLen-1; i!=pos; --i) {
 	  _purgeList[i] = _purgeList[i-1];
@@ -98,17 +154,15 @@ struct DistRange(T)
       return false;
     }
     else {
-      T index = cast(T)
-	// ((_max - _min + 1 - cast (T) _purgeList.length) * select) /
-	((_max - _min + 1 - cast (T) _purgeLen) * select) /
-	_adjTotalWeight;
+      size_t index = 
+	cast(size_t) (((distance(_max, _min) - _purgeLen) * select) / _adjTotalWeight);
       // foreach (elem; _purgeList) {
       foreach (elem; _purgeList[0.._purgeLen]) {
-	T eindex = cast(T) (elem - _min);
+	size_t eindex = distance(elem, _min) - 1;
 	if (eindex <= index) index += 1;
 	else break;
       }
-      var = cast(T) (_min + index);
+      var = travel(_min, index);
       select = -1;
       return true;
     }
