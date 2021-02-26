@@ -20,7 +20,7 @@ import std.traits: isIntegral, isBoolean, isStaticArray,
 abstract class CstVecTerm: CstVecExpr
 {
 
-  final CstLogicTerm toBoolExpr() {
+  CstLogicTerm toBoolExpr() {
     auto zero = new CstVecValue!int(0); // CstVecValue!int.allocate(0);
     return new CstVec2LogicExpr(this, zero, CstCompareOp.NEQ);
   }

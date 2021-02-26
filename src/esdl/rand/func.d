@@ -5,7 +5,7 @@ import std.traits: isIntegral, isBoolean, isStaticArray,
 import esdl.data.bvec: isBitVector;
 import esdl.rand.misc;
 import esdl.rand.base: CstVecExpr, CstDomSet, CstDomain;
-import esdl.rand.expr: CstLogicTerm, CstVec2LogicExpr, CstRangeExpr, CstDistSetElem,
+import esdl.rand.expr: CstLogicTerm, CstVecTerm, CstVec2LogicExpr, CstRangeExpr, CstDistSetElem,
   CstInsideSetElem, CstUniqueSetElem, CstUniqueArrExpr, CstWeightedDistSetElem,
   CstInsideArrExpr, CstVecDomain, CstDistExpr, CstOrderingExpr;
 
@@ -390,6 +390,10 @@ auto _esdl__dist(T, rand RAND)(CstVecDomain!(T, RAND) vec,
 			       CstWeightedDistSetElem[] ranges) {
   return new CstDistExpr!T(vec, ranges);
 }
+
 auto _esdl__order(CstDomain a, CstDomain b){
   return new CstOrderingExpr(a, b);
+
+CstLogicTerm _esdl__bool(CstVecTerm term) {
+  return term.toBoolExpr();
 }
