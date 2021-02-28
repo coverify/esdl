@@ -463,7 +463,7 @@ class CstVecDomain(T, rand RAND_ATTR): CstDomain
     }
     static if (HAS_RAND_ATTRIB) {
       Unconst!T newVal;
-      static if(isIntegral!T || isBoolean!T) {
+      static if (isIntegral!T || isBoolean!T) {
 	newVal = cast(T) val;
       }
       else {
@@ -1107,7 +1107,7 @@ auto _esdl__cstVal(T)(T val) {
   return new CstVecValue!(T)(val); // CstVecValue!(T).allocate(val);
 }
 
-class CstVecValue(T = int): CstValue
+class CstVecValue(T): CstValue
 {
   static if (isIntegral!T) {
     import std.traits;
@@ -1117,6 +1117,10 @@ class CstVecValue(T = int): CstValue
   else static if (isBitVector!T) {
     enum bool SIGNED = T.ISSIGNED;
     enum uint BITCOUNT = T.SIZE;
+  }
+  else static if (isBoolean!T) {
+    enum bool SIGNED = false;
+    enum uint BITCOUNT = 1;
   }
 
   override bool signed() {
@@ -1128,7 +1132,7 @@ class CstVecValue(T = int): CstValue
   }
 
   override long value() {
-    return _val;
+    return cast(long) _val;
   }
 
   import std.conv;
@@ -1179,7 +1183,7 @@ class CstVecValue(T = int): CstValue
   // }
 
   override long evaluate() {
-    return _val;
+    return cast(long) _val;
   }
 
   override bool isOrderingExpr() {
@@ -1209,7 +1213,7 @@ class CstVecValue(T = int): CstValue
     static if (isBoolean!T) {
       str ~= 'U';
     }
-    static if (isIntegral!T) {
+    else static if (isIntegral!T) {
       static if (isSigned!T) {
 	str ~= 'S';
       }
@@ -1217,13 +1221,16 @@ class CstVecValue(T = int): CstValue
 	str ~= 'U';
       }
     }
-    else {
+    else static if (isBitVector!T) {
       static if (T.ISSIGNED) {
 	str ~= 'S';
       }
       else {
 	str ~= 'U';
       }
+    }
+    else {
+      static assert (false);
     }
     _val.writeHexString(str);
   }

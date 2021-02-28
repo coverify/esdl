@@ -10,8 +10,8 @@ import esdl.rand.misc;
 import esdl.rand.base: CstVecPrim, CstVecExpr, CstIterator, DomType, CstDomain,
   CstDomSet, CstPredicate, CstVarNodeIntf, CstVecNodeIntf;
 import esdl.rand.proxy: _esdl__Proxy;
-import esdl.rand.expr: CstArrLength, CstVecDomain, _esdl__cstVal,
-  CstArrIterator, CstValue, CstRangeExpr, CstVec2LogicExpr;
+import esdl.rand.expr: CstArrLength, CstVecDomain, _esdl__cstVal, CstVecValue,
+  CstArrIterator, CstValue, CstRangeExpr, CstVec2LogicExpr, CstLogicTerm;
 
 import esdl.rand.meta: _esdl__ProxyResolve, _esdl__staticCast;
 
@@ -64,9 +64,10 @@ class CstVectorBase(V, rand RAND_ATTR, int N)
 	  super(name, root);
 	}
 
-	CstLogicTerm toBoolExpr() {
-	  auto zero = cast(LEAF) 0;
-	  return new CstVec2LogicExpr(this, zero, CstCompareOp.NEQ);
+	override CstLogicTerm toBoolExpr() {
+	  CstVecValue!LEAF zero = new CstVecValue!LEAF(cast(LEAF) 0);
+	  return new CstVec2LogicExpr(this, zero,
+				      CstCompareOp.NEQ);
 	}
 
 	override string name() {
