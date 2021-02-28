@@ -584,8 +584,9 @@ struct CstParser {
     return true;
   }
 
-  size_t procIdentifier() {
+  bool procIdentifier() {
     // parse an identifier and the following '.' heirarcy if any
+    bool isSym = true;
     auto start = srcCursor;
     auto srcTag = srcCursor;
     
@@ -594,6 +595,7 @@ struct CstParser {
     fill(CST[srcTag..srcCursor]);
 
     srcTag = srcCursor;
+    auto idStart = srcCursor;
     parseIdentifier();
 
     if (srcCursor != srcTag) {	// some identifier
@@ -607,6 +609,7 @@ struct CstParser {
 	fillDeclaration(CST[srcTag..srcCursor]);
       }
       else {
+	isSym = false;
 	mapped = varMap[indx].xLat;
 	parseMappedChain(mapped, mappedCursor);
 	fill(mapped[0..mappedCursor]);
@@ -619,6 +622,10 @@ struct CstParser {
       while (parseMappedChain(mapped, mappedCursor)) {
 	fill("._esdl__dot!(\"");
 	fill(mapped[mappedPrevCursor..mappedCursor]);
+	fill("\", \"");
+	// if (isSym is true) fill(CST[idStart..srcCursor]);
+	// else fill("_esdl__UNDEFINED");
+	fill(CST[idStart..srcCursor]);	
 	fill("\")");
 	mappedPrevCursor = ++mappedCursor;
       }
@@ -642,6 +649,10 @@ struct CstParser {
 	  srcTag = srcCursor;
 	  parseIdentifier();
 	  fill(CST[srcTag..srcCursor]);
+	  fill("\", \"");
+	  // if (isSym is true) fill(CST[idStart..srcCursor]);
+	  // else fill("_esdl__UNDEFINED");
+	  fill(CST[idStart..srcCursor]);
 	  fill("\")");
 	  continue;
 	}
@@ -650,7 +661,7 @@ struct CstParser {
 	  fill("[");
 	  srcCursor += 1;
 	  srcTag = srcCursor;
-	  procIndexExpr(srcCursor);
+	  isSym &= procIndexExpr(srcCursor);
 	  srcTag = srcCursor;
 	  parseSpace();
 	  fill(CST[srcTag..srcCursor]);
@@ -700,7 +711,7 @@ struct CstParser {
 	}
       }
     }
-    return start;
+    return isSym;
   }
 
   size_t parseLineComment() {
@@ -1524,24 +1535,26 @@ struct CstParser {
     numParen = savedNumParen;
   }
 
-  void procIndexExpr(size_t cursor) {
+  bool procIndexExpr(size_t cursor) {
+    bool isSym;
     auto savedCursor = srcCursor;
     auto savedNumIndex = numIndex;
     auto savedNumParen = numParen;
     srcCursor = cursor;
     numIndex = 0;
     numParen = 0;
-    procRangeTerm("index_");
+    isSym = procRangeTerm("index_");
     numIndex = savedNumIndex;
     numParen = savedNumParen;
     // srcCursor = savedCursor;
+    return isSym;
   }
 
   bool procArithExpr() {
-    bool identOnly = true;
     size_t startNumParen = numParen;
     size_t srcTag = 0;
     size_t startAnchor = outCursor;
+    bool isSym = true;
     // true in the beginning of the expression or just after a start of parenthesis
     // bool unaryLegal = true;
     while (srcCursor < CST.length) {
@@ -1563,20 +1576,18 @@ struct CstParser {
 	srcTag = parseSpace();
 	fill(CST[srcTag..srcCursor]);
 	srcTag = srcCursor;
-	identOnly = false;
-	procArithExpr();
+	isSym &= procArithExpr();
 	break;
       case OpUnaryArithToken.INV: fill('~');
 	srcTag = parseSpace();
 	fill(CST[srcTag..srcCursor]);
 	srcTag = srcCursor;
-	identOnly = false;
-	procArithExpr();
+	isSym &= procArithExpr();
 	break;
       case OpUnaryArithToken.NONE:
 	srcTag = parseSpace();
 	fill(CST[srcTag..srcCursor]);
-	srcTag = procIdentifier();
+	isSym &= procIdentifier();
 	break;
       }
       // }
@@ -1594,7 +1605,7 @@ struct CstParser {
 
       final switch(opToken) {
       case OpArithToken.NONE:
-	return identOnly;
+	return isSym;
 	// break;
       case OpArithToken.AND:
 	fill(" & ");
@@ -1629,12 +1640,13 @@ struct CstParser {
       case OpArithToken.SLICE:
 	assert(false); // FIXME
       }
-      identOnly = false;
     }
-    return false;
+    return isSym;
   }
 
-  void procRangeTerm(string prefix) {
+  bool procRangeTerm(string prefix) {
+    bool isSym = true;
+    
     size_t srcTag = 0;
 
     srcTag = parseSpace();
@@ -1645,7 +1657,7 @@ struct CstParser {
       // size_t openingParenAnchor = fill(' ');
       size_t startAnchor = outCursor;
       srcTag = srcCursor;
-      procArithExpr();
+      isSym &= procArithExpr();
       if (srcTag == srcCursor) {
 	assert(false, "Expecting an expression, got none");
       }
@@ -1673,19 +1685,20 @@ struct CstParser {
 	fill(")._esdl__");
 	fill(prefix);
 	fill("range(null)");
-	return;
+	return isSym;
       }
       // RHS
       srcTag = parseSpace();
       fill(CST[srcTag..srcCursor]);
 
       srcTag = srcCursor;
-      procArithExpr();
+      isSym &= procArithExpr();
       if (srcTag == srcCursor) {
 	assert(false, "Expecting an arithmatic expression on RHS, got none");
       }
       fill(')');
     }
+    return isSym;
   }
 
   void procUniqueTerm() {
@@ -1838,7 +1851,7 @@ struct CstParser {
       // size_t openingParenAnchor = fill(' ');
       size_t startAnchor = outCursor;
       srcTag = srcCursor;
-      bool identOnly = procArithExpr();
+      procArithExpr();
 
       if (srcTag == srcCursor) {
 	assert(false, "Expecting an expression, got none");
@@ -2002,7 +2015,7 @@ struct CstParser {
 	else {
 	  assert(false, "Expecting an expression, got none");
 	}
-	// srcTag = procIdentifier();
+	// procIdentifier();
       }
       // }
       // unaryLegal = false;
@@ -2073,7 +2086,7 @@ struct CstParser {
   //     }
   //     srcTag = parseSpace();
   //     fill(CST[srcTag..srcCursor]);
-  //     srcTag = procIdentifier();
+  //     procIdentifier();
   //     // fillDeclaration(CST[srcTag..srcCursor]);
   //     srcTag = parseSpace();
   //     fill(CST[srcTag..srcCursor]);

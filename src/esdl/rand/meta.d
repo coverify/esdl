@@ -826,7 +826,7 @@ struct _esdl__rand_type_proxy(T, P)
     _parent = parent;
   }
   
-  auto _esdl__dot(string S)() {
+  auto _esdl__dot(string S, string SS)() {
     return esdl.rand.meta._esdl__sym(__traits(getMember, T, S), S, _parent);
   }
 }
@@ -887,7 +887,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
   }
 }
 
-auto _esdl__dot(string S, RV)(RV rv)
+auto _esdl__dot(string S, string SS, RV)(RV rv)
 {
   return __traits(getMember, rv, S);
 }
