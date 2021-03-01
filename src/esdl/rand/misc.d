@@ -7,12 +7,6 @@ import std.traits: isIntegral, isBoolean, isArray,
   EnumMembers, isSomeChar;
 import std.meta: AliasSeq;
 
-interface _esdl__Norand { } 	// classes derived from this interface shall not have a proxy
-
-// Different types attributes for UI
-// template _esdl__norand() {}
-// enum norand;
-
 
 
 // write in Hex form for all the bytes of data
@@ -45,6 +39,10 @@ size_t writeHexString(T)(T val, ref Charbuf str) {
 
 struct rand
 {
+  // enum phony;
+  static interface disable { }
+  static interface barrier { }
+
   bool _noRand;
   bool _noProxy;
 
@@ -54,9 +52,9 @@ struct rand
     _counts = counts;
   }
   
-  this(bool hasProxy) {
-    _noProxy = ! hasProxy;
-    _noRand  = _noProxy;
+  this(bool hasRand) {
+    _noRand  = ! hasRand;
+    _noProxy = false;
   }
 
   this(bool noRand, bool noProxy) {
@@ -259,6 +257,25 @@ template _esdl__ArrOrder(T, int N=0) {
 //   }
 // }
 
+template _esdl__TypeHasRandBarrier(T) {
+  static if (is (T == class) &&
+	     is (T B == super) &&
+	     _esdl__TypeEnlistsRandBarrier!B)
+    enum bool _esdl__TypeHasRandBarrier = true;
+  else
+    enum bool _esdl__TypeHasRandBarrier = false;
+}
+
+template _esdl__TypeEnlistsRandBarrier(B...) {
+  static if (B.length == 0)
+    enum bool _esdl__TypeEnlistsRandBarrier = false;
+  else static if (is (B[0] == rand.barrier))
+    enum bool _esdl__TypeEnlistsRandBarrier = true;
+  else
+    enum bool _esdl__TypeEnlistsRandBarrier =
+      _esdl__TypeEnlistsRandBarrier!(B[1..$]);
+}
+
 template _esdl__TypeHasNorandAttr(T) {
   static if (is (T == class) || is (T == struct)) {
     enum rand RAND = scanRandAttr!(__traits(getAttributes, T));
@@ -292,7 +309,7 @@ template getRandAttr(T, int I) {
 
 template scanRandAttr(A...) {
   static if(A.length == 0) {
-    enum rand scanRandAttr = rand(true, false);
+    enum rand scanRandAttr = rand(true, true);
   }
   else static if(__traits(isSame, A[0], rand)) {
     enum rand scanRandAttr = rand(false, false);

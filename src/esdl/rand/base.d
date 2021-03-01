@@ -7,7 +7,7 @@ import esdl.solver.mono: CstMonoSolver;
 import esdl.rand.dist;
 import esdl.rand.expr: CstValue, CstVecTerm, CstVecArrExpr;
 import esdl.rand.proxy: _esdl__ConstraintBase, _esdl__Proxy;
-import esdl.rand.misc: _esdl__RandGen, isVecSigned, writeHexString, CstVectorOp;
+import esdl.rand.misc: _esdl__RandGen, isVecSigned, writeHexString, CstVectorOp, rand;
 import esdl.data.bvec: isBitVector;
 import esdl.data.folder;
 import esdl.data.charbuf;
@@ -1606,7 +1606,7 @@ class CstVisitorPredicate: CstPredicate
   }
 }
 
-class CstBlock
+class CstBlock: rand.disable
 {
   CstPredicate[] _preds;
   bool[] _booleans;

@@ -13,18 +13,18 @@ import esdl.rand.dist: DistRangeSetBase;
 import std.container: Array;
 import std.array;
 
-abstract class _esdl__ConstraintBase: _esdl__Norand
+abstract class _esdl__ConstraintBase: rand.disable
 {
   this(_esdl__Proxy proxy, string name, string constraint) {
     _proxy = proxy;
     _name = name;
     _constraint = constraint;
   }
-  immutable @rand(false) string _constraint;
-  immutable @rand(false) string _name;
-  protected @rand(false) bool _enabled = true;
-  protected @rand(false) _esdl__Proxy _proxy;
-  protected @rand(false) CstBlock _cstBlock;
+  immutable string _constraint;
+  immutable string _name;
+  protected bool _enabled = true;
+  protected _esdl__Proxy _proxy;
+  protected CstBlock _cstBlock;
 
   bool isEnabled() {
     return _enabled;
@@ -106,7 +106,7 @@ class domainPair {
   }
 }
 
-abstract class _esdl__Proxy: CstObjectIntf
+abstract class _esdl__Proxy: CstObjectIntf, rand.barrier
 {
   // static Buddy _esdl__buddy;
 
