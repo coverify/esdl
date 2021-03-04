@@ -612,7 +612,54 @@ class CstVecDomain(T, rand RAND_ATTR): CstDomain
     return desc;
   }
 }
-
+class CstOrderingExpr: CstLogicExpr
+{
+  CstDomain _first;
+  CstDomain _second;
+  bool _isSolved;
+  this (CstDomain a, CstDomain b){
+    _first = a;
+    _second = b;
+  }
+  override bool isOrderingExpr(){
+    return true;
+  }
+  override DistRangeSetBase getDist(){
+    assert(false);
+  }
+  override CstVecExpr isNot(CstDomain A){
+    assert(false);
+  }
+  override CstLogicExpr unroll(CstIterator iter, uint n){
+    assert(false);
+  }
+  override void setDomainContext(CstPredicate pred,
+				 ref CstDomain[] rnds,
+				 ref CstDomSet[] rndArrs,
+				 ref CstDomain[] vars,
+				 ref CstDomSet[] varArrs,
+				 ref CstValue[] vals,
+				 ref CstIterator[] iters,
+				 ref CstVecNodeIntf[] idxs,
+				 ref CstDomain[] bitIdxs,
+				 ref CstVecNodeIntf[] deps) {
+    rnds ~= _first;
+    rnds ~= _second;
+  }
+  override bool isSolved(){
+    return _isSolved;
+  }
+  override void visit(CstSolver solver){
+    assert(false, "cannot visit an ordering expression");
+  }
+  override void writeExprString(ref Charbuf str){
+    //assert(false);
+  }
+  override string describe(){
+    string str = "( " ~ _first.describe() ~ " is solved before " ~ _second.describe() ~ " )";
+    return str;
+  }
+}
 abstract class CstLogicTerm: CstLogicExpr
 {
   abstract override CstLogicTerm unroll(CstIterator iter, uint n);
@@ -1948,7 +1995,7 @@ class CstDistExpr(T): CstLogicTerm
   }
 
   override void writeExprString(ref Charbuf str) {
-    assert(false);
+    // assert(false);
   }
   override CstVecExpr isNot(CstDomain dom){
     return null;

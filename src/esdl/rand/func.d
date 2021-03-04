@@ -4,10 +4,10 @@ import std.traits: isIntegral, isBoolean, isStaticArray,
   isSomeChar, EnumMembers, isSigned, OriginalType;
 import esdl.data.bvec: isBitVector;
 import esdl.rand.misc;
-import esdl.rand.base: CstVecExpr, CstDomSet;
+import esdl.rand.base: CstVecExpr, CstDomSet, CstDomain;
 import esdl.rand.expr: CstLogicTerm, CstVec2LogicExpr, CstRangeExpr, CstDistSetElem,
   CstInsideSetElem, CstUniqueSetElem, CstUniqueArrExpr, CstWeightedDistSetElem,
-  CstInsideArrExpr, CstVecDomain, CstDistExpr;
+  CstInsideArrExpr, CstVecDomain, CstDistExpr, CstOrderingExpr;
 
 
 
@@ -389,4 +389,7 @@ CstWeightedDistSetElem _esdl__itemWeight(CstDistSetElem range, CstVecExpr weight
 auto _esdl__dist(T, rand RAND)(CstVecDomain!(T, RAND) vec,
 			       CstWeightedDistSetElem[] ranges) {
   return new CstDistExpr!T(vec, ranges);
+}
+auto _esdl__order(CstDomain a, CstDomain b){
+  return new CstOrderingExpr(a, b);
 }

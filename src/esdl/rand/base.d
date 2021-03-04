@@ -247,13 +247,16 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
   void randomizeIfUnconstrained(_esdl__Proxy proxy) {
     if (! isSolved()) {
       if (_rndPreds.length == 0) {
-	_esdl__doRandomize(getProxyRoot()._esdl__getRandGen());
-	proxy.solvedSome();
-	markSolved();
-	proxy.addSolvedDomain(this);
-	execCbs();
+	randomizeWithoutConstraints(proxy);
       }
     }
+  }
+  void randomizeWithoutConstraints(_esdl__Proxy proxy){
+    _esdl__doRandomize(getProxyRoot()._esdl__getRandGen());
+    proxy.solvedSome();
+    markSolved();
+    proxy.addSolvedDomain(this);
+    execCbs();
   }
 
   void markSolved() {
@@ -297,7 +300,7 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
     // assert (_group is null && (! this.isSolved()));
     // _group = group;
     foreach (pred; _rndPreds) {
-      if (pred._state is CstPredicate.State.INIT) {
+      if (pred._state is CstPredicate.State.INIT && !pred.getmarkBefore()) {
 	pred.setGroupContext(group);
       }
     }
@@ -364,7 +367,31 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
     }
     _depCbs ~= idxCb; // use same callbacks as deps for now
   }
-
+  uint _markBefore = 0;
+  void orderBefore(CstDomain x, uint lap){
+    if(isSolved() || x.isSolved()){
+      return;
+    }
+    x.setmarkBefore(lap);
+    CstPredicate [] a = x.getRandPreds();
+    foreach(elem; a){
+      if(!elem.getmarkBefore()){
+	elem.setmarkBefore(true);
+	CstDomain [] b = elem.getDomains();
+	foreach(j, e; b){
+	  if(e != this && e.getmarkBefore() != lap){
+	    orderBefore(e, lap);
+	  }
+	}
+      }
+    }
+  }
+  void setmarkBefore(uint lap){
+    _markBefore = lap;
+  }
+  uint getmarkBefore(){
+    return _markBefore;
+  }
 
   bool _esdl__parentIsConstrained;
   override abstract string describe();
@@ -630,6 +657,9 @@ abstract class CstLogicExpr: CstExpr
   abstract DistRangeSetBase getDist();
   abstract CstVecExpr isNot(CstDomain A);
   abstract CstLogicExpr unroll(CstIterator iter, uint n);
+  bool isOrderingExpr(){
+    return false;
+  }
 
 }
 
@@ -1035,6 +1065,7 @@ class CstPredicate: CstIterCallback, CstDepCallback
     SOLVED = 2,
   }
 
+  bool _markBefore;
   _esdl__ConstraintBase _constraint;
   uint _statement;
   _esdl__Proxy _proxy;
@@ -1054,6 +1085,13 @@ class CstPredicate: CstIterCallback, CstDepCallback
 
   State _state = State.INIT;
 
+  void setmarkBefore(bool a){
+    _markBefore = a;
+  }
+  bool getmarkBefore(){
+    return _markBefore;
+  }
+  
   void reset() {
     _state = State.INIT;
   }
@@ -1306,14 +1344,17 @@ class CstPredicate: CstIterCallback, CstDepCallback
     // if (_iters.length > 0) {
     //   _len = _iters[0].getLenVec();
     // }
-    foreach (rnd; _rnds) {
-      rnd.registerRndPred(this);
-      if (! rnd.isStatic()) {
-	_dynRnds ~= rnd;
+    
+    if(!getExpr().isOrderingExpr()){
+      foreach (rnd; _rnds) {
+	rnd.registerRndPred(this);
+	if (! rnd.isStatic()) {
+	  _dynRnds ~= rnd;
+	}
       }
-    }
-    foreach (rnd; _rndArrs) {
-      rnd.registerRndPred(this);
+      foreach (rnd; _rndArrs) {
+	rnd.registerRndPred(this);
+      }
     }
 
     // foreach (var; _vars) var.registerVarPred(this);

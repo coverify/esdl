@@ -1351,7 +1351,7 @@ struct CstParser {
   }
 
   void procBeforeStmt() {
-    size_t srcTag = parseSpace();
+    /*size_t srcTag = parseSpace();
     fill(CST[srcTag..srcCursor]);
 
     srcTag = parseIdentifier();
@@ -1388,7 +1388,46 @@ struct CstParser {
 	      srcCursor.to!string);
     }
 
-    fill(");\n");
+    fill(");\n");*/
+    fill("_esdl__block ~= new CstPredicate(this, 0, this.outer, 0,");
+    size_t srcTag = parseSpace();
+    fill(CST[srcTag..srcCursor]);
+
+    srcTag = parseIdentifier();
+    if (CST[srcTag..srcCursor] != "solve") {
+      import std.conv: to;
+      assert (false, "Not a solve statement at: " ~ srcTag.to!string);
+    }
+
+    srcTag = parseSpace();
+    fill(CST[srcTag..srcCursor]);
+
+    procIdentifier();
+
+    fill("._esdl__order(");
+    srcTag = parseSpace();
+    fill(CST[srcTag..srcCursor]);
+
+    srcTag = parseIdentifier();
+    if (CST[srcTag..srcCursor] != "before") {
+      import std.conv: to;
+      assert (false, "Expected keyword \"before\" at: " ~ srcTag.to!string);
+    }
+
+    srcTag = parseSpace();
+    fill(CST[srcTag..srcCursor]);
+
+    procIdentifier();
+
+    srcTag = parseSpace();
+    fill(CST[srcTag..srcCursor]);
+
+    if (CST[srcCursor++] !is ';') {
+      assert (false, "Error: -- ';' missing at end of statement; at " ~
+	      srcCursor.to!string);
+    }
+
+    fill("));\n");
   }
 
   enum StmtToken: byte
