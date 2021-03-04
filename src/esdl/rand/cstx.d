@@ -622,11 +622,10 @@ struct CstParser {
       while (parseMappedChain(mapped, mappedCursor)) {
 	fill("._esdl__dot!(\"");
 	fill(mapped[mappedPrevCursor..mappedCursor]);
-	fill("\", \"");
-	// if (isSym is true) fill(CST[idStart..srcCursor]);
-	// else fill("_esdl__UNDEFINED");
-	fill(CST[idStart..srcCursor]);	
 	fill("\")");
+	// fill("\", \"");
+	// fill(CST[idStart..srcCursor]);	
+	// fill("\")");
 	mappedPrevCursor = ++mappedCursor;
       }
 
@@ -649,11 +648,10 @@ struct CstParser {
 	  srcTag = srcCursor;
 	  parseIdentifier();
 	  fill(CST[srcTag..srcCursor]);
-	  fill("\", \"");
-	  // if (isSym is true) fill(CST[idStart..srcCursor]);
-	  // else fill("_esdl__UNDEFINED");
-	  fill(CST[idStart..srcCursor]);
 	  fill("\")");
+	  // fill("\", \"");
+	  // fill(CST[idStart..srcCursor]);
+	  // fill("\")");
 	  continue;
 	}
 	else if (CST[srcCursor] == '[') {

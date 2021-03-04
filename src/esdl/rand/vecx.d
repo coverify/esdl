@@ -8,7 +8,7 @@ import std.traits: isIntegral, isBoolean, isArray,
 
 import esdl.rand.misc;
 import esdl.rand.base: CstVecPrim, CstVecExpr, CstIterator, DomType, CstDomain,
-  CstDomSet, CstPredicate, CstVarNodeIntf, CstVecNodeIntf;
+  CstDomSet, CstPredicate, CstVarNodeIntf, CstVecNodeIntf, CstNoRandIntf;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.expr: CstArrLength, CstVecDomain, _esdl__cstVal, CstVecValue,
   CstArrIterator, CstValue, CstRangeExpr, CstVec2LogicExpr, CstLogicTerm;
@@ -22,6 +22,26 @@ interface CstVecIndexed { }
 // V represents the type of the declared array/non-array member
 // N represents the level of the array-elements we have to traverse
 // for the elements this CstVector represents
+
+class CstVecNoRand(V, rand RAND_ATTR, int N, alias SYM)
+  : CstVector!(V, RAND_ATTR, N), CstNoRandIntf
+{
+  enum _esdl__ISRAND = RAND_ATTR.isRand();
+  enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
+
+  this(string name, _esdl__Proxy parent, V* var) {
+    super(name, parent, var);
+  }
+
+  override void _esdl__fixRef() {
+    _esdl__setValRef (& SYM);
+  }
+  
+  // no unrolling is possible without adding rand proxy
+  override CstVecExpr unroll(CstIterator iter, uint n) {
+    return this;
+  }
+}
 
 class CstVecIdx(V, rand RAND_ATTR, int N, int IDX,
 		P, int PIDX): CstVector!(V, RAND_ATTR, N)

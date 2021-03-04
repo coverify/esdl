@@ -123,6 +123,11 @@ interface CstObjArrIntf: CstObjNodeIntf {
 
 }
 
+interface CstNoRandIntf
+{
+  void _esdl__fixRef();
+}
+
 
 enum DomType: ubyte
 {   TRUEMONO = 1,

@@ -3,7 +3,7 @@ import esdl.solver.base;
 
 import esdl.rand.base: CstVecPrim, CstLogicExpr, CstScope, CstDomain,
   CstPredicate, CstBlock, CstPredGroup, DomType, CstVecExpr,
-  CstVarNodeIntf, CstObjectIntf, CstIterator, CstDomSet;
+  CstVarNodeIntf, CstObjectIntf, CstIterator, CstDomSet, CstNoRandIntf;
 
 import esdl.rand.misc;
 import esdl.data.folder;
@@ -134,6 +134,19 @@ abstract class _esdl__Proxy: CstObjectIntf, rand.barrier
   void visit() {}		// when an object is unrolled
 
   CstSolver[string] _solvers;
+
+  CstNoRandIntf[string] _globalLookups;
+
+  void addGlobalLookup(CstNoRandIntf global, string lookup) {
+    assert(lookup !in _globalLookups);
+    _globalLookups[lookup] = global;
+  }
+
+  CstNoRandIntf getGlobalLookup(string lookup) {
+    auto global = lookup in _globalLookups;
+    if (global !is null) return *global;
+    else return null;
+  }
 
   Folder!(CstPredicate, "newPreds") _newPreds;
   Folder!(CstPredicate, "unrolledPreds") _unrolledPreds;

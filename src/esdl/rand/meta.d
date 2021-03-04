@@ -18,9 +18,9 @@ import std.range: ElementType;
 
 import esdl.rand.misc;
 import esdl.rand.expr: CstVecValue, CstVarVisitorExpr;
-import esdl.rand.base: CstBlock, CstVecPrim, CstPredicate,
+import esdl.rand.base: CstBlock, CstVecPrim, CstPredicate, CstNoRandIntf,
   CstVarNodeIntf, CstObjectIntf, CstObjArrIntf, CstVisitorPredicate;
-import esdl.rand.vecx: CstVecIdx, CstVecArrIdx;
+import esdl.rand.vecx: CstVecIdx, CstVecArrIdx, CstVecNoRand;
 import esdl.rand.objx: CstObjIdx, CstObjArrIdx;
 import esdl.rand.proxy;
 import esdl.rand.func;
@@ -484,6 +484,8 @@ class Randomizable {
   mixin Randomization;
 }
 
+alias randomization = Randomization;
+
 mixin template Randomization()
 {
   enum bool _esdl__HasRandomizationMixin = true;
@@ -778,6 +780,9 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   }
 
   void _esdl__doSetOuter()(bool changed) {
+    foreach (name, lookup; _globalLookups) {
+      lookup._esdl__fixRef();
+    }
     _esdl__doSetOuterElems(this, changed);
   }
 
@@ -833,7 +838,7 @@ struct _esdl__rand_type_proxy(T, P)
     _parent = parent;
   }
   
-  auto _esdl__dot(string S, string SS)() {
+  auto _esdl__dot(string S)() {
     return esdl.rand.meta._esdl__sym(__traits(getMember, T, S), S, _parent);
   }
 }
@@ -851,9 +856,15 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
   static if (isIntegral!L || isBitVector!L ||
 	     isBoolean!L || isSomeChar!L || is (L == enum)) {
     static if (isLvalue!V) {
-      // import std.stdio;
-      // writeln("Creating VarVec, ", name);
-      return new CstVecIdx!(L, rand(true, true), 0, -1, _esdl__VALUE)(name, parent, V);
+      alias CstVecType = CstVecNoRand!(L, rand(true, true), 0, V);
+      CstNoRandIntf global = parent.getGlobalLookup(V.stringof);
+      if (global !is null)
+	return cast(CstVecType) global;
+      else {
+	CstVecType obj = new CstVecType(name, parent, &V);
+	parent.addGlobalLookup(obj, V.stringof);
+	return obj;
+      }
     }
     else {
       return new CstVecValue!L(V); // CstVecValue!L.allocate(l);
@@ -894,7 +905,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
   }
 }
 
-auto _esdl__dot(string S, string SS, RV)(RV rv)
+auto _esdl__dot(string S, RV)(RV rv)
 {
   return __traits(getMember, rv, S);
 }
