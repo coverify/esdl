@@ -9,6 +9,7 @@ enum NumType: ubyte {INT, UINT, LONG, ULONG};
 enum Type: ubyte { NUM, ADD, SUB, RAND};
 enum RangeType: ubyte {STA, DYN, NUL};
 
+//debug = MONOSOLVER;
 debug (MONOSOLVER){
   debug = CHECKMONO;
 }
@@ -172,6 +173,9 @@ struct Term
 
 class CstMonoSolver (S): CstSolver
 {
+  Term [] _prevVariableVals;
+  CstDomain [] _variables;
+  bool _hasBeenSolved = false;
   bool _hasRand ;
   Term [] _evalStack;
   byte _endFlag = 0;
@@ -197,7 +201,7 @@ class CstMonoSolver (S): CstSolver
     return "Mono Solver"  ~ super.describe();
   }
   override void pushToEvalStack(CstDomain domain) {
-    if (domain.isRand()) {
+    if (domain.isRand() && !domain.isSolved()) {
       debug (MONOSOLVER){
 	if(_debugFlag){
 	  import std.stdio;
@@ -319,6 +323,8 @@ class CstMonoSolver (S): CstSolver
 	  _evalStack ~= Term(cast(ulong)domain.value()); 
 	}
       }
+      _prevVariableVals ~= _evalStack[$-1];
+      _variables ~= domain;
       debug (MONOSOLVER){
 	import std.stdio;
 	writeln("variable ",domain.value()," of type ", numTypeToStr(_evalStack[$-1].getNumType()), " pushed to _evalStack");
@@ -498,9 +504,59 @@ class CstMonoSolver (S): CstSolver
       ANDRANGE(_finalRange, x);
     }
   }
+  bool checkDifference(){
+    if(!_hasBeenSolved) return true;
+    foreach(i, domain; _variables){
+      Term A;
+      int n = domain.bitcount();
+      if (n>32 && n<64){
+	A = Term(cast(long)domain.value()); 
+      }
+      else if (n < 32){
+        A = Term(cast(int)domain.value()); 
+      }
+      else if(n == 32){
+	if (domain.signed()){
+	  A = Term(cast(int)domain.value()); 
+	}
+	else {
+	  A = Term(cast(uint)domain.value()); 
+	}
+      }
+      else {
+	if (domain.signed()){
+	  A = Term(cast(long)domain.value()); 
+	}
+	else {
+	  A = Term(cast(ulong)domain.value()); 
+	}
+      }
+      if(A != _prevVariableVals[i]){
+	return true;
+      }
+    }
+    return false;
+  }
   override bool solve(CstPredGroup group) {
     CstDomain [] doms = group.domains();
     assert (doms.length == 1);
+    if(!checkDifference()){
+      _count = counter();
+      auto rand = _proxy._esdl__rGen.gen(0, _count);
+      ulong num = choose(rand);
+      doms[0].setVal(num);
+      debug (MONOSOLVER){
+	import std.stdio;
+	writeln("no difference found, reusing same solver");
+	writeln("count for the range is: " ,_count);
+	writeln("random number generated is (between 0 and count): " ,rand);
+	writeln("random number chosen from range: " ,num);
+	assert (isInRange(cast(S)num, _finalRange), "chosen number doesnt fall in range");
+      }
+      return true;
+    }
+    _prevVariableVals.length = 0;
+    _variables.length = 0;
     CstPredicate [] predSet = group.predicates();
     _finalRange = [S.min, S.max];
     _proxy = group.getProxy();
@@ -594,6 +650,7 @@ class CstMonoSolver (S): CstSolver
     auto rand = _proxy._esdl__rGen.gen(0, _count);
     ulong num = choose(rand);
     doms[0].setVal(num);
+    _hasBeenSolved = true;
     debug (MONOSOLVER){
       import std.stdio;
       writeln("count for the range is: " ,_count);
@@ -601,7 +658,6 @@ class CstMonoSolver (S): CstSolver
       writeln("random number chosen from range: " ,num);
       assert (isInRange(cast(S)num, _finalRange), "chosen number doesnt fall in range");
     }
-    resetSolver();
     return true;
   }
   
