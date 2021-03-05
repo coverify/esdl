@@ -606,25 +606,32 @@ struct CstParser {
       int indx = idMatch(CST[srcTag..srcCursor]);
       if (indx == -1) {
 	fill(CST[srcTag..srcCursor]);
+	fill(")(\"");
+	// fill(", \"");
+	// fill(CST[srcTag..srcCursor]);
+	// fill("\")(\"");
 	fillDeclaration(CST[srcTag..srcCursor]);
+	fill(CST[srcTag..srcCursor]);
       }
       else {
 	isSym = false;
 	mapped = varMap[indx].xLat;
 	parseMappedChain(mapped, mappedCursor);
 	fill(mapped[0..mappedCursor]);
+	fill(")(\"");
+	// fill(", \"");
+	// fill(mapped[0..mappedCursor]);
+	// fill("\")(\"");
 	fillDeclaration(varMap[indx].xLatBase);
+	fill(mapped[0..mappedCursor]);
 	mappedPrevCursor = ++mappedCursor;
       }
-      fill(")(\"");
-      fill(CST[srcTag..srcCursor]);
       fill("\", this.outer)");
       while (parseMappedChain(mapped, mappedCursor)) {
-	fill("._esdl__dot!(\"");
+	fill('.');
 	fill(mapped[mappedPrevCursor..mappedCursor]);
-	fill("\")");
-	// fill("\", \"");
-	// fill(CST[idStart..srcCursor]);	
+	// fill("._esdl__dot!(\"");
+	// fill(mapped[mappedPrevCursor..mappedCursor]);
 	// fill("\")");
 	mappedPrevCursor = ++mappedCursor;
       }
@@ -644,13 +651,14 @@ struct CstParser {
 	  parseSpace();
 	  srcTag = srcCursor;
 	  fill(CST[srcTag..srcCursor]);
-	  fill("._esdl__dot!(\"");
 	  srcTag = srcCursor;
 	  parseIdentifier();
+	  fill('.');
 	  fill(CST[srcTag..srcCursor]);
-	  fill("\")");
-	  // fill("\", \"");
-	  // fill(CST[idStart..srcCursor]);
+	  // fill("._esdl__dot!(\"");
+	  // srcTag = srcCursor;
+	  // parseIdentifier();
+	  // fill(CST[srcTag..srcCursor]);
 	  // fill("\")");
 	  continue;
 	}
@@ -686,8 +694,11 @@ struct CstParser {
       if (srcCursor > srcTag) {
 	fill("_esdl__sym!(");
 	fill(CST[srcTag..srcCursor]);
-	fillDeclaration(CST[srcTag..srcCursor]);
 	fill(")(\"");
+	// fill(", \"");
+	// fill(CST[srcTag..srcCursor]);
+	// fill("\")(\"");
+	fillDeclaration(CST[srcTag..srcCursor]);
 	fill(CST[start..srcCursor]);
 	fill("\", this.outer)");
       }
@@ -1253,7 +1264,31 @@ struct CstParser {
 
     // start of foreach
     // fill("    // Start of Foreach: " ~ array ~ ".iterator() \n");
-    fill("    " ~ _proxy ~ ".pushScope(" ~ array ~ "._esdl__iter);\n");
+    int dotLoc = findFirstDot(array);
+    if (dotLoc == -1) {
+      fill(_proxy);
+      fill(".pushScope(_esdl__sym!(");
+      fill(array);
+      fill(")(\"");
+      // fill(", \"");
+      // fill(array);
+      // fill("\")(\"");
+      fill(array);
+      fill("\", this.outer)._esdl__iter);\n");
+    }
+    else {
+      fill(_proxy);
+      fill(".pushScope(_esdl__sym!(");
+      fill(array[0..dotLoc]);
+      fill(")(\"");
+      // fill(", \"");
+      // fill(array[0..dotLoc]);
+      // fill("\")(\"");
+      fill(array[0..dotLoc]);
+      fill("\", this.outer)");
+      fill(array[dotLoc..$]);
+      fill("._esdl__iter);\n");
+    }
     if (CST[srcCursor] is '{') {
       ++srcCursor;
       procBlock();
@@ -1276,6 +1311,17 @@ struct CstParser {
 
   }
 
+  int findFirstDot(string str) {
+    int loc = -1;
+    foreach (i, c; str) {
+      if (c is '.') {
+	loc = cast(int) i;
+	break;
+      }
+    }
+    return loc;
+  }
+  
   void procIfBlock() {
     size_t srcTag;
 

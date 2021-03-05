@@ -8,7 +8,7 @@ import std.traits: isIntegral, isBoolean, isArray,
 
 import esdl.rand.misc;
 import esdl.rand.base: CstVecExpr, CstIterator, DomType, CstDomain, CstDomSet,
-  CstObjSet, CstPredicate, CstVarNodeIntf, CstVecNodeIntf, CstObjArrIntf;
+  CstObjSet, CstPredicate, CstVarNodeIntf, CstVecNodeIntf, CstObjArrIntf, CstNoRandIntf;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.expr: CstArrLength, _esdl__cstVal,
   CstArrIterator, CstValue, CstRangeExpr;
@@ -22,6 +22,70 @@ interface CstObjIndexed { }
 // V represents the type of the declared array/non-array member
 // N represents the level of the array-elements we have to traverse
 // for the elements this CstObject represents
+
+class CstObjNoRand(V, rand RAND_ATTR, int N, alias SYM)
+  : CstObject!(V, RAND_ATTR, N), CstNoRandIntf
+{
+  enum _esdl__ISRAND = RAND_ATTR.isRand();
+  enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
+
+  static if (is (LEAF == struct)) {
+    this(string name, _esdl__Proxy parent, V* var) {
+      super(name, parent, var);
+    }
+  }
+  else {
+    this(string name, _esdl__Proxy parent, V var) {
+      super(name, parent, var);
+    }
+  }
+
+  override void _esdl__fixRef() {
+    static if (is (V == struct)) {
+      _esdl__setValRef(& SYM);
+    }
+    else
+      _esdl__setValRef(SYM);
+  }
+  
+  // no unrolling is possible without adding rand proxy
+  override _esdl__Proxy unroll(CstIterator iter, uint n) {
+    return this;
+  }
+}
+
+class CstObjNoRandP(V, rand RAND_ATTR, int N, PT, string OBJ)
+  : CstObject!(V, RAND_ATTR, N), CstNoRandIntf
+{
+  enum _esdl__ISRAND = RAND_ATTR.isRand();
+  enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
+
+  static if (is (LEAF == struct)) {
+    this(string name, _esdl__Proxy parent, V* var) {
+      super(name, parent, null);
+      _esdl__fixRef();
+    }
+  }
+  else {
+    this(string name, _esdl__Proxy parent, V var) {
+      super(name, parent, null);
+      _esdl__fixRef();
+    }
+  }
+
+  override void _esdl__fixRef() {
+    static if (is (V == struct)) {
+      _esdl__setValRef(& __traits(getMember, (cast(PT) _parent)._esdl__outer, OBJ));
+    }
+    else
+      _esdl__setValRef(__traits(getMember, (cast(PT) _parent)._esdl__outer, OBJ));
+  }
+  
+  // no unrolling is possible without adding rand proxy
+  override _esdl__Proxy unroll(CstIterator iter, uint n) {
+    return this;
+  }
+}
 
 class CstObjIdx(V, rand RAND_ATTR, int N, int IDX,
 		P, int PIDX): CstObject!(V, RAND_ATTR, N)
@@ -352,6 +416,26 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
       }
     }
 
+
+class CstObjArrNoRand(V, rand RAND_ATTR, int N, alias SYM)
+  : CstObjArr!(V, RAND_ATTR, N), CstNoRandIntf
+{
+  enum _esdl__ISRAND = RAND_ATTR.isRand();
+  enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
+
+  this(string name, _esdl__Proxy parent, V* var) {
+    super(name, parent, var);
+  }
+
+  override void _esdl__fixRef() {
+    _esdl__setValRef (& SYM);
+  }
+  
+  // no unrolling is possible without adding rand proxy
+  override RV unroll(CstIterator iter, uint n) {
+    return this;
+  }
+}
 
 
 // Arrays (Multidimensional arrays as well)

@@ -2,7 +2,7 @@ module esdl.rand.proxy;
 import esdl.solver.base;
 
 import esdl.rand.base: CstVecPrim, CstLogicExpr, CstScope, CstDomain,
-  CstPredicate, CstBlock, CstPredGroup, DomType, CstVecExpr,
+  CstPredicate, CstBlock, CstPredGroup, DomType, CstVecExpr, CstObjectVoid,
   CstVarNodeIntf, CstObjectIntf, CstIterator, CstDomSet, CstNoRandIntf;
 
 import esdl.rand.misc;
@@ -106,7 +106,7 @@ class domainPair {
   }
 }
 
-abstract class _esdl__Proxy: CstObjectIntf, rand.barrier
+abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 {
   // static Buddy _esdl__buddy;
 

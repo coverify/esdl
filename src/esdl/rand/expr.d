@@ -653,7 +653,7 @@ class CstOrderingExpr: CstLogicExpr
     assert(false, "cannot visit an ordering expression");
   }
   override void writeExprString(ref Charbuf str){
-    //assert(false);
+    assert(false);
   }
   override string describe(){
     string str = "( " ~ _first.describe() ~ " is solved before " ~ _second.describe() ~ " )";
@@ -2002,7 +2002,7 @@ class CstDistExpr(T): CstLogicTerm
   }
 
   override void writeExprString(ref Charbuf str) {
-    // assert(false);
+    assert(false);
   }
   override CstVecExpr isNot(CstDomain dom){
     return null;

@@ -34,7 +34,7 @@ class CstVecNoRand(V, rand RAND_ATTR, int N, alias SYM)
   }
 
   override void _esdl__fixRef() {
-    _esdl__setValRef (& SYM);
+    _esdl__setValRef(& SYM);
   }
   
   // no unrolling is possible without adding rand proxy
@@ -383,6 +383,26 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	return _parent;
       }
     }
+
+class CstVecArrNoRand(V, rand RAND_ATTR, int N, alias SYM)
+  : CstVecArr!(V, RAND_ATTR, N), CstNoRandIntf
+{
+  enum _esdl__ISRAND = RAND_ATTR.isRand();
+  enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
+
+  this(string name, _esdl__Proxy parent, V* var) {
+    super(name, parent, var);
+  }
+
+  override void _esdl__fixRef() {
+    _esdl__setValRef (& SYM);
+  }
+  
+  // no unrolling is possible without adding rand proxy
+  override RV unroll(CstIterator iter, uint n) {
+    return this;
+  }
+}
 
 // Arrays (Multidimensional arrays as well)
 class CstVecArrIdx(V, rand RAND_ATTR, int N, int IDX,

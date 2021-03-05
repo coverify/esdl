@@ -20,8 +20,10 @@ import esdl.rand.misc;
 import esdl.rand.expr: CstVecValue, CstVarVisitorExpr;
 import esdl.rand.base: CstBlock, CstVecPrim, CstPredicate, CstNoRandIntf,
   CstVarNodeIntf, CstObjectIntf, CstObjArrIntf, CstVisitorPredicate;
-import esdl.rand.vecx: CstVecIdx, CstVecArrIdx, CstVecNoRand;
-import esdl.rand.objx: CstObjIdx, CstObjArrIdx;
+import esdl.rand.vecx: CstVecIdx, CstVecArrIdx,
+  CstVecNoRand, CstVecArrNoRand;
+import esdl.rand.objx: CstObjIdx, CstObjArrIdx,
+  CstObjNoRand, CstObjNoRandP;
 import esdl.rand.proxy;
 import esdl.rand.func;
 
@@ -46,7 +48,6 @@ body {
   return cast(T) cast(void*) from;
  }
 
-struct _esdl__VALUE {}
 struct _esdl__ARG {}
 enum _esdl__UNDEFINED;
 
@@ -798,29 +799,6 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   }
 }
 
-auto ref _esdl__sym(L)(ref L l, string name,
-		       _esdl__Proxy parent) {
-  import std.traits: isIntegral, isBoolean, isArray, isSomeChar;
-  import esdl.data.queue: Queue, isQueue;
-  static if (isIntegral!L || isBitVector!L ||
-	     isBoolean!L || isSomeChar!L || is (L == enum)) {
-    // import std.stdio;
-    // writeln("Creating VarVec, ", name);
-    return new CstVecIdx!(L, rand(true, true), 0, -1, _esdl__VALUE)(name, parent, l);
-  }
-  else static if (isArray!L || isQueue!L) {
-    // import std.stdio;
-    // writeln("Creating VarVecArr, ", name);
-    return new CstVecArrIdx!(L, rand(true, true), 0, -1, _esdl__VALUE)(name, parent, l);
-  }
-  else {
-    if (l is null) {
-      l = new L(name, parent, parent._esdl__outer.tupleof[L._esdl__INDEX]);
-    }
-    return l;
-  }
-}
-
 auto _esdl__sym(L)(L l, string name,
 		   _esdl__Proxy parent)
   if (isIntegral!L || isBitVector!L ||
@@ -837,10 +815,13 @@ struct _esdl__rand_type_proxy(T, P)
     _name = name;
     _parent = parent;
   }
-  
-  auto _esdl__dot(string S)() {
-    return esdl.rand.meta._esdl__sym(__traits(getMember, T, S), S, _parent);
+
+  auto opDispatch(string S)() {
+    return _esdl__sym(__traits(getMember, T, S), S, _parent);
   }
+  // auto _esdl__dot(string S)() {
+  //   return _esdl__sym(__traits(getMember, T, S), S, _parent);
+  // }
 }
 
 // V is a type
@@ -853,37 +834,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
   alias L = typeof(V);
   import std.traits: isIntegral, isBoolean, isArray, isSomeChar;
   import esdl.data.queue: Queue, isQueue;
-  static if (isIntegral!L || isBitVector!L ||
-	     isBoolean!L || isSomeChar!L || is (L == enum)) {
-    static if (isLvalue!V) {
-      alias CstVecType = CstVecNoRand!(L, rand(true, true), 0, V);
-      CstNoRandIntf global = parent.getGlobalLookup(V.stringof);
-      if (global !is null)
-	return cast(CstVecType) global;
-      else {
-	CstVecType obj = new CstVecType(name, parent, &V);
-	parent.addGlobalLookup(obj, V.stringof);
-	return obj;
-      }
-    }
-    else {
-      return new CstVecValue!L(V); // CstVecValue!L.allocate(l);
-    }
-  }
-  else static if (isArray!L || isQueue!L) {
-    // import std.stdio;
-    // writeln("Creating VarVecArr, ", name);
-    return new CstVecArrIdx!(L, rand(true, true), 0, -1, _esdl__VALUE)(name, parent, V);
-  }
-  else {
-    // import std.stdio;
-    // assert (parent !is null);
-    // writeln(V.stringof);
-    // writeln(VS);
-    // writeln(__traits(getMember, parent, VS).stringof);
-    // if (__traits(getMember, parent, VS) is null) {
-    //   __traits(getMember, parent, VS) = new L(name, parent, parent._esdl__outer.tupleof[L._esdl__INDEX]);
-    // }
+  static if (is (L: CstVarNodeIntf)) {
     if (V is null) {
       L._esdl__PROXYT p = parent;
       if (p is null) {
@@ -901,14 +852,82 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       }
     }
     return V;
+  }
+  else static if (isIntegral!L || isBitVector!L ||
+	     isBoolean!L || isSomeChar!L || is (L == enum)) {
+    static if (isLvalue!V) {
+      alias CstVecType = CstVecNoRand!(L, rand(true, true), 0, V);
+      CstNoRandIntf global = parent.getGlobalLookup(V.stringof);
+      if (global !is null)
+	return cast(CstVecType) global;
+      else {
+	CstVecType obj = new CstVecType(name, parent, &V);
+	parent.addGlobalLookup(obj, V.stringof);
+	return obj;
+      }
+    }
+    else {
+      return new CstVecValue!L(V); // CstVecValue!L.allocate(l);
+    }
+  }
+  else static if (is (L == class) || is (L == struct) ||
+		  (is (L == U*, U) && is (U == struct))) {
+    // pragma(msg, "inside: ", NAME);
+    static if (is (L == class) || is (L == struct)) {
+      alias CstObjType = CstObjNoRand!(L, rand(true, true), 0, V);
+    }
+    else {
+      alias CstObjType = CstObjNoRand!(U, rand(true, true), 0, V);
+    }
+    CstNoRandIntf global = parent.getGlobalLookup(V.stringof);
+    if (global !is null)
+      return cast(CstObjType) global;
+    else {
+      // pragma(msg, CstObjType.stringof);
+      static if (is (L == struct)) {
+	CstObjType obj = new CstObjType(name, parent, &V);
+      }
+      else {
+	CstObjType obj = new CstObjType(name, parent, V);
+      }
+      parent.addGlobalLookup(obj, V.stringof);
+      return obj;
+    }
+  }
+  else static if (isArray!L || isQueue!L) {
+    // import std.stdio;
+    // writeln("Creating VarVecArr, ", name);
+    alias CstVecArrType = CstVecArrNoRand!(L, rand(true, true), 0, V);
+    CstNoRandIntf global = parent.getGlobalLookup(V.stringof);
+    if (global !is null)
+      return cast(CstVecArrType) global;
+    else {
+      CstVecArrType obj = new CstVecArrType(name, parent, &V);
+      parent.addGlobalLookup(obj, V.stringof);
+      return obj;
+    }
+    // return new CstVecArrIdx!(L, rand(true, true), 0, -1, _esdl__VALUE)(name, parent, V);
+  }
+  else {
+    // import std.stdio;
+    // assert (parent !is null);
+    // writeln(V.stringof);
+    // writeln(VS);
+    // writeln(__traits(getMember, parent, VS).stringof);
+    // if (__traits(getMember, parent, VS) is null) {
+    //   __traits(getMember, parent, VS) = new L(name, parent, parent._esdl__outer.tupleof[L._esdl__INDEX]);
+    // }
     // return __traits(getMember, parent, VS);
   }
 }
 
-auto _esdl__dot(string S, RV)(RV rv)
-{
-  return __traits(getMember, rv, S);
-}
+// auto _esdl__dot(string S, RV)(RV rv)
+// {
+//   // pragma(msg, RV.stringof);
+//   // pragma(msg, S);
+//   // static assert(false);
+//   return __traits(getMember, rv, S);
+// }
 
 
 auto _esdl__arg_proxy(L, S)(string name, ref L arg, S parent) {

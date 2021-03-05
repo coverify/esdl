@@ -393,6 +393,7 @@ auto _esdl__dist(T, rand RAND)(CstVecDomain!(T, RAND) vec,
 
 auto _esdl__order(CstDomain a, CstDomain b){
   return new CstOrderingExpr(a, b);
+}
 
 CstLogicTerm _esdl__bool(CstVecTerm term) {
   return term.toBoolExpr();

@@ -558,6 +558,10 @@ class CstMonoSolver (S): CstSolver
     _prevVariableVals.length = 0;
     _variables.length = 0;
     CstPredicate [] predSet = group.predicates();
+    if(predSet.length == 0){
+      //doms[0].randomizeWithoutConstraints(doms[0].getProxyRoot());
+      return true;
+    }
     _finalRange = [S.min, S.max];
     _proxy = group.getProxy();
     foreach (pred; predSet){
@@ -2070,7 +2074,8 @@ class CstMonoSolver (S): CstSolver
   }
   ulong counter(){
     ulong num = 0;
-    for(size_t i = 0; i < _finalRange.length - 1; i += 2){
+    assert(_finalRange.length > 0);
+    for(int i = 0; i < _finalRange.length - 1; i += 2){
       num += _finalRange[i+1] - _finalRange[i] + 1;
     }
     return num;

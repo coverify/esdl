@@ -128,6 +128,10 @@ interface CstNoRandIntf
   void _esdl__fixRef();
 }
 
+abstract class CstObjectVoid: CstVariableVoid { }
+abstract class CstVectorVoid: CstVariableVoid { }
+abstract class CstVariableVoid { }
+
 
 enum DomType: ubyte
 {   TRUEMONO = 1,
@@ -402,7 +406,7 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
   override abstract string describe();
 }
 
-abstract class CstObjSet: CstObjArrIntf
+abstract class CstObjSet: CstObjectVoid, CstObjArrIntf
 {
   string _name;
 
@@ -437,7 +441,7 @@ abstract class CstObjSet: CstObjArrIntf
   
 }
 
-abstract class CstDomSet: CstVecPrim, CstVecArrIntf
+abstract class CstDomSet: CstVectorVoid, CstVecPrim, CstVecArrIntf
 {
   State _state;
   
@@ -620,7 +624,7 @@ interface CstVecPrim
   abstract void addPreRequisite(CstVecPrim other);
 }
 
-abstract class CstExpr
+abstract class CstExpr: CstVectorVoid
 {
   string describe();
 
