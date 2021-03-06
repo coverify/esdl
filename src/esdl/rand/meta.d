@@ -20,11 +20,11 @@ import esdl.rand.misc;
 import esdl.rand.expr: CstVecValue, CstVarVisitorExpr;
 import esdl.rand.base: CstBlock, CstVecPrim, CstPredicate, CstVarGlobIntf,
   CstVarNodeIntf, CstObjectIntf, CstObjArrIntf, CstVisitorPredicate,
-  CstObjectWrapBase, CstObjArrWrapBase;
+  CstObjectStubBase, CstObjArrStubBase;
 import esdl.rand.vecx: CstVectorIdx, CstVecArrIdx,
   CstVectorGlob, CstVecArrGlob;
-import esdl.rand.objx: CstObjectIdx, CstObjArrIdx, CstObjectGlob, CstObjectWrap,
-  CstObjArrWrap;
+import esdl.rand.objx: CstObjectIdx, CstObjArrIdx, CstObjectGlob, CstObjectStub,
+  CstObjArrStub;
 import esdl.rand.proxy;
 import esdl.rand.func;
 
@@ -90,7 +90,7 @@ template _esdl__RandProxyType(T, int I, P, int PI)
     static if (RAND.hasProxy())
       alias _esdl__RandProxyType = CstObjectIdx!(L, RAND, 0, I, P, PI);
     else
-      alias _esdl__RandProxyType = CstObjectWrap!(L, RAND, 0, I, P, PI);
+      alias _esdl__RandProxyType = CstObjectStub!(L, RAND, 0, I, P, PI);
   }
   else static if ((isArray!L || isQueue!L) &&
 		  (is (LEAF == class)  ||
@@ -98,7 +98,7 @@ template _esdl__RandProxyType(T, int I, P, int PI)
     static if (RAND.hasProxy())
       alias _esdl__RandProxyType = CstObjArrIdx!(L, RAND, 0, I, P, PI);
     else
-      alias _esdl__RandProxyType = CstObjArrWrap!(L, RAND, 0, I, P, PI);
+      alias _esdl__RandProxyType = CstObjArrStub!(L, RAND, 0, I, P, PI);
   }
   else {
     alias _esdl__RandProxyType = _esdl__UNDEFINED;
@@ -131,7 +131,7 @@ void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy) {
       }
     }
     static if (is (Q: CstObjectIntf)//  ||
-	       // is (Q: CstObjArrIntf)
+	       // is (Q: CstObjArrIntf)  // handled by the visitor on unroll
 	       ) {
       static if (P.tupleof[I]._esdl__ISRAND) {
 	if (p.tupleof[I].isRand())
@@ -182,7 +182,7 @@ void _esdl__doInitRandsElems(P, int I=0)(P p) {
     alias Q = typeof (P.tupleof[I]);
     // pragma(msg, "#" ~ Q.stringof);
     static if (is (Q: CstVarNodeIntf) ||
-	       is (Q: CstObjectWrapBase) || is (Q: CstObjArrWrapBase)) {
+	       is (Q: CstObjectStubBase) || is (Q: CstObjArrStubBase)) {
       // static if (Q._esdl__HASPROXY // && Q._esdl__ISRAND // not just @rand
       // 		 ) {
       // pragma(msg, "#" ~ Q.stringof);
@@ -268,7 +268,7 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 	}
       }
     }
-    static if (is (Q == CstObjectWrap!(L, RAND, N, IDX, P, PIDX),
+    static if (is (Q == CstObjectStub!(L, RAND, N, IDX, P, PIDX),
 		   L, rand RAND, int N, int IDX, P, int PIDX)) {
       if (p.tupleof[I] !is null && p.tupleof[I]._esdl__obj !is null) {
 	static if (is (L == struct)) {
@@ -293,7 +293,7 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 	p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
       }
     }
-    static if (is (Q == CstObjArrWrap!(L, RAND, N, IDX, P, PIDX),
+    static if (is (Q == CstObjArrStub!(L, RAND, N, IDX, P, PIDX),
 		   L, rand RAND, int N, int IDX, P, int PIDX)) {
       if (p.tupleof[I] !is null && p.tupleof[I]._esdl__obj !is null) {
 	p.tupleof[I]._esdl__get().
@@ -717,8 +717,8 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       auto obj = mixin(OBJ);
       alias TOBJ = typeof(obj);
       CstBlock _esdl__block = new CstBlock();
-      static if (is (TOBJ: CstObjectWrapBase) ||
-		 is (TOBJ: CstObjArrWrapBase)) {
+      static if (is (TOBJ: CstObjectStubBase) ||
+		 is (TOBJ: CstObjArrStubBase)) {
 	assert (obj !is null, OBJ ~ " is null");
 	_esdl__block ~=
 	  new CstVisitorPredicate(this, 0, this.outer, 0,
@@ -871,7 +871,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
     }
     return V;
   }
-  else static if (is (L: CstObjectWrapBase) || is (L: CstObjArrWrapBase)) {
+  else static if (is (L: CstObjectStubBase) || is (L: CstObjArrStubBase)) {
     if (V is null) {
       L._esdl__PROXYT p = parent;
       if (p is null) {

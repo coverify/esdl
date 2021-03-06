@@ -120,7 +120,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   // only the root proxy gets a null name, other component proxies override
   string fullName() {return "";}
   string name() {return "";}
-  bool isRand() {assert (false);}		// when an object is unrolled
+  bool isRand() {return true;}
 
   _esdl__Proxy getProxyRoot() {
     if (_root is null) {return this;}

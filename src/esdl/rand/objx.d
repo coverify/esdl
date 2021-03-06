@@ -8,7 +8,7 @@ import std.traits: isIntegral, isBoolean, isArray,
 
 import esdl.rand.misc;
 import esdl.rand.base: CstVecExpr, CstIterator, DomType, CstDomain,
-  CstDomSet, CstObjectWrapBase, CstObjArrWrapBase, CstObjSet, CstPredicate,
+  CstDomSet, CstObjectStubBase, CstObjArrStubBase, CstObjSet, CstPredicate,
   CstVarNodeIntf, CstVecNodeIntf, CstObjArrIntf, CstVarGlobIntf,
   CstObjectVoid, CstObjArrVoid;
 import esdl.rand.proxy: _esdl__Proxy;
@@ -56,8 +56,8 @@ class CstObjectGlob(V, rand RAND_ATTR, int N, alias SYM)
   }
 }
 
-class CstObjectWrap(V, rand RAND_ATTR, int N, int IDX,
-		    P, int PIDX): CstObjectWrapBase
+class CstObjectStub(V, rand RAND_ATTR, int N, int IDX,
+		    P, int PIDX): CstObjectStubBase
 {
   enum int _esdl__INDEX = IDX;
   alias _esdl__PROXYT = P;
@@ -131,7 +131,7 @@ class CstObjectIdx(V, rand RAND_ATTR, int N, int IDX,
       if (_parent !is _root) {
 	P uparent = cast(P)(_parent.unroll(iter, n));
 	assert (uparent !is null);
-	static if (is (typeof(uparent.tupleof[PIDX]): CstObjectWrapBase)) {
+	static if (is (typeof(uparent.tupleof[PIDX]): CstObjectStubBase)) {
 	  return uparent.tupleof[PIDX]._esdl__get();
 	}
 	else {
@@ -189,15 +189,10 @@ class CstObjectBase(V, rand RAND_ATTR, int N)
 	  return this.to!string();
 	}
 
+	bool _isRand = true;
 	override bool isRand() {
-	  static if (HAS_RAND_ATTRIB) {
-	    return true;
-	  }
-	  else {
-	    return false;
-	  }
+	  assert (false);	// overridden in derived classes
 	}
-
       }
 
 class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
@@ -223,6 +218,9 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	}
       }
 
+      final override bool isRand() {
+	return HAS_RAND_ATTRIB && _isRand && _parent.isRand();
+      }
 
       final override string fullName() {
 	if (_parent is _root) return _name;
@@ -262,9 +260,10 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
       override void visit() {
 	// import std.stdio;
 	// writeln("Visiting: ", this.fullName());
-	assert (this.getRef() !is null);
-	_esdl__setValRef(this.getRef());
-	_esdl__doConstrain(getProxyRoot());
+	assert (false);
+	// assert (this.getRef() !is null);
+	// _esdl__setValRef(this.getRef());
+	// _esdl__doConstrain(getProxyRoot());
       }
 
       void setDomainContext(CstPredicate pred,
@@ -322,6 +321,10 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	_parent = parent;
 	_pindex = index;
 	_root = _parent.getProxyRoot();
+      }
+
+      final override bool isRand() {
+	return HAS_RAND_ATTRIB && _isRand && _parent.isRand();
       }
 
       override bool opEquals(Object other) {
@@ -402,7 +405,8 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	// writeln("Visiting: ", this.fullName());
 	assert (this.getRef() !is null);
 	_esdl__setValRef(this.getRef());
-	_esdl__doConstrain(getProxyRoot());
+	if (this.isRand())
+	  _esdl__doConstrain(getProxyRoot());
       }
 
       void setDomainContext(CstPredicate pred,
@@ -463,8 +467,8 @@ class CstObjArrGlob(V, rand RAND_ATTR, int N, alias SYM)
 }
 
 
-class CstObjArrWrap(V, rand RAND_ATTR, int N, int IDX,
-		    P, int PIDX): CstObjArrWrapBase
+class CstObjArrStub(V, rand RAND_ATTR, int N, int IDX,
+		    P, int PIDX): CstObjArrStubBase
 {
   enum int _esdl__INDEX = IDX;
   alias _esdl__PROXYT = P;
@@ -515,7 +519,7 @@ class CstObjArrIdx(V, rand RAND_ATTR, int N, int IDX,
     if (_parent !is _root) {
       P uparent = cast(P)(_parent.unroll(iter, n));
       assert (uparent !is null);
-      static if (is (typeof(uparent.tupleof[PIDX]): CstObjArrWrapBase)) {
+      static if (is (typeof(uparent.tupleof[PIDX]): CstObjArrStubBase)) {
 	return uparent.tupleof[PIDX]._esdl__get();
       }
       else {
@@ -560,13 +564,9 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
   abstract EV createElem(CstVecExpr indexExpr);
   abstract EV createElem(uint i);
     
+  bool _isRand = true;
   bool isRand() {
-    static if (HAS_RAND_ATTRIB) {
-      return true;
-    }
-    else {
-      return false;
-    }
+    assert (false);	// overridden in derived classes
   }
 
   abstract size_t getLen();
@@ -748,6 +748,10 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	_arrLen = new CstArrLength!RV(name ~ "->length", this);
       }
 
+      final override bool isRand() {
+	return HAS_RAND_ATTRIB && _isRand && _parent.isRand();
+      }
+
       final bool isRolled() {
 	return _parent.isRolled();
       }
@@ -862,6 +866,10 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	_pindex = index;
 	_root = _parent.getProxyRoot();
 	_arrLen = new CstArrLength!RV(name ~ "->length", this);
+      }
+
+      final override bool isRand() {
+	return HAS_RAND_ATTRIB && _isRand && _parent.isRand();
       }
 
       override bool opEquals(Object other) {

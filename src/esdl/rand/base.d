@@ -128,8 +128,8 @@ interface CstVarGlobIntf
   void _esdl__fixRef();
 }
 
-abstract class CstObjectWrapBase { }
-abstract class CstObjArrWrapBase { }
+abstract class CstObjectStubBase { }
+abstract class CstObjArrStubBase { }
 
 abstract class CstObjectVoid: CstObjVoid { }
 abstract class CstObjArrVoid: CstObjVoid { }

@@ -94,13 +94,9 @@ class CstVectorBase(V, rand RAND_ATTR, int N)
 	  return _name;
 	}
 
+	bool _isRand = true;
 	override bool isRand() {
-	  static if (HAS_RAND_ATTRIB) {
-	    return true;
-	  }
-	  else {
-	    return false;
-	  }
+	  assert (false);	// overridded in derived classes
 	}
 
 	void solveBefore(CstVecPrim other) {
@@ -136,6 +132,10 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 	_var = var;
 	_parent = parent;
 	_root = _parent.getProxyRoot();
+      }
+
+      final override bool isRand() {
+	return HAS_RAND_ATTRIB && _isRand && _parent.isRand();
       }
 
       final override string fullName() {
@@ -259,6 +259,10 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	  _type = DomType.MULTI;
 	  _esdl__parentIsConstrained = true;
 	}
+      }
+
+      final override bool isRand() {
+	return HAS_RAND_ATTRIB && _isRand && _parent.isRand();
       }
 
       override bool opEquals(Object other) {
@@ -459,13 +463,9 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
   abstract EV createElem(uint i);
   abstract EV createElem(CstVecExpr index);
 
+  bool _isRand = true;
   bool isRand() {
-    static if (HAS_RAND_ATTRIB) {
-      return true;
-    }
-    else {
-      return false;
-    }
+    assert (false);
   }
 
   abstract size_t getLen();
@@ -732,6 +732,10 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	_arrLen = new CstArrLength!(RV) (name ~ "->length", this);
       }
 
+      final override bool isRand() {
+	return HAS_RAND_ATTRIB && _isRand && _parent.isRand();
+      }
+
       final bool isRolled() {
 	return _parent.isRolled();
       }
@@ -861,6 +865,10 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	    _parent._esdl__parentIsConstrained) {
 	  _esdl__parentIsConstrained = true;
 	}
+      }
+
+      final override bool isRand() {
+	return HAS_RAND_ATTRIB && _isRand && _parent.isRand();
       }
 
       override bool opEquals(Object other) {
