@@ -86,6 +86,10 @@ class CstObjectWrap(V, rand RAND_ATTR, int N, int IDX,
     }
   }
 
+  CstObjectVoid _esdl__obj() {
+    return _obj;
+  }
+
   auto _esdl__get()() {
     alias TYPE = CstObjectIdx!(V, RAND_ATTR, N, IDX, P, PIDX);
     if (_obj is null) {
@@ -475,6 +479,10 @@ class CstObjArrWrap(V, rand RAND_ATTR, int N, int IDX,
     _name = name;
     _parent = parent;
     _var = var;
+  }
+
+  CstObjArrVoid _esdl__obj() {
+    return _obj;
   }
 
   auto _esdl__get()() {

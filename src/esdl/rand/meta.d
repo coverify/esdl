@@ -253,41 +253,51 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
     alias Q = typeof (P.tupleof[I]);
     static if (is (Q == CstVectorIdx!(L, RAND, N, IDX, P, PIDX),
 		   L, rand RAND, int N, int IDX, P, int PIDX)) {
-      static if (Q._esdl__HASPROXY) {
-	if (p.tupleof[I] !is null) {
-	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
-	}
+      if (p.tupleof[I] !is null) {
+	p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
       }
     }
     static if (is (Q == CstObjectIdx!(L, RAND, N, IDX, P, PIDX),
 		   L, rand RAND, int N, int IDX, P, int PIDX)) {
-      static if (Q._esdl__HASPROXY) {
+      if (p.tupleof[I] !is null) {
 	static if (is (L == struct)) {
-	  if (p.tupleof[I] !is null) {
-	    p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
-	  }
+	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
 	}
 	else {
-	  if (p.tupleof[I] !is null) {
-	    p.tupleof[I]._esdl__setValRef(p._esdl__outer.tupleof[IDX]);
-	  }
+	  p.tupleof[I]._esdl__setValRef(p._esdl__outer.tupleof[IDX]);
 	}
       }
     }
+    static if (is (Q == CstObjectWrap!(L, RAND, N, IDX, P, PIDX),
+		   L, rand RAND, int N, int IDX, P, int PIDX)) {
+      if (p.tupleof[I] !is null && p.tupleof[I]._esdl__obj !is null) {
+	static if (is (L == struct)) {
+	  p.tupleof[I]._esdl__get().
+	    _esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
+	}
+	else {
+	  p.tupleof[I]._esdl__get().
+	    _esdl__setValRef(p._esdl__outer.tupleof[IDX]);
+	}
+      }
+    }    
     static if (is (Q == CstVecArrIdx!(L, RAND, N, IDX, P, PIDX),
 		   L, rand RAND, int N, int IDX, P, int PIDX)) {
-      static if (Q._esdl__HASPROXY) {
-	if (p.tupleof[I] !is null) {
-	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
-	}
+      if (p.tupleof[I] !is null) {
+	p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
       }
     }
     static if (is (Q == CstObjArrIdx!(L, RAND, N, IDX, P, PIDX),
 		   L, rand RAND, int N, int IDX, P, int PIDX)) {
-      static if (Q._esdl__HASPROXY) {
-	if (p.tupleof[I] !is null) {
-	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
-	}
+      if (p.tupleof[I] !is null) {
+	p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
+      }
+    }
+    static if (is (Q == CstObjArrWrap!(L, RAND, N, IDX, P, PIDX),
+		   L, rand RAND, int N, int IDX, P, int PIDX)) {
+      if (p.tupleof[I] !is null && p.tupleof[I]._esdl__obj !is null) {
+	p.tupleof[I]._esdl__get().
+	  _esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
       }
     }
     _esdl__doSetOuterElems!(P, I+1)(p, changed);
