@@ -8,7 +8,7 @@ import std.traits: isIntegral, isBoolean, isArray,
 
 import esdl.rand.misc;
 import esdl.rand.base: CstVecPrim, CstVecExpr, CstIterator, DomType, CstDomain,
-  CstDomSet, CstPredicate, CstVarNodeIntf, CstVecNodeIntf, CstNoRandIntf;
+  CstDomSet, CstPredicate, CstVarNodeIntf, CstVecNodeIntf, CstVarGlobIntf;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.expr: CstArrLength, CstVecDomain, _esdl__cstVal, CstVecValue,
   CstArrIterator, CstValue, CstRangeExpr, CstVec2LogicExpr, CstLogicTerm;
@@ -23,8 +23,8 @@ interface CstVecIndexed { }
 // N represents the level of the array-elements we have to traverse
 // for the elements this CstVector represents
 
-class CstVecNoRand(V, rand RAND_ATTR, int N, alias SYM)
-  : CstVector!(V, RAND_ATTR, N), CstNoRandIntf
+class CstVectorGlob(V, rand RAND_ATTR, int N, alias SYM)
+  : CstVector!(V, RAND_ATTR, N), CstVarGlobIntf
 {
   enum _esdl__ISRAND = RAND_ATTR.isRand();
   enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
@@ -43,8 +43,8 @@ class CstVecNoRand(V, rand RAND_ATTR, int N, alias SYM)
   }
 }
 
-class CstVecIdx(V, rand RAND_ATTR, int N, int IDX,
-		P, int PIDX): CstVector!(V, RAND_ATTR, N)
+class CstVectorIdx(V, rand RAND_ATTR, int N, int IDX,
+		   P, int PIDX): CstVector!(V, RAND_ATTR, N)
 {
   enum _esdl__ISRAND = RAND_ATTR.isRand();
   enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
@@ -175,6 +175,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       override long value() {
+	assert (_var !is null, _name ~ " is null");
 	return cast (long) (*_var);
       }
 
@@ -384,8 +385,8 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
       }
     }
 
-class CstVecArrNoRand(V, rand RAND_ATTR, int N, alias SYM)
-  : CstVecArr!(V, RAND_ATTR, N), CstNoRandIntf
+class CstVecArrGlob(V, rand RAND_ATTR, int N, alias SYM)
+  : CstVecArr!(V, RAND_ATTR, N), CstVarGlobIntf
 {
   enum _esdl__ISRAND = RAND_ATTR.isRand();
   enum _esdl__HASPROXY = RAND_ATTR.hasProxy();

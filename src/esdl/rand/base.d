@@ -123,14 +123,23 @@ interface CstObjArrIntf: CstObjNodeIntf {
 
 }
 
-interface CstNoRandIntf
+interface CstVarGlobIntf
 {
   void _esdl__fixRef();
 }
 
-abstract class CstObjectVoid: CstVariableVoid { }
-abstract class CstVectorVoid: CstVariableVoid { }
-abstract class CstVariableVoid { }
+abstract class CstObjectWrapBase { }
+abstract class CstObjArrWrapBase { }
+
+abstract class CstObjectVoid: CstObjVoid { }
+abstract class CstObjArrVoid: CstObjVoid { }
+
+abstract class CstVectorVoid: CstVecVoid { }
+abstract class CstVecArrVoid: CstVecVoid { }
+
+abstract class CstObjVoid: CstVarVoid { }
+abstract class CstVecVoid: CstVarVoid { }
+abstract class CstVarVoid { }
 
 
 enum DomType: ubyte
@@ -406,7 +415,7 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
   override abstract string describe();
 }
 
-abstract class CstObjSet: CstObjectVoid, CstObjArrIntf
+abstract class CstObjSet: CstObjArrVoid, CstObjArrIntf
 {
   string _name;
 
@@ -441,7 +450,7 @@ abstract class CstObjSet: CstObjectVoid, CstObjArrIntf
   
 }
 
-abstract class CstDomSet: CstVectorVoid, CstVecPrim, CstVecArrIntf
+abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
 {
   State _state;
   

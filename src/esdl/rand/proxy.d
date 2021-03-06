@@ -3,7 +3,7 @@ import esdl.solver.base;
 
 import esdl.rand.base: CstVecPrim, CstLogicExpr, CstScope, CstDomain,
   CstPredicate, CstBlock, CstPredGroup, DomType, CstVecExpr, CstObjectVoid,
-  CstVarNodeIntf, CstObjectIntf, CstIterator, CstDomSet, CstNoRandIntf;
+  CstVarNodeIntf, CstObjectIntf, CstIterator, CstDomSet, CstVarGlobIntf;
 
 import esdl.rand.misc;
 import esdl.data.folder;
@@ -135,14 +135,14 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   CstSolver[string] _solvers;
 
-  CstNoRandIntf[string] _globalLookups;
+  CstVarGlobIntf[string] _globalLookups;
 
-  void addGlobalLookup(CstNoRandIntf global, string lookup) {
+  void addGlobalLookup(CstVarGlobIntf global, string lookup) {
     assert(lookup !in _globalLookups);
     _globalLookups[lookup] = global;
   }
 
-  CstNoRandIntf getGlobalLookup(string lookup) {
+  CstVarGlobIntf getGlobalLookup(string lookup) {
     auto global = lookup in _globalLookups;
     if (global !is null) return *global;
     else return null;

@@ -18,12 +18,13 @@ import std.range: ElementType;
 
 import esdl.rand.misc;
 import esdl.rand.expr: CstVecValue, CstVarVisitorExpr;
-import esdl.rand.base: CstBlock, CstVecPrim, CstPredicate, CstNoRandIntf,
-  CstVarNodeIntf, CstObjectIntf, CstObjArrIntf, CstVisitorPredicate;
-import esdl.rand.vecx: CstVecIdx, CstVecArrIdx,
-  CstVecNoRand, CstVecArrNoRand;
-import esdl.rand.objx: CstObjIdx, CstObjArrIdx,
-  CstObjNoRand, CstObjNoRandP;
+import esdl.rand.base: CstBlock, CstVecPrim, CstPredicate, CstVarGlobIntf,
+  CstVarNodeIntf, CstObjectIntf, CstObjArrIntf, CstVisitorPredicate,
+  CstObjectWrapBase, CstObjArrWrapBase;
+import esdl.rand.vecx: CstVectorIdx, CstVecArrIdx,
+  CstVectorGlob, CstVecArrGlob;
+import esdl.rand.objx: CstObjectIdx, CstObjArrIdx, CstObjectGlob, CstObjectWrap,
+  CstObjArrWrap;
 import esdl.rand.proxy;
 import esdl.rand.func;
 
@@ -61,7 +62,7 @@ template _esdl__RandProxyType(T, int I, P, int PI)
   static if (isBitVector!L || isIntegral!L ||
 	     isBoolean!L || // isSomeChar!L || // exclude chars
 	     is (L == enum)) {
-    alias _esdl__RandProxyType = CstVecIdx!(L, RAND, 0, I, P, PI);
+    alias _esdl__RandProxyType = CstVectorIdx!(L, RAND, 0, I, P, PI);
   }  
   else static if ((isArray!L || isQueue!L ) &&
 		  (isBitVector!LEAF || isIntegral!LEAF ||
@@ -70,7 +71,7 @@ template _esdl__RandProxyType(T, int I, P, int PI)
     alias _esdl__RandProxyType = CstVecArrIdx!(L, RAND, 0, I, P, PI);
   }
   else static if (is (L == struct)) {
-    alias _esdl__RandProxyType = CstObjIdx!(L, RAND, 0, I, P, PI);
+    alias _esdl__RandProxyType = CstObjectIdx!(L, RAND, 0, I, P, PI);
   }
   else static if ((isArray!L || isQueue!L) &&
 		  (is (LEAF == struct))) {
@@ -78,7 +79,7 @@ template _esdl__RandProxyType(T, int I, P, int PI)
   }
   // Exclude class/struct* elements that have not been rand tagged
   // or are excluded  because of rand.disable or rand.barrier
-  else static if ((! RAND.hasProxy()) ||
+  else static if (// (! RAND.hasProxy()) ||
 		  // _esdl__TypeHasNorandAttr!L ||
 		  _esdl__TypeHasRandBarrier!L ||
 		  (is (L: rand.disable))) {
@@ -86,12 +87,18 @@ template _esdl__RandProxyType(T, int I, P, int PI)
   }
   else static if (is (L == class) ||
 		  (is (L == U*, U) && is (U == struct))) {
-    alias _esdl__RandProxyType = CstObjIdx!(L, RAND, 0, I, P, PI);
+    static if (RAND.hasProxy())
+      alias _esdl__RandProxyType = CstObjectIdx!(L, RAND, 0, I, P, PI);
+    else
+      alias _esdl__RandProxyType = CstObjectWrap!(L, RAND, 0, I, P, PI);
   }
   else static if ((isArray!L || isQueue!L) &&
 		  (is (LEAF == class)  ||
 		   (is (LEAF == U*, U) && is (U == struct)))) {
-    alias _esdl__RandProxyType = CstObjArrIdx!(L, RAND, 0, I, P, PI);
+    static if (RAND.hasProxy())
+      alias _esdl__RandProxyType = CstObjArrIdx!(L, RAND, 0, I, P, PI);
+    else
+      alias _esdl__RandProxyType = CstObjArrWrap!(L, RAND, 0, I, P, PI);
   }
   else {
     alias _esdl__RandProxyType = _esdl__UNDEFINED;
@@ -174,7 +181,8 @@ void _esdl__doInitRandsElems(P, int I=0)(P p) {
   else {
     alias Q = typeof (P.tupleof[I]);
     // pragma(msg, "#" ~ Q.stringof);
-    static if (is (Q: CstVarNodeIntf)) {
+    static if (is (Q: CstVarNodeIntf) ||
+	       is (Q: CstObjectWrapBase) || is (Q: CstObjArrWrapBase)) {
       // static if (Q._esdl__HASPROXY // && Q._esdl__ISRAND // not just @rand
       // 		 ) {
       // pragma(msg, "#" ~ Q.stringof);
@@ -243,7 +251,7 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
   }
   else {
     alias Q = typeof (P.tupleof[I]);
-    static if (is (Q == CstVecIdx!(L, RAND, N, IDX, P, PIDX),
+    static if (is (Q == CstVectorIdx!(L, RAND, N, IDX, P, PIDX),
 		   L, rand RAND, int N, int IDX, P, int PIDX)) {
       static if (Q._esdl__HASPROXY) {
 	if (p.tupleof[I] !is null) {
@@ -251,7 +259,7 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 	}
       }
     }
-    static if (is (Q == CstObjIdx!(L, RAND, N, IDX, P, PIDX),
+    static if (is (Q == CstObjectIdx!(L, RAND, N, IDX, P, PIDX),
 		   L, rand RAND, int N, int IDX, P, int PIDX)) {
       static if (Q._esdl__HASPROXY) {
 	static if (is (L == struct)) {
@@ -301,20 +309,13 @@ template _esdl__RandDeclVars(T, int I, PT, int PI)
     else {
       // pragma(msg, I);
       // pragma(msg, __traits(identifier, T.tupleof[I]));
-      static if (is (T == U*, U) && is (U == struct)) {
-	enum string _esdl__RandDeclVars =
-	  "  _esdl__RandProxyType!(_esdl__T, " ~ I.stringof ~
-	  ", _esdl__PROXYT, " ~ PI.stringof ~ ") " ~
-	  __traits(identifier, U.tupleof[I]) ~ ";\n" ~
-	  _esdl__RandDeclVars!(T, I+1, PT, PI+1);
-      }
-      else {
-	enum string _esdl__RandDeclVars =
-	  "  _esdl__RandProxyType!(_esdl__T, " ~ I.stringof ~
-	  ", _esdl__PROXYT, " ~ PI.stringof ~ ") " ~
-          __traits(identifier, T.tupleof[I]) ~ ";\n" ~
-	  _esdl__RandDeclVars!(T, I+1, PT, PI+1);
-      }
+      static if (is (T == U*, U) && is (U == struct)) alias TT = U;
+      else                                            alias TT = T;
+      enum string _esdl__RandDeclVars =
+	"  _esdl__RandProxyType!(_esdl__T, " ~ I.stringof ~
+	", _esdl__PROXYT, " ~ PI.stringof ~ ") " ~
+	__traits(identifier, TT.tupleof[I]) ~ ";\n" ~
+	_esdl__RandDeclVars!(T, I+1, PT, PI+1);
     }
   }
 }
@@ -393,16 +394,11 @@ template _esdl__ConstraintDefaults(T, int I=0)
   else {
     alias RAND = getRandAttr!(T, I);
     static if (RAND.isRand) {
-      static if (is (T == U*, U) && is (U == struct)) {
-	enum string _esdl__ConstraintDefaults =
-	  _esdl__ConstraintDefaults!(__traits(identifier, U.tupleof[I]), 0, RAND) ~
-	  _esdl__ConstraintDefaults!(T, I+1);
-      }
-      else {
-	enum string _esdl__ConstraintDefaults =
-	  _esdl__ConstraintDefaults!(__traits(identifier, T.tupleof[I]), 0, RAND) ~
-	  _esdl__ConstraintDefaults!(T, I+1);
-      }
+      static if (is (T == U*, U) && is (U == struct)) alias TT = U;
+      else                                            alias TT = T;
+      enum string _esdl__ConstraintDefaults =
+	_esdl__ConstraintDefaults!(__traits(identifier, TT.tupleof[I]), 0, RAND) ~
+	_esdl__ConstraintDefaults!(T, I+1);
     }
     else {
       enum string _esdl__ConstraintDefaults = _esdl__ConstraintDefaults!(T, I+1);
@@ -708,9 +704,21 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       super(eng, name, OBJ);
     }
     override CstBlock makeCstBlock() {
+      auto obj = mixin(OBJ);
+      alias TOBJ = typeof(obj);
       CstBlock _esdl__block = new CstBlock();
-      _esdl__block ~= new CstVisitorPredicate(this, 0, this.outer, 0,
-					      new CstVarVisitorExpr(mixin(OBJ)));
+      static if (is (TOBJ: CstObjectWrapBase) ||
+		 is (TOBJ: CstObjArrWrapBase)) {
+	assert (obj !is null, OBJ ~ " is null");
+	_esdl__block ~=
+	  new CstVisitorPredicate(this, 0, this.outer, 0,
+				  new CstVarVisitorExpr(obj._esdl__get()));
+      }
+      else {
+	_esdl__block ~=
+	  new CstVisitorPredicate(this, 0, this.outer, 0,
+				  new CstVarVisitorExpr(obj));
+      }
       return _esdl__block;
     }
   }
@@ -853,11 +861,30 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
     }
     return V;
   }
+  else static if (is (L: CstObjectWrapBase) || is (L: CstObjArrWrapBase)) {
+    if (V is null) {
+      L._esdl__PROXYT p = parent;
+      if (p is null) {
+	V = new L(name, parent, null);
+      }
+      else {
+	alias M = typeof(p._esdl__outer.tupleof[L._esdl__INDEX]);
+	static if (is (M == class) ||
+		   (is (M == U*, U) && is (U == struct))) {
+	  V = new L(name, parent, p._esdl__outer.tupleof[L._esdl__INDEX]);
+	}
+	else {
+	  V = new L(name, parent, &(p._esdl__outer.tupleof[L._esdl__INDEX]));
+	}
+      }
+    }
+    return V._esdl__get();
+  }
   else static if (isIntegral!L || isBitVector!L ||
 	     isBoolean!L || isSomeChar!L || is (L == enum)) {
     static if (isLvalue!V) {
-      alias CstVecType = CstVecNoRand!(L, rand(true, true), 0, V);
-      CstNoRandIntf global = parent.getGlobalLookup(V.stringof);
+      alias CstVecType = CstVectorGlob!(L, rand(true, true), 0, V);
+      CstVarGlobIntf global = parent.getGlobalLookup(V.stringof);
       if (global !is null)
 	return cast(CstVecType) global;
       else {
@@ -874,12 +901,12 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
 		  (is (L == U*, U) && is (U == struct))) {
     // pragma(msg, "inside: ", NAME);
     static if (is (L == class) || is (L == struct)) {
-      alias CstObjType = CstObjNoRand!(L, rand(true, true), 0, V);
+      alias CstObjType = CstObjectGlob!(L, rand(true, true), 0, V);
     }
     else {
-      alias CstObjType = CstObjNoRand!(U, rand(true, true), 0, V);
+      alias CstObjType = CstObjectGlob!(U, rand(true, true), 0, V);
     }
-    CstNoRandIntf global = parent.getGlobalLookup(V.stringof);
+    CstVarGlobIntf global = parent.getGlobalLookup(V.stringof);
     if (global !is null)
       return cast(CstObjType) global;
     else {
@@ -897,8 +924,8 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
   else static if (isArray!L || isQueue!L) {
     // import std.stdio;
     // writeln("Creating VarVecArr, ", name);
-    alias CstVecArrType = CstVecArrNoRand!(L, rand(true, true), 0, V);
-    CstNoRandIntf global = parent.getGlobalLookup(V.stringof);
+    alias CstVecArrType = CstVecArrGlob!(L, rand(true, true), 0, V);
+    CstVarGlobIntf global = parent.getGlobalLookup(V.stringof);
     if (global !is null)
       return cast(CstVecArrType) global;
     else {
@@ -938,7 +965,7 @@ auto _esdl__arg_proxy(L, S)(string name, ref L arg, S parent) {
 	     isBoolean!L || isSomeChar!L || is (L == enum)) {
     // import std.stdio;
     // writeln("Creating VarVec, ", name);
-    return new CstVecIdx!(L, rand(true, true), 0, -1, _esdl__ARG, -1)(name, parent, &arg);
+    return new CstVectorIdx!(L, rand(true, true), 0, -1, _esdl__ARG, -1)(name, parent, &arg);
   }
   else {
     static assert(false);
