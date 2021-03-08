@@ -190,9 +190,15 @@ class CstObjectBase(V, rand RAND_ATTR, int N)
 	}
 
 	bool _isRand = true;
-	override bool isRand() {
-	  assert (false);	// overridden in derived classes
+	void rand_mode(bool mode) {
+	  if (mode != _isRand) {
+	    _isRand = mode;
+	    _root.setNeedSync();
+	  }
 	}
+	bool rand_mode() { return _isRand; }
+	// overridded in derived classes
+	override bool isRand() { assert (false); }
       }
 
 class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
@@ -565,9 +571,15 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
   abstract EV createElem(uint i);
     
   bool _isRand = true;
-  bool isRand() {
-    assert (false);	// overridden in derived classes
+  void rand_mode(bool mode) {
+    if (mode != _isRand) {
+      _isRand = mode;
+      _root.setNeedSync();
+    }
   }
+  bool rand_mode() { return _isRand; }
+  // overridded in derived classes
+  bool isRand() { assert (false); }
 
   abstract size_t getLen();
   abstract void setLen(size_t len);

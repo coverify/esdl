@@ -451,12 +451,12 @@ void _esdl__randomize(T) (T t, _esdl__ConstraintBase withCst = null) {
   t._esdl__initProxy();
   
   if (withCst is null && t._esdl__proxyInst._esdl__cstWith !is null) {
-    t._esdl__proxyInst._esdl__cstWith = withCst;
+    t._esdl__proxyInst._esdl__cstWith = null;
     t._esdl__proxyInst._esdl__cstWithChanged = true;
   }
-  else {
-    t._esdl__proxyInst._esdl__cstWithChanged = false;
-  }
+  // else {
+  //   t._esdl__proxyInst._esdl__cstWithChanged = false;
+  // }
 
   static if(__traits(compiles, t.preRandomize())) {
     t.preRandomize();
@@ -561,8 +561,32 @@ mixin template Randomization()
   //   return mixin(NAME);
   // }
 
+  bool rand_mode(string rnd)() {
+    this._esdl__initProxy();
+    _esdl__ProxyType proxy = cast(_esdl__ProxyType) _esdl__proxyInst;
+    return proxy.rand_mode!rnd();
+  }
+
+  void rand_mode(string rnd)(bool mode) {
+    this._esdl__initProxy();
+    _esdl__ProxyType proxy = cast(_esdl__ProxyType) _esdl__proxyInst;
+    proxy.rand_mode!rnd(mode);
+  }
+
+  bool constraint_mode(string rnd)() {
+    this._esdl__initProxy();
+    _esdl__ProxyType proxy = cast(_esdl__ProxyType) _esdl__proxyInst;
+    return proxy.constraint_mode!rnd();
+  }
+
+  void constraint_mode(string rnd)(bool mode) {
+    this._esdl__initProxy();
+    _esdl__ProxyType proxy = cast(_esdl__ProxyType) _esdl__proxyInst;
+    proxy.constraint_mode!rnd(mode);
+  }
+
   static if(// is(_esdl__T: Randomizable) ||
-	    __traits(compiles, _esdl__proxyInst)) {
+	    __traits(compiles, _esdl__proxyInst)) { // this is a derived class
     static assert (is (typeof(this) == class),
 		   typeof(this).stringof ~ " is not a class"); // only classes can have a base class
     override void _esdl__virtualRandomize(_esdl__ConstraintBase withCst = null) {
@@ -707,6 +731,22 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   mixin (_esdl__RandDeclVars!(_esdl__T, 0, _esdl__PROXYT, 0));
   mixin (_esdl__ConstraintsDefDecl!_esdl__T);
   mixin (_esdl__ConstraintsDecl!_esdl__T);
+
+  bool rand_mode(string rnd)() {
+    return mixin(rnd).rand_mode();
+  }
+
+  void constraint_mode(string rnd)(bool mode) {
+    mixin(rnd).constraint_mode(mode);
+  }
+
+  bool rand_mode(string rnd)() {
+    return mixin(rnd).rand_mode();
+  }
+
+  void constraint_mode(string rnd)(bool mode) {
+    mixin(rnd).constraint_mode(mode);
+  }
 
   class _esdl__Constraint(string OBJ): _esdl__ConstraintBase
   {

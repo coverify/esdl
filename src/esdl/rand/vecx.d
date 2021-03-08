@@ -95,9 +95,15 @@ class CstVectorBase(V, rand RAND_ATTR, int N)
 	}
 
 	bool _isRand = true;
-	override bool isRand() {
-	  assert (false);	// overridded in derived classes
+	void rand_mode(bool mode) {
+	  if (mode != _isRand) {
+	    _isRand = mode;
+	    _root.setNeedSync();
+	  }
 	}
+	bool rand_mode() { return _isRand; }
+	// overridded in derived classes
+	override bool isRand() { assert (false); }
 
 	void solveBefore(CstVecPrim other) {
 	  static if (HAS_RAND_ATTRIB) {
@@ -464,9 +470,15 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
   abstract EV createElem(CstVecExpr index);
 
   bool _isRand = true;
-  bool isRand() {
-    assert (false);
+  bool rand_mode() { return _isRand; }
+  void rand_mode(bool mode) {
+    if (mode != _isRand) {
+      _isRand = mode;
+      _root.setNeedSync();
+    }
   }
+  // overridded in derived classes
+  bool isRand() { assert (false); }
 
   abstract size_t getLen();
   abstract void setLen(size_t len);

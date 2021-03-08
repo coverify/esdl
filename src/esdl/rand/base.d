@@ -826,6 +826,7 @@ class CstPredGroup			// group of related predicates
     solvablePred.setGroupContext(this);
     
     if (_state is State.NEEDSYNC ||
+	_proxy.needSync() is true ||
 	_predList.length != _preds.length ||
 	_dynPredList.length != _dynPreds.length) {
       _hasSoftConstraints = false;
@@ -1520,7 +1521,8 @@ class CstPredicate: CstIterCallback, CstDepCallback
   void setGroupContext(CstPredGroup group) {
     _state = State.GROUPED;
     if (_group !is group) {
-      assert(_group is null, "A predicate may be added to a group, but group should not change");
+      assert(_group is null,
+	     "A predicate may be added to a group, but group should not change");
       group.needSync();
     }
     if (_rndArrs.length != 0) group.needSync();

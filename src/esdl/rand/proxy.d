@@ -38,6 +38,14 @@ abstract class _esdl__ConstraintBase: rand.disable
     _enabled = false;
   }
 
+  void constraint_mode(bool mode) {
+    if (mode != _enabled) {
+      _enabled = mode;
+      _proxy.getProxyRoot().setNeedSync();
+    }
+  }
+  bool constraint_mode() { return _enabled; }
+
   string name() {
     return _name;
   }
@@ -279,7 +287,16 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   // Keep a list of constraints in the class
   _esdl__ConstraintBase _esdl__cstWith;
 
-  bool _esdl__cstWithChanged;
+  bool _esdl__cstWithChanged = true;
+  bool _esdl__needSync = true;
+
+  bool needSync() {
+    return _esdl__needSync;
+  }
+
+  void setNeedSync() {
+    _esdl__needSync = true;
+  }
 
   CstBlock _esdl__cstExprs;
 
@@ -398,6 +415,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     return false;
   }
   void solve() {
+    if (_esdl__cstWithChanged is true)
+      _esdl__needSync = true;
     assert(_root is this);
     this._cycle += 1;
     foreach(pred; _newPreds){
@@ -652,7 +671,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       _solvedDomainArrs ~= group.domainArrs();
     }
     _solvedGroups.reset();
-      
+    _esdl__needSync = false;
   }
 
   void procResolved(CstPredicate pred) {
