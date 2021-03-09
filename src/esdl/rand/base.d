@@ -24,7 +24,7 @@ interface CstVarNodeIntf {
 
   bool _esdl__isObjArray();
   CstIterator _esdl__iter();
-  CstVarNodeIntf _esdl__getChild(uint n);
+  CstVarNodeIntf _esdl__getChild(ulong n);
   void visit();			// when an object is unrolled
 }
 
@@ -254,7 +254,7 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
   // CstVecNodeIntf
   final bool _esdl__isVecArray() {return false;}
   final CstIterator _esdl__iter() {return null;}
-  final CstVarNodeIntf _esdl__getChild(uint n) {assert (false);}
+  final CstVarNodeIntf _esdl__getChild(ulong n) {assert (false);}
 
   bool _isDist;
   final bool isDist() { return _isDist; }
@@ -481,7 +481,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   }
 
   abstract CstDomSet getParentDomSet();
-  abstract CstDomSet unroll(CstIterator iter, uint n);
+  abstract CstDomSet unroll(CstIterator iter, ulong n);
   
   override void registerDepPred(CstDepCallback depCb) {
     foreach (cb; _depCbs) {
@@ -661,7 +661,7 @@ abstract class CstVecExpr: CstExpr
   
   abstract long evaluate();
 
-  abstract CstVecExpr unroll(CstIterator iter, uint n);
+  abstract CstVecExpr unroll(CstIterator iter, ulong n);
 
   abstract bool isOrderingExpr();
 
@@ -674,7 +674,7 @@ abstract class CstLogicExpr: CstExpr
 {
   abstract DistRangeSetBase getDist();
   abstract CstVecExpr isNot(CstDomain A);
-  abstract CstLogicExpr unroll(CstIterator iter, uint n);
+  abstract CstLogicExpr unroll(CstIterator iter, ulong n);
   bool isOrderingExpr(){
     return false;
   }
@@ -694,11 +694,12 @@ abstract class CstIterator: CstVecTerm
       cb.doUnroll();
     }
   }
-  abstract uint size();
+  abstract ulong size();
   abstract string name();
   abstract string fullName();
   abstract CstIterator unrollIterator(CstIterator iter, uint n);
   abstract CstDomain getLenVec();
+  abstract ulong mapIter(size_t i);
   final bool isUnrollable() {
     return getLenVec().isSolved();
   }
@@ -1215,8 +1216,10 @@ class CstPredicate: CstIterCallback, CstDepCallback
       // writeln("Need to unroll ", currLen - _uwPreds.length, " times");
       for (uint i = cast(uint) _uwPreds.length;
 	   i != currLen; ++i) {
+	// import std.stdio;
+	// writeln("i: ", i, " mapped: ", iter.mapIter(i));
 	_uwPreds ~= new CstPredicate(_constraint, _statement, _proxy, _soft,
-				     _expr.unroll(iter, i), this, iter, i// ,
+				     _expr.unroll(iter, iter.mapIter(i)), this, iter, i// ,
 				     // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
 				     );
       }
@@ -1602,8 +1605,10 @@ class CstVisitorPredicate: CstPredicate
       // writeln("Need to unroll ", currLen - _uwPreds.length, " times");
       for (uint i = cast(uint) _uwPreds.length;
 	   i != currLen; ++i) {
+	// import std.stdio;
+	// writeln("i: ", i, " mapped: ", iter.mapIter(i));
 	_uwPreds ~= new CstVisitorPredicate(_constraint, _statement, _proxy, _soft,
-					    _expr.unroll(iter, i), this, iter, i// ,
+					    _expr.unroll(iter, iter.mapIter(i)), this, iter, i// ,
 					    // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
 					    );
       }

@@ -4,7 +4,8 @@ import esdl.data.bvec: isBitVector;
 import esdl.data.queue;
 import esdl.data.charbuf;
 import std.traits: isIntegral, isBoolean, isArray, EnumMembers,
-  isSomeChar, isAssociativeArray, ValueType, KeyType;
+  isSomeChar, isAssociativeArray, ValueType, KeyType, OriginalType;
+import std.range: ElementType;
 import std.meta: AliasSeq;
 
 
@@ -102,6 +103,139 @@ struct rand
 // }
 
 // struct _esdl__rand(N...) { }
+
+template isRandomizableInt(T) {
+  enum bool isRandomizableInt =
+    isIntegral!T || isBitVector!T || isBoolean!T; // || isSomeChar!T
+}
+
+template isRandomizableEnum(T) {
+  alias OT = OriginalType!T;
+  enum bool isRandomizableEnum = is (T == enum) && isRandomizableInt!OT;
+}
+
+template isRandomizable(T) {
+  enum bool isRandomizable = isRandomizableInt!T || isRandomizableEnum!T;
+}
+
+
+template isRandVectorSet(T) {
+  enum bool isRandVectorSet = isRandVectorAssoc!T || isRandVectorArray!T;
+}
+
+template isRandStructSet(T) {
+  enum bool isRandStructSet = isRandStructAssoc!T || isRandStructArray!T;
+}
+
+template isRandClassSet(T) {
+  enum bool isRandClassSet = isRandClassAssoc!T || isRandClassArray!T;
+}
+
+// Associative arrays that can be randomized
+template isRandVectorAssoc(T) {
+  // only the top level array can be Assoc
+  static if (isAssociativeArray!T) {
+    alias K = KeyType!T; 
+    static if (isRandomizable!K) {
+      alias E = ValueType!T;
+      enum bool isRandVectorAssoc =
+	isRandVectorArray!E || isRandomizable!E;
+    }
+    else {
+      enum bool isRandVectorAssoc = false;
+    }
+  }
+  else {
+    enum bool isRandVectorAssoc = false;
+  }
+}
+
+template isRandStructAssoc(T) {
+  // only the top level array can be Assoc
+  static if (isAssociativeArray!T) {
+    alias K = KeyType!T; 
+    static if (isRandomizable!K) {
+      alias E = ValueType!T;
+      enum bool isRandStructAssoc =
+	isRandStructArray!E || is (E == struct);
+    }
+    else {
+      enum bool isRandStructAssoc = false;
+    }
+  }
+  else {
+    enum bool isRandStructAssoc = false;
+  }
+}
+
+template isRandClassAssoc(T) {
+  // only the top level array can be Assoc
+  static if (isAssociativeArray!T) {
+    alias K = KeyType!T; 
+    static if (isRandomizable!K) {
+      alias E = ValueType!T;
+      enum bool isRandClassAssoc =
+	isRandClassArray!E || is (E == class) ||
+	(is (E == U*, U) && is (U == struct));
+    }
+    else {
+      enum bool isRandClassAssoc = false;
+    }
+  }
+  else {
+    enum bool isRandClassAssoc = false;
+  }
+}
+
+template isRandVectorArray(T) {
+  static if (isArray!T) {
+    alias E = ElementType!T;
+    enum bool isRandVectorArray =
+      isRandVectorArray!E || isRandomizable!E;
+  }
+  else static if (isQueue!T) {
+    alias E = T.ElementType;
+    enum bool isRandVectorArray =
+      isRandVectorArray!E || isRandomizable!E;
+  }
+  else {
+    enum bool isRandVectorArray = false;
+  }
+}
+
+template isRandStructArray(T) {
+  static if (isArray!T) {
+    alias E = ElementType!T;
+    enum bool isRandStructArray =
+      isRandStructArray!E || is (E == struct);
+  }
+  else static if (isQueue!T) {
+    alias E = T.ElementType;
+    enum bool isRandStructArray =
+      isRandStructArray!E || is (E == struct);
+  }
+  else {
+    enum bool isRandStructArray = false;
+  }
+}
+
+template isRandClassArray(T) {
+  static if (isArray!T) {
+    alias E = ElementType!T;
+    enum bool isRandClassArray =
+      isRandClassArray!E || is (E == class) ||
+      (is (E == U*, U) && is (U == struct));
+  }
+  else static if (isQueue!T) {
+    alias E = T.ElementType;
+    enum bool isRandClassArray =
+      isRandClassArray!E || is (E == class) ||
+      (is (E == U*, U) && is (U == struct));
+  }
+  else {
+    enum bool isRandClassArray = false;
+  }
+}
 
 template isVecSigned(L) {
   import std.traits: isIntegral, isSigned;

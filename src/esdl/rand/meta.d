@@ -34,20 +34,6 @@ private import std.typetuple: staticIndexOf, TypeTuple;
 private import std.traits: BaseClassesTuple; // required for staticIndexOf
 
 
-template isRandomizableInt(T) {
-  enum bool isRandomizableInt =
-    isIntegral!T || isBitVector!T || isBoolean!T; // || isSomeChar!T
-}
-
-template isRandomizableEnum(T) {
-  alias OT = OriginalType!T;
-  enum bool isRandomizableEnum = is (T == enum) && isRandomizableInt!OT;
-}
-
-template isRandomizable(T) {
-  enum bool isRandomizable = isRandomizableInt!T || isRandomizableEnum!T;
-}
-
 // static alias Unconst(T) = T;
 // static alias Unconst(T: const U, U) = U;
 
@@ -65,28 +51,24 @@ body {
  }
 
 struct _esdl__ARG {}
-enum _esdl__UNDEFINED;
+enum _esdl__NotMappedForRandomization;
 
 template _esdl__RandProxyType(T, int I, P, int PI)
 {
   import std.traits;
   alias L = typeof(T.tupleof[I]);
-  static if (isArray!L || isQueue!L || isAssociativeArray!L)
-    alias LEAF = LeafElementType!L;
   enum rand RAND = getRandAttr!(T, I);
   // pragma(msg, "Looking at: ", L.stringof);
   static if (isRandomizable!L) {
     alias _esdl__RandProxyType = CstVectorIdx!(L, RAND, 0, I, P, PI);
   }  
-  else static if ((isArray!L || isQueue!L || isAssociativeArray!L) &&
-		  isRandomizable!LEAF) {
+  else static if (isRandVectorSet!L) {
     alias _esdl__RandProxyType = CstVecArrIdx!(L, RAND, 0, I, P, PI);
   }
   else static if (is (L == struct)) {
     alias _esdl__RandProxyType = CstObjectIdx!(L, RAND, 0, I, P, PI);
   }
-  else static if ((isArray!L || isQueue!L || isAssociativeArray!L) &&
-		  (is (LEAF == struct))) {
+  else static if (isRandStructSet!L) {
     alias _esdl__RandProxyType = CstObjArrIdx!(L, RAND, 0, I, P, PI);
   }
   // Exclude class/struct* elements that have not been rand tagged
@@ -95,7 +77,7 @@ template _esdl__RandProxyType(T, int I, P, int PI)
 		  // _esdl__TypeHasNorandAttr!L ||
 		  _esdl__TypeHasRandBarrier!L ||
 		  (is (L: rand.disable))) {
-    alias _esdl__RandProxyType = _esdl__UNDEFINED;
+    alias _esdl__RandProxyType = _esdl__NotMappedForRandomization;
   }
   else static if (is (L == class) ||
 		  (is (L == U*, U) && is (U == struct))) {
@@ -104,16 +86,14 @@ template _esdl__RandProxyType(T, int I, P, int PI)
     else
       alias _esdl__RandProxyType = CstObjectStub!(L, RAND, 0, I, P, PI);
   }
-  else static if ((isArray!L || isQueue!L || isAssociativeArray!L) &&
-		  (is (LEAF == class)  ||
-		   (is (LEAF == U*, U) && is (U == struct)))) {
+  else static if (isRandClassSet!L) {
     static if (RAND.hasProxy())
       alias _esdl__RandProxyType = CstObjArrIdx!(L, RAND, 0, I, P, PI);
     else
       alias _esdl__RandProxyType = CstObjArrStub!(L, RAND, 0, I, P, PI);
   }
   else {
-    alias _esdl__RandProxyType = _esdl__UNDEFINED;
+    alias _esdl__RandProxyType = _esdl__NotMappedForRandomization;
   }
 }
 
@@ -325,7 +305,8 @@ template _esdl__RandDeclVars(T, int I, PT, int PI)
     enum rand RAND = getRandAttr!(T, I);
     static if (// (! RAND.hasProxy()) ||
 	       // is (typeof(T.tupleof[I]): rand.disable) ||
-	       is (_esdl__RandProxyType!(T, I, PT, PI) == _esdl__UNDEFINED)) {
+	       is (_esdl__RandProxyType!(T, I, PT, PI) ==
+		   _esdl__NotMappedForRandomization)) {
       enum string _esdl__RandDeclVars = _esdl__RandDeclVars!(T, I+1, PT, PI);
     }
     else {
@@ -349,8 +330,6 @@ template _esdl__ConstraintsDecl(T, int I=0)
   }
   else {
     alias L = typeof(T.tupleof[I]);
-    static if (isArray!L || isQueue!L || isAssociativeArray!L)
-      alias E = LeafElementType!L;
     static if (is (T == U*, U) && is (U == struct)) {
       enum NAME = __traits(identifier, U.tupleof[I]);
     }
@@ -376,8 +355,7 @@ template _esdl__ConstraintsDecl(T, int I=0)
 	", _esdl__FILE_" ~ NAME ~ ", _esdl__LINE_" ~ NAME ~ ") " ~
 	NAME ~ ";\n" ~ _esdl__ConstraintsDecl!(T, I+1);
     }
-    else static if ((isArray!L || isQueue!L || isAssociativeArray!L) &&
-		    (isRandomizable!E || is (E == struct) || is (E == class))) {
+    else static if (isRandVectorSet!L || isRandStructSet!L || isRandClassSet!L) {
       enum _esdl__ConstraintsDecl =
 	"  _esdl__Constraint!(\"" ~ NAME ~ "\") _esdl__visitorCst_"
 	~ NAME ~ ";\n"  ~ _esdl__ConstraintsDecl!(T, I+1);
@@ -977,7 +955,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       return obj;
     }
   }
-  else static if (isArray!L || isQueue!L || isAssociativeArray!L) {
+  else static if (isRandVectorSet!L) {
     // import std.stdio;
     // writeln("Creating VarVecArr, ", name);
     alias CstVecArrType = CstVecArrGlob!(L, rand(true, true), 0, V);
@@ -989,9 +967,22 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       parent.addGlobalLookup(obj, V.stringof);
       return obj;
     }
-    // return new CstVecArrIdx!(L, rand(true, true), 0, -1, _esdl__VALUE)(name, parent, V);
+  }
+  else static if (isRandClassSet!L || isRandStructSet!L) {
+    // import std.stdio;
+    // writeln("Creating VarVecArr, ", name);
+    alias CstObjArrType = CstObjArrGlob!(L, rand(true, true), 0, V);
+    CstVarGlobIntf global = parent.getGlobalLookup(V.stringof);
+    if (global !is null)
+      return cast(CstObjArrType) global;
+    else {
+      CstObjArrType obj = new CstObjArrType(name, parent, &V);
+      parent.addGlobalLookup(obj, V.stringof);
+      return obj;
+    }
   }
   else {
+    static assert (false, "Unhandled Global Lookup -- Please report to the EUVM Developer");
     // import std.stdio;
     // assert (parent !is null);
     // writeln(V.stringof);

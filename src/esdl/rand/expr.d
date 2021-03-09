@@ -25,7 +25,7 @@ abstract class CstVecTerm: CstVecExpr
     return new CstVec2LogicExpr(this, zero, CstCompareOp.NEQ);
   }
 
-  // abstract CstVecExpr unroll(CstIterator iter, uint n);
+  // abstract CstVecExpr unroll(CstIterator iter, ulong n);
 
   CstVec2VecExpr opBinary(string op)(CstVecTerm other)
   {
@@ -630,7 +630,7 @@ class CstOrderingExpr: CstLogicExpr
   override CstVecExpr isNot(CstDomain A){
     assert(false);
   }
-  override CstLogicExpr unroll(CstIterator iter, uint n){
+  override CstLogicExpr unroll(CstIterator iter, ulong n){
     assert(false);
   }
   override void setDomainContext(CstPredicate pred,
@@ -662,7 +662,7 @@ class CstOrderingExpr: CstLogicExpr
 }
 abstract class CstLogicTerm: CstLogicExpr
 {
-  abstract override CstLogicTerm unroll(CstIterator iter, uint n);
+  abstract override CstLogicTerm unroll(CstIterator iter, ulong n);
 
   CstLogicTerm opBinary(string op)(CstLogicTerm other)
   {
@@ -750,15 +750,19 @@ class CstArrIterator(RV): CstIterator
     return _arrVar.arrLen();
   }
   
-  override uint size() {
+  final override ulong mapIter(size_t i) {
+    return _arrVar.mapIter(i);
+  }
+
+  override ulong size() {
     if(! getLenVec().isSolved()) {
       assert(false, "Can not find size since the " ~
-	     "Iter Variable is unrollable");
+	     "Iter Variable has not been unrolled");
     }
     // import std.stdio;
     // writeln("size for arrVar: ", _arrVar.name(), " is ",
     // 	    _arrVar.arrLen.value);
-    return cast(uint) _arrVar.arrLen.value;
+    return _arrVar.arrLen.value;
   }
 
   override string name() {
@@ -784,7 +788,7 @@ class CstArrIterator(RV): CstIterator
     else return (_arrVar == rhs._arrVar);
   }
 
-  override CstVecExpr unroll(CstIterator iter, uint n) {
+  override CstVecExpr unroll(CstIterator iter, ulong n) {
     if(this !is iter) {
       return _arrVar.unroll(iter,n).arrLen().makeIterVar();
     }
@@ -986,7 +990,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecPrim
   //   _parent.setLen(cast(size_t) v);
   // }
 
-  override CstVecExpr unroll(CstIterator iter, uint n) {
+  override CstVecExpr unroll(CstIterator iter, ulong n) {
     return _parent.unroll(iter,n).arrLen();
   }
 
@@ -1094,7 +1098,7 @@ abstract class CstValue: CstVecTerm
     return false;
   }
 
-  override CstVecExpr unroll(CstIterator l, uint n) {
+  override CstVecExpr unroll(CstIterator iters, ulong n) {
     return this;
   }
 
@@ -1276,7 +1280,7 @@ class CstVecArrExpr: CstVecTerm
     assert (false, "TBD");
   }
 
-  override CstVecArrExpr unroll(CstIterator iter, uint n) {
+  override CstVecArrExpr unroll(CstIterator iter, ulong n) {
     return this;
   }
 
@@ -1413,7 +1417,7 @@ class CstVec2VecExpr: CstVecTerm
     }
   }
 
-  override CstVec2VecExpr unroll(CstIterator iter, uint n) {
+  override CstVec2VecExpr unroll(CstIterator iter, ulong n) {
     return new CstVec2VecExpr(_lhs.unroll(iter, n), _rhs.unroll(iter, n), _op);
   }
 
@@ -1518,7 +1522,7 @@ class CstRangeExpr
     return _lhs.evaluate();
   }
 
-  CstRangeExpr unroll(CstIterator iter, uint n) {
+  CstRangeExpr unroll(CstIterator iter, ulong n) {
     if (_rhs is null)
       return new CstRangeExpr(_lhs.unroll(iter, n), null, _inclusive);
     else
@@ -1596,7 +1600,7 @@ class CstDistSetElem
     return _lhs.evaluate();
   }
 
-  CstDistSetElem unroll(CstIterator iter, uint n) {
+  CstDistSetElem unroll(CstIterator iter, ulong n) {
     if (_rhs is null)
       return new CstDistSetElem(_lhs.unroll(iter, n), null, _inclusive);
     else
@@ -1671,7 +1675,7 @@ class CstUniqueSetElem
     }
   }
 
-  CstUniqueSetElem unroll(CstIterator iter, uint n) {
+  CstUniqueSetElem unroll(CstIterator iter, ulong n) {
     if (_arr !is null) {
       assert (_vec is null);
       return new CstUniqueSetElem(_arr.unroll(iter, n));
@@ -1786,7 +1790,7 @@ class CstInsideSetElem
     }
   }
 
-  CstInsideSetElem unroll(CstIterator iter, uint n) {
+  CstInsideSetElem unroll(CstIterator iter, ulong n) {
     if (_arr !is null) {
       assert (_lhs is null);
       return new CstInsideSetElem(_arr.unroll(iter, n));
@@ -1882,7 +1886,7 @@ class CstWeightedDistSetElem
     return str;
   }
 
-  CstWeightedDistSetElem unroll(CstIterator iter, uint n) {
+  CstWeightedDistSetElem unroll(CstIterator iter, ulong n) {
     return this;
   }
 
@@ -1974,7 +1978,7 @@ class CstDistExpr(T): CstLogicTerm
     assert (false, "Can not visit Dist Constraint: " ~ describe());
   }
 
-  override CstDistExpr!T unroll(CstIterator iter, uint n) {
+  override CstDistExpr!T unroll(CstIterator iter, ulong n) {
     // import std.stdio;
     // writeln(_lhs.describe() ~ " " ~ _op.to!string ~ " " ~ _rhs.describe() ~ " Getting unwound!");
     // writeln("RHS: ", _rhs.unroll(iter, n).describe());
@@ -2044,7 +2048,7 @@ class CstDistExpr(T): CstLogicTerm
 //     assert(false, "Can not evaluate a CstVecSliceExpr!");
 //   }
 
-//   override CstVecSliceExpr unroll(CstIterator iter, uint n) {
+//   override CstVecSliceExpr unroll(CstIterator iter, ulong n) {
 //     if (_rhs is null)
 //       return new CstVecSliceExpr(_vec.unroll(iter, n),
 // 				 _lhs.unroll(iter, n), null);
@@ -2139,7 +2143,7 @@ class CstVecSliceExpr: CstVecTerm
     assert(false, "Can not evaluate a CstVecSliceExpr!");
   }
 
-  override CstVecSliceExpr unroll(CstIterator iter, uint n) {
+  override CstVecSliceExpr unroll(CstIterator iter, ulong n) {
     return new CstVecSliceExpr(_vec.unroll(iter, n),
 			       _range.unroll(iter, n));
   }
@@ -2220,7 +2224,7 @@ class CstVecSliceExpr: CstVecTerm
 //     assert(false, "Can not evaluate a CstVecIndexExpr!");
 //   }
 
-//   override CstVecIndexExpr unroll(CstIterator iter, uint n) {
+//   override CstVecIndexExpr unroll(CstIterator iter, ulong n) {
 //     return new CstVecIndexExpr(_vec.unroll(iter, n),
 // 			       _index.unroll(iter, n));
 //   }
@@ -2293,7 +2297,7 @@ class CstNotVecExpr: CstVecTerm
     return ~(_expr.evaluate());
   }
 
-  override CstNotVecExpr unroll(CstIterator iter, uint n) {
+  override CstNotVecExpr unroll(CstIterator iter, ulong n) {
     return new CstNotVecExpr(_expr.unroll(iter, n));
   }
 
@@ -2378,7 +2382,7 @@ class CstNegVecExpr: CstVecTerm
     return -(_expr.evaluate());
   }
 
-  override CstNegVecExpr unroll(CstIterator iter, uint n) {
+  override CstNegVecExpr unroll(CstIterator iter, ulong n) {
     return new CstNegVecExpr(_expr.unroll(iter, n));
   }
 
@@ -2463,7 +2467,7 @@ class CstLogic2LogicExpr: CstLogicTerm
     solver.processEvalStack(_op);
   }
 
-  override CstLogic2LogicExpr unroll(CstIterator iter, uint n) {
+  override CstLogic2LogicExpr unroll(CstIterator iter, ulong n) {
     return new CstLogic2LogicExpr(_lhs.unroll(iter, n), _rhs.unroll(iter, n), _op);
   }
 
@@ -2567,7 +2571,7 @@ class CstInsideArrExpr: CstLogicTerm
     _elems ~= elem;
   }
 
-  override CstInsideArrExpr unroll(CstIterator iter, uint n) {
+  override CstInsideArrExpr unroll(CstIterator iter, ulong n) {
     CstInsideArrExpr unrolled = new CstInsideArrExpr(_term.unroll(iter, n));
     foreach (elem; _elems) {
       unrolled.addElem(elem.unroll(iter, n));
@@ -2654,7 +2658,7 @@ class CstUniqueArrExpr: CstLogicTerm
     _elems ~= elem;
   }
 
-  override CstUniqueArrExpr unroll(CstIterator iter, uint n) {
+  override CstUniqueArrExpr unroll(CstIterator iter, ulong n) {
     CstUniqueArrExpr unrolled = new CstUniqueArrExpr();
     foreach (elem; _elems) {
       unrolled.addElem(elem.unroll(iter, n));
@@ -2731,7 +2735,7 @@ class CstIteLogicExpr: CstLogicTerm
     return false;
   }
 
-  override CstLogicTerm unroll(CstIterator iter, uint n) {
+  override CstLogicTerm unroll(CstIterator iter, ulong n) {
     assert(false, "TBD");
   }
 
@@ -2772,7 +2776,7 @@ class CstVec2LogicExpr: CstLogicTerm
     solver.processEvalStack(_op);
   }
 
-  override CstVec2LogicExpr unroll(CstIterator iter, uint n) {
+  override CstVec2LogicExpr unroll(CstIterator iter, ulong n) {
     // import std.stdio;
     // writeln(_lhs.describe() ~ " " ~ _op.to!string ~ " " ~ _rhs.describe() ~ " Getting unwound!");
     // writeln("RHS: ", _rhs.unroll(iter, n).describe());
@@ -2841,7 +2845,7 @@ class CstLogicConst: CstLogicTerm
     else return "FALSE";
   }
 
-  override CstLogicConst unroll(CstIterator iter, uint n) {
+  override CstLogicConst unroll(CstIterator iter, ulong n) {
     return this;
   }
 
@@ -2893,7 +2897,7 @@ class CstNotLogicExpr: CstLogicTerm
     solver.processEvalStack(CstLogicOp.LOGICNOT);
   }
 
-  override CstNotLogicExpr unroll(CstIterator iter, uint n) {
+  override CstNotLogicExpr unroll(CstIterator iter, ulong n) {
     return new CstNotLogicExpr(_expr.unroll(iter, n));
   }
 
@@ -2951,10 +2955,10 @@ class CstVarVisitorExpr: CstLogicTerm
     _obj.visit();
   }
 
-  override CstVarVisitorExpr unroll(CstIterator i, uint n) {
+  override CstVarVisitorExpr unroll(CstIterator iter, ulong n) {
     assert (_obj !is null);
-    CstIterator iter = _obj._esdl__iter();
-    if (iter is i) {
+    CstIterator iter_ = _obj._esdl__iter();
+    if (iter_ is iter) {
       return new CstVarVisitorExpr(_obj._esdl__getChild(n));
     }
     else {

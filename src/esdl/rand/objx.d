@@ -3,8 +3,8 @@ module esdl.rand.objx;
 import esdl.data.bvec;
 import esdl.data.bstr;
 import esdl.data.queue;
-import std.traits: isIntegral, isBoolean, isArray,
-  isStaticArray, isDynamicArray;
+import std.traits: isIntegral, isBoolean, isArray, KeyType,
+  isStaticArray, isDynamicArray, isAssociativeArray;
 
 import esdl.rand.misc;
 import esdl.rand.base: CstVecExpr, CstIterator, DomType, CstDomain,
@@ -51,7 +51,7 @@ class CstObjectGlob(V, rand RAND_ATTR, int N, alias SYM)
   }
   
   // no unrolling is possible without adding rand proxy
-  override _esdl__Proxy unroll(CstIterator iter, uint n) {
+  override _esdl__Proxy unroll(CstIterator iter, ulong n) {
     return this;
   }
 }
@@ -127,7 +127,7 @@ class CstObjectIdx(V, rand RAND_ATTR, int N, int IDX,
   }    
 
   static if (PIDX >= 0) {	// exclude randomize_with
-    override _esdl__Proxy unroll(CstIterator iter, uint n) {
+    override _esdl__Proxy unroll(CstIterator iter, ulong n) {
       if (_parent !is _root) {
 	P uparent = cast(P)(_parent.unroll(iter, n));
 	assert (uparent !is null);
@@ -248,7 +248,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       // RV
-      override _esdl__Proxy unroll(CstIterator iter, uint n) {
+      override _esdl__Proxy unroll(CstIterator iter, ulong n) {
 	return this;
       }
 
@@ -297,7 +297,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
       P _parent;
 
       CstVecExpr _indexExpr = null;
-      int _pindex = 0;
+      ulong _pindex = 0;
 
       uint _resolvedCycle;	// cycle for which indexExpr has been resolved
       RV _resolvedObj;
@@ -306,7 +306,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 
       this(string name, P parent, CstVecExpr indexExpr) {
 	if (indexExpr.isConst()) {
-	  uint index = cast(uint) indexExpr.evaluate();
+	  ulong index = indexExpr.evaluate();
 	  this(name, parent, index);
 	}
 	else {
@@ -319,7 +319,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	}
       }
 
-      this(string name, P parent, uint index) {
+      this(string name, P parent, ulong index) {
 	assert (parent !is null);
 	super(name, parent.getProxyRoot(), null);
 	// super(parent.getProxyRoot());
@@ -376,7 +376,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       // RV
-      override _esdl__Proxy unroll(CstIterator iter, uint n) {
+      override _esdl__Proxy unroll(CstIterator iter, ulong n) {
 	if (_indexExpr) {
 	  return _parent.unroll(iter,n)[_indexExpr.unroll(iter,n)];
 	}
@@ -467,7 +467,7 @@ class CstObjArrGlob(V, rand RAND_ATTR, int N, alias SYM)
   }
   
   // no unrolling is possible without adding rand proxy
-  override RV unroll(CstIterator iter, uint n) {
+  override RV unroll(CstIterator iter, ulong n) {
     return this;
   }
 }
@@ -521,7 +521,7 @@ class CstObjArrIdx(V, rand RAND_ATTR, int N, int IDX,
   this(string name, _esdl__Proxy parent, V* var) {
     super(name, parent, var);
   }
-  override RV unroll(CstIterator iter, uint n) {
+  override RV unroll(CstIterator iter, ulong n) {
     if (_parent !is _root) {
       P uparent = cast(P)(_parent.unroll(iter, n));
       assert (uparent !is null);
@@ -557,6 +557,11 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
   }
   else {
     alias EV = CstObjArr!(V, RAND_ATTR, N+1);
+  }
+
+  static if (isAssociativeArray!L) {
+    static assert(N == 0,
+		  "Only top level Associative Arrays are supported for now");
   }
 
   this(string name) {
@@ -608,16 +613,13 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
     }
   }
 
+  abstract ulong mapIter(size_t iter);
+  abstract size_t mapIndex(ulong index);
+
   EV opIndex(CstVecExpr indexExpr) {
     if (indexExpr.isConst()) {
-      size_t index = cast(size_t) indexExpr.evaluate();
-      if (_arrLen.isSolved()) {
-	if (_arrLen.evaluate() <= index) {
-	  assert (false, "Index Out of Range");
-	}
-      }
-      buildElements(index+1);
-      return _elems[index];
+      ulong index = indexExpr.evaluate();
+      return this[index];
     }
     else {
       return createElem(indexExpr);
@@ -629,19 +631,19 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
     return this.opIndex(index._lhs);
   }
 
-  EV opIndex(size_t index) {
+  EV opIndex(ulong index) {
+    size_t key = mapIndex(index);
     if (_arrLen.isSolved()) {
       auto len = _arrLen.evaluate();
-      if (len <= index) {
+      if (len <= key) {
 	assert (false, "Index Out of Range");
       }
       buildElements(len);
     }
     else {
-      buildElements(index+1);
+      buildElements(key+1);
     }
-    // assert (_elems[index]._indexExpr is null);
-    return _elems[index];
+    return _elems[key];
   }
 
   void _esdl__doRandomize(_esdl__RandGen randGen) {
@@ -652,7 +654,7 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
       // big array which might lead to memory allocation issues
       buildElements(getLen());
       for (size_t i=0; i != _arrLen.evaluate(); ++i) {
-	this[i]._esdl__doRandomize(randGen);
+	_elems[i]._esdl__doRandomize(randGen);
       }
     }
     else {
@@ -662,7 +664,7 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
 
   uint maxArrLen() {
     static if (HAS_RAND_ATTRIB) {
-      static if(isStaticArray!L) {
+      static if (isStaticArray!L) {
 	return L.length;
       }
       else {
@@ -709,7 +711,7 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
     return iter;
   }
 
-  final CstVarNodeIntf _esdl__getChild(uint n) {
+  final CstVarNodeIntf _esdl__getChild(ulong n) {
     return this[n];
   }
 
@@ -782,7 +784,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	return this;
       }
 
-      RV unroll(CstIterator iter, uint n) {
+      RV unroll(CstIterator iter, ulong n) {
 	return this;
       }
 
@@ -812,6 +814,31 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	// iters ~= iter;
 
 	// no parent
+      }
+
+      override ulong mapIter(size_t iter) {
+	static if (isAssociativeArray!V) {
+	  auto keys = (*_var).keys;
+	  if (keys.length <= iter) assert (false);
+	  else return keys[iter];
+	}
+	else {
+	  return iter;
+	}
+      }
+	
+      override size_t mapIndex(ulong index) {
+	import std.string: format;
+	static if (isAssociativeArray!V) {
+	  foreach (i, key; (*_var).keys) {
+	    if (key == index) return i;
+	  }
+	  assert (false, format("Can not find key %s in Associative Array",
+				cast(KeyType!V) index));
+	}
+	else {
+	  return cast(size_t) index;
+	}
       }
 
       override EV createElem(CstVecExpr indexExpr) {
@@ -850,7 +877,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
       alias P = CstObjArr!(V, RAND_ATTR, N-1);
       P _parent;
       CstVecExpr _indexExpr = null;
-      int _pindex = 0;
+      ulong _pindex = 0;
 
       alias RAND=RAND_ATTR;
       
@@ -868,7 +895,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	_arrLen = new CstArrLength!RV(name ~ "->length", this);
       }
 
-      this(string name, P parent, uint index) {
+      this(string name, P parent, ulong index) {
 	// import std.stdio;
 	// writeln("New ", name);
 	assert (parent !is null);
@@ -921,7 +948,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	return _resolvedObj;
       }
 
-      RV unroll(CstIterator iter, uint n) {
+      RV unroll(CstIterator iter, ulong n) {
 	if (_indexExpr) {
 	  return _parent.unroll(iter,n)[_indexExpr.unroll(iter,n)];
 	}
@@ -968,6 +995,20 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	}
       }
 
+      override ulong mapIter(size_t iter) {
+	static if (isAssociativeArray!L) {
+	  static assert (false, "Associative Arrays are supported only at top array hierarchy");
+	}
+	else return iter;
+      }
+      
+      override size_t mapIndex(ulong index) {
+	static if (isAssociativeArray!L) {
+	  static assert (false, "Associative Arrays are supported only at top array hierarchy");
+	}
+	else return cast(size_t) index;
+      }
+
       override EV createElem(CstVecExpr indexExpr) {
 	return new EV(name ~ "[" ~ indexExpr.describe() ~ "]", this, indexExpr);
       }
@@ -997,18 +1038,21 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 
 
 private auto getArrElemTmpl(A, N...)(ref A arr, N indx)
-  if ((isArray!A || isQueue!A) && N.length > 0 && isIntegral!(N[0])) {
+  if ((isArray!A || isQueue!A || isAssociativeArray!A) &&
+      N.length > 0 && isIntegral!(N[0])) {
     alias LEAF = LeafElementType!A;
+    static if (isAssociativeArray!A) auto key = arr.keys[cast(size_t) (indx[0])];
+    else                             size_t key = cast(size_t) (indx[0]);
     static if (N.length == 1) {
       static if (is (LEAF == struct)) {
-	return &(arr[cast(size_t) (indx[0])]);
+	return &(arr[key]);
       }
       else {
-	return (arr[cast(size_t) (indx[0])]);
+	return (arr[key]);
       }
     }
     else {
-      return getArrElemTmpl(arr[cast(size_t) (indx[0])], indx[1..$]);
+      return getArrElemTmpl(arr[key], indx[1..$]);
     }
   }
 
@@ -1030,11 +1074,15 @@ private auto getRefTmpl(RV, J...)(RV rv, J indx)
 
 
 private size_t getArrLenTmpl(A, N...)(ref A arr, N indx)
-  if (isArray!A || isQueue!A) {
+  if (isArray!A || isQueue!A || isAssociativeArray!A) {
     static if (N.length == 0) return arr.length;
     else {
       if (arr.length == 0) return 0;
-      else return getArrLenTmpl(arr[indx[0]], indx[1..$]);
+      else {
+	static if (isAssociativeArray!A) auto key = arr.keys[cast(size_t) (indx[0])];
+	else                             size_t key = cast(size_t) (indx[0]);
+	return getArrLenTmpl(arr[key], indx[1..$]);
+      }
     }
   }
 
@@ -1048,17 +1096,19 @@ private size_t getLenTmpl(RV, N...)(RV rv, N indx) {
 }
 
 private void setArrLen(A, N...)(ref A arr, size_t v, N indx)
-  if (isArray!A || isQueue!A) {
+  if (isArray!A || isQueue!A || isAssociativeArray!A) {
     static if(N.length == 0) {
-      static if(isDynamicArray!A || isQueue!A) {
-	arr.length = v;
-      }
-      else {
-	assert(false, "Can not set length of a fixed length array");
-      }
+      static if (isDynamicArray!A || isQueue!A) arr.length = v;
+      else static if (isStaticArray!A)
+	assert (false, "Can not set length of a fixed length array");
+      else static if (isAssociativeArray!A)
+	assert (false, "Can not set length of an associative array");
+      else static assert (false, "Unhandled Exception");
     }
     else {
-      setArrLen(arr[indx[0]], v, indx[1..$]);
+      static if (isAssociativeArray!A) auto key = arr.keys[cast(size_t) (indx[0])];
+      else                             size_t key = cast(size_t) (indx[0]);
+      setArrLen(arr[key], v, indx[1..$]);
     }
   }
 

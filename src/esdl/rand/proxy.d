@@ -138,7 +138,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   // CstObjNodeIntf
   final bool _esdl__isObjArray() {return false;}
   final CstIterator _esdl__iter() {return null;}
-  final CstVarNodeIntf _esdl__getChild(uint n) {assert (false);}
+  final CstVarNodeIntf _esdl__getChild(ulong n) {assert (false);}
   void visit() {}		// when an object is unrolled
 
   CstSolver[string] _solvers;
@@ -271,7 +271,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   abstract bool _esdl__debugSolver();
 
-  _esdl__Proxy unroll(CstIterator iter, uint n) {
+  _esdl__Proxy unroll(CstIterator iter, ulong n) {
     return this;
   }
 
