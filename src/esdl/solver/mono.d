@@ -650,6 +650,9 @@ class CstMonoSolver (S): CstSolver
 	display(_finalRange);
       }
     }
+    if (_finalRange.length == 0) {
+      assert (false, "No solution found");
+    }
     _count = counter();
     auto rand = _proxy._esdl__rGen.gen(0, _count);
     ulong num = choose(rand);
