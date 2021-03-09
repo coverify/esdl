@@ -8,7 +8,8 @@
 
 module esdl.rand.meta;
 
-import std.traits: isIntegral, isBoolean, isArray, isSomeChar, PointerTarget;
+import std.traits: isIntegral, isBoolean, isArray, isSomeChar,
+  PointerTarget, OriginalType, isAssociativeArray, ValueType, KeyType;
 import esdl.data.bvec: isBitVector;
 import esdl.data.queue: isQueue, Queue;
 import esdl.data.bstr;
@@ -33,6 +34,20 @@ private import std.typetuple: staticIndexOf, TypeTuple;
 private import std.traits: BaseClassesTuple; // required for staticIndexOf
 
 
+template isRandomizableInt(T) {
+  enum bool isRandomizableInt =
+    isIntegral!T || isBitVector!T || isBoolean!T; // || isSomeChar!T
+}
+
+template isRandomizableEnum(T) {
+  alias OT = OriginalType!T;
+  enum bool isRandomizableEnum = is (T == enum) && isRandomizableInt!OT;
+}
+
+template isRandomizable(T) {
+  enum bool isRandomizable = isRandomizableInt!T || isRandomizableEnum!T;
+}
+
 // static alias Unconst(T) = T;
 // static alias Unconst(T: const U, U) = U;
 
@@ -56,24 +71,21 @@ template _esdl__RandProxyType(T, int I, P, int PI)
 {
   import std.traits;
   alias L = typeof(T.tupleof[I]);
-  static if (isArray!L || isQueue!L) alias LEAF = LeafElementType!L;
+  static if (isArray!L || isQueue!L || isAssociativeArray!L)
+    alias LEAF = LeafElementType!L;
   enum rand RAND = getRandAttr!(T, I);
   // pragma(msg, "Looking at: ", L.stringof);
-  static if (isBitVector!L || isIntegral!L ||
-	     isBoolean!L || // isSomeChar!L || // exclude chars
-	     is (L == enum)) {
+  static if (isRandomizable!L) {
     alias _esdl__RandProxyType = CstVectorIdx!(L, RAND, 0, I, P, PI);
   }  
-  else static if ((isArray!L || isQueue!L ) &&
-		  (isBitVector!LEAF || isIntegral!LEAF ||
-		   isBoolean!LEAF || // isSomeChar!LEAF || // exclude strings
-		   is (LEAF == enum))) {
+  else static if ((isArray!L || isQueue!L || isAssociativeArray!L) &&
+		  isRandomizable!LEAF) {
     alias _esdl__RandProxyType = CstVecArrIdx!(L, RAND, 0, I, P, PI);
   }
   else static if (is (L == struct)) {
     alias _esdl__RandProxyType = CstObjectIdx!(L, RAND, 0, I, P, PI);
   }
-  else static if ((isArray!L || isQueue!L) &&
+  else static if ((isArray!L || isQueue!L || isAssociativeArray!L) &&
 		  (is (LEAF == struct))) {
     alias _esdl__RandProxyType = CstObjArrIdx!(L, RAND, 0, I, P, PI);
   }
@@ -92,7 +104,7 @@ template _esdl__RandProxyType(T, int I, P, int PI)
     else
       alias _esdl__RandProxyType = CstObjectStub!(L, RAND, 0, I, P, PI);
   }
-  else static if ((isArray!L || isQueue!L) &&
+  else static if ((isArray!L || isQueue!L || isAssociativeArray!L) &&
 		  (is (LEAF == class)  ||
 		   (is (LEAF == U*, U) && is (U == struct)))) {
     static if (RAND.hasProxy())
@@ -337,7 +349,8 @@ template _esdl__ConstraintsDecl(T, int I=0)
   }
   else {
     alias L = typeof(T.tupleof[I]);
-    static if (isArray!L || isQueue!L) alias E = LeafElementType!L;
+    static if (isArray!L || isQueue!L || isAssociativeArray!L)
+      alias E = LeafElementType!L;
     static if (is (T == U*, U) && is (U == struct)) {
       enum NAME = __traits(identifier, U.tupleof[I]);
     }
@@ -363,9 +376,8 @@ template _esdl__ConstraintsDecl(T, int I=0)
 	", _esdl__FILE_" ~ NAME ~ ", _esdl__LINE_" ~ NAME ~ ") " ~
 	NAME ~ ";\n" ~ _esdl__ConstraintsDecl!(T, I+1);
     }
-    else static if ((isArray!L || isQueue!L) &&
-		    (isIntegral!E || is (E == bool) ||
-		     is (E == struct) || is (E == class))) {
+    else static if ((isArray!L || isQueue!L || isAssociativeArray!L) &&
+		    (isRandomizable!E || is (E == struct) || is (E == class))) {
       enum _esdl__ConstraintsDecl =
 	"  _esdl__Constraint!(\"" ~ NAME ~ "\") _esdl__visitorCst_"
 	~ NAME ~ ";\n"  ~ _esdl__ConstraintsDecl!(T, I+1);
@@ -715,9 +727,6 @@ class _esdl__ProxyNoRand(_esdl__T)
 
 mixin template _esdl__ProxyMixin(_esdl__T)
 {
-  import std.traits: isIntegral, isBoolean;
-  import esdl.data.bvec: isBitVector;
-
   alias _esdl__PROXYT = typeof(this);
 
   debug(CSTPARSER) {
@@ -740,8 +749,8 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     mixin(rnd).constraint_mode(mode);
   }
 
-  bool rand_mode(string rnd)() {
-    return mixin(rnd).rand_mode();
+  void rand_mode(string rnd)(bool mode) {
+    return mixin(rnd).rand_mode(mode);
   }
 
   void constraint_mode(string rnd)(bool mode) {
@@ -858,11 +867,9 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 }
 
 auto _esdl__sym(L)(L l, string name,
-		   _esdl__Proxy parent)
-  if (isIntegral!L || isBitVector!L ||
-      isBoolean!L || isSomeChar!L || is (L == enum)) {
-    return new CstVecValue!L(l); // CstVecValue!L.allocate(l);
-  }
+		   _esdl__Proxy parent) if (isRandomizable!L) {
+  return new CstVecValue!L(l); // CstVecValue!L.allocate(l);
+ }
 
 struct _esdl__rand_type_proxy(T, P)
 {
@@ -890,7 +897,7 @@ auto _esdl__sym(V, S)(string name, S parent) {
 // or else
 auto _esdl__sym(alias V, S)(string name, S parent) {
   alias L = typeof(V);
-  import std.traits: isIntegral, isBoolean, isArray, isSomeChar;
+  import std.traits: isArray, isAssociativeArray;
   import esdl.data.queue: Queue, isQueue;
   static if (is (L: CstVarNodeIntf)) {
     if (V is null) {
@@ -930,8 +937,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
     }
     return V._esdl__get();
   }
-  else static if (isIntegral!L || isBitVector!L ||
-	     isBoolean!L || isSomeChar!L || is (L == enum)) {
+  else static if (isRandomizable!L) {
     static if (isLvalue!V) {
       alias CstVecType = CstVectorGlob!(L, rand(true, true), 0, V);
       CstVarGlobIntf global = parent.getGlobalLookup(V.stringof);
@@ -971,7 +977,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       return obj;
     }
   }
-  else static if (isArray!L || isQueue!L) {
+  else static if (isArray!L || isQueue!L || isAssociativeArray!L) {
     // import std.stdio;
     // writeln("Creating VarVecArr, ", name);
     alias CstVecArrType = CstVecArrGlob!(L, rand(true, true), 0, V);
@@ -1008,11 +1014,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
 
 
 auto _esdl__arg_proxy(L, S)(string name, ref L arg, S parent) {
-  import std.traits: isIntegral, isBoolean, isArray, isSomeChar;
-  import esdl.data.queue: Queue, isQueue;
-  // pragma(msg, L.stringof);
-  static if (isIntegral!L || isBitVector!L ||
-	     isBoolean!L || isSomeChar!L || is (L == enum)) {
+  static if (isRandomizable!L) {
     // import std.stdio;
     // writeln("Creating VarVec, ", name);
     return new CstVectorIdx!(L, rand(true, true), 0, -1, _esdl__ARG, -1)(name, parent, &arg);
@@ -1104,8 +1106,7 @@ template allIntengral(ARGS...) {
   static if(ARGS.length == 0) {
     enum bool allIntengral = true;
   }
-  else static if (isIntegral!(ARGS[0]) || isBitVector!(ARGS[0]) ||
-		  isBoolean!(ARGS[0]) || isSomeChar!(ARGS[0]) || is (ARGS[0] == enum)) {
+  else static if (isRandomizable!(ARGS[0])) {
     enum bool allIntengral = allIntengral!(ARGS[1..$]);
   }
   else enum bool allIntengral = false;

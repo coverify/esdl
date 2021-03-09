@@ -3,8 +3,8 @@ module esdl.rand.misc;
 import esdl.data.bvec: isBitVector;
 import esdl.data.queue;
 import esdl.data.charbuf;
-import std.traits: isIntegral, isBoolean, isArray,
-  EnumMembers, isSomeChar;
+import std.traits: isIntegral, isBoolean, isArray, EnumMembers,
+  isSomeChar, isAssociativeArray, ValueType, KeyType;
 import std.meta: AliasSeq;
 
 
@@ -121,14 +121,18 @@ template isVecSigned(L) {
 template LeafElementType(T)
 {
   import std.range;		// ElementType
-  static if (is (T == string)) {
-    alias LeafElementType = immutable(char);
-  }
-  else static if (isArray!T) {
+  // static if (is (T == string)) {
+  //   alias LeafElementType = immutable(char);
+  // }
+  // else
+  static if (isArray!T) {
     alias LeafElementType = LeafElementType!(ElementType!T);
   }
   else static if (isQueue!T) {
     alias LeafElementType = LeafElementType!(T.ElementType);
+  }
+  else static if (isAssociativeArray!T) {
+    alias LeafElementType = LeafElementType!(ValueType!T);
   }
   else {
     alias LeafElementType = T;
@@ -141,9 +145,16 @@ template ElementTypeN(T, int N=0)
   static if(N==0) {
     alias ElementTypeN = T;
   }
-  else {
+  else static if (isArray!T) {
     alias ElementTypeN = ElementTypeN!(ElementType!T, N-1);
   }
+  else static if (isQueue!T) {
+    alias ElementTypeN = ElementTypeN!(T.ElementType, N-1);
+  }
+  else static if (isAssociativeArray!T) {
+    alias ElementTypeN = ElementTypeN!(ValueType!T, N-1);
+  }
+  else static assert(false);
 }
 
 template Unconst(T) {
@@ -167,6 +178,9 @@ template _esdl__ArrOrder(T, int N=0) {
   }
   else static if (isQueue!T) {
     enum int _esdl__ArrOrder = 1 + _esdl__ArrOrder!(T.ElementType) - N;
+  }
+  else static if (isAssociativeArray!T) {
+    enum int _esdl__ArrOrder = 1 + _esdl__ArrOrder!(ValueType!T) - N;
   }
   else {
     static assert (N == 0);
