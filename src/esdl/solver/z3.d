@@ -10,6 +10,7 @@ import esdl.solver.base;
 import esdl.solver.z3expr;
 import esdl.rand.expr;
 import esdl.rand.base;
+import esdl.rand.pred;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.misc;
 import esdl.intf.z3.z3;

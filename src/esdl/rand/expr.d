@@ -9,6 +9,7 @@ import esdl.rand.misc: CstBinaryOp, CstCompareOp, CstLogicOp,
   CstUnaryOp, CstSliceOp, writeHexString, CstUniqueOp;
 
 import esdl.rand.base;
+import esdl.rand.pred: CstPredicate, CstPredGroup;
 import esdl.rand.func;
 import esdl.rand.proxy: _esdl__Proxy;
 
@@ -391,6 +392,13 @@ class CstVecDomain(T, rand RAND_ATTR): CstDomain
     static if (isBoolean!T)         return 1;
     else static if (isIntegral!T || isSomeChar!T)   return T.sizeof * 8;
     else static if (isBitVector!T)  return T.SIZE;
+    else static if (is (T == enum)) {
+      alias OT = OriginalType!T;
+      static if (isBoolean!OT)         return 1;
+      else static if (isIntegral!OT || isSomeChar!OT)   return OT.sizeof * 8;
+      else static if (isBitVector!OT)  return OT.SIZE;
+      else static assert(false, "bitcount can not operate on: " ~ T.stringof);
+    }
     else static assert(false, "bitcount can not operate on: " ~ T.stringof);
   }
 
@@ -425,6 +433,48 @@ class CstVecDomain(T, rand RAND_ATTR): CstDomain
   //     assert(false);
   //   }
   // }
+
+  override bool isBool() {
+    return isBoolean!T;
+  }
+  
+  override bool getBool() {
+    static if (isBoolean!T) {
+      return *(getRef());
+    }
+    else {
+      assert (false, "getBool called on a non-boolean domain");
+    }
+  }
+    
+  override void setBool(bool val) {
+    static if (HAS_RAND_ATTRIB) {
+      static if (isBoolean!T) {
+	Unconst!T newVal;
+	newVal = val;
+	assert (getRef() !is null);
+	if (newVal != *(getRef())) {
+	  _valueChanged = true;
+	}
+	else {
+	  _valueChanged = false;
+	}
+	*(getRef()) = newVal;
+	markSolved();
+	execCbs();
+      }
+      else {
+	assert (false, "setBool called on a non-boolean domain");
+      }
+    }
+    else {
+      assert(false);
+    }
+  }
+
+  override long value() {
+    return cast(long) *(getRef());
+  }
 
   override void setVal(ulong[] value) {
     static if (HAS_RAND_ATTRIB) {
@@ -660,6 +710,7 @@ class CstOrderingExpr: CstLogicExpr
     return str;
   }
 }
+
 abstract class CstLogicTerm: CstLogicExpr
 {
   abstract override CstLogicTerm unroll(CstIterator iter, ulong n);
@@ -1102,7 +1153,9 @@ abstract class CstValue: CstVecTerm
     return this;
   }
 
+  abstract bool isBool();
   abstract long value();
+  abstract bool getBool();
   // abstract bool signed();
   // abstract uint bitcount();
 }
@@ -1127,12 +1180,25 @@ class CstVecValue(T): CstValue
     enum uint BITCOUNT = 1;
   }
 
+  override bool isBool() {
+    return isBoolean!T;
+  }
+
   override bool signed() {
     return SIGNED;
   }
 
   override uint bitcount() {
     return BITCOUNT;
+  }
+
+  override bool getBool() {
+    static if (isBoolean!T) {
+      return _val;
+    }
+    else {
+      assert (false, "getBool called on non-boolean CstVecValue");
+    }
   }
 
   override long value() {

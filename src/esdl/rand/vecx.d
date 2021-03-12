@@ -8,7 +8,8 @@ import std.traits: isIntegral, isBoolean, isArray, KeyType,
 
 import esdl.rand.misc;
 import esdl.rand.base: CstVecPrim, CstVecExpr, CstIterator, DomType, CstDomain,
-  CstDomSet, CstPredicate, CstVarNodeIntf, CstVecNodeIntf, CstVarGlobIntf;
+  CstDomSet, CstVarNodeIntf, CstVecNodeIntf, CstVarGlobIntf;
+import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.expr: CstArrLength, CstVecDomain, _esdl__cstVal, CstVecValue,
   CstArrIterator, CstValue, CstRangeExpr, CstVec2LogicExpr, CstLogicTerm;
@@ -180,11 +181,6 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 	return _var;
       }
 
-      override long value() {
-	assert (_var !is null, _name ~ " is null");
-	return cast (long) (*_var);
-      }
-
       override bool isConst() {
 	return false;
       }
@@ -332,15 +328,6 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	else {
 	  return getRefTmpl(_parent, this._pindex);
 	}
-      }
-
-      override long value() {
-      	if (_indexExpr) {
-      	  return *(getRefTmpl(_parent, _indexExpr.evaluate()));
-      	}
-      	else {
-      	  return *(getRefTmpl(_parent, this._pindex));
-      	}
       }
 
       override bool isConst() {

@@ -19,13 +19,14 @@ import std.range: ElementType;
 
 import esdl.rand.misc;
 import esdl.rand.expr: CstVecValue, CstVarVisitorExpr;
-import esdl.rand.base: CstVecPrim, CstPredicate, CstVarGlobIntf,
-  CstVarNodeIntf, CstObjectIntf, CstObjArrIntf, CstVisitorPredicate,
-  CstObjectStubBase, CstObjArrStubBase;
+import esdl.rand.base: CstVecPrim, CstVarGlobIntf, CstVarNodeIntf,
+  CstObjectIntf, CstObjArrIntf, CstObjectStubBase,
+  CstObjArrStubBase;
+import esdl.rand.pred: CstPredicate, CstVisitorPredicate;
 import esdl.rand.vecx: CstVectorIdx, CstVecArrIdx,
   CstVectorGlob, CstVecArrGlob;
-import esdl.rand.objx: CstObjectIdx, CstObjArrIdx, CstObjectGlob, CstObjectStub,
-  CstObjArrStub;
+import esdl.rand.objx: CstObjectIdx, CstObjArrIdx, CstObjectGlob,
+  CstObjectStub, CstObjArrStub;
 import esdl.rand.proxy;
 import esdl.rand.func;
 

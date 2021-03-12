@@ -1,8 +1,9 @@
 module esdl.solver.mono;
 
 import esdl.solver.base;
-import esdl.rand.expr;
-import esdl.rand.base;
+import esdl.rand.expr: CstValue;
+import esdl.rand.base: CstDomain;
+import esdl.rand.pred: CstPredGroup, CstPredicate;
 import esdl.rand.misc;
 import esdl.rand.proxy: _esdl__Proxy;
 enum NumType: ubyte {INT, UINT, LONG, ULONG};

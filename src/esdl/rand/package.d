@@ -8,6 +8,7 @@ public import esdl.rand.expr;
 public import esdl.rand.func;
 public import esdl.rand.dist;
 public import esdl.rand.meta;
+public import esdl.rand.pred;
 public import esdl.rand.proxy;
 public import esdl.rand.vecx;
 public import esdl.rand.objx;
