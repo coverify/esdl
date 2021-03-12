@@ -2,7 +2,7 @@ module esdl.rand.proxy;
 import esdl.solver.base;
 
 import esdl.rand.base: CstVecPrim, CstLogicExpr, CstScope, CstDomain,
-  CstPredicate, CstBlock, CstPredGroup, DomType, CstVecExpr, CstObjectVoid,
+  CstPredicate, CstPredGroup, DomType, CstVecExpr, CstObjectVoid,
   CstVarNodeIntf, CstObjectIntf, CstIterator, CstDomSet, CstVarGlobIntf;
 
 import esdl.rand.misc;
@@ -12,6 +12,13 @@ import esdl.rand.dist: DistRangeSetBase;
 
 import std.container: Array;
 import std.array;
+
+static char[] constraintXlate(string PROXY, string CST,
+			      string FILE, size_t LINE, string NAME="") {
+  import esdl.rand.cstx;
+  CstParser parser = CstParser(CST, FILE, LINE);
+  return parser.translate(PROXY, NAME);
+}
 
 abstract class _esdl__ConstraintBase: rand.disable
 {
@@ -24,7 +31,6 @@ abstract class _esdl__ConstraintBase: rand.disable
   immutable string _name;
   protected bool _enabled = true;
   protected _esdl__Proxy _proxy;
-  protected CstBlock _cstBlock;
 
   bool isEnabled() {
     return _enabled;
@@ -58,29 +64,25 @@ abstract class _esdl__ConstraintBase: rand.disable
     return _proxy;
   }
 
-  final CstBlock getCstBlock() {
-    if (_cstBlock is null) {
-      _cstBlock = makeCstBlock();
-    }
-    return _cstBlock;
-  }
-
-  abstract CstBlock makeCstBlock();
-}
-
-static char[] constraintXlate(string PROXY, string CST,
-			      string FILE, size_t LINE, string NAME="") {
-  import esdl.rand.cstx;
-  CstParser parser = CstParser(CST, FILE, LINE);
-  return parser.translate(PROXY, NAME);
+  abstract void makeConstraints();
+  abstract CstPredicate[] getConstraints();
 }
 
 abstract class Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=__LINE__)
   : _esdl__ConstraintBase
 {
+  protected CstPredicate[] _preds;
+  protected bool _initialized;
+
   this(_esdl__Proxy eng, string name) {
     super(eng, name, CONSTRAINT);
   }
+
+  final override CstPredicate[] getConstraints() {
+    if (! _initialized) makeConstraints();
+    return _preds;
+  }
+
 };
 
 
@@ -298,10 +300,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _esdl__needSync = true;
   }
 
-  CstBlock _esdl__cstExprs;
-
-  // Array!ulong _solveValue;
-  
   this(_esdl__Proxy parent, Object outer) {
     this(parent);
   }
@@ -329,12 +327,11 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     }
     _esdl__rGen = new _esdl__RandGen(_esdl__seed);
 
-    if(parent is null) {
+    if (parent is null) {
       // if (_esdl__buddy is null) {
       // 	_esdl__buddy = new Buddy(400, 400);
       // }
       _root = this;
-      _esdl__cstExprs = new CstBlock();
     }
     else {
       _parent = parent;

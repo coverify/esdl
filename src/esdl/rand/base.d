@@ -30,7 +30,12 @@ interface CstVarNodeIntf {
 
 interface CstVecNodeIntf: CstVarNodeIntf {
   abstract bool hasChanged();
+
+  // This function is used in setDomainArrContext to register all the
+  // predicates with the domain variables that this predicate
+  // constrains
   abstract void registerRndPred(CstPredicate rndPred);  
+
   abstract void registerDepPred(CstDepCallback depCb);
   abstract void registerIdxPred(CstDepCallback idxCb);
   abstract bool isSolved();
@@ -233,6 +238,10 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
   // abstract void collate(ulong v, int word=0);
   abstract void setVal(ulong[] v);
   abstract void setVal(ulong v);
+
+  // abstract void setBool(bool v);
+  // abstract bool getBool();
+  
   // abstract uint domIndex();
   // abstract void domIndex(uint s);
   // abstract bool signed();
@@ -245,7 +254,7 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
   abstract bool hasChanged();
   abstract bool isStatic();
   abstract bool isRolled();
-  abstract void registerRndPred(CstPredicate rndPred);  
+  abstract void registerRndPred(CstPredicate rndPred);
   abstract CstDomSet getParentDomSet();
   // abstract void registerVarPred(CstPredicate varPred);  
   // abstract void registerDepPred(CstDepCallback depCb);
@@ -1631,46 +1640,3 @@ class CstVisitorPredicate: CstPredicate
   }
 }
 
-class CstBlock: rand.disable
-{
-  CstPredicate[] _preds;
-  bool[] _booleans;
-
-  string describe() {
-    string name_ = "";
-    foreach(pred; _preds) {
-      name_ ~= " & " ~ pred._expr.describe() ~ "\n";
-    }
-    return name_;
-  }
-
-  void clear() {
-    _preds.length = 0;
-  }
-
-  bool isEmpty() {
-    return _preds.length == 0;
-  }
-  
-  void opOpAssign(string op)(bool other)
-    if(op == "~") {
-      _booleans ~= other;
-    }
-
-  void opOpAssign(string op)(CstPredicate other)
-    if(op == "~") {
-      _preds ~= other;
-    }
-
-  void opOpAssign(string op)(CstBlock other)
-    if(op == "~") {
-      if(other is null) return;
-      foreach(pred; other._preds) {
-	_preds ~= pred;
-      }
-      foreach(boolean; other._booleans) {
-	_booleans ~= boolean;
-      }
-    }
-
-}

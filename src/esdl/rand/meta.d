@@ -19,7 +19,7 @@ import std.range: ElementType;
 
 import esdl.rand.misc;
 import esdl.rand.expr: CstVecValue, CstVarVisitorExpr;
-import esdl.rand.base: CstBlock, CstVecPrim, CstPredicate, CstVarGlobIntf,
+import esdl.rand.base: CstVecPrim, CstPredicate, CstVarGlobIntf,
   CstVarNodeIntf, CstObjectIntf, CstObjArrIntf, CstVisitorPredicate,
   CstObjectStubBase, CstObjArrStubBase;
 import esdl.rand.vecx: CstVectorIdx, CstVecArrIdx,
@@ -116,7 +116,7 @@ void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy) {
       static if (p.tupleof[I].stringof != "p._esdl__cstWith") {
 	// import std.stdio;
 	// writeln("Adding constraint: ", p.tupleof[I].stringof);
-	foreach (pred; p.tupleof[I].getCstBlock()._preds) {
+	foreach (pred; p.tupleof[I].getConstraints()) {
 	  // writeln("Adding predicate: ", pred.name());
 	  proxy.addNewPredicate(pred);
 	}
@@ -349,8 +349,6 @@ template _esdl__ConstraintsDecl(T, int I=0)
 	" = _esdl__constraintParams!(_esdl__T, " ~ I.stringof ~ ").FILE;\n" ~
 	"  enum size_t _esdl__LINE_" ~ NAME ~
 	" = _esdl__constraintParams!(_esdl__T, " ~ I.stringof ~ ").LINE;\n" ~
-	// "  CstBlock _esdl__cst_block_" ~ NAME ~ ";\n" ~
-	// cast(string) constraintXlate("this", CONSTRAINT, FILE, LINE, NAME) ~
 	"  _esdl__Constraint!(_esdl__CONSTRAINT_" ~ NAME ~
 	", _esdl__FILE_" ~ NAME ~ ", _esdl__LINE_" ~ NAME ~ ") " ~
 	NAME ~ ";\n" ~ _esdl__ConstraintsDecl!(T, I+1);
@@ -458,7 +456,7 @@ void _esdl__randomize(T) (T t, _esdl__ConstraintBase withCst = null) {
   t._esdl__proxyInst.reset();
 
   if (withCst !is null) {
-    foreach (pred; withCst.getCstBlock()._preds) {
+    foreach (pred; withCst.getConstraints()) {
       t._esdl__proxyInst.addNewPredicate(pred);
     }
   }
@@ -740,24 +738,33 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     this(_esdl__Proxy eng, string name) {
       super(eng, name, OBJ);
     }
-    override CstBlock makeCstBlock() {
+
+    CstPredicate[] _preds;
+    protected bool _initialized;
+
+    override void makeConstraints() {
       auto obj = mixin(OBJ);
       alias TOBJ = typeof(obj);
-      CstBlock _esdl__block = new CstBlock();
       static if (is (TOBJ: CstObjectStubBase) ||
 		 is (TOBJ: CstObjArrStubBase)) {
 	assert (obj !is null, OBJ ~ " is null");
-	_esdl__block ~=
+	_preds ~=
 	  new CstVisitorPredicate(this, 0, this.outer, 0,
 				  new CstVarVisitorExpr(obj._esdl__get()));
       }
       else {
-	_esdl__block ~=
+	_preds ~=
 	  new CstVisitorPredicate(this, 0, this.outer, 0,
 				  new CstVarVisitorExpr(obj));
       }
-      return _esdl__block;
+      _initialized = true;
     }
+
+    final override CstPredicate[] getConstraints() {
+      if (! _initialized) makeConstraints();
+      return _preds;
+    }
+
   }
 
   class _esdl__Constraint(string _esdl__CstString, string FILE, size_t LINE):

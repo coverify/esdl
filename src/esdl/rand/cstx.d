@@ -1088,14 +1088,12 @@ struct CstParser {
     import std.conv: to;
     fill("// Constraint @ File: " ~ FILE ~ " Line: " ~ LINE.to!string ~ "\n\n");
     if (name == "") {
-      fill("override CstBlock makeCstBlock() {\n"//  ~
-	   // "\n  auto cstExpr = new CstBlock;\n"
+      fill("override void makeConstraints() {\n"//  ~
 	   );
       // blockName = "_esdl__cst_block";
     }
     else {
-      fill("CstBlock _esdl__cst_func_" ~ name ~ "() {\n"//  ~
-	   // "\n  auto cstExpr = new CstBlock;\n"
+      fill("void _esdl__cst_func_" ~ name ~ "() {\n"//  ~
 	   );
       // blockName = "_esdl__cst_block_" ~ name;
     }
@@ -1103,11 +1101,10 @@ struct CstParser {
     // fill("  if (" ~ blockName ~ " !is null) return " ~
     // 	 blockName ~ ";\n");
 
-    fill("  CstBlock _esdl__block = new CstBlock();\n");
-
     procBlock();
+    fill("  this._initialized = true;\n");
     // fill("  " ~ blockName ~ " = _esdl__block;\n");
-    fill("  return _esdl__block;\n}\n");
+    fill("\n}\n");
   }
 
   int idMatch(string id) {
@@ -1444,7 +1441,7 @@ struct CstParser {
     }
 
     fill(");\n");*/
-    fill("_esdl__block ~= new CstPredicate(this, 0, this.outer, 0,");
+    fill("_preds ~= new CstPredicate(this, 0, this.outer, 0,");
     size_t srcTag = parseSpace();
     fill(CST[srcTag..srcCursor]);
 
@@ -2299,7 +2296,7 @@ struct CstParser {
   // translate the expression and also consume the semicolon thereafter
   void procExprStmt() {
     import std.conv: to;
-    fill("  _esdl__block ~= new CstPredicate(this, ");
+    fill("  _preds ~= new CstPredicate(this, ");
     fill(stmtCount.to!string);
     stmtCount += 1;
     fill(", ");
