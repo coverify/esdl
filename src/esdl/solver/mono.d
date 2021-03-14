@@ -566,35 +566,37 @@ class CstMonoSolver (S): CstSolver
     _finalRange = [S.min, S.max];
     _proxy = group.getProxy();
     foreach (pred; predSet){
-      reset();
-      pred.visit(this);
-      if (_endFlag == 3){
-	resetSolver();
-	return false;
-      }
-      if(_endFlag == 1){
-	assert(false, "no solutions found");
-      }
-      assert(_rangeStack.length == 1);
-      debug (MONOSOLVER){
-	import std.stdio;
-	writeln("range for predicate ",pred.describe(), " is:");
-	displayRangeStack(_rangeStack);
-      }
-      if(_rangeStack[0].getType() == RangeType.DYN){
-	ANDRANGE(_finalRange, _rangeStack[0].getD());
-      }
-      else if(_rangeStack[0].getType() == RangeType.STA){
-	ANDRANGE(_finalRange, _rangeStack[0].getS());
-      }
-      else{
-	_endFlag = 1;
-	assert(false, "no solutions found");
-      }
-      debug (MONOSOLVER){
-	import std.stdio;
-	writeln("_finalRange after this predicate is :");
-	display(_finalRange);
+      if (! pred.isGuard()) {
+	reset();
+	pred.visit(this);
+	if (_endFlag == 3){
+	  resetSolver();
+	  return false;
+	}
+	if(_endFlag == 1){
+	  assert(false, "no solutions found");
+	}
+	assert(_rangeStack.length == 1);
+	debug (MONOSOLVER){
+	  import std.stdio;
+	  writeln("range for predicate ",pred.describe(), " is:");
+	  displayRangeStack(_rangeStack);
+	}
+	if(_rangeStack[0].getType() == RangeType.DYN){
+	  ANDRANGE(_finalRange, _rangeStack[0].getD());
+	}
+	else if(_rangeStack[0].getType() == RangeType.STA){
+	  ANDRANGE(_finalRange, _rangeStack[0].getS());
+	}
+	else{
+	  _endFlag = 1;
+	  assert(false, "no solutions found");
+	}
+	debug (MONOSOLVER){
+	  import std.stdio;
+	  writeln("_finalRange after this predicate is :");
+	  display(_finalRange);
+	}
       }
     }
     _rangeStack.length = 0;

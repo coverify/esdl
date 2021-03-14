@@ -117,6 +117,10 @@ void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy) {
       static if (p.tupleof[I].stringof != "p._esdl__cstWith") {
 	// import std.stdio;
 	// writeln("Adding constraint: ", p.tupleof[I].stringof);
+	foreach (pred; p.tupleof[I].getConstraintGuards()) {
+	  // writeln("Adding predicate: ", pred.name());
+	  proxy.addNewPredicate(pred);
+	}
 	foreach (pred; p.tupleof[I].getConstraints()) {
 	  // writeln("Adding predicate: ", pred.name());
 	  proxy.addNewPredicate(pred);
@@ -457,6 +461,9 @@ void _esdl__randomize(T) (T t, _esdl__ConstraintBase withCst = null) {
   t._esdl__proxyInst.reset();
 
   if (withCst !is null) {
+    foreach (pred; withCst.getConstraintGuards()) {
+      t._esdl__proxyInst.addNewPredicate(pred);
+    }
     foreach (pred; withCst.getConstraints()) {
       t._esdl__proxyInst.addNewPredicate(pred);
     }
@@ -750,15 +757,19 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 		 is (TOBJ: CstObjArrStubBase)) {
 	assert (obj !is null, OBJ ~ " is null");
 	_preds ~=
-	  new CstVisitorPredicate(this, 0, this.outer, 0,
-				  new CstVarVisitorExpr(obj._esdl__get()));
+	  new CstVisitorPredicate(this, null, false, 0, this.outer, 0,
+				  new CstVarVisitorExpr(obj._esdl__get()), false);
       }
       else {
 	_preds ~=
-	  new CstVisitorPredicate(this, 0, this.outer, 0,
-				  new CstVarVisitorExpr(obj));
+	  new CstVisitorPredicate(this, null, false, 0, this.outer, 0,
+				  new CstVarVisitorExpr(obj), false);
       }
       _initialized = true;
+    }
+
+    final override CstPredicate[] getConstraintGuards() {
+      return null;
     }
 
     final override CstPredicate[] getConstraints() {

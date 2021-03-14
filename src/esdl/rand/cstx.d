@@ -57,12 +57,11 @@ struct CstParser {
   
   bool dryRun = true;
 
-  uint stmtCount = 0;
+  uint predCount = 0;
+  uint guardCount = 0;
 
   char[] outBuffer;
   
-  string dummy;			// sometimes required in dryRun
-
   string _proxy;
   
   size_t outCursor = 0;
@@ -96,7 +95,8 @@ struct CstParser {
       assert (false, "varMap has not been unrolled completely");
     }
     dryRun = false;
-    stmtCount = 0;
+    predCount = 0;
+    guardCount = 0;
   }
 
   this(string CST, string FILE, size_t LINE) {
@@ -1122,13 +1122,10 @@ struct CstParser {
   }
 
   struct Condition {
+    uint _guardIndex;
     bool _inverse = false;
-    string _cond;
-    this(string cond) {
-      _cond = cond;
-    }
-    string cond() {
-      return _cond;
+    this(uint index) {
+      _guardIndex = index;
     }
     void switchToElse() {
       _inverse = true;
@@ -1340,22 +1337,21 @@ struct CstParser {
 
     ++srcCursor;
 
-    fill("/* IF Block: ");
-    auto outTag = outCursor;
+    fill("// IF Block -- Guard\n");
+
+    Condition ifCond = Condition(guardCount++);
+    ifConds ~= ifCond;
+
+    fill("  _guards ~= new CstPredicate(this, null, false, ");
+    fill((ifCond._guardIndex).to!string());
+    fill(", ");
+    fill(_proxy);
+    fill(", 0, ");		// not soft
+
     procLogicExpr();
 
-    if (dryRun) {
-      dummy.length = outCursor-outTag;
-      Condition ifCond = dummy;
-      ifConds ~= ifCond;
-    }
-    else {
-      Condition ifCond = Condition(cast(string) outBuffer[outTag..outCursor]);
-      ifConds ~= ifCond;
-    }
-
-    fill("*/\n");
-
+    fill(", true);\n");
+      
     srcTag = parseSpace();
     fill(CST[srcTag..srcCursor]);
     if (CST[srcCursor] != ')') {
@@ -1364,6 +1360,7 @@ struct CstParser {
     ++srcCursor;
     srcTag = parseSpace();
     fill(CST[srcTag..srcCursor]);
+
 
     if (CST[srcCursor] is '{') {
       ++srcCursor;
@@ -1441,7 +1438,7 @@ struct CstParser {
     }
 
     fill(");\n");*/
-    fill("_preds ~= new CstPredicate(this, 0, this.outer, 0,");
+    fill("_preds ~= new CstPredicate(this, null, false, 0, this.outer, 0,");
     size_t srcTag = parseSpace();
     fill(CST[srcTag..srcCursor]);
 
@@ -1479,7 +1476,7 @@ struct CstParser {
 	      srcCursor.to!string);
     }
 
-    fill("));\n");
+    fill("), false);\n");
   }
 
   enum StmtToken: byte
@@ -2297,8 +2294,17 @@ struct CstParser {
   void procExprStmt() {
     import std.conv: to;
     fill("  _preds ~= new CstPredicate(this, ");
-    fill(stmtCount.to!string);
-    stmtCount += 1;
+    if (ifConds.length !is 0) {
+      auto ifCond = ifConds[$-1];
+      fill("_guards[");
+      fill(ifCond._guardIndex.to!string());
+      fill("], ");
+      if (ifCond.isInverse()) fill("true, ");
+      else                    fill("false, ");
+    }
+    else fill("null, false, ");
+    fill(predCount.to!string);
+    predCount += 1;
     fill(", ");
     fill(_proxy);
     fill(", ");
@@ -2312,23 +2318,23 @@ struct CstParser {
     fill (softAttr.to!string);
     fill(", ");
     
-    if (ifConds.length !is 0) {
-      fill("// Conditions \n        ( ");
-      foreach (ifCond; ifConds[0..$-1]) {
-	if (ifCond.isInverse()) fill('*');
-	fill(ifCond.cond);
-	fill(" &\n          ");
-      }
-      if (ifConds[$-1].isInverse()) fill('*');
-      fill(ifConds[$-1].cond);
-      fill(").implies( // End of Conditions\n");
-      fill("       ( ");
-      procLogicExpr();
-      fill(')');
-    }
-    else {
-      procLogicExpr();
-    }
+    // if (ifConds.length !is 0) {
+    //   fill("// Conditions \n        ( ");
+    //   foreach (ifCond; ifConds[0..$-1]) {
+    // 	if (ifCond.isInverse()) fill('*');
+    // 	fill(ifCond.cond);
+    // 	fill(" &\n          ");
+    //   }
+    //   if (ifConds[$-1].isInverse()) fill('*');
+    //   fill(ifConds[$-1].cond);
+    //   fill(").implies( // End of Conditions\n");
+    //   fill("       ( ");
+    //   procLogicExpr();
+    //   fill(')');
+    // }
+    // else
+
+    procLogicExpr();
 
     if (numParen !is 0) {
       import std.conv: to;
@@ -2343,20 +2349,12 @@ struct CstParser {
       assert (false, "Error: -- ';' missing at end of statement; at " ~
 	      srcCursor.to!string);
     }
-    if (ifConds.length !is 0) {
-      fill(')');
-    }
-
-    // no parent CstPredicate
-    // fill(", null, null, 0");
-
-    // if (iterators.length != 0) {
-    //   foreach (iterator; iterators) {
-    // 	fill(", " ~ iterator);
-    //   }
+    // if (ifConds.length !is 0) {
+    //   fill(')');
     // }
 
-    fill(");\n");
+
+    fill(", false);\n");
   }
 
   void procStmt() {
@@ -2400,7 +2398,8 @@ struct CstParser {
   }
   
   void procBlock() {
-    uint stmtCount = 0;
+    uint predCount = 0;
+    uint guardCount = 0;
     while (srcCursor <= CST.length) {
       size_t srcTag = parseSpace();
       fill(CST[srcTag..srcCursor]);

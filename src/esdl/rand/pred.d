@@ -375,7 +375,19 @@ class CstPredicate: CstIterCallback, CstDepCallback
   }
 
   void visit(CstSolver solver) {
-    _expr.visit(solver);
+    if (_guard is null) {
+      _expr.visit(solver);
+    }
+    else {
+      _guard.visit(solver);
+      if (_guardInv)
+	solver.processEvalStack(CstLogicOp.LOGICNOT);
+      _expr.visit(solver);
+      if (this.isGuard())
+	solver.processEvalStack(CstLogicOp.LOGICAND);
+      else
+	solver.processEvalStack(CstLogicOp.LOGICIMP);
+    }
   }
   // alias _expr this;
 
@@ -392,6 +404,16 @@ class CstPredicate: CstIterCallback, CstDepCallback
   CstScope _scope;
   CstLogicExpr _expr;
   CstPredicate _parent;
+  CstPredicate _guard;
+
+  bool _isGuard;
+
+  bool isGuard() { return _isGuard; }
+
+  bool _guardInv;
+  bool guardInv() { return _guardInv; }
+    
+  
   uint _level;
   uint _unrollCycle;
   bool _markResolve = true;
@@ -422,9 +444,10 @@ class CstPredicate: CstIterCallback, CstDepCallback
   __gshared uint _count;
   immutable uint _id;
 
-  this(_esdl__ConstraintBase cst, uint stmt, _esdl__Proxy proxy,
-       uint soft, CstLogicExpr expr, CstPredicate parent=null,
-       CstIterator unrollIter=null, uint unrollIterVal=0// ,
+  this(_esdl__ConstraintBase cst, CstPredicate guard, bool guardInv,
+       uint stmt, _esdl__Proxy proxy, uint soft, CstLogicExpr expr,
+       bool isGuard, CstPredicate parent=null,
+       CstIterator unrollIter=null, uint unrollIterVal=0 // ,
        // CstIterator[] iters ...
        ) {
     synchronized(typeid(CstPredicate)) {
@@ -432,6 +455,8 @@ class CstPredicate: CstIterCallback, CstDepCallback
     }
     assert(proxy !is null);
     _constraint = cst;
+    _guard = guard;
+    _guardInv = guardInv,
     _soft = soft;
     _statement = stmt;
     _proxy = proxy;
@@ -447,6 +472,7 @@ class CstPredicate: CstIterCallback, CstDepCallback
     assert(_scope !is null);
     _expr = expr;
 
+    _isGuard = isGuard;
 
     _parent = parent;
     
@@ -460,7 +486,7 @@ class CstPredicate: CstIterCallback, CstDepCallback
 				     unrollIterVal)).array;
     }
       
-    this.setDomainContext();
+    this.setDomainContext(this);
 
     debug(CSTPREDS) {
       import std.stdio;
@@ -484,6 +510,7 @@ class CstPredicate: CstIterCallback, CstDepCallback
   }
 
   void doUnroll() {
+    bool guardUnrolled = false;
     if (_unrollCycle == _proxy._cycle) { // already executed
       return;
     }
@@ -494,13 +521,19 @@ class CstPredicate: CstIterCallback, CstDepCallback
     //   }
     // }
     CstIterator iter = _iters[0];
+
+    if (_guard !is null && _guard._iters[0] is iter) {
+      _guard.doUnroll();
+      guardUnrolled = true;
+    }
+    
     if (iter.getLenVec().isSolved()) {
-      this.unroll(iter);
+      this.unroll(iter, guardUnrolled);
       _unrollCycle = _proxy._cycle;
     }
   }
   
-  void unroll(CstIterator iter) {
+  void unroll(CstIterator iter, bool guardUnrolled) {
     assert (iter is _iters[0]);
 
     if (! iter.isUnrollable()) {
@@ -518,10 +551,30 @@ class CstPredicate: CstIterCallback, CstDepCallback
 	   i != currLen; ++i) {
 	// import std.stdio;
 	// writeln("i: ", i, " mapped: ", iter.mapIter(i));
-	_uwPreds ~= new CstPredicate(_constraint, _statement, _proxy, _soft,
-				     _expr.unroll(iter, iter.mapIter(i)), this, iter, i// ,
-				     // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
-				     );
+	if (_guard is null) {
+	  _uwPreds ~= new CstPredicate(_constraint, null, false, _statement, _proxy, _soft,
+				       _expr.unroll(iter, iter.mapIter(i)), _isGuard, this, iter, i// ,
+				       // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
+				       );
+	}
+	else {
+	  if (guardUnrolled) {
+	    _uwPreds ~= new CstPredicate(_constraint, _guard._uwPreds[i],
+					 _guardInv, _statement, _proxy, _soft,
+					 _expr.unroll(iter, iter.mapIter(i)),
+					 _isGuard, this, iter, i// ,
+					 // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
+					 );
+	  }
+	  else {
+	    _uwPreds ~= new CstPredicate(_constraint, _guard,
+					 _guardInv, _statement, _proxy, _soft,
+					 _expr.unroll(iter, iter.mapIter(i)),
+					 _isGuard, this, iter, i// ,
+					 // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
+					 );
+	  }
+	}
       }
     }
 
@@ -564,6 +617,7 @@ class CstPredicate: CstIterCallback, CstDepCallback
   CstDomain[] _bitIdxs;
   CstIterator[] _iters;
   CstIterator[] _parsedIters;
+  CstIterator[] _varIters;
 
   CstIterator _unrollIter;
   uint _unrollIterVal;
@@ -653,84 +707,91 @@ class CstPredicate: CstIterCallback, CstDepCallback
     return _dynRnds.length > 0;
   }
 
-  final void setDomainContext() {
-    CstIterator[] varIters;
+  final void setDomainContext(CstPredicate pred) {
     
-    _expr.setDomainContext(this, _rnds, _rndArrs, _vars, _varArrs, _vals,
-			   varIters, _idxs, _bitIdxs, _deps);
-
-    // foreach (varIter; varIters) {
-    //   import std.stdio;
-    //   stderr.writeln("Found Iterator: ", varIter.name());
-    // }
-    // if (_iters.length > 0) {
-    //   _len = _iters[0].getLenVec();
-    // }
-    
-    if(!getExpr().isOrderingExpr()){
-      foreach (rnd; _rnds) {
-	rnd.registerRndPred(this);
-	if (! rnd.isStatic()) {
-	  _dynRnds ~= rnd;
-	}
-      }
-      foreach (rnd; _rndArrs) {
-	rnd.registerRndPred(this);
-      }
+    if (_guard !is null) {
+      _guard.setDomainContext(pred);
     }
 
-    // foreach (var; _vars) var.registerVarPred(this);
+    _expr.setDomainContext(pred, pred._rnds, pred._rndArrs, pred._vars,
+			   pred._varArrs, pred._vals, pred._varIters,
+			   pred._idxs, pred._bitIdxs, pred._deps);
 
-    if ((! this.isVisitor()) && _rndArrs.length == 0) {
-      assert (_rnds.length != 0, this.describe());
-      if (_rnds.length > 1) {
+    if (this is pred) {
+    
+      // foreach (varIter; varIters) {
+      //   import std.stdio;
+      //   stderr.writeln("Found Iterator: ", varIter.name());
+      // }
+      // if (_iters.length > 0) {
+      //   _len = _iters[0].getLenVec();
+      // }
+    
+      if(!getExpr().isOrderingExpr()){
 	foreach (rnd; _rnds) {
-	  rnd._type = DomType.MULTI;
-	}
-      }
-      else if (! this.isDist()) {
-	assert(_rnds.length == 1);
-	auto rnd = _rnds[0];
-	if (rnd._type == DomType.TRUEMONO) {
-	  if (_vars.length > 0) {
-	    rnd._type = DomType.LAZYMONO;
-	  }
-	  if (_idxs.length > 0) {
-	    assert(! rnd.isStatic());
-	    rnd._type = DomType.INDEXEDMONO;
+	  rnd.registerRndPred(this);
+	  if (! rnd.isStatic()) {
+	    _dynRnds ~= rnd;
 	  }
 	}
+	foreach (rnd; _rndArrs) {
+	  rnd.registerRndPred(this);
+	}
       }
-    }
 
-    // When the parent unrolls, its dependencies would already be take care of
-    // if (_parent !is null) {
-    //   CstDomain[] _foundDeps = _deps ~ _idxs;
-    //   _deps = _foundDeps.filter!(dep => (! canFind(_parent._deps, dep))).array;
-    // }
+      // foreach (var; _vars) var.registerVarPred(this);
 
-    foreach (idx; _idxs) if (! idx.isSolved()) _deps ~= idx;
-    foreach (idx; _bitIdxs) if (! idx.isSolved()) _deps ~= idx;
+      if ((! this.isVisitor()) && (! this.isGuard()) && _rndArrs.length == 0) {
+	assert (_rnds.length != 0, this.describe());
+	if (_rnds.length > 1) {
+	  foreach (rnd; _rnds) {
+	    rnd._type = DomType.MULTI;
+	  }
+	}
+	else if (! this.isDist()) {
+	  assert(_rnds.length == 1);
+	  auto rnd = _rnds[0];
+	  if (rnd._type == DomType.TRUEMONO) {
+	    if (_vars.length > 0) {
+	      rnd._type = DomType.LAZYMONO;
+	    }
+	    if (_idxs.length > 0) {
+	      assert(! rnd.isStatic());
+	      rnd._type = DomType.INDEXEDMONO;
+	    }
+	  }
+	}
+      }
+
+      // When the parent unrolls, its dependencies would already be take care of
+      // if (_parent !is null) {
+      //   CstDomain[] _foundDeps = _deps ~ _idxs;
+      //   _deps = _foundDeps.filter!(dep => (! canFind(_parent._deps, dep))).array;
+      // }
+
+      foreach (idx; _idxs) if (! idx.isSolved()) _deps ~= idx;
+      foreach (idx; _bitIdxs) if (! idx.isSolved()) _deps ~= idx;
     
-    foreach (dep; _deps) dep.registerDepPred(this);
+      foreach (dep; _deps) dep.registerDepPred(this);
 
-    // For now treat _idxs as _deps since _idxs are merged with _deps
-    // foreach (idx; _idxs) idx.registerIdxPred(this);
+      // For now treat _idxs as _deps since _idxs are merged with _deps
+      // foreach (idx; _idxs) idx.registerIdxPred(this);
 
-    // take only the parsed iterators that are found in the expression
-    // as well
-    // _iters = pasredIters.filter!(itr =>
-    // 				 canFind(varIters, itr)).array;
-    if (isVisitor()) {
-      _iters = varIters;
-    }
-    else {
-      _iters = _parsedIters.filter!(itr =>
-				    canFind!((CstIterator a, CstIterator b) => a == b)
-				    (varIters, itr)).array;
-    }
+      // take only the parsed iterators that are found in the expression
+      // as well
+      // _iters = pasredIters.filter!(itr =>
+      // 				 canFind(varIters, itr)).array;
+      if (isVisitor()) {
+	_iters = _varIters;
+      }
+      else {
+	_iters = _parsedIters.filter!(itr =>
+				      canFind!((CstIterator a, CstIterator b) => a == b)
+				      (_varIters, itr)).array;
+      }
     
-    if (_iters.length != 0) _iters[0].registerRolled(this);
+      if (_iters.length != 0) _iters[0].registerRolled(this);
+    }
   }
 
   CstLogicExpr getExpr() {
@@ -854,6 +915,11 @@ class CstPredicate: CstIterCallback, CstDepCallback
       str ~= _soft.to!string();
       str ~= ':';
     }
+    if (_guard !is null) {
+      if (_guardInv) str ~= " ! ";
+      _guard.writeSignature(str);
+      str ~= " >> ";
+    }
     _expr.writeExprString(str);
   }
 
@@ -873,21 +939,22 @@ class CstPredicate: CstIterCallback, CstDepCallback
 
 class CstVisitorPredicate: CstPredicate
 {
-  this(_esdl__ConstraintBase cst, uint stmt, _esdl__Proxy proxy,
-       uint soft, CstLogicExpr expr, CstPredicate parent=null,
+  this(_esdl__ConstraintBase cst, CstPredicate guard, bool guardInv, uint stmt,
+       _esdl__Proxy proxy, uint soft, CstLogicExpr expr, bool isGuard, CstPredicate parent=null,
        CstIterator unrollIter=null, uint unrollIterVal=0// ,
        // CstIterator[] iters ...
        ) {
+    assert (guard is null);
     // import std.stdio;
     // writeln("Creating a visitor predicate: ", cst.name());
-    super(cst, stmt, proxy, soft, expr, parent, unrollIter, unrollIterVal);
+    super(cst, guard, guardInv, stmt, proxy, soft, expr, isGuard, parent, unrollIter, unrollIterVal);
   }
 
   override bool isVisitor() {
     return true;
   }
 
-  override void unroll(CstIterator iter) {
+  override void unroll(CstIterator iter, bool guardUnrolled) {
     // import std.stdio;
     // writeln("Unrolling Visitor");
     assert (iter is _iters[0]);
@@ -907,8 +974,8 @@ class CstVisitorPredicate: CstPredicate
 	   i != currLen; ++i) {
 	// import std.stdio;
 	// writeln("i: ", i, " mapped: ", iter.mapIter(i));
-	_uwPreds ~= new CstVisitorPredicate(_constraint, _statement, _proxy, _soft,
-					    _expr.unroll(iter, iter.mapIter(i)), this, iter, i// ,
+	_uwPreds ~= new CstVisitorPredicate(_constraint, _guard, _guardInv, _statement, _proxy, _soft,
+					    _expr.unroll(iter, iter.mapIter(i)), false, this, iter, i// ,
 					    // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
 					    );
       }

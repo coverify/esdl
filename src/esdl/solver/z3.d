@@ -263,19 +263,23 @@ class CstZ3Solver: CstSolver
       if (pred.group() !is group) {
 	assert (false, "Group Violation " ~ pred.name());
       }
-      pred.visit(this);
-      assert(_evalStack.length == 1);
-      uint softWeight = pred.getSoftWeight();
-      if (softWeight == 0) {
-	addRule(_solver, _evalStack[0].toBool());
-	if (_needOptimize) addRule(_optimize, _evalStack[0].toBool());
+
+      if (! pred.isGuard()) {
+	pred.visit(this);
+      
+	assert(_evalStack.length == 1);
+	uint softWeight = pred.getSoftWeight();
+	if (softWeight == 0) {
+	  addRule(_solver, _evalStack[0].toBool());
+	  if (_needOptimize) addRule(_optimize, _evalStack[0].toBool());
+	}
+	else {
+	  // ignore the soft constraint
+	  assert (_needOptimize);
+	  addRule(_optimize, _evalStack[0].toBool(), softWeight, "@soft");
+	}
+	_evalStack.length = 0;
       }
-      else {
-	// ignore the soft constraint
-	assert (_needOptimize);
-	addRule(_optimize, _evalStack[0].toBool(), softWeight, "@soft");
-      }
-      _evalStack.length = 0;
     }
 
     _seed = _proxy._esdl__rGen.gen!uint();

@@ -65,6 +65,7 @@ abstract class _esdl__ConstraintBase: rand.disable
   }
 
   abstract void makeConstraints();
+  abstract CstPredicate[] getConstraintGuards();
   abstract CstPredicate[] getConstraints();
 }
 
@@ -72,10 +73,17 @@ abstract class Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=_
   : _esdl__ConstraintBase
 {
   protected CstPredicate[] _preds;
+  protected CstPredicate[] _guards;
+  
   protected bool _initialized;
 
   this(_esdl__Proxy eng, string name) {
     super(eng, name, CONSTRAINT);
+  }
+
+  final override CstPredicate[] getConstraintGuards() {
+    if (! _initialized) makeConstraints();
+    return _guards;
   }
 
   final override CstPredicate[] getConstraints() {
@@ -672,7 +680,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   }
 
   void procResolved(CstPredicate pred) {
-    assert (pred._rnds.length > 0 || pred._rndArrs.length > 0,
+    assert (pred._rnds.length > 0 || pred._rndArrs.length > 0 || pred.isGuard(),
 	    pred.describe());
     if (pred.isDist()) {
       _resolvedDistPreds ~= pred;
@@ -704,6 +712,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   }
 
   void addUnrolledPredicate(CstPredicate pred) {
+    // import std.stdio;
+    // writeln("Adding: ", pred.describe());
     _unrolledPreds ~= pred;
   }
   void makeBeforePreds(CstPredicate pred ){

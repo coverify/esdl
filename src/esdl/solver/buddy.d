@@ -306,12 +306,14 @@ class CstBuddySolver: CstSolver
       if (pred.group() !is group) {
 	assert (false, "Group Violation " ~ pred.name());
       }
-      pred.visit(this);
-      _context.addRule(_evalStack[0].toBool());
-      popEvalStack();
-      assert(_evalStack.length == 0);
-      // writeln("We are here too");
-      // _evalStack.length = 0;
+      if (! pred.isGuard()) {
+	pred.visit(this);
+	_context.addRule(_evalStack[0].toBool());
+	popEvalStack();
+	assert(_evalStack.length == 0);
+	// writeln("We are here too");
+	// _evalStack.length = 0;
+      }
     }
 
     this.push();
