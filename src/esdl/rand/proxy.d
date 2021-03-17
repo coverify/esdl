@@ -183,7 +183,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   Folder!(CstPredicate, "unresolvedPreds") _unresolvedPreds;
   Folder!(CstPredicate, "toResolvedPreds") _toUnresolvedPreds;
 
-  Folder!(CstPredicate, "resolvedDistPreds") _resolvedDistPreds;
+  // Folder!(CstPredicate, "resolvedDistPreds") _resolvedDistPreds;
   Folder!(CstPredicate, "resolvedMonoPreds") _resolvedMonoPreds;
 
   Folder!(CstDomain, "solvedDomains") _solvedDomains;
@@ -377,7 +377,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _unresolvedPreds.reset();
     _toUnresolvedPreds.reset();
     _beforePreds.reset();
-    _resolvedDistPreds.reset();
+    // _resolvedDistPreds.reset();
     _resolvedMonoPreds.reset();
     _solvedDomains.reset();
     _solvedDomainArrs.reset();
@@ -435,7 +435,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     }
     while (_newPreds.length > 0 ||
 	   _unrolledPreds.length > 0 ||
-	   // _resolvedDistPreds.length > 0 ||
 	   // _resolvedMonoPreds.length > 0 ||
 	   _resolvedDynPreds.length > 0 ||
 	   _resolvedPreds.length > 0 ||
@@ -474,34 +473,11 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       foreach (pred; _newPreds) procNewPredicate(pred);
       _newPreds.reset();
       
-      foreach (pred; _resolvedDistPreds) {
-	if (_esdl__debugSolver) {
-	  import std.stdio;
-	  writeln("Solving Dist Predicate: ", pred.describe());
-	}
-	CstDomain[] distVars = pred.getRnds();
-	assert (distVars.length == 1);
-	CstDomain distDom = distVars[0];
-	CstPredicate[] distPreds = distDom.getRandPreds();
-	// long[] toRemove;
-	DistRangeSetBase dist = pred._expr.getDist();
-	dist.reset();
-	foreach (predicate; distPreds){
-	  CstVecExpr ex = predicate._expr.isNot(distDom);
-	  // isNot returns rhs if the predicate is of != type,
-	  // otherwise it returns null
-	  if (predicate.getRnds().length == 1 && ! predicate.isDist()) {
-	    if (ex is null) {
-	      assert (false, "can only use != operator on distributed domains");
-	    }
-	    dist.purge(ex.evaluate());
-	  }
-	}
-	dist.uniform(distDom, _esdl__getRandGen());
-	_solvedDomains ~= distDom;
-	_solvedSome = true;
-      }
-      _resolvedDistPreds.reset();
+      // foreach (pred; _resolvedDistPreds) {
+      // 	_solvedDomains ~= solveDist(pred);
+      // 	_solvedSome = true;
+      // }
+      // _resolvedDistPreds.reset();
 
       // _lap, like _cycle starts with 1
       // this is to avoid default values
@@ -604,29 +580,31 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
       // Work on _solvePreds
       foreach (pred; _solvePreds) {
-	if (pred.isSolved()) {
-	  _solvedSome = true;
-	}
-	else {
-	  import std.conv: to;
-	  CstPredGroup group = pred.group();
-	  if (group is null) {
-	    group = new CstPredGroup(this);
-	    if (_esdl__debugSolver) {
-	      import std.stdio;
-	      writeln("Created new group ", group._id, " for predicate: ", pred.name());
-	    }
+	if (! pred.isGuard()) {
+	  if (pred.isSolved()) {
+	    _solvedSome = true;
 	  }
-	  assert (! group.isSolved(),
-		  "Group can not be solved when the predicate is still not solved; group id: " ~
-		  group._id.to!string() ~ " predicate id: " ~ pred._id.to!string());
-	  group.setGroupContext(pred);
-	  group.solve();
-	  _solvedGroups ~= group;
-	  _solvedSome = true;
+	  else {
+	    import std.conv: to;
+	    CstPredGroup group = pred.group();
+	    if (group is null) {
+	      group = new CstPredGroup(this);
+	      if (_esdl__debugSolver) {
+		import std.stdio;
+		writeln("Created new group ", group._id, " for predicate: ", pred.name());
+	      }
+	    }
+	    assert (! group.isSolved(),
+		    "Group can not be solved when the predicate is still not solved; group id: " ~
+		    group._id.to!string() ~ " predicate id: " ~ pred._id.to!string());
+	    group.setGroupContext(pred);
+	    group.solve();
+	    _solvedGroups ~= group;
+	    _solvedSome = true;
+	  }
 	}
       }
-      foreach( pred; _dependentPreds){
+      foreach(pred; _dependentPreds){
 	pred.setmarkBefore(false);
       }
       foreach (pred; _beforePreds) {
@@ -637,10 +615,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       }
       if (_solvedSome is false) {
 	import std.stdio;
-	if (_resolvedDistPreds.length > 0) {
-	  stderr.writeln("_resolvedDistPreds: ");
-	  foreach (pred; _resolvedDistPreds) stderr.writeln(pred.describe());
-	}
+	// if (_resolvedDistPreds.length > 0) {
+	//   stderr.writeln("_resolvedDistPreds: ");
+	//   foreach (pred; _resolvedDistPreds) stderr.writeln(pred.describe());
+	// }
 	// if (_resolvedMonoPreds.length > 0) {
 	//   stderr.writeln("_resolvedMonoPreds: ");
 	//   foreach (pred; _resolvedMonoPreds) stderr.writeln(pred.describe());
@@ -679,21 +657,47 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _esdl__needSync = false;
   }
 
+  CstDomain solveDist(CstPredicate pred) {
+    if (_esdl__debugSolver) {
+      import std.stdio;
+      writeln("Solving Dist Predicate: ", pred.describe());
+    }
+    CstDomain distDom = pred.distDomain();
+    CstPredicate[] distPreds = distDom.getRandPreds();
+    // long[] toRemove;
+    DistRangeSetBase dist = pred._expr.getDist();
+    dist.reset();
+    foreach (predicate; distPreds){
+      CstVecExpr ex = predicate._expr.isNot(distDom);
+      // isNot returns rhs if the predicate is of != type,
+      // otherwise it returns null
+      if (predicate.getRnds().length == 1 && ! predicate.isDist()) {
+	if (ex is null) {
+	  assert (false, "can only use != operator on distributed domains");
+	}
+	dist.purge(ex.evaluate());
+      }
+    }
+    dist.uniform(distDom, _esdl__getRandGen());
+    return distDom;
+  }
+
   void procResolved(CstPredicate pred) {
     assert (pred._rnds.length > 0 || pred._rndArrs.length > 0 || pred.isGuard(),
 	    pred.describe());
-    if (pred.isDist()) {
-      _resolvedDistPreds ~= pred;
-    }
-    // else if (pred._rnds.length == 1 &&
-    // 	     pred._rndArrs.length == 0 &&
-    // 	     pred._rnds[0]._type <= DomType.LAZYMONO//  &&
-    // 	     // pred._rnds[0]._esdl__parentIsConstrained is false
-    // 	     ) {
-    //   _resolvedMonoPreds ~= pred;
-    //   // procMonoDomain(pred._rnds[0], pred);
+    // if (pred.isDist()) {
+    //   _resolvedDistPreds ~= pred;
     // }
-    else if (pred._dynRnds.length > 0) {
+    // // else if (pred._rnds.length == 1 &&
+    // // 	     pred._rndArrs.length == 0 &&
+    // // 	     pred._rnds[0]._type <= DomType.LAZYMONO//  &&
+    // // 	     // pred._rnds[0]._esdl__parentIsConstrained is false
+    // // 	     ) {
+    // //   _resolvedMonoPreds ~= pred;
+    // //   // procMonoDomain(pred._rnds[0], pred);
+    // // }
+    // else
+    if (pred._dynRnds.length > 0) {
       foreach (rnd; pred._dynRnds) {
 	auto dom = rnd.getResolved();
 	dom._tempPreds ~= pred;

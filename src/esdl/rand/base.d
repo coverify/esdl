@@ -203,6 +203,13 @@ class CstScope {
   }
 }
 
+enum DomDistEnum: ubyte
+{   NONE = 0,
+    DETECT = 1,
+    PROPER = 2
+    }
+
+
 abstract class CstDomain: CstVecTerm, CstVectorIntf
 {
 
@@ -259,10 +266,47 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
   final CstIterator _esdl__iter() {return null;}
   final CstVarNodeIntf _esdl__getChild(ulong n) {assert (false);}
 
-  bool _isDist;
-  final bool isDist() { return _isDist; }
-  final void isDist(bool b) { _isDist = b; }
+  DomDistEnum _dist;
+  final bool isDist() { return _dist >= DomDistEnum.DETECT; }
+  final bool isProperDist() {
+    if (_dist == DomDistEnum.NONE) return false;
+    if (_dist >= DomDistEnum.PROPER) return true;
 
+    bool isProper = true;
+
+    // now make sure that all the predicates related to this domain are
+    // not related to any other domain (ignoring conditions)
+    foreach (pred; getRandPreds()) {
+      if (pred.getDom() is this) {
+	pred.hasDistDomain(true);
+      }
+      else isProper = false;
+      break;
+    }
+
+    if (isProper) {
+      _dist = DomDistEnum.PROPER;
+    }
+    else {
+      foreach (pred; getRandPreds()) {
+	pred.hasDistDomain(false);
+      }
+    }
+
+    return isProper;
+  }
+
+  final void isDist(bool b) {
+    if (b) {
+      if (_dist == DomDistEnum.NONE) _dist = DomDistEnum.DETECT;
+    }
+    else 
+      _dist = DomDistEnum.NONE;
+  }
+  final void isDist(DomDistEnum d) {
+    _dist = d;
+  }
+  
   abstract long value();
   
   void randomizeIfUnconstrained(_esdl__Proxy proxy) {
@@ -286,7 +330,8 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
       stderr.writeln("Marking ", this.name(), " as SOLVED");
     }
     _tempPreds.reset();
-    assert (_state != State.SOLVED);
+    assert (_state != State.SOLVED, this.name() ~
+	    " already marked as solved");
     _state = State.SOLVED;
   }
 
@@ -315,14 +360,47 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
   //   return _group;
   // }
 
+  final void annotate(CstPredGroup group, bool withDist) {
+    // import std.stdio;
+    // writeln(this.name(), ": ", withDist);
+    if (_domN == uint.max) {
+      if (withDist) {
+	if (this.isProperDist() && ! this.isSolved()) {
+	  _domN = group.addDistDomain(this);
+	}
+	else {
+	  if (! this.isSolved()) {
+	    _domN = group.addRandom(this);
+	  }
+	}
+      }
+      else {
+	if (this.isSolved()) {
+	  _domN = group.addVariable(this);
+	  if (_varN == uint.max) _varN = _root.indexVar();
+	}
+	else {
+	  // if (this.isProperDist()) {
+	  //   group.addDistDomain(this);
+	  // }
+	  _domN = group.addDomain(this);
+	}
+      }
+    }
+  }
+
   void setGroupContext(CstPredGroup group) {
+    if (isDist()) this.isProperDist();
+
     assert (_state is State.INIT && (! this.isSolved()));
     _state = State.GROUPED;
     // assert (_group is null && (! this.isSolved()));
     // _group = group;
     foreach (pred; _rndPreds) {
-      if (pred._state is CstPredicate.State.INIT && !pred.getmarkBefore()) {
-	pred.setGroupContext(group);
+      if (! pred.isGuard()) {
+	if (pred._state is CstPredicate.State.INIT && !pred.getmarkBefore()) {
+	  pred.setGroupContext(group);
+	}
       }
     }
     if (_esdl__parentIsConstrained) {
@@ -334,7 +412,7 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
     }
   }
 
-  abstract void annotate(CstPredGroup group);
+  // abstract void annotate(CstPredGroup group);
   abstract bool visitDomain(CstSolver solver);
   
   // init value has to be different from proxy._cycle init value
@@ -595,8 +673,10 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     assert (this.isResolved());
     assert (_state is State.INIT);
     foreach (pred; _rndPreds) {
-      if (pred._state is CstPredicate.State.INIT) {
-	pred.setGroupContext(group);
+      if (! pred.isGuard()) {
+	if (pred._state is CstPredicate.State.INIT) {
+	  pred.setGroupContext(group);
+	}
       }
     }
     if (_esdl__parentIsConstrained) {
@@ -666,8 +746,6 @@ interface CstVecExpr: CstExpr
 
   CstVecExpr unroll(CstIterator iter, ulong n);
 
-  bool isOrderingExpr();
-
   uint bitcount();
   bool signed();
 
@@ -678,7 +756,7 @@ interface CstLogicExpr: CstExpr
   DistRangeSetBase getDist();
   CstVecExpr isNot(CstDomain A);
   CstLogicExpr unroll(CstIterator iter, ulong n);
-  bool isOrderingExpr(); // {return false;}
+  bool isOrderingExpr();
 }
 
 
@@ -711,8 +789,5 @@ abstract class CstIterator: CstVecTerm
   }
   long evaluate() {
     assert(false, "Can not evaluate an Iterator: " ~ this.name());
-  }
-  bool isOrderingExpr() {
-    return false;		// only CstVecOrderingExpr return true
   }
 }

@@ -302,11 +302,13 @@ class CstBuddySolver: CstSolver
 
     foreach (pred; group.predicates()) {
       // import std.stdio;
-      // writeln("Working on: ", pred.name());
+      // writeln("Buddy Working on: ", pred.name());
       if (pred.group() !is group) {
 	assert (false, "Group Violation " ~ pred.name());
       }
-      if (! pred.isGuard()) {
+      if (! pred.isGuard() && ! pred.withDist()) {
+	// import std.stdio;
+	// writeln(pred.describe());
 	pred.visit(this);
 	_context.addRule(_evalStack[0].toBool());
 	popEvalStack();

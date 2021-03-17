@@ -189,10 +189,6 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 	return false;
       }
 
-      bool isOrderingExpr() {
-	return false;		// only CstVecOrderingExpr return true
-      }
-
       void setDomainContext(CstPredicate pred,
 			    ref CstDomain[] rnds,
 			    ref CstDomSet[] rndArrs,
@@ -336,10 +332,6 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 
       bool isIterator() {
 	return false;
-      }
-
-      bool isOrderingExpr() {
-	return false;		// only CstVecOrderingExpr return true
       }
 
       void setDomainContext(CstPredicate pred,

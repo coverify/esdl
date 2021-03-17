@@ -44,8 +44,13 @@ class CstPredGroup			// group of related predicates
   Folder!(CstPredicate, "preds") _preds;
   Folder!(CstPredicate, "dynPreds") _dynPreds;
 
+  Folder!(CstPredicate, "distPreds") _distPreds;
+  Folder!(CstPredicate, "withDistPreds") _withDistPreds;
+  
   Folder!(CstPredicate, "predList") _predList;
   Folder!(CstPredicate, "dynPredList") _dynPredList;
+  Folder!(CstPredicate, "distPredList") _distPredList;
+  Folder!(CstPredicate, "withDistPredList") _withDistPredList;
   
   CstPredicate[] predicates() {
     return _preds[];
@@ -74,18 +79,40 @@ class CstPredGroup			// group of related predicates
     _dynPredList ~= pred;
   }
 
+  void addDistPredicate(CstPredicate pred) {
+    _distPredList ~= pred;
+  }
+
+  void addWithDistPredicate(CstPredicate pred) {
+    _withDistPredList ~= pred;
+  }
+
   // The flag _hasDynamicBinding gets set if there is at least one
   // predicate that has a dynamically resolvable constraint --
   // typically that would mean a random variable dependancy as part of index 
   bool _hasDynamicBinding;
 
   Folder!(CstDomain, "doms") _doms;
-
   uint addDomain(CstDomain dom) {
     uint index = cast (uint) _doms.length;
     _doms ~= dom;
     return index;
   }
+
+  Folder!(CstDomain, "distDoms") _distDoms;
+  uint addDistDomain(CstDomain dom) {
+    uint index = cast (uint) _distDoms.length;
+    _distDoms ~= dom;
+    return index;
+  }
+
+  Folder!(CstDomain, "rnds") _rnds;
+  uint addRandom(CstDomain rnd) {
+    uint index = cast (uint) _rnds.length;
+    _rnds ~= rnd;
+    return index;
+  }
+
 
   CstDomain[] domains() {
     return _doms[];
@@ -129,10 +156,14 @@ class CstPredGroup			// group of related predicates
     if (_state is State.NEEDSYNC ||
 	_proxy.needSync() is true ||
 	_predList.length != _preds.length ||
-	_dynPredList.length != _dynPreds.length) {
+	_dynPredList.length != _dynPreds.length ||
+	_distPredList.length != _distPreds.length ||
+	_withDistPredList.length != _withDistPreds.length) {
+
       _hasSoftConstraints = false;
       _hasVectorConstraints = false;
       _hasUniqueConstraints = false;
+
       _state = State.NEEDSYNC;	// mark that we need to reassign a solver
       foreach (pred; _preds) pred._group = null;
       _preds.reset();
@@ -143,6 +174,15 @@ class CstPredGroup			// group of related predicates
 	if (pred._uniqueFlag is true) _hasUniqueConstraints = true;
 	_preds ~= pred;
       }
+      foreach (pred; _distPreds) pred._group = null;
+      _distPreds.reset();
+      foreach (pred; sort!((x, y) => x.name() < y.name())(_distPredList[])) {
+	pred._group = this;
+	if (pred._soft != 0) _hasSoftConstraints = true;
+	if (pred._vectorOp != CstVectorOp.NONE) _hasVectorConstraints = true;
+	if (pred._uniqueFlag is true) _hasUniqueConstraints = true;
+	_distPreds ~= pred;
+      }
       foreach (pred; _dynPreds) pred._group = null;
       _dynPreds.reset();
       foreach (pred; sort!((x, y) => x.name() < y.name())(_dynPredList[])) {
@@ -152,32 +192,29 @@ class CstPredGroup			// group of related predicates
 	if (pred._uniqueFlag is true) _hasUniqueConstraints = true;
 	_dynPreds ~= pred;
       }
+      foreach (pred; _withDistPreds) pred._group = null;
+      _withDistPreds.reset();
+      foreach (pred; sort!((x, y) => x.name() < y.name())(_withDistPredList[])) {
+	pred._group = this;
+	if (pred._soft != 0) _hasSoftConstraints = true;
+	if (pred._vectorOp != CstVectorOp.NONE) _hasVectorConstraints = true;
+	if (pred._uniqueFlag is true) _hasUniqueConstraints = true;
+	_withDistPreds ~= pred;
+      }
     }
     // for the next cycle
     _predList.reset();
+    _distPredList.reset();
     _dynPredList.reset();
+    _withDistPredList.reset();
   }
 
   void annotate() {
-    foreach (pred; _preds) {
-      foreach (rnd; pred._rnds) {
-	rnd.annotate(this);
-      }
-      foreach (rndArr; pred._rndArrs) {
-	addDomainArr(rndArr);
-	foreach (rnd; rndArr[]) {
-	  rnd.annotate(this);
-	}
-      }
-      foreach (var; pred._vars) {
-	var.annotate(this);
-      }
-      foreach (varArr; pred._varArrs) {
-	addVariableArr(varArr);
-	foreach (var; varArr[]) {
-	  var.annotate(this);
-	}
-      }
+    foreach (pred; _preds) pred.annotate(this, false);
+    foreach (pred; _distPreds) {
+      // import std.stdio;
+      // writeln("Annotating: ", pred.name);
+      pred.annotate(this, true);
     }
   }
 
@@ -187,6 +224,12 @@ class CstPredGroup			// group of related predicates
     _sig.reset();
     _sig ~= "GROUP:\n";
     foreach (pred; _preds) {
+      pred.writeSignature(_sig);
+    }
+    foreach (pred; _distPreds) {
+      pred.writeSignature(_sig);
+    }
+    foreach (pred; _withDistPreds) {
       pred.writeSignature(_sig);
     }
     return _sig.toString();
@@ -223,7 +266,7 @@ class CstPredGroup			// group of related predicates
 
   void solve() {
     // import std.stdio;
-    // writeln(this.describe());
+    // writeln("Solving: ", this.describe());
     if (_proxy._esdl__debugSolver()) {
       import std.stdio;
       writeln(describe());
@@ -245,6 +288,10 @@ class CstPredGroup			// group of related predicates
       if (solverp !is null) {
 	_solver = *solverp;
 	_solver.solve(this);
+      }
+      else if (_doms.length == 0) {
+	assert (_solver is null);
+	_solver = null;
       }
       else {
 	if (_hasSoftConstraints || _hasVectorConstraints) {
@@ -291,7 +338,13 @@ class CstPredGroup			// group of related predicates
 	  }
 	  if (! monoFlag) {
 	    uint totalBits;
-	    foreach (dom; _doms) totalBits += dom.bitcount();
+	    uint domBits;
+	    foreach (dom; _doms) {
+	      assert (! dom.isProperDist());
+	      uint domBC = dom.bitcount();
+	      totalBits += domBC;
+	      domBits += domBC;
+	    }
 	    foreach (var; _vars) totalBits += var.bitcount();
 	    if (totalBits > 32 || _hasUniqueConstraints) {
 	      if (_proxy._esdl__debugSolver()) {
@@ -318,9 +371,20 @@ class CstPredGroup			// group of related predicates
       // import std.stdio;
       // writeln(_solver.describe());
       // writeln("We are here");
-      _solver.solve(this);
+      if (_solver !is null) _solver.solve(this);
     }
 
+    foreach (rnd; _rnds) {
+      // import std.stdio;
+      // writeln("Randomizing: ", rnd.name());
+      rnd.randomizeWithoutConstraints(_proxy);
+    }
+
+    foreach (pred; _distPreds) {
+      // import std.stdio;
+      // writeln("Working on: ", pred.name());
+      pred.markSolved();
+    }
     // import std.stdio;
     // writeln(_solver.describe());
     // _solver.solve(this);
@@ -340,9 +404,21 @@ class CstPredGroup			// group of related predicates
 	description ~= "    " ~ pred.name() ~ '\n';
       }
     }
+    if (_distPreds.length > 0) {
+      description ~= "  Dist Predicates:\n";
+      foreach (pred; _distPreds) {
+	description ~= "    " ~ pred.name() ~ '\n';
+      }
+    }
     if (_dynPreds.length > 0) {
       description ~= "  Dynamic Predicates:\n";
       foreach (pred; _dynPreds) {
+	description ~= "    " ~ pred.name() ~ '\n';
+      }
+    }
+    if (_withDistPreds.length > 0) {
+      description ~= "  With Dist Predicates:\n";
+      foreach (pred; _withDistPreds) {
 	description ~= "    " ~ pred.name() ~ '\n';
       }
     }
@@ -391,13 +467,23 @@ class CstPredicate: CstIterCallback, CstDepCallback
   }
   // alias _expr this;
 
-  enum State: byte {
-    INIT = 0,
-      GROUPED = 1,
-      SOLVED = 2,
-      }
+  enum State: byte { INIT = 0, GROUPED = 1, SOLVED = 2 }
 
   bool _markBefore;
+
+  bool _hasDistDomain;
+
+  void hasDistDomain(bool v) {
+    _hasDistDomain = v;
+  }
+  bool hasDistDomain() {
+    return _hasDistDomain;
+  }
+
+  bool withDist() {
+    return _hasDistDomain || isDist();
+  }
+  
   _esdl__ConstraintBase _constraint;
   uint _statement;
   _esdl__Proxy _proxy;
@@ -413,6 +499,14 @@ class CstPredicate: CstIterCallback, CstDepCallback
   bool _guardInv;
   bool guardInv() { return _guardInv; }
     
+  bool isGuardEnabled() {
+    // if (_guard is null) return true;
+    // else {
+    //   auto gv = _guard.evaluate();
+      
+    // }
+    return true;
+  }
   
   uint _level;
   uint _unrollCycle;
@@ -605,6 +699,12 @@ class CstPredicate: CstIterCallback, CstDepCallback
     }
     return false;
   }
+
+  // Excl. Conds -- The special case of mono and dist preds
+  CstDomain _dom;	    	// would be null if multiple domains
+  CstDomain getDom() {
+    return _dom;
+  }
   
   CstDomain[] _rnds;
   CstDomSet[] _rndArrs;
@@ -709,13 +809,20 @@ class CstPredicate: CstIterCallback, CstDepCallback
 
   final void setDomainContext(CstPredicate pred) {
     
-    if (_guard !is null) {
-      _guard.setDomainContext(pred);
-    }
-
     _expr.setDomainContext(pred, pred._rnds, pred._rndArrs, pred._vars,
 			   pred._varArrs, pred._vals, pred._varIters,
 			   pred._idxs, pred._bitIdxs, pred._deps);
+
+    if (this is pred && _rnds.length == 1 && _rndArrs.length == 0)
+      _dom = _rnds[0];
+
+    // if (this is pred && this.isDist()) {
+    //   assert (_rnds.length == 1 && _rndArrs.length == 0);
+    // }
+
+    if (_guard !is null) {
+      _guard.setDomainContext(pred);
+    }
 
     if (this is pred) {
     
@@ -727,7 +834,7 @@ class CstPredicate: CstIterCallback, CstDepCallback
       //   _len = _iters[0].getLenVec();
       // }
     
-      if(!getExpr().isOrderingExpr()){
+      if(! getExpr().isOrderingExpr()){
 	foreach (rnd; _rnds) {
 	  rnd.registerRndPred(this);
 	  if (! rnd.isStatic()) {
@@ -891,8 +998,15 @@ class CstPredicate: CstIterCallback, CstDepCallback
     }
     if (_rndArrs.length != 0) group.needSync();
     if (_bitIdxs.length != 0) group.needSync();
-    if (this.isDynamic()) group.addDynPredicate(this);
-    else group.addPredicate(this);
+    if (this.isDynamic()) {
+      if (this.withDist()) { assert (false); } // group.addWithDistPredicate(this);
+      else                 group.addDynPredicate(this);
+    }
+    else {
+      if (this.isDist())        group.addDistPredicate(this);
+      else if (this.withDist()) group.addWithDistPredicate(this);
+      else                      group.addPredicate(this);
+    }
     foreach (dom; _rnds) {
       // if (dom.group is null && (! dom.isSolved())) {
       if (dom._state is CstDomain.State.INIT && (! dom.isSolved())) {
@@ -904,6 +1018,28 @@ class CstPredicate: CstIterCallback, CstDepCallback
       if (arr._state is CstDomSet.State.INIT // && (! arr.isSolved())
 	  ) {
 	arr.setGroupContext(group);
+      }
+    }
+  }
+
+  void annotate(CstPredGroup group, bool withDist) {
+    assert (! this.isGuard());
+    foreach (rnd; this._rnds) {
+      rnd.annotate(group, withDist);
+    }
+    foreach (rndArr; this._rndArrs) {
+      group.addDomainArr(rndArr);
+      foreach (rnd; rndArr[]) {
+	rnd.annotate(group, withDist);
+      }
+    }
+    foreach (var; this._vars) {
+      var.annotate(group, withDist);
+    }
+    foreach (varArr; this._varArrs) {
+      group.addVariableArr(varArr);
+      foreach (var; varArr[]) {
+	var.annotate(group, withDist);
       }
     }
   }
@@ -923,9 +1059,15 @@ class CstPredicate: CstIterCallback, CstDepCallback
     _expr.writeExprString(str);
   }
 
-  bool _isDist;
-  bool isDist() { return _isDist; }
-  void isDist(bool b) { _isDist = b; }
+  bool isDist() { return _distDomain !is null; }
+  CstDomain _distDomain;
+  void distDomain(CstDomain vec) {
+    assert (_distDomain is null);
+    _distDomain = vec;
+  }
+  CstDomain distDomain() {
+    return _distDomain;
+  }
 
   void markSolved() {
     assert (_state == State.GROUPED);

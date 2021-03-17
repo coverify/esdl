@@ -786,6 +786,9 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       super(eng, name);
     }
     debug(CSTPARSER) {
+      pragma(msg, "/* Constraint Soecification STARTS\n");
+      pragma(msg, _esdl__CstString);
+      pragma(msg, "\nConstraint Soecification ENDS */");
       pragma(msg, "// constraintXlate! STARTS\n");
       pragma(msg, constraintXlate("this.outer", _esdl__CstString, FILE, LINE));
       pragma(msg, "// constraintXlate! ENDS\n");

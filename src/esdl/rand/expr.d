@@ -8,7 +8,8 @@ import esdl.rand.misc: rand, _esdl__RandGen, isVecSigned, Unconst, CstVectorOp, 
 import esdl.rand.misc: CstBinaryOp, CstCompareOp, CstLogicOp,
   CstUnaryOp, CstSliceOp, writeHexString, CstUniqueOp;
 
-import esdl.rand.base;
+import esdl.rand.base: DomDistEnum, CstVecExpr, CstLogicExpr, CstDomain, CstDomSet,
+  CstIterator, CstVecNodeIntf, CstVarNodeIntf, CstVecArrIntf, CstVecPrim, DomType;
 import esdl.rand.pred: CstPredicate, CstPredGroup;
 import esdl.rand.func;
 import esdl.rand.proxy: _esdl__Proxy;
@@ -195,18 +196,6 @@ class CstVecDomain(T, rand RAND_ATTR): CstDomain
   enum HAS_RAND_ATTRIB = RAND_ATTR.isRand();
 
   Unconst!T _shadowValue;
-
-  override void annotate(CstPredGroup group) {
-    if (_domN == uint.max) {
-      if (this.isSolved()) {
-	_domN = group.addVariable(this);
-	if (_varN == uint.max) _varN = _root.indexVar();
-      }
-      else {
-	_domN = group.addDomain(this);
-      }
-    }
-  }
 
   static if (is (T == enum)) {
     alias OT = OriginalType!T;
@@ -668,20 +657,20 @@ class CstOrderingExpr: CstLogicExpr
   CstDomain _first;
   CstDomain _second;
   bool _isSolved;
-  this (CstDomain a, CstDomain b){
+  this (CstDomain a, CstDomain b) {
     _first = a;
     _second = b;
   }
-  override bool isOrderingExpr(){
+  override bool isOrderingExpr() {
     return true;
   }
-  override DistRangeSetBase getDist(){
+  override DistRangeSetBase getDist() {
     assert(false);
   }
-  override CstVecExpr isNot(CstDomain A){
+  override CstVecExpr isNot(CstDomain A) {
     assert(false);
   }
-  override CstLogicExpr unroll(CstIterator iter, ulong n){
+  override CstLogicExpr unroll(CstIterator iter, ulong n) {
     assert(false);
   }
   void setDomainContext(CstPredicate pred,
@@ -1065,10 +1054,6 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecPrim
     return false;
   }
   
-  bool isOrderingExpr() {
-    return false;		// only CstVecOrderingExpr return true
-  }
-
   void setDomainContext(CstPredicate pred,
 			ref CstDomain[] rnds,
 			ref CstDomSet[] rndArrs,
@@ -1260,10 +1245,6 @@ class CstVecValue(T): CstValue
     return cast(long) _val;
   }
 
-  bool isOrderingExpr() {
-    return false;		// only CstVecOrderingExpr return true
-  }
-
   bool isSolved() {
     return true;
   }
@@ -1389,10 +1370,6 @@ class CstVecArrExpr: CstVecTerm
 
   bool isIterator() {
     return false;
-  }
-
-  bool isOrderingExpr() {
-    return false;		// only CstVecOrderingExpr return true
   }
 
   void setDomainContext(CstPredicate pred,
@@ -1536,10 +1513,6 @@ class CstVec2VecExpr: CstVecTerm
     return false;
   }
 
-  bool isOrderingExpr() {
-    return false;		// only CstVecOrderingExpr return true
-  }
-
   void setDomainContext(CstPredicate pred,
 			ref CstDomain[] rnds,
 			ref CstDomSet[] rndArrs,
@@ -1614,10 +1587,6 @@ class CstRangeExpr
   //   return false;
   // }
 
-  // bool isOrderingExpr() {
-  //   return false;		// only CstVecOrderingExpr return true
-  // }
-
   void setDomainContext(CstPredicate pred,
 				 ref CstDomain[] rnds,
 				 ref CstDomSet[] rndArrs,
@@ -1690,10 +1659,6 @@ class CstDistSetElem
 
   // bool isIterator() {
   //   return false;
-  // }
-
-  // bool isOrderingExpr() {
-  //   return false;		// only CstVecOrderingExpr return true
   // }
 
   void setDomainContext(CstPredicate pred,
@@ -1796,10 +1761,6 @@ class CstUniqueSetElem
   //   return false;
   // }
 
-  // bool isOrderingExpr() {
-  //   return false;		// only CstVecOrderingExpr return true
-  // }
-
   void setDomainContext(CstPredicate pred,
 			ref CstDomain[] rnds,
 			ref CstDomSet[] rndArrs,
@@ -1895,10 +1856,6 @@ class CstInsideSetElem
   //   return false;
   // }
 
-  // bool isOrderingExpr() {
-  //   return false;		// only CstVecOrderingExpr return true
-  // }
-
   void setDomainContext(CstPredicate pred,
 			ref CstDomain[] rnds,
 			ref CstDomSet[] rndArrs,
@@ -1974,10 +1931,6 @@ class CstWeightedDistSetElem
   //   return false;
   // }
 
-  // bool isOrderingExpr() {
-  //   return false;		// only CstVecOrderingExpr return true
-  // }
-
   void setDomainContext(CstPredicate pred,
 			ref CstDomain[] rnds,
 			ref CstDomSet[] rndArrs,
@@ -2045,9 +1998,25 @@ class CstDistExpr(T): CstLogicTerm
   }
 
   void visit(CstSolver solver) {
-    assert (false, "Can not visit Dist Constraint: " ~ describe());
+    solver.pushToEvalStack(false);
+    _vec.visit(solver);
+    solver.processEvalStack(CstInsideOp.INSIDE);
+    foreach (dist; _dists) {
+      auto elem = dist._range;
+      elem._lhs.visit(solver);
+      if (elem._rhs !is null) {
+	elem._rhs.visit(solver);
+	if (elem._inclusive) solver.processEvalStack(CstInsideOp.RANGEINCL);
+	else solver.processEvalStack(CstInsideOp.RANGE);
+	// solver.processEvalStack(CstLogicOp.LOGICAND);
+      }
+      else {
+	solver.processEvalStack(CstInsideOp.EQUAL);
+      }
+    }
+    solver.processEvalStack(CstInsideOp.DONE);
   }
-
+  
   override CstDistExpr!T unroll(CstIterator iter, ulong n) {
     // import std.stdio;
     // writeln(_lhs.describe() ~ " " ~ _op.to!string ~ " " ~ _rhs.describe() ~ " Getting unwound!");
@@ -2067,8 +2036,8 @@ class CstDistExpr(T): CstLogicTerm
 				 ref CstDomain[] bitIdxs,
 				 ref CstVecNodeIntf[] deps) {
     rnds ~= _vec;
-    pred.isDist(true);
-    _vec.isDist(true);
+    pred.distDomain(_vec);
+    _vec.isDist(DomDistEnum.DETECT);
   }
 
   bool isSolved() {
@@ -2076,8 +2045,13 @@ class CstDistExpr(T): CstLogicTerm
   }
 
   void writeExprString(ref Charbuf str) {
-    assert(false);
+    str ~= "DIST ";
+    _vec.writeExprString(str);
+    foreach (dist; _dists) {
+      dist.writeExprString(str);
+    }
   }
+  
   CstVecExpr isNot(CstDomain dom){
     return null;
   }
@@ -2139,10 +2113,6 @@ class CstDistExpr(T): CstLogicTerm
 
 //   bool isIterator() {
 //     return false;
-//   }
-
-//   bool isOrderingExpr() {
-//     return false;		// only CstVecOrderingExpr return true
 //   }
 
 //   void setDomainContext(CstPredicate pred,
@@ -2239,10 +2209,6 @@ class CstVecSliceExpr: CstVecTerm
     return false;
   }
 
-  bool isOrderingExpr() {
-    return false;		// only CstVecOrderingExpr return true
-  }
-
   void setDomainContext(CstPredicate pred,
 			ref CstDomain[] rnds,
 			ref CstDomSet[] rndArrs,
@@ -2310,10 +2276,6 @@ class CstVecSliceExpr: CstVecTerm
 
 //   bool isIterator() {
 //     return false;
-//   }
-
-//   bool isOrderingExpr() {
-//     return false;		// only CstVecOrderingExpr return true
 //   }
 
 //   void setDomainContext(CstPredicate pred,
@@ -2399,10 +2361,6 @@ class CstNotVecExpr: CstVecTerm
     return false;
   }
 
-  bool isOrderingExpr() {
-    return false;		// only CstVecOrderingExpr return true
-  }
-
   void setDomainContext(CstPredicate pred,
 			ref CstDomain[] rnds,
 			ref CstDomSet[] rndArrs,
@@ -2482,10 +2440,6 @@ class CstNegVecExpr: CstVecTerm
 
   bool isIterator() {
     return false;
-  }
-
-  bool isOrderingExpr() {
-    return false;		// only CstVecOrderingExpr return true
   }
 
   void setDomainContext(CstPredicate pred,
