@@ -18,7 +18,7 @@ interface CstVarNodeIntf {
   bool _esdl__isObjArray();
   CstIterator _esdl__iter();
   CstVarNodeIntf _esdl__getChild(ulong n);
-  void visit();			// when an object is unrolled
+  void scan();			// when an object is unrolled
 }
 
 interface CstVecNodeIntf: CstVarNodeIntf {
@@ -415,7 +415,7 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
   }
 
   bool _esdl__parentIsConstrained;
-  override abstract string describe();
+  abstract string describe();
 }
 
 abstract class CstObjSet: CstObjArrVoid, CstObjArrIntf
@@ -636,9 +636,9 @@ interface CstVecPrim
   abstract void addPreRequisite(CstVecPrim other);
 }
 
-abstract class CstExpr: CstVectorVoid
+interface CstExpr
 {
-  string describe();
+  abstract string describe();
 
   abstract void setDomainContext(CstPredicate pred,
 				 ref CstDomain[] rnds,
@@ -653,7 +653,7 @@ abstract class CstExpr: CstVectorVoid
 
   abstract bool isSolved();
   abstract void visit(CstSolver solver);
-  void visit() {}		// used for CstVarVisitorExpr
+  abstract void scan(); // {}		// used for CstVarVisitorExpr
   abstract void writeExprString(ref Charbuf str);
 }
 
@@ -678,10 +678,7 @@ abstract class CstLogicExpr: CstExpr
   abstract DistRangeSetBase getDist();
   abstract CstVecExpr isNot(CstDomain A);
   abstract CstLogicExpr unroll(CstIterator iter, ulong n);
-  bool isOrderingExpr(){
-    return false;
-  }
-
+  abstract bool isOrderingExpr(); // {return false;}
 }
 
 

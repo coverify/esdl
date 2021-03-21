@@ -985,7 +985,7 @@ class CstVisitorPredicate: CstPredicate
     // array than the current value of currLen
     for (size_t i=0; i!=currLen; ++i) {
       if (_uwPreds[i]._iters.length == 0) { // completely unrolled
-	_uwPreds[i]._expr.visit();
+	_uwPreds[i]._expr.scan();
 	// import std.stdio;
 	// writeln("Collecting constraints from: ", _uwPreds[i]._expr.describe());
       }

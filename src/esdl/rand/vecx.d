@@ -193,16 +193,16 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 	return false;		// only CstVecOrderingExpr return true
       }
 
-      override void setDomainContext(CstPredicate pred,
-				     ref CstDomain[] rnds,
-				     ref CstDomSet[] rndArrs,
-				     ref CstDomain[] vars,
-				     ref CstDomSet[] varArrs,
-				     ref CstValue[] vals,
-				     ref CstIterator[] iters,
-				     ref CstVecNodeIntf[] idxs,
-				     ref CstDomain[] bitIdxs,
-				     ref CstVecNodeIntf[] deps) {
+      void setDomainContext(CstPredicate pred,
+			    ref CstDomain[] rnds,
+			    ref CstDomSet[] rndArrs,
+			    ref CstDomain[] vars,
+			    ref CstDomSet[] varArrs,
+			    ref CstValue[] vals,
+			    ref CstIterator[] iters,
+			    ref CstVecNodeIntf[] idxs,
+			    ref CstDomain[] bitIdxs,
+			    ref CstVecNodeIntf[] deps) {
 	static if (RAND_ATTR.isRand()) {
 	  if (! canFind(rnds, this)) rnds ~= this;
 	}
@@ -342,16 +342,16 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	return false;		// only CstVecOrderingExpr return true
       }
 
-      override void setDomainContext(CstPredicate pred,
-				     ref CstDomain[] rnds,
-				     ref CstDomSet[] rndArrs,
-				     ref CstDomain[] vars,
-				     ref CstDomSet[] varArrs,
-				     ref CstValue[] vals,
-				     ref CstIterator[] iters,
-				     ref CstVecNodeIntf[] idxs,
-				     ref CstDomain[] bitIdxs,
-				     ref CstVecNodeIntf[] deps) {
+      void setDomainContext(CstPredicate pred,
+			    ref CstDomain[] rnds,
+			    ref CstDomSet[] rndArrs,
+			    ref CstDomain[] vars,
+			    ref CstDomSet[] varArrs,
+			    ref CstValue[] vals,
+			    ref CstIterator[] iters,
+			    ref CstVecNodeIntf[] idxs,
+			    ref CstDomain[] bitIdxs,
+			    ref CstVecNodeIntf[] deps) {
 	static if (RAND_ATTR.isRand()) {
 	  if (! this.isStatic()) {
 	    if (_type <= DomType.LAZYMONO) _type = DomType.MAYBEMONO;

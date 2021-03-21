@@ -186,6 +186,8 @@ abstract class CstVecTerm: CstVecExpr
       return lhs & rhs;
     }
   }
+
+  void scan() { }
 }
 
 class CstVecDomain(T, rand RAND_ATTR): CstDomain
@@ -298,12 +300,12 @@ class CstVecDomain(T, rand RAND_ATTR): CstDomain
     }
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     // assert (solver !is null);
     solver.pushToEvalStack(this);
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str) {
     if (this.isSolved()) {
       str ~= 'V';
       if (_domN < 256) (cast(ubyte) _domN).writeHexString(str);
@@ -683,32 +685,33 @@ class CstOrderingExpr: CstLogicExpr
   override CstLogicExpr unroll(CstIterator iter, ulong n){
     assert(false);
   }
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
     rnds ~= _first;
     rnds ~= _second;
   }
-  override bool isSolved(){
+  bool isSolved(){
     return _isSolved;
   }
-  override void visit(CstSolver solver){
+  void visit(CstSolver solver){
     assert(false, "cannot visit an ordering expression");
   }
-  override void writeExprString(ref Charbuf str){
+  void writeExprString(ref Charbuf str){
     assert(false);
   }
-  override string describe(){
+  string describe(){
     string str = "( " ~ _first.describe() ~ " is solved before " ~ _second.describe() ~ " )";
     return str;
   }
+  void scan() { }
 }
 
 abstract class CstLogicTerm: CstLogicExpr
@@ -779,6 +782,8 @@ abstract class CstLogicTerm: CstLogicExpr
     return new CstLogic2LogicExpr(this, other.toBoolExpr(), CstLogicOp.LOGICAND);
   }
 
+  void scan() { }
+  override bool isOrderingExpr() { return false; }
 }
 
 class CstArrIterator(RV): CstIterator
@@ -826,7 +831,7 @@ class CstArrIterator(RV): CstIterator
     return n ~ "->iterator";
   }
 
-  override string describe() {
+  string describe() {
     return name();
   }
 
@@ -853,7 +858,7 @@ class CstArrIterator(RV): CstIterator
     return _arrVar.unroll(iter,n).arrLen().makeIterVar();
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     assert (false, "Can not visit an Iter Variable without unrolling");
   }
 
@@ -861,16 +866,16 @@ class CstArrIterator(RV): CstIterator
   //   return false;
   // }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
     deps ~= getLenVec();
     iters ~= this;
   }
@@ -883,12 +888,12 @@ class CstArrIterator(RV): CstIterator
     return 64;
   }
   
-  override bool isSolved() {
+  bool isSolved() {
     return _arrVar._arrLen.isSolved();
   }
 
 
-  override void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str) {
     // assert(false);
   }
 }
@@ -1065,16 +1070,16 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecPrim
     return false;		// only CstVecOrderingExpr return true
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
     bool listed;
     foreach (rnd; rnds) {
       if (rnd is this) {
@@ -1216,7 +1221,7 @@ class CstVecValue(T): CstValue
 
   T _val;			// the value of the constant
 
-  override string describe() {
+  string describe() {
     return _val.to!string();
   }
 
@@ -1239,7 +1244,7 @@ class CstVecValue(T): CstValue
   ~this() {
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     solver.pushToEvalStack(this);
   }
 
@@ -1260,24 +1265,24 @@ class CstVecValue(T): CstValue
     return false;		// only CstVecOrderingExpr return true
   }
 
-  override bool isSolved() {
+  bool isSolved() {
     return true;
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
     vals ~= this;
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str) {
     // VSxxxxx or VUxxxxx
     str ~= 'V';
     static if (isBoolean!T) {
@@ -1314,11 +1319,11 @@ class CstVecArrExpr: CstVecTerm
   CstDomSet _arr;
   CstVectorOp _op;
 
-  override string describe() {
+  string describe() {
     return "( " ~ _arr.fullName ~ " " ~ _op.to!string() ~ " )";
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     CstVecArrIntf.Range range = _arr[];
     solver.pushToEvalStack(0, 32, true);
 
@@ -1391,26 +1396,26 @@ class CstVecArrExpr: CstVecTerm
     return false;		// only CstVecOrderingExpr return true
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
     pred._vectorOp = _op;
     _arr.setDomainArrContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
     assert (rndArrs.length > 0 || varArrs.length > 0);
   }
 
-  override bool isSolved() {
+  bool isSolved() {
     return false;
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str) {
     str ~= '(';
     str ~= _op.to!string;
     str ~= ' ';
@@ -1429,11 +1434,11 @@ class CstVec2VecExpr: CstVecTerm
   CstVecExpr _rhs;
   CstBinaryOp _op;
 
-  override string describe() {
+  string describe() {
     return "( " ~ _lhs.describe ~ " " ~ _op.to!string() ~ " " ~ _rhs.describe ~ " )";
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     _lhs.visit(solver);
     _rhs.visit(solver);
     solver.processEvalStack(_op);
@@ -1536,25 +1541,25 @@ class CstVec2VecExpr: CstVecTerm
     return false;		// only CstVecOrderingExpr return true
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
     _lhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
     _rhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
 
-  override bool isSolved() {
+  bool isSolved() {
     return _lhs.isSolved() && _rhs.isSolved();
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str) {
     str ~= '(';
     str ~= _op.to!string;
     str ~= ' ';
@@ -2030,7 +2035,7 @@ class CstDistExpr(T): CstLogicTerm
     return _rs;
   }
 
-  override string describe() {
+  string describe() {
     string str = "( " ~ _vec.describe() ~ " dist ";
     foreach (dist; _dists) {
       assert (dist !is null);
@@ -2040,7 +2045,7 @@ class CstDistExpr(T): CstLogicTerm
     return str;
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     assert (false, "Can not visit Dist Constraint: " ~ describe());
   }
 
@@ -2052,7 +2057,7 @@ class CstDistExpr(T): CstLogicTerm
     return new CstDistExpr!T(cast (CstDomain) (_vec.unroll(iter, n)), _dists);
   }
 
-  override void setDomainContext(CstPredicate pred,
+  void setDomainContext(CstPredicate pred,
 				 ref CstDomain[] rnds,
 				 ref CstDomSet[] rndArrs,
 				 ref CstDomain[] vars,
@@ -2067,11 +2072,11 @@ class CstDistExpr(T): CstLogicTerm
     _vec.isDist(true);
   }
 
-  override bool isSolved() {
+  bool isSolved() {
     return _vec.isSolved();
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str) {
     assert(false);
   }
   override CstVecExpr isNot(CstDomain dom){
@@ -2179,11 +2184,11 @@ class CstVecSliceExpr: CstVecTerm
   CstVecExpr _vec;
   CstRangeExpr _range;
   
-  override string describe() {
+  string describe() {
     return _vec.describe() ~ "[ " ~ _range.describe() ~ " ]";
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     _vec.visit(solver);
     // _range.visit(solver);
     assert (_range._lhs.isSolved());
@@ -2239,25 +2244,25 @@ class CstVecSliceExpr: CstVecTerm
     return false;		// only CstVecOrderingExpr return true
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
     _vec.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
     _range.setDomainContext(pred, bitIdxs, rndArrs, bitIdxs, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
 
-  override bool isSolved() {
+  bool isSolved() {
     return _range.isSolved() && _vec.isSolved();
   }
   
-  override void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str) {
     _vec.writeExprString(str);
     str ~= '[';
     _range.writeExprString(str);
@@ -2344,11 +2349,11 @@ class CstNotVecExpr: CstVecTerm
 
   CstVecExpr _expr;
 
-  override string describe() {
+  string describe() {
     return "( ~ " ~ _expr.describe ~ " )";
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     _expr.visit(solver);
     solver.processEvalStack(CstUnaryOp.NOT);
   }
@@ -2399,24 +2404,24 @@ class CstNotVecExpr: CstVecTerm
     return false;		// only CstVecOrderingExpr return true
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
     _expr.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
 
-  override bool isSolved() {
+  bool isSolved() {
     return _expr.isSolved();
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str) {
     str ~= "(NOT ";
     _expr.writeExprString(str);
     str ~= ')';
@@ -2429,11 +2434,11 @@ class CstNegVecExpr: CstVecTerm
 
   CstVecExpr _expr;
 
-  override string describe() {
+  string describe() {
     return "( - " ~ _expr.describe ~ " )";
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     _expr.visit(solver);
     solver.processEvalStack(CstUnaryOp.NEG);
   }
@@ -2484,24 +2489,24 @@ class CstNegVecExpr: CstVecTerm
     return false;		// only CstVecOrderingExpr return true
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
     _expr.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
 
-  override bool isSolved() {
+  bool isSolved() {
     return _expr.isSolved();
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str) {
     str ~= "(NEG ";
     _expr.writeExprString(str);
     str ~= ')';
@@ -2523,11 +2528,11 @@ class CstLogic2LogicExpr: CstLogicTerm
     _op = op;
   }
 
-  override string describe() {
+  string describe() {
     return "( " ~ _lhs.describe ~ " " ~ _op.to!string ~ " " ~ _rhs.describe ~ " )";
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     _lhs.visit(solver);
     _rhs.visit(solver);
     solver.processEvalStack(_op);
@@ -2537,16 +2542,16 @@ class CstLogic2LogicExpr: CstLogicTerm
     return new CstLogic2LogicExpr(_lhs.unroll(iter, n), _rhs.unroll(iter, n), _op);
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
     _lhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
     _rhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
@@ -2559,11 +2564,11 @@ class CstLogic2LogicExpr: CstLogicTerm
     return false;
   }
 
-  override bool isSolved() {
+  bool isSolved() {
     return _lhs.isSolved && _rhs.isSolved();
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str) {
     str ~= '(';
     str ~= _op.to!string;
     str ~= ' ';
@@ -2588,7 +2593,7 @@ class CstInsideArrExpr: CstLogicTerm
 
   void setNotInside() { _notinside = true; }
 
-  override string describe() {
+  string describe() {
     string description = "( " ~ _term.describe() ~ " inside [";
     foreach (elem; _elems) {
       description ~= elem.describe();
@@ -2597,7 +2602,7 @@ class CstInsideArrExpr: CstLogicTerm
     return description;
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     solver.pushToEvalStack(false);
     _term.visit(solver);
     solver.processEvalStack(CstInsideOp.INSIDE);
@@ -2645,16 +2650,16 @@ class CstInsideArrExpr: CstLogicTerm
     return unrolled;
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
     _term.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
     foreach (elem; _elems) {
       elem.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
@@ -2669,11 +2674,11 @@ class CstInsideArrExpr: CstLogicTerm
     return false;
   }
 
-  override bool isSolved() {
+  bool isSolved() {
     return false;
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str) {
     str ~= "(INSIDE ";
     _term.writeExprString(str);
     str ~= " [";
@@ -2691,7 +2696,7 @@ class CstUniqueArrExpr: CstLogicTerm
 {
   CstUniqueSetElem[] _elems;
 
-  override string describe() {
+  string describe() {
     string description = "( unique [";
     foreach (elem; _elems) {
       description ~= elem.describe();
@@ -2700,7 +2705,7 @@ class CstUniqueArrExpr: CstLogicTerm
     return description;
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     CstUniqueOp intT = CstUniqueOp.INT;
     foreach (elem; _elems) elem.fixIntType(intT);
     foreach (elem; _elems) {
@@ -2732,16 +2737,16 @@ class CstUniqueArrExpr: CstLogicTerm
     return unrolled;
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
     pred.setUniqueFlag();
     foreach (elem; _elems) {
       elem.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
@@ -2756,11 +2761,11 @@ class CstUniqueArrExpr: CstLogicTerm
     return false;
   }
 
-  override bool isSolved() {
+  bool isSolved() {
     return false;
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str) {
     str ~= "(UNIQUE ";
     str ~= " [";
     foreach (elem; _elems)
@@ -2776,20 +2781,20 @@ class CstUniqueArrExpr: CstLogicTerm
 // TBD
 class CstIteLogicExpr: CstLogicTerm
 {
-  override string describe() {
+  string describe() {
     return "CstIteLogicExpr";
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
     assert(false, "TBD");
   }
 
@@ -2805,11 +2810,11 @@ class CstIteLogicExpr: CstLogicTerm
     assert(false, "TBD");
   }
 
-  override abstract void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     assert(false, "TBD");
   }
 
-  override bool isSolved() {
+  bool isSolved() {
     assert(false, "TBD");
   }
 
@@ -2832,11 +2837,11 @@ class CstVec2LogicExpr: CstLogicTerm
     _op = op;
   }
 
-  override string describe() {
+  string describe() {
     return "( " ~ _lhs.describe ~ " " ~ _op.to!string ~ " " ~ _rhs.describe ~ " )";
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     _lhs.visit(solver);
     _rhs.visit(solver);
     solver.processEvalStack(_op);
@@ -2850,16 +2855,16 @@ class CstVec2LogicExpr: CstLogicTerm
     return new CstVec2LogicExpr(_lhs.unroll(iter, n), _rhs.unroll(iter, n), _op);
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
     _lhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
     _rhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
@@ -2875,11 +2880,11 @@ class CstVec2LogicExpr: CstLogicTerm
     return null;
   }
     
-  override bool isSolved() {
+  bool isSolved() {
     return _lhs.isSolved && _rhs.isSolved();
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str) {
     str ~= '(';
     str ~= _op.to!string;
     str ~= ' ';
@@ -2902,11 +2907,11 @@ class CstLogicConst: CstLogicTerm
     _expr = expr;
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     solver.pushToEvalStack(_expr);
   }
 
-  override string describe() {
+  string describe() {
     if(_expr) return "TRUE";
     else return "FALSE";
   }
@@ -2915,16 +2920,16 @@ class CstLogicConst: CstLogicTerm
     return this;
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
     // nothing for CstLogicConst
   }
 
@@ -2932,11 +2937,11 @@ class CstLogicConst: CstLogicTerm
     return null;
   }
 
-  override bool isSolved() {
+  bool isSolved() {
     return true;
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str) {
     if (_expr) str ~= "TRUE";
     else str ~= "FALSE";
   }
@@ -2954,11 +2959,11 @@ class CstNotLogicExpr: CstLogicTerm
     _expr = expr;
   }
 
-  override string describe() {
+  string describe() {
     return "( " ~ "!" ~ " " ~ _expr.describe ~ " )";
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     _expr.visit(solver);
     solver.processEvalStack(CstLogicOp.LOGICNOT);
   }
@@ -2967,16 +2972,16 @@ class CstNotLogicExpr: CstLogicTerm
     return new CstNotLogicExpr(_expr.unroll(iter, n));
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
     _expr.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
 
@@ -2984,11 +2989,11 @@ class CstNotLogicExpr: CstLogicTerm
     return null;
   }
 
-  override bool isSolved() {
+  bool isSolved() {
     return _expr.isSolved();
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str) {
     str ~= "(NOT ";
     _expr.writeExprString(str);
     str ~= ")\n";
@@ -3008,17 +3013,17 @@ class CstVarVisitorExpr: CstLogicTerm
     _obj = obj;
   }
 
-  override string describe() {
+  string describe() {
     return "Visitor: " ~ _obj.fullName();
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     assert (false);
   }
 
-  override void visit() {
+  override void scan() {
     assert (_obj !is null);
-    _obj.visit();
+    _obj.scan();
   }
 
   override CstVarVisitorExpr unroll(CstIterator iter, ulong n) {
@@ -3032,16 +3037,16 @@ class CstVarVisitorExpr: CstLogicTerm
     }
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
     assert (_obj !is null);
     CstIterator iter = _obj._esdl__iter();
     if (iter !is null) {
@@ -3049,11 +3054,11 @@ class CstVarVisitorExpr: CstLogicTerm
     }
   }
 
-  override bool isSolved() {
+  bool isSolved() {
     return false;
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str) {
     str ~= this.describe();
   }
 

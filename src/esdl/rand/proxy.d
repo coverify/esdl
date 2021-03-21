@@ -149,7 +149,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   final bool _esdl__isObjArray() {return false;}
   final CstIterator _esdl__iter() {return null;}
   final CstVarNodeIntf _esdl__getChild(ulong n) {assert (false);}
-  void visit() {}		// when an object is unrolled
+  void scan() {}		// when an object is unrolled
 
   CstSolver[string] _solvers;
 

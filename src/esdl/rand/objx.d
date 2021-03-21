@@ -264,7 +264,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	}
       }
 
-      override void visit() {
+      override void scan() {
 	// import std.stdio;
 	// writeln("Visiting: ", this.fullName());
 	assert (false);
@@ -407,7 +407,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	}
       }
 
-      override void visit() {
+      override void scan() {
 	// import std.stdio;
 	// writeln("Visiting: ", this.fullName());
 	assert (this.getRef() !is null);
@@ -736,7 +736,7 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
     }
   }    
 
-  final void visit() {
+  final void scan() {
     // import std.stdio;
     // writeln("Visiting: ", this.fullName());
   }
