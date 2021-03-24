@@ -621,64 +621,64 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
 // The client keeps a list of agents that when resolved makes the client happy
 interface CstIterCallback
 {
-  abstract void doUnroll();
+  void doUnroll();
 }
 
 interface CstDepCallback
 {
-  abstract void doResolve();
+  void doResolve();
 }
 
 interface CstVecPrim
 {
-  abstract string name();
-  abstract void solveBefore(CstVecPrim other);
-  abstract void addPreRequisite(CstVecPrim other);
+  string name();
+  void solveBefore(CstVecPrim other);
+  void addPreRequisite(CstVecPrim other);
 }
 
 interface CstExpr
 {
-  abstract string describe();
+  string describe();
 
-  abstract void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps);
+  void setDomainContext(CstPredicate pred,
+  			 ref CstDomain[] rnds,
+  			 ref CstDomSet[] rndArrs,
+  			 ref CstDomain[] vars,
+  			 ref CstDomSet[] varArrs,
+  			 ref CstValue[] vals,
+  			 ref CstIterator[] iters,
+  			 ref CstVecNodeIntf[] idxs,
+  			 ref CstDomain[] bitIdxs,
+  			 ref CstVecNodeIntf[] deps);
 
-  abstract bool isSolved();
-  abstract void visit(CstSolver solver);
-  abstract void scan(); // {}		// used for CstVarVisitorExpr
-  abstract void writeExprString(ref Charbuf str);
+  bool isSolved();
+  void visit(CstSolver solver);
+  void scan(); // {}		// used for CstVarVisitorExpr
+  void writeExprString(ref Charbuf str);
 }
 
-abstract class CstVecExpr: CstExpr
+interface CstVecExpr: CstExpr
 {
-  abstract bool isConst();
-  abstract bool isIterator();
+  bool isConst();
+  bool isIterator();
   
-  abstract long evaluate();
+  long evaluate();
 
-  abstract CstVecExpr unroll(CstIterator iter, ulong n);
+  CstVecExpr unroll(CstIterator iter, ulong n);
 
-  abstract bool isOrderingExpr();
+  bool isOrderingExpr();
 
-  abstract uint bitcount();
-  abstract bool signed();
+  uint bitcount();
+  bool signed();
 
 }
 
-abstract class CstLogicExpr: CstExpr
+interface CstLogicExpr: CstExpr
 {
-  abstract DistRangeSetBase getDist();
-  abstract CstVecExpr isNot(CstDomain A);
-  abstract CstLogicExpr unroll(CstIterator iter, ulong n);
-  abstract bool isOrderingExpr(); // {return false;}
+  DistRangeSetBase getDist();
+  CstVecExpr isNot(CstDomain A);
+  CstLogicExpr unroll(CstIterator iter, ulong n);
+  bool isOrderingExpr(); // {return false;}
 }
 
 
@@ -703,16 +703,16 @@ abstract class CstIterator: CstVecTerm
   final bool isUnrollable() {
     return getLenVec().isSolved();
   }
-  override bool isConst() {
+  bool isConst() {
     return false;
   }
-  override bool isIterator() {
+  bool isIterator() {
     return true;
   }
-  override long evaluate() {
+  long evaluate() {
     assert(false, "Can not evaluate an Iterator: " ~ this.name());
   }
-  override bool isOrderingExpr() {
+  bool isOrderingExpr() {
     return false;		// only CstVecOrderingExpr return true
   }
 }

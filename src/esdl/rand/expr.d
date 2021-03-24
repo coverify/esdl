@@ -356,7 +356,7 @@ class CstVecDomain(T, rand RAND_ATTR): CstDomain
   ~this() {
   }    
 
-  override long evaluate() {
+  long evaluate() {
     static if (HAS_RAND_ATTRIB) {
       if (! this.isRand || this.isSolved()) {
 	return value();
@@ -390,7 +390,7 @@ class CstVecDomain(T, rand RAND_ATTR): CstDomain
   //   return this.to!string();
   // }
 
-  override uint bitcount() {
+  uint bitcount() {
     static if (isBoolean!T)         return 1;
     else static if (isIntegral!T || isSomeChar!T)   return T.sizeof * 8;
     else static if (isBitVector!T)  return T.SIZE;
@@ -404,7 +404,7 @@ class CstVecDomain(T, rand RAND_ATTR): CstDomain
     else static assert(false, "bitcount can not operate on: " ~ T.stringof);
   }
 
-   override bool signed() {
+  bool signed() {
     static if (isVecSigned!T) {
       return true;
     }
@@ -844,7 +844,7 @@ class CstArrIterator(RV): CstIterator
     else return (_arrVar == rhs._arrVar);
   }
 
-  override CstVecExpr unroll(CstIterator iter, ulong n) {
+  CstVecExpr unroll(CstIterator iter, ulong n) {
     if(this !is iter) {
       return _arrVar.unroll(iter,n).arrLen().makeIterVar();
     }
@@ -880,11 +880,11 @@ class CstArrIterator(RV): CstIterator
     iters ~= this;
   }
 
-  override bool signed() {
+  bool signed() {
     return false;
   }
 
-  override uint bitcount() {
+  uint bitcount() {
     return 64;
   }
   
@@ -1046,7 +1046,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecPrim
   //   _parent.setLen(cast(size_t) v);
   // }
 
-  override CstVecExpr unroll(CstIterator iter, ulong n) {
+  CstVecExpr unroll(CstIterator iter, ulong n) {
     return _parent.unroll(iter,n).arrLen();
   }
 
@@ -1058,15 +1058,15 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecPrim
     _preReqs ~= domain;
   }
 
-  override bool isConst() {
+  bool isConst() {
     return false;
   }
   
-  override bool isIterator() {
+  bool isIterator() {
     return false;
   }
   
-  override bool isOrderingExpr() {
+  bool isOrderingExpr() {
     return false;		// only CstVecOrderingExpr return true
   }
 
@@ -1146,15 +1146,15 @@ abstract class CstValue: CstVecTerm
 {
   CstLogicExpr _cstExpr;
   
-  override bool isConst() {
+  bool isConst() {
     return true;
   }
 
-  override bool isIterator() {
+  bool isIterator() {
     return false;
   }
 
-  override CstVecExpr unroll(CstIterator iters, ulong n) {
+  CstVecExpr unroll(CstIterator iters, ulong n) {
     return this;
   }
 
@@ -1189,11 +1189,11 @@ class CstVecValue(T): CstValue
     return isBoolean!T;
   }
 
-  override bool signed() {
+  bool signed() {
     return SIGNED;
   }
 
-  override uint bitcount() {
+  uint bitcount() {
     return BITCOUNT;
   }
 
@@ -1257,11 +1257,11 @@ class CstVecValue(T): CstValue
   //   return true;
   // }
 
-  override long evaluate() {
+  long evaluate() {
     return cast(long) _val;
   }
 
-  override bool isOrderingExpr() {
+  bool isOrderingExpr() {
     return false;		// only CstVecOrderingExpr return true
   }
 
@@ -1347,11 +1347,11 @@ class CstVecArrExpr: CstVecTerm
     // solver.processEvalStack(_op);
   }
 
-  override long evaluate() {
+  long evaluate() {
     assert (false, "TBD");
   }
 
-  override CstVecArrExpr unroll(CstIterator iter, ulong n) {
+  CstVecArrExpr unroll(CstIterator iter, ulong n) {
     return this;
   }
 
@@ -1361,7 +1361,7 @@ class CstVecArrExpr: CstVecTerm
     _op = CstVectorOp.SUM;
   }
 
-  override uint bitcount() {
+  uint bitcount() {
     uint _elemBitCount = _arr.elemBitcount();
 
     if (_elemBitCount <= 32) return 32;
@@ -1371,7 +1371,7 @@ class CstVecArrExpr: CstVecTerm
     }
   }
 
-  override bool signed() {
+  bool signed() {
     uint _elemBitCount = _arr.elemBitcount();
     bool _elemSigned = _arr.elemSigned();
 
@@ -1384,15 +1384,15 @@ class CstVecArrExpr: CstVecTerm
     }
   }
   
-  override bool isConst() {
+  bool isConst() {
     return false;
   }
 
-  override bool isIterator() {
+  bool isIterator() {
     return false;
   }
 
-  override bool isOrderingExpr() {
+  bool isOrderingExpr() {
     return false;		// only CstVecOrderingExpr return true
   }
 
@@ -1469,7 +1469,7 @@ class CstVec2VecExpr: CstVecTerm
   //   }
   // }
 
-  override long evaluate() {
+  long evaluate() {
     auto lvec = _lhs.evaluate();
     auto rvec = _rhs.evaluate();
 
@@ -1488,7 +1488,7 @@ class CstVec2VecExpr: CstVecTerm
     }
   }
 
-  override CstVec2VecExpr unroll(CstIterator iter, ulong n) {
+  CstVec2VecExpr unroll(CstIterator iter, ulong n) {
     return new CstVec2VecExpr(_lhs.unroll(iter, n), _rhs.unroll(iter, n), _op);
   }
 
@@ -1498,7 +1498,7 @@ class CstVec2VecExpr: CstVecTerm
     _op = op;
   }
 
-  override uint bitcount() {
+  uint bitcount() {
     uint lhsBitcount = _lhs.bitcount();
     uint rhsBitCount = _rhs.bitcount();
     uint count = rhsBitCount > lhsBitcount ? rhsBitCount : lhsBitcount;
@@ -1508,7 +1508,7 @@ class CstVec2VecExpr: CstVecTerm
     else return count;
   }
   
-  override bool signed() {
+  bool signed() {
     uint lhsBitcount = _lhs.bitcount();
     uint rhsBitcount = _rhs.bitcount();
     bool lhsSigned = _lhs.signed();
@@ -1529,15 +1529,15 @@ class CstVec2VecExpr: CstVecTerm
     }
   }
   
-  override bool isConst() {
+  bool isConst() {
     return _lhs.isConst() && _rhs.isConst();
   }
 
-  override bool isIterator() {
+  bool isIterator() {
     return false;
   }
 
-  override bool isOrderingExpr() {
+  bool isOrderingExpr() {
     return false;		// only CstVecOrderingExpr return true
   }
 
@@ -2031,7 +2031,7 @@ class CstDistExpr(T): CstLogicTerm
     }
   }
 
-  override DistRangeSetBase getDist() {
+  DistRangeSetBase getDist() {
     return _rs;
   }
 
@@ -2079,7 +2079,7 @@ class CstDistExpr(T): CstLogicTerm
   void writeExprString(ref Charbuf str) {
     assert(false);
   }
-  override CstVecExpr isNot(CstDomain dom){
+  CstVecExpr isNot(CstDomain dom){
     return null;
   }
 }
@@ -2206,7 +2206,7 @@ class CstVecSliceExpr: CstVecTerm
   //   return false;
   // }
 
-  override long evaluate() {
+  long evaluate() {
     // auto vec  = _vec.evaluate();
     // auto lvec = _lhs.evaluate();
     // auto rvec = _range._rhs.evaluate();
@@ -2214,7 +2214,7 @@ class CstVecSliceExpr: CstVecTerm
     assert(false, "Can not evaluate a CstVecSliceExpr!");
   }
 
-  override CstVecSliceExpr unroll(CstIterator iter, ulong n) {
+  CstVecSliceExpr unroll(CstIterator iter, ulong n) {
     return new CstVecSliceExpr(_vec.unroll(iter, n),
 			       _range.unroll(iter, n));
   }
@@ -2224,23 +2224,23 @@ class CstVecSliceExpr: CstVecTerm
     _range = range;
   }
 
-  override uint bitcount() {
+  uint bitcount() {
     return _vec.bitcount();
   }
   
-  override bool signed() {
+  bool signed() {
     return false;
   }
   
-  override bool isConst() {
+  bool isConst() {
     return false;
   }
 
-  override bool isIterator() {
+  bool isIterator() {
     return false;
   }
 
-  override bool isOrderingExpr() {
+  bool isOrderingExpr() {
     return false;		// only CstVecOrderingExpr return true
   }
 
@@ -2364,11 +2364,11 @@ class CstNotVecExpr: CstVecTerm
   //   return retval;
   // }
 
-  override long evaluate() {
+  long evaluate() {
     return ~(_expr.evaluate());
   }
 
-  override CstNotVecExpr unroll(CstIterator iter, ulong n) {
+  CstNotVecExpr unroll(CstIterator iter, ulong n) {
     return new CstNotVecExpr(_expr.unroll(iter, n));
   }
 
@@ -2376,7 +2376,7 @@ class CstNotVecExpr: CstVecTerm
     _expr = expr;
   }
 
-  override uint bitcount() {
+  uint bitcount() {
     uint count = _expr.bitcount();
 
     if (count <= 32) return 32;
@@ -2384,7 +2384,7 @@ class CstNotVecExpr: CstVecTerm
     else return count;
   }
   
-  override bool signed() {
+  bool signed() {
     bool sign = _expr.signed();
     uint count = _expr.bitcount();
 
@@ -2392,15 +2392,15 @@ class CstNotVecExpr: CstVecTerm
     else return true;		// int promotion
   }
   
-  override bool isConst() {
+  bool isConst() {
     return _expr.isConst();
   }
 
-  override bool isIterator() {
+  bool isIterator() {
     return false;
   }
 
-  override bool isOrderingExpr() {
+  bool isOrderingExpr() {
     return false;		// only CstVecOrderingExpr return true
   }
 
@@ -2449,11 +2449,11 @@ class CstNegVecExpr: CstVecTerm
   //   return retval;
   // }
 
-  override long evaluate() {
+  long evaluate() {
     return -(_expr.evaluate());
   }
 
-  override CstNegVecExpr unroll(CstIterator iter, ulong n) {
+  CstNegVecExpr unroll(CstIterator iter, ulong n) {
     return new CstNegVecExpr(_expr.unroll(iter, n));
   }
 
@@ -2461,7 +2461,7 @@ class CstNegVecExpr: CstVecTerm
     _expr = expr;
   }
 
-  override uint bitcount() {
+  uint bitcount() {
     uint count = _expr.bitcount();
 
     if (count <= 32) return 32;
@@ -2469,7 +2469,7 @@ class CstNegVecExpr: CstVecTerm
     else return count;
   }
   
-  override bool signed() {
+  bool signed() {
     bool sign = _expr.signed();
     uint count = _expr.bitcount();
 
@@ -2477,15 +2477,15 @@ class CstNegVecExpr: CstVecTerm
     else return true;		// int promotion
   }
   
-  override bool isConst() {
+  bool isConst() {
     return _expr.isConst();
   }
 
-  override bool isIterator() {
+  bool isIterator() {
     return false;
   }
 
-  override bool isOrderingExpr() {
+  bool isOrderingExpr() {
     return false;		// only CstVecOrderingExpr return true
   }
 
@@ -2556,7 +2556,7 @@ class CstLogic2LogicExpr: CstLogicTerm
     _rhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
 
-  override CstVecExpr isNot(CstDomain dom){
+  CstVecExpr isNot(CstDomain dom){
     return null;
   }
   
@@ -2578,7 +2578,7 @@ class CstLogic2LogicExpr: CstLogicTerm
     str ~= ")\n";
   }
 
-  override DistRangeSetBase getDist() {
+  DistRangeSetBase getDist() {
     assert (false);
   }
 }
@@ -2666,7 +2666,7 @@ class CstInsideArrExpr: CstLogicTerm
     }
   }
 
-  override CstVecExpr isNot(CstDomain dom){
+  CstVecExpr isNot(CstDomain dom){
     return null;
   }
   
@@ -2687,7 +2687,7 @@ class CstInsideArrExpr: CstLogicTerm
     str ~= "])\n";
   }
 
-  override DistRangeSetBase getDist() {
+  DistRangeSetBase getDist() {
     assert (false);
   }
 }
@@ -2753,7 +2753,7 @@ class CstUniqueArrExpr: CstLogicTerm
     }
   }
 
-  override CstVecExpr isNot(CstDomain dom){
+  CstVecExpr isNot(CstDomain dom){
     return null;
   }
   
@@ -2773,7 +2773,7 @@ class CstUniqueArrExpr: CstLogicTerm
     str ~= "])\n";
   }
 
-  override DistRangeSetBase getDist() {
+  DistRangeSetBase getDist() {
     assert (false);
   }
 }
@@ -2798,7 +2798,7 @@ class CstIteLogicExpr: CstLogicTerm
     assert(false, "TBD");
   }
 
-  override CstVecExpr isNot(CstDomain dom){
+  CstVecExpr isNot(CstDomain dom){
     return null;
   }
 
@@ -2818,7 +2818,7 @@ class CstIteLogicExpr: CstLogicTerm
     assert(false, "TBD");
   }
 
-  override DistRangeSetBase getDist() {
+  DistRangeSetBase getDist() {
     assert (false);
   }
 }
@@ -2869,7 +2869,7 @@ class CstVec2LogicExpr: CstLogicTerm
     _rhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
   
-  override CstVecExpr isNot(CstDomain dom){
+  CstVecExpr isNot(CstDomain dom){
     if (_op is CstCompareOp.NEQ) {
       if (_lhs !is dom) {
 	assert(false, "Constraint " ~ describe() ~ " not allowed since " ~ dom.name()
@@ -2894,7 +2894,7 @@ class CstVec2LogicExpr: CstLogicTerm
     str ~= ")\n";
   }
 
-  override DistRangeSetBase getDist() {
+  DistRangeSetBase getDist() {
     assert (false);
   }
 }
@@ -2933,7 +2933,7 @@ class CstLogicConst: CstLogicTerm
     // nothing for CstLogicConst
   }
 
-  override CstVecExpr isNot(CstDomain dom){
+  CstVecExpr isNot(CstDomain dom){
     return null;
   }
 
@@ -2946,7 +2946,7 @@ class CstLogicConst: CstLogicTerm
     else str ~= "FALSE";
   }
 
-  override DistRangeSetBase getDist() {
+  DistRangeSetBase getDist() {
     assert (false);
   }
 }
@@ -2985,7 +2985,7 @@ class CstNotLogicExpr: CstLogicTerm
     _expr.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
 
-  override CstVecExpr isNot(CstDomain dom){
+  CstVecExpr isNot(CstDomain dom){
     return null;
   }
 
@@ -2999,7 +2999,7 @@ class CstNotLogicExpr: CstLogicTerm
     str ~= ")\n";
   }
   
-  override DistRangeSetBase getDist() {
+  DistRangeSetBase getDist() {
     assert (false);
   }
 }
@@ -3062,11 +3062,11 @@ class CstVarVisitorExpr: CstLogicTerm
     str ~= this.describe();
   }
 
-  override CstVecExpr isNot(CstDomain dom){
+  CstVecExpr isNot(CstDomain dom){
     return null;
   }
 
-  override DistRangeSetBase getDist() {
+  DistRangeSetBase getDist() {
     assert (false);
   }
 }

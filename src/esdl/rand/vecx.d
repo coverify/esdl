@@ -173,7 +173,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       // RV
-      override CstVecExpr unroll(CstIterator iter, ulong n) {
+      CstVecExpr unroll(CstIterator iter, ulong n) {
 	return this;
       }
 
@@ -181,15 +181,15 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 	return _var;
       }
 
-      override bool isConst() {
+      bool isConst() {
 	return false;
       }
 
-      override bool isIterator() {
+      bool isIterator() {
 	return false;
       }
 
-      override bool isOrderingExpr() {
+      bool isOrderingExpr() {
 	return false;		// only CstVecOrderingExpr return true
       }
 
@@ -312,7 +312,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       // RV
-      override CstVecExpr unroll(CstIterator iter, ulong n) {
+      CstVecExpr unroll(CstIterator iter, ulong n) {
 	if (_indexExpr) {
 	  return _parent.unroll(iter,n)[_indexExpr.unroll(iter,n)];
 	}
@@ -330,15 +330,15 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	}
       }
 
-      override bool isConst() {
+      bool isConst() {
 	return false;
       }
 
-      override bool isIterator() {
+      bool isIterator() {
 	return false;
       }
 
-      override bool isOrderingExpr() {
+      bool isOrderingExpr() {
 	return false;		// only CstVecOrderingExpr return true
       }
 
