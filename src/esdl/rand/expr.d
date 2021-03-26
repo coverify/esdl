@@ -452,8 +452,7 @@ class CstVecDomain(T, rand RAND_ATTR): CstDomain
   override void setBool(bool val) {
     static if (HAS_RAND_ATTRIB) {
       static if (isBoolean!T) {
-	Unconst!T newVal;
-	newVal = val;
+	Unconst!T newVal= cast (Unconst!T) val;
 	assert (getRef() !is null);
 	if (newVal != *(getRef())) {
 	  _valueChanged = true;
