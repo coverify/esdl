@@ -398,3 +398,31 @@ auto _esdl__order(CstDomain a, CstDomain b){
 CstLogicTerm _esdl__bool(CstVecTerm term) {
   return term.toBoolExpr();
 }
+
+auto _esdl__evaluate(T, U)(T lvec, U rvec, CstBinaryOp op) {
+  final switch(op) {
+  case CstBinaryOp.AND: return lvec &  rvec;
+  case CstBinaryOp.OR:  return lvec |  rvec;
+  case CstBinaryOp.XOR: return lvec ^  rvec;
+  case CstBinaryOp.ADD: return lvec +  rvec;
+  case CstBinaryOp.SUB: return lvec -  rvec;
+  case CstBinaryOp.MUL: return lvec *  rvec;
+  case CstBinaryOp.DIV: return lvec /  rvec;
+  case CstBinaryOp.REM: return lvec %  rvec;
+  case CstBinaryOp.LSH: return lvec << rvec;
+  case CstBinaryOp.RSH: return lvec >> rvec;
+  case CstBinaryOp.LRSH: return lvec >>> rvec;
+  }
+}
+
+auto _esdl__evaluate(T, U)(T lvec, U rvec, CstCompareOp op) {
+  final switch(op) {
+  case CstCompareOp.LTH: return lvec <  rvec;
+  case CstCompareOp.LTE: return lvec <= rvec;
+  case CstCompareOp.GTH: return lvec >  rvec;
+  case CstCompareOp.GTE: return lvec >= rvec;
+  case CstCompareOp.EQU: return lvec == rvec;
+  case CstCompareOp.NEQ: return lvec != rvec;
+  }
+}
+

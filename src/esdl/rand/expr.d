@@ -700,6 +700,9 @@ class CstOrderingExpr: CstLogicExpr
     return str;
   }
   void scan() { }
+  bool eval() {
+    assert (false);
+  }
 }
 
 abstract class CstLogicTerm: CstLogicExpr
@@ -771,7 +774,8 @@ abstract class CstLogicTerm: CstLogicExpr
   }
 
   void scan() { }
-  override bool isOrderingExpr() { return false; }
+  bool isOrderingExpr() { return false; }
+  bool eval() {assert (false, "Enable to evaluate CstLogicTerm");}
 }
 
 class CstArrIterator(RV): CstIterator
@@ -1420,48 +1424,91 @@ class CstVec2VecExpr: CstVecTerm
     solver.processEvalStack(_op);
   }
 
-  //   long lval;
-  //   long rval;
-  //   if (! _lhs.getVal(lval)) {
-  //     return false;
-  //   }
-  //   if (! _rhs.getVal(rval)) {
-  //     return false;
-  //   }
-
-  //   final switch(_op) {
-  //   case CstBinaryOp.AND: val = lval &  rval; return true;
-  //   case CstBinaryOp.OR:  val = lval |  rval; return true;
-  //   case CstBinaryOp.XOR: val = lval ^  rval; return true;
-  //   case CstBinaryOp.ADD: val = lval +  rval; return true;
-  //   case CstBinaryOp.SUB: val = lval -  rval; return true;
-  //   case CstBinaryOp.MUL: val = lval *  rval; return true;
-  //   case CstBinaryOp.DIV: val = lval /  rval; return true;
-  //   case CstBinaryOp.REM: val = lval %  rval; return true;
-  //   case CstBinaryOp.LSH: val = lval << rval; return true;
-  //   case CstBinaryOp.RSH: val = lval >> rval; return true;
-  //   case CstBinaryOp.BITINDEX:
-  //     assert(false, "BITINDEX is not implemented yet!");
-  //   }
-  // }
-
   long evaluate() {
     auto lvec = _lhs.evaluate();
     auto rvec = _rhs.evaluate();
 
-    final switch(_op) {
-    case CstBinaryOp.AND: return lvec &  rvec;
-    case CstBinaryOp.OR:  return lvec |  rvec;
-    case CstBinaryOp.XOR: return lvec ^  rvec;
-    case CstBinaryOp.ADD: return lvec +  rvec;
-    case CstBinaryOp.SUB: return lvec -  rvec;
-    case CstBinaryOp.MUL: return lvec *  rvec;
-    case CstBinaryOp.DIV: return lvec /  rvec;
-    case CstBinaryOp.REM: return lvec %  rvec;
-    case CstBinaryOp.LSH: return lvec << rvec;
-    case CstBinaryOp.RSH: return lvec >> rvec;
-    case CstBinaryOp.LRSH: return lvec >>> rvec;
+    if (_lhs.bitcount() < 32 || (_lhs.bitcount() == 32 && _lhs.signed())) {
+      int lhs_ = cast(int) lvec;
+      if (_rhs.bitcount() < 32 || (_rhs.bitcount() == 32 && _rhs.signed())) {
+	int rhs_ = cast(int) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 32 && !_rhs.signed()) {
+	uint rhs_ = cast(uint) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() < 64 || (_rhs.bitcount() == 64 && _rhs.signed())) {
+	long rhs_ = cast(long) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 64 && !_rhs.signed()) {
+	ulong rhs_ = cast(ulong) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      assert(false, "TBD -- Can not yet handle > 64 bit math operations");
     }
+    if (_lhs.bitcount() == 32 && !_lhs.signed) {
+      uint lhs_ = cast(uint) lvec;
+      if (_rhs.bitcount() < 32 || (_rhs.bitcount() == 32 && _rhs.signed())) {
+	int rhs_ = cast(int) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 32 && !_rhs.signed()) {
+	uint rhs_ = cast(uint) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() < 64 || (_rhs.bitcount() == 64 && _rhs.signed())) {
+	long rhs_ = cast(long) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 64 && !_rhs.signed()) {
+	ulong rhs_ = cast(ulong) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      assert(false, "TBD -- Can not yet handle > 64 bit math operations");
+    }
+    if (_lhs.bitcount() < 64 || (_lhs.bitcount() == 64 && _lhs.signed())) {
+      long lhs_ = cast(long) lvec;
+      if (_rhs.bitcount() < 32 || (_rhs.bitcount() == 32 && _rhs.signed())) {
+	int rhs_ = cast(int) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 32 && !_rhs.signed()) {
+	uint rhs_ = cast(uint) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() < 64 || (_rhs.bitcount() == 64 && _rhs.signed())) {
+	long rhs_ = cast(long) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 64 && !_rhs.signed()) {
+	ulong rhs_ = cast(ulong) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      assert(false, "TBD -- Can not yet handle > 64 bit math operations");
+    }
+    if (_lhs.bitcount() == 64 && !_lhs.signed()) {
+      ulong lhs_ = cast(ulong) lvec;
+      if (_rhs.bitcount() < 32 || (_rhs.bitcount() == 32 && _rhs.signed())) {
+	int rhs_ = cast(int) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 32 && !_rhs.signed()) {
+	uint rhs_ = cast(uint) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() < 64 || (_rhs.bitcount() == 64 && _rhs.signed())) {
+	long rhs_ = cast(long) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 64 && !_rhs.signed()) {
+	ulong rhs_ = cast(ulong) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      assert(false, "TBD -- Can not yet handle > 64 bit math operations");
+    }
+    assert(false, "TBD -- Can not yet handle > 64 bit math operations");
   }
 
   CstVec2VecExpr unroll(CstIterator iter, ulong n) {
@@ -2055,6 +2102,8 @@ class CstDistExpr(T): CstLogicTerm
   CstVecExpr isNot(CstDomain dom){
     return null;
   }
+
+  override bool eval() {assert (false, "Enable to evaluate CstDistExpr");}
 }
 
 // class CstVecSliceExpr: CstVecTerm
@@ -2534,6 +2583,20 @@ class CstLogic2LogicExpr: CstLogicTerm
   DistRangeSetBase getDist() {
     assert (false);
   }
+
+  override bool eval() {
+    final switch (_op) {
+    case CstLogicOp.LOGICAND:
+      return _lhs.eval() && _rhs.eval();
+    case CstLogicOp.LOGICOR:
+      return _lhs.eval() || _rhs.eval();
+    case CstLogicOp.LOGICIMP:
+      return (! _lhs.eval()) || _rhs.eval();
+    case CstLogicOp.LOGICNOT:
+      assert (false);
+    }
+  }
+  
 }
 
 class CstInsideArrExpr: CstLogicTerm
@@ -2643,6 +2706,8 @@ class CstInsideArrExpr: CstLogicTerm
   DistRangeSetBase getDist() {
     assert (false);
   }
+
+  override bool eval() {assert (false, "Enable to evaluate CstInsideArrExpr");}
 }
 
 class CstUniqueArrExpr: CstLogicTerm
@@ -2729,6 +2794,8 @@ class CstUniqueArrExpr: CstLogicTerm
   DistRangeSetBase getDist() {
     assert (false);
   }
+
+  override bool eval() {assert (false, "Enable to evaluate CstUniqueArrExpr");}
 }
 
 // TBD
@@ -2774,6 +2841,7 @@ class CstIteLogicExpr: CstLogicTerm
   DistRangeSetBase getDist() {
     assert (false);
   }
+  override bool eval() {assert (false, "Enable to evaluate CstIteLogicExpr");}
 }
 
 class CstVec2LogicExpr: CstLogicTerm
@@ -2850,22 +2918,109 @@ class CstVec2LogicExpr: CstLogicTerm
   DistRangeSetBase getDist() {
     assert (false);
   }
+
+  override bool eval() {
+    auto lvec = _lhs.evaluate();
+    auto rvec = _rhs.evaluate();
+
+    if (_lhs.bitcount() < 32 || (_lhs.bitcount() == 32 && _lhs.signed())) {
+      int lhs_ = cast(int) lvec;
+      if (_rhs.bitcount() < 32 || (_rhs.bitcount() == 32 && _rhs.signed())) {
+	int rhs_ = cast(int) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 32 && !_rhs.signed()) {
+	uint rhs_ = cast(uint) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() < 64 || (_rhs.bitcount() == 64 && _rhs.signed())) {
+	long rhs_ = cast(long) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 64 && !_rhs.signed()) {
+	ulong rhs_ = cast(ulong) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      assert(false, "TBD -- Can not yet handle > 64 bit math operations");
+    }
+    if (_lhs.bitcount() == 32 && !_lhs.signed) {
+      uint lhs_ = cast(uint) lvec;
+      if (_rhs.bitcount() < 32 || (_rhs.bitcount() == 32 && _rhs.signed())) {
+	int rhs_ = cast(int) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 32 && !_rhs.signed()) {
+	uint rhs_ = cast(uint) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() < 64 || (_rhs.bitcount() == 64 && _rhs.signed())) {
+	long rhs_ = cast(long) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 64 && !_rhs.signed()) {
+	ulong rhs_ = cast(ulong) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      assert(false, "TBD -- Can not yet handle > 64 bit math operations");
+    }
+    if (_lhs.bitcount() < 64 || (_lhs.bitcount() == 64 && _lhs.signed())) {
+      long lhs_ = cast(long) lvec;
+      if (_rhs.bitcount() < 32 || (_rhs.bitcount() == 32 && _rhs.signed())) {
+	int rhs_ = cast(int) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 32 && !_rhs.signed()) {
+	uint rhs_ = cast(uint) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() < 64 || (_rhs.bitcount() == 64 && _rhs.signed())) {
+	long rhs_ = cast(long) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 64 && !_rhs.signed()) {
+	ulong rhs_ = cast(ulong) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      assert(false, "TBD -- Can not yet handle > 64 bit math operations");
+    }
+    if (_lhs.bitcount() == 64 && !_lhs.signed()) {
+      ulong lhs_ = cast(ulong) lvec;
+      if (_rhs.bitcount() < 32 || (_rhs.bitcount() == 32 && _rhs.signed())) {
+	int rhs_ = cast(int) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 32 && !_rhs.signed()) {
+	uint rhs_ = cast(uint) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() < 64 || (_rhs.bitcount() == 64 && _rhs.signed())) {
+	long rhs_ = cast(long) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 64 && !_rhs.signed()) {
+	ulong rhs_ = cast(ulong) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      assert(false, "TBD -- Can not yet handle > 64 bit math operations");
+    }
+    assert(false, "TBD -- Can not yet handle > 64 bit math operations");
+  }
 }
 
 class CstLogicConst: CstLogicTerm
 {
-  immutable bool _expr;
+  immutable bool _bool;
 
-  this(bool expr) {
-    _expr = expr;
+  this(bool val) {
+    _bool = val;
   }
 
   void visit(CstSolver solver) {
-    solver.pushToEvalStack(_expr);
+    solver.pushToEvalStack(_bool);
   }
 
   string describe() {
-    if(_expr) return "TRUE";
+    if(_bool) return "TRUE";
     else return "FALSE";
   }
 
@@ -2895,13 +3050,15 @@ class CstLogicConst: CstLogicTerm
   }
 
   void writeExprString(ref Charbuf str) {
-    if (_expr) str ~= "TRUE";
+    if (_bool) str ~= "TRUE";
     else str ~= "FALSE";
   }
 
   DistRangeSetBase getDist() {
     assert (false);
   }
+
+  override bool eval() {return _bool;}
 }
 
 class CstNotLogicExpr: CstLogicTerm
@@ -2955,6 +3112,8 @@ class CstNotLogicExpr: CstLogicTerm
   DistRangeSetBase getDist() {
     assert (false);
   }
+
+  override bool eval() {return !_expr.eval();}
 }
 
 class CstVarVisitorExpr: CstLogicTerm
@@ -3022,4 +3181,6 @@ class CstVarVisitorExpr: CstLogicTerm
   DistRangeSetBase getDist() {
     assert (false);
   }
+
+  override bool eval() {assert(false);}
 }

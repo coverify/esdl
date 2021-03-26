@@ -99,6 +99,12 @@ struct Folder(T, string NAME="") if (is (T == class) || is (T == interface))
   }
 
   ref T opIndex(size_t index) {
+    if (_size <= index) {
+      growCapacity(index + 1);
+      for (size_t i=_size; i<=index; ++i) {
+	_load[i] = null;
+      }
+    }
     return _load[index];
   }
 

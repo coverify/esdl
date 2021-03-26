@@ -9,9 +9,10 @@ import esdl.data.charbuf;
 import esdl.rand.proxy: _esdl__Proxy, _esdl__ConstraintBase;
 import esdl.rand.misc;
 import esdl.rand.base: CstDomain, CstDomSet, CstIterCallback, DomType,
-  CstDepCallback, CstScope, CstLogicExpr, CstIterator, CstVecNodeIntf;
+  CstDepCallback, CstScope, CstLogicExpr, CstIterator, CstVecNodeIntf,
+  CstVecExpr;
 import esdl.rand.expr: CstValue;
-
+import esdl.rand.dist: DistRangeSetBase;
 import esdl.solver.base;
 import esdl.solver.mono: CstMonoSolver;
 import esdl.solver.z3: CstZ3Solver;
@@ -245,9 +246,9 @@ class CstPredGroup			// group of related predicates
   
   void reset() {
     _state = State.INIT;
-    foreach (pred; _preds) {
-      pred.reset();
-    }
+    foreach (pred; _preds) pred.reset();
+    foreach (pred; _distPreds) pred.reset();
+    foreach (pred; _withDistPreds) pred.reset();
   }
 
   void needSync() {
@@ -275,6 +276,7 @@ class CstPredGroup			// group of related predicates
     if (_state is State.NEEDSYNC) {
       _doms.reset();
       _vars.reset();
+      _rnds.reset();
       annotate();
       string sig = signature();
 
@@ -382,14 +384,36 @@ class CstPredGroup			// group of related predicates
 
     foreach (pred; _distPreds) {
       // import std.stdio;
-      // writeln("Working on: ", pred.name());
-      pred.markSolved();
+      // writeln("Marking Solved: ", pred.name());
+      // import std.stdio;
+      // writeln(pred.name(), " guard enabled: ", pred.isGuardEnabled());
+      if (pred.isGuardEnabled()) {
+	DistRangeSetBase dist = pred._expr.getDist();
+	CstDomain distDomain = pred.distDomain();
+	dist.reset();
+	foreach (wp; _withDistPreds) {
+	  if (wp.isGuardEnabled()) {
+	    CstVecExpr ex = wp._expr.isNot(distDomain);
+	    if (ex is null) assert (false, "can only use != operator on distributed domains");
+	    dist.purge(ex.evaluate());
+	    wp.markPredSolved();
+	  }
+	}
+	dist.uniform(distDomain, _proxy._esdl__getRandGen());
+	_proxy.addSolvedDomain(distDomain);
+	pred.markPredSolved();
+      }
+      else {
+	pred.markPredSolved();
+      }
     }
     // import std.stdio;
     // writeln(_solver.describe());
     // _solver.solve(this);
     foreach (pred; _preds) {
-      pred.markSolved();
+      // import std.stdio;
+      // writeln("Marking Solved: ", pred.name());
+      pred.markPredSolved();
     }
     this.markSolved();
   }
@@ -438,6 +462,7 @@ class CstPredicate: CstIterCallback, CstDepCallback
     import std.conv;
     if (_parent is null) {
       return _constraint.fullName() ~ '/' ~
+	(_isGuard ? "g_" : "p_") ~
 	_statement.to!string() ~ '%' ~ _id.to!string();
     }
     else {
@@ -500,12 +525,11 @@ class CstPredicate: CstIterCallback, CstDepCallback
   bool guardInv() { return _guardInv; }
     
   bool isGuardEnabled() {
-    // if (_guard is null) return true;
-    // else {
-    //   auto gv = _guard.evaluate();
-      
-    // }
-    return true;
+    if (_guard is null) return true;
+    else {
+      auto gv = _guard._expr.eval();
+      return gv ^ _guardInv;
+    }
   }
   
   uint _level;
@@ -1069,7 +1093,7 @@ class CstPredicate: CstIterCallback, CstDepCallback
     return _distDomain;
   }
 
-  void markSolved() {
+  void markPredSolved() {
     assert (_state == State.GROUPED);
     _state = State.SOLVED;
   }

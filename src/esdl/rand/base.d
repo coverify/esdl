@@ -757,6 +757,7 @@ interface CstLogicExpr: CstExpr
   CstVecExpr isNot(CstDomain A);
   CstLogicExpr unroll(CstIterator iter, ulong n);
   bool isOrderingExpr();
+  bool eval();
 }
 
 
