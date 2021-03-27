@@ -109,7 +109,7 @@ abstract class Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=_
 //     enum bool _esdl__baseHasRandomization = false;
 //   }
 // }
-class domainPair {
+class CstDomainPair {
   CstDomain dom1;
   CstDomain dom2;
   CstDomain getFirst(){
@@ -174,7 +174,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   Folder!(CstPredicate, "resolvedPreds") _resolvedPreds;
   Folder!(CstPredicate, "resolvedDynPreds") _resolvedDynPreds;
   // Folder!(CstPredicate, "beforePreds") _beforePreds;
-  Folder!(domainPair, "beforePreds") _beforePreds;
+  Folder!(CstDomainPair, "beforePreds") _beforePreds;
   Folder!(CstPredicate, "toSolvePreds") _toSolvePreds;
   Folder!(CstPredicate, "dependentPreds") _dependentPreds;
 
@@ -386,7 +386,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   
   private bool _solvedSome = false;
   void solvedSome() { _solvedSome = true; }
-  bool checkContinue(ref domainPair pred, uint lap){
+  bool checkContinue(ref CstDomainPair pred, uint lap){
     if(pred.getSecond.getmarkBefore() == lap){
       return true;
     }
@@ -405,7 +405,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     for(uint j = 0; j < beforeLength; j++){
       if(_beforePreds[j].getFirst == dom2){
 	if(!isInBeforePreds(dom1, _beforePreds[j].getSecond, beforeLength)){
-	  _beforePreds ~= new domainPair(dom1, _beforePreds[j].getSecond);
+	  _beforePreds ~= new CstDomainPair(dom1, _beforePreds[j].getSecond);
 	  addpsuedoBeforePreds( dom1, _beforePreds[j].getSecond, beforeLength);
 	}
       }
@@ -722,7 +722,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   }
   void makeBeforePreds(CstPredicate pred ){
     if(pred.getExpr().isOrderingExpr()){
-      _beforePreds ~= new domainPair(pred.getDomains[0], pred.getDomains[1]);
+      _beforePreds ~= new CstDomainPair(pred.getDomains[0], pred.getDomains[1]);
     }
   }
   void procNewPredicate(CstPredicate pred) {
