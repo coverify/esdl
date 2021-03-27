@@ -18,7 +18,7 @@ import std.exception: enforce;
 import std.range: ElementType;
 
 import esdl.rand.misc;
-import esdl.rand.expr: CstVecValue, CstVarVisitorExpr;
+import esdl.rand.expr: CstVarVisitorExpr;
 import esdl.rand.base: CstVecPrim, CstVarGlobIntf, CstVarNodeIntf,
   CstObjectIntf, CstObjArrIntf, CstObjectStubBase,
   CstObjArrStubBase;
@@ -27,6 +27,7 @@ import esdl.rand.vecx: CstVectorIdx, CstVecArrIdx,
   CstVectorGlob, CstVecArrGlob;
 import esdl.rand.objx: CstObjectIdx, CstObjArrIdx, CstObjectGlob,
   CstObjectStub, CstObjArrStub;
+import esdl.rand.domain: CstVecValue;
 import esdl.rand.proxy;
 import esdl.rand.func;
 

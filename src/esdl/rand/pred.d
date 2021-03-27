@@ -11,7 +11,7 @@ import esdl.rand.misc;
 import esdl.rand.base: CstDomain, CstDomSet, CstIterCallback, DomType,
   CstDepCallback, CstScope, CstLogicExpr, CstIterator, CstVecNodeIntf,
   CstVecExpr;
-import esdl.rand.expr: CstValue;
+import esdl.rand.base: CstValue;
 import esdl.rand.dist: DistRangeSetBase;
 import esdl.solver.base;
 import esdl.solver.mono: CstMonoSolver;

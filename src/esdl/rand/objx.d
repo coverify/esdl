@@ -7,14 +7,14 @@ import std.traits: isIntegral, isBoolean, isArray, KeyType,
   isStaticArray, isDynamicArray, isAssociativeArray;
 
 import esdl.rand.misc;
-import esdl.rand.base: CstVecExpr, CstIterator, DomType, CstDomain,
-  CstDomSet, CstObjectStubBase, CstObjArrStubBase, CstObjSet,
+import esdl.rand.base: CstValue, CstVecExpr, CstIterator, DomType,
+  CstDomain, CstDomSet, CstObjectStubBase, CstObjArrStubBase, CstObjSet,
   CstVarNodeIntf, CstVecNodeIntf, CstObjArrIntf, CstVarGlobIntf,
   CstObjectVoid, CstObjArrVoid;
 import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy;
-import esdl.rand.expr: CstArrLength, _esdl__cstVal,
-  CstArrIterator, CstValue, CstRangeExpr;
+import esdl.rand.expr: CstRangeExpr;
+import esdl.rand.domain: CstArrIterator, CstArrLength;
 
 import esdl.rand.meta: _esdl__ProxyResolve, _esdl__staticCast;
 

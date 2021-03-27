@@ -2,11 +2,9 @@ module esdl.solver.base;
 
 // import esdl.rand.base;
 
-import esdl.rand.expr: CstValue;
-
 import esdl.rand.misc;
 import esdl.rand.pred: CstPredGroup;
-import esdl.rand.base: CstDomain;
+import esdl.rand.base: CstDomain, CstValue;
 
 abstract class CstSolver
 {

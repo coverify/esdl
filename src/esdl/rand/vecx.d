@@ -8,12 +8,12 @@ import std.traits: isIntegral, isBoolean, isArray, KeyType,
 
 import esdl.rand.misc;
 import esdl.rand.base: CstVecPrim, CstVecExpr, CstIterator, DomType, CstDomain,
-  CstDomSet, CstVarNodeIntf, CstVecNodeIntf, CstVarGlobIntf;
+  CstDomSet, CstVarNodeIntf, CstVecNodeIntf, CstVarGlobIntf, CstValue,
+  CstLogicTerm;
 import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy;
-import esdl.rand.expr: CstArrLength, CstVecDomain, _esdl__cstVal, CstVecValue,
-  CstArrIterator, CstValue, CstRangeExpr, CstVec2LogicExpr, CstLogicTerm;
-
+import esdl.rand.expr: CstRangeExpr, CstVec2LogicExpr;
+import esdl.rand.domain: CstVecValue, CstArrIterator, CstArrLength, CstVecDomain;
 import esdl.rand.meta: _esdl__ProxyResolve, _esdl__staticCast;
 
 import std.algorithm.searching: canFind;

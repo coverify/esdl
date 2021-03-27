@@ -1,11 +1,18 @@
 module esdl.rand.base;
 
+import std.traits: isIntegral;
+
 import esdl.solver.base;
 import esdl.rand.dist;
-import esdl.rand.expr: CstValue, CstVecTerm, CstVecArrExpr;
+import esdl.rand.domain: CstVecValue;
+import esdl.rand.expr: CstVecArrExpr, CstVecSliceExpr, CstRangeExpr,
+  CstInsideSetElem, CstVec2LogicExpr, CstLogic2LogicExpr, CstVec2VecExpr;
 import esdl.rand.pred: CstPredGroup, CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy;
-import esdl.rand.misc: _esdl__RandGen, CstVectorOp;
+import esdl.rand.misc: _esdl__RandGen, CstVectorOp, CstLogicOp, CstCompareOp,
+  CstBinaryOp;
+
+import esdl.data.bvec: isBitVector;
 import esdl.data.folder;
 import esdl.data.charbuf;
 
@@ -496,6 +503,30 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
   abstract string describe();
 }
 
+abstract class CstValue: CstVecTerm
+{
+  CstLogicExpr _cstExpr;
+  
+  bool isConst() {
+    return true;
+  }
+
+  bool isIterator() {
+    return false;
+  }
+
+  CstVecExpr unroll(CstIterator iters, ulong n) {
+    return this;
+  }
+
+  abstract bool isBool();
+  abstract long value();
+  abstract bool getBool();
+  // abstract bool signed();
+  // abstract uint bitcount();
+}
+
+
 abstract class CstObjSet: CstObjArrVoid, CstObjArrIntf
 {
   string _name;
@@ -791,4 +822,249 @@ abstract class CstIterator: CstVecTerm
   long evaluate() {
     assert(false, "Can not evaluate an Iterator: " ~ this.name());
   }
+}
+
+abstract class CstVecTerm: CstVecExpr
+{
+
+  CstLogicTerm toBoolExpr() {
+    auto zero = new CstVecValue!int(0); // CstVecValue!int.allocate(0);
+    return new CstVec2LogicExpr(this, zero, CstCompareOp.NEQ);
+  }
+
+  // abstract CstVecExpr unroll(CstIterator iter, ulong n);
+
+  CstVec2VecExpr opBinary(string op)(CstVecTerm other)
+  {
+    static if(op == "&") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.AND);
+    }
+    static if(op == "|") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.OR);
+    }
+    static if(op == "^") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.XOR);
+    }
+    static if(op == "+") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.ADD);
+    }
+    static if(op == "-") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.SUB);
+    }
+    static if(op == "*") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.MUL);
+    }
+    static if(op == "/") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.DIV);
+    }
+    static if(op == "%") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.REM);
+    }
+    static if(op == "<<") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.LSH);
+    }
+    static if(op == ">>") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.RSH);
+    }
+    static if(op == ">>>") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.LRSH);
+    }
+    static if(op == "~") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.RANGE);
+    }
+  }
+
+  CstVec2VecExpr opBinary(string op, Q)(Q q)
+    if(isBitVector!Q || isIntegral!Q)
+      {
+  	auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
+  	static if(op == "&") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.AND);
+  	}
+  	static if(op == "|") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.OR);
+  	}
+  	static if(op == "^") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.XOR);
+  	}
+  	static if(op == "+") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.ADD);
+  	}
+  	static if(op == "-") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.SUB);
+  	}
+  	static if(op == "*") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.MUL);
+  	}
+  	static if(op == "/") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.DIV);
+  	}
+  	static if(op == "%") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.REM);
+  	}
+  	static if(op == "<<") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.LSH);
+  	}
+  	static if(op == ">>") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.RSH);
+  	}
+  	static if(op == ">>>") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.LRSH);
+  	}
+  	static if(op == "~") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.RANGE);
+  	}
+      }
+
+  CstVec2VecExpr opBinaryRight(string op, Q)(Q q)
+    if(isBitVector!Q || isIntegral!Q)
+      {
+	auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
+	static if(op == "&") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.AND);
+	}
+	static if(op == "|") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.OR);
+	}
+	static if(op == "^") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.XOR);
+	}
+	static if(op == "+") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.ADD);
+	}
+	static if(op == "-") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.SUB);
+	}
+	static if(op == "*") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.MUL);
+	}
+	static if(op == "/") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.DIV);
+	}
+	static if(op == "%") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.REM);
+	}
+	static if(op == "<<") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.LSH);
+	}
+	static if(op == ">>") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.RSH);
+	}
+	static if(op == ">>>") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.LRSH);
+	}
+	static if(op == "~") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.RANGE);
+	}
+      }
+
+  // final CstVecSliceExpr opSlice(CstVecTerm lhs, CstVecTerm rhs) {
+  //   return new CstVecSliceExpr(this, lhs, rhs);
+  // }
+
+  final CstVecSliceExpr opIndex(CstRangeExpr range) {
+    return new CstVecSliceExpr(this, range);
+  }
+
+  // final CstVecIndexExpr opIndex(CstVecTerm index) {
+  //   return new CstVecIndexExpr(this, index);
+  // }
+
+  CstNotLogicExpr opUnary(string op)() if(op == "*") {
+    return new CstNotLogicExpr(this.toBoolExpr());
+  }
+  CstNotVecExpr opUnary(string op)() if(op == "~") {
+    return new CstNotVecExpr(this);
+  }
+  CstNegVecExpr opUnary(string op)() if(op == "-") {
+    return new CstNegVecExpr(this);
+  }
+
+  final CstLogicTerm inside(CstInsideSetElem range) {
+    if (range._rhs is null) {
+      return new CstVec2LogicExpr(this, range._lhs, CstCompareOp.EQU);
+    }
+    else {
+      CstLogicTerm lhs = new CstVec2LogicExpr(this, range._lhs, CstCompareOp.GTE);
+      CstLogicTerm rhs;
+      if (range._inclusive) rhs = new CstVec2LogicExpr(this, range._rhs, CstCompareOp.LTE);
+      else rhs = new CstVec2LogicExpr(this, range._rhs, CstCompareOp.LTH);
+      return lhs & rhs;
+    }
+  }
+
+  void scan() { }
+}
+
+abstract class CstLogicTerm: CstLogicExpr
+{
+  abstract override CstLogicTerm unroll(CstIterator iter, ulong n);
+
+  CstLogicTerm opBinary(string op)(CstLogicTerm other)
+  {
+    static if(op == "&") {
+      return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICAND);
+    }
+    static if(op == "|") {
+      return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICOR);
+    }
+    static if(op == ">>") {
+      return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICIMP);
+    }
+  }
+
+  CstLogicTerm opOpAssign(string op)(CstLogicTerm other)
+  {
+    static if(op == ">>>") {
+      return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICIMP);
+    }
+  }
+  
+  CstLogicTerm opUnary(string op)() if(op == "*")
+    {
+      static if(op == "*") {	// "!" in cstx is translated as "*"
+	return new CstNotLogicExpr(this);
+      }
+    }
+
+  CstLogicTerm opUnary(string op)() if(op == "~")
+    {
+      static if(op == "~") {	// "!" in cstx is translated as "*"
+	return new CstNotLogicExpr(this);
+      }
+    }
+
+  final CstLogicTerm implies(CstLogicTerm other)
+  {
+    return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICIMP);
+  }
+
+  final CstLogicTerm implies(CstVecTerm other)
+  {
+    return new CstLogic2LogicExpr(this, other.toBoolExpr(), CstLogicOp.LOGICIMP);
+  }
+
+  final CstLogicTerm logicOr(CstLogicTerm other)
+  {
+    return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICOR);
+  }
+
+  final CstLogicTerm logicOr(CstVecTerm other)
+  {
+    return new CstLogic2LogicExpr(this, other.toBoolExpr(), CstLogicOp.LOGICOR);
+  }
+
+  final CstLogicTerm logicAnd(CstLogicTerm other)
+  {
+    return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICAND);
+  }
+
+  final CstLogicTerm logicAnd(CstVecTerm other)
+  {
+    return new CstLogic2LogicExpr(this, other.toBoolExpr(), CstLogicOp.LOGICAND);
+  }
+
+  void scan() { }
+  bool isOrderingExpr() { return false; }
+  bool eval() {assert (false, "Enable to evaluate CstLogicTerm");}
 }

@@ -1,0 +1,966 @@
+module esdl.rand.domain;
+
+import std.traits: isIntegral, isBoolean, isSigned, Unconst,
+  OriginalType, EnumMembers, isSomeChar, isStaticArray;
+
+import esdl.data.bvec: isBitVector;
+import esdl.data.charbuf: Charbuf;
+
+import esdl.rand.base: CstValue, CstDomain, CstDomSet, CstIterator,
+  CstVecNodeIntf, CstVecPrim, CstVecExpr, DomType;
+// import esdl.rand.misc: rand, writeHexString, _esdl__RandGen;
+import esdl.rand.misc: rand, _esdl__RandGen, writeHexString, isVecSigned,
+  CstVectorOp, CstInsideOp, CstCompareOp, CstLogicOp;
+import esdl.rand.proxy: _esdl__Proxy;
+import esdl.rand.pred: CstPredicate;
+
+import esdl.solver.base: CstSolver;
+
+
+class CstVecDomain(T, rand RAND_ATTR): CstDomain
+{
+  enum HAS_RAND_ATTRIB = RAND_ATTR.isRand();
+
+  Unconst!T _shadowValue;
+
+  static if (is (T == enum)) {
+    alias OT = OriginalType!T;
+
+    T[] _enumSortedVals;
+
+    void _enumSortedValsPopulate() {
+      import std.algorithm.sorting: sort;
+      _enumSortedVals = cast(T[]) [EnumMembers!T];
+      _enumSortedVals.sort();
+    }
+
+
+    static if (isIntegral!OT) {
+      private void _addRangeConstraint(CstSolver solver, OT min, OT max) {
+	if (min == max) {
+	  solver.pushToEvalStack(this);
+	  solver.pushToEvalStack(min, OT.sizeof*8, isSigned!OT);
+	  solver.processEvalStack(CstCompareOp.EQU);
+	}
+	else {
+	  solver.pushToEvalStack(this);
+	  solver.pushToEvalStack(min, OT.sizeof*8, isSigned!OT);
+	  solver.processEvalStack(CstCompareOp.GTE);
+	  solver.pushToEvalStack(this);
+	  solver.pushToEvalStack(max, OT.sizeof*8, isSigned!OT);
+	  solver.processEvalStack(CstCompareOp.LTE);
+	  solver.processEvalStack(CstLogicOp.LOGICAND);
+	}
+      }
+    }
+    else static if (isBitVector!OT && OT.SIZE <= 64) {
+      private void _addRangeConstraint(CstSolver solver, OT min, OT max) {
+	if (min == max) {
+	  solver.pushToEvalStack(this);
+	  solver.pushToEvalStack(cast(ulong) min, OT.SIZE, OT.ISSIGNED);
+	  solver.processEvalStack(CstCompareOp.EQU);
+	}
+	else {
+	  solver.pushToEvalStack(this);
+	  solver.pushToEvalStack(cast(ulong) min, OT.SIZE, OT.ISSIGNED);
+	  solver.processEvalStack(CstCompareOp.GTE);
+	  solver.pushToEvalStack(this);
+	  solver.pushToEvalStack(cast(ulong) max, OT.SIZE, OT.ISSIGNED);
+	  solver.processEvalStack(CstCompareOp.LTE);
+	  solver.processEvalStack(CstLogicOp.LOGICAND);
+	}
+      }
+    }
+    else {
+      private void _addRangeConstraint(CstSolver solver, OT min, OT max) {
+	assert (false);
+      }
+    }
+  }
+
+
+   override bool visitDomain(CstSolver solver) {
+    static if (is (T == enum)) {
+      uint count;
+      if (_enumSortedVals.length == 0) {
+	_enumSortedValsPopulate();
+      }
+      T min;
+      T max;
+      foreach (i, val; _enumSortedVals) {
+	if (i == 0) {
+	  min = val;
+	  max = val;
+	}
+	else {
+	  if (val - max == 1) {
+	    max = val;
+	  }
+	  else {
+	    _addRangeConstraint(solver, min, max);
+	    count += 1;
+	    min = val;
+	    max = val;
+	  }
+	}
+      }
+      _addRangeConstraint(solver, min, max);
+      for (uint i=0; i!=count; ++i) {
+	solver.processEvalStack(CstLogicOp.LOGICOR);
+      }
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
+
+  void visit(CstSolver solver) {
+    // assert (solver !is null);
+    solver.pushToEvalStack(this);
+  }
+
+  void writeExprString(ref Charbuf str) {
+    if (this.isSolved()) {
+      str ~= 'V';
+      if (_domN < 256) (cast(ubyte) _domN).writeHexString(str);
+      else (cast(ushort) _domN).writeHexString(str);
+      str ~= '#';
+      if (_varN < 256) (cast(ubyte) _varN).writeHexString(str);
+      else (cast(ushort) _varN).writeHexString(str);
+    }
+    else {
+      str ~= 'R';
+      if (_domN < 256) (cast(ubyte) _domN).writeHexString(str);
+      else (cast(ushort) _domN).writeHexString(str);
+      str ~= T.stringof;
+      // static if (isBitVector!T) {
+      // 	static if (T.ISSIGNED) {
+      // 	  str ~= 'S';
+      // 	}
+      // 	else {
+      // 	  str ~= 'U';
+      // 	}
+      // 	if (T.SIZE < 256) (cast(ubyte) T.SIZE).writeHexString(str);
+      // 	else (cast(ushort) T.SIZE).writeHexString(str);
+      // }
+      // else static if (is (T == enum)) {
+      // 	str ~= T.stringof;
+      // }
+      // else static if (isIntegral!T) {
+      // 	static if (isSigned!T) {
+      // 	  str ~= 'S';
+      // 	}
+      // 	else {
+      // 	  str ~= 'U';
+      // 	}
+      // 	(cast(ubyte) (T.sizeof * 8)).writeHexString(str);
+      // }
+      // else static if (isBoolean!T) {
+      // 	str ~= 'U';
+      // 	(cast(ubyte) 1).writeHexString(str);
+      // }
+    }
+  }
+
+  this(string name, _esdl__Proxy root) {
+    _name = name;
+    _root = root;
+  }
+
+  ~this() {
+  }    
+
+  long evaluate() {
+    static if (HAS_RAND_ATTRIB) {
+      if (! this.isRand || this.isSolved()) {
+	return value();
+      }
+      else {
+	assert (false, "Error evaluating " ~ _name);
+      }
+    }
+    else {
+      return value();
+    }
+  }
+
+  // S to(S)()
+  //   if (is (S == string)) {
+  //     import std.conv;
+  //     static if (HAS_RAND_ATTRIB) {
+  // 	if (isRand) {
+  // 	  return "RAND#" ~ _name ~ ":" ~ value().to!string();
+  // 	}
+  // 	else {
+  // 	  return "VAL#" ~ _name ~ ":" ~ value().to!string();
+  // 	}
+  //     }
+  //     else {
+  // 	return "VAR#" ~ _name ~ ":" ~ value().to!string();
+  //     }
+  //   }
+
+  // override string toString() {
+  //   return this.to!string();
+  // }
+
+  uint bitcount() {
+    static if (isBoolean!T)         return 1;
+    else static if (isIntegral!T || isSomeChar!T)   return T.sizeof * 8;
+    else static if (isBitVector!T)  return T.SIZE;
+    else static if (is (T == enum)) {
+      alias OT = OriginalType!T;
+      static if (isBoolean!OT)         return 1;
+      else static if (isIntegral!OT || isSomeChar!OT)   return OT.sizeof * 8;
+      else static if (isBitVector!OT)  return OT.SIZE;
+      else static assert(false, "bitcount can not operate on: " ~ T.stringof);
+    }
+    else static assert(false, "bitcount can not operate on: " ~ T.stringof);
+  }
+
+  bool signed() {
+    static if (isVecSigned!T) {
+      return true;
+    }
+    else  {
+      return false;
+    }
+  }
+  
+  abstract T* getRef();
+  
+  // override void collate(ulong v, int word = 0) {
+  //   static if (HAS_RAND_ATTRIB) {
+  //     T* var = getRef();
+  //     static if(isIntegral!T) {
+  // 	if(word == 0) {
+  // 	  *var = cast(T) v;
+  // 	}
+  // 	else {
+  // 	  assert(false, "word has to be 0 for integrals");
+  // 	}
+  //     }
+  //     else {
+  // 	(*var)._setNthWord(v, word);
+  //     }
+  //     markSolved();
+  //   }
+  //   else {
+  //     assert(false);
+  //   }
+  // }
+
+  // override bool isBool() {
+  //   return isBoolean!T;
+  // }
+  
+  // override bool getBool() {
+  //   static if (isBoolean!T) {
+  //     return *(getRef());
+  //   }
+  //   else {
+  //     assert (false, "getBool called on a non-boolean domain");
+  //   }
+  // }
+    
+  // override void setBool(bool val) {
+  //   static if (HAS_RAND_ATTRIB) {
+  //     static if (isBoolean!T) {
+  // 	Unconst!T newVal= cast (Unconst!T) val;
+  // 	assert (getRef() !is null);
+  // 	if (newVal != *(getRef())) {
+  // 	  _valueChanged = true;
+  // 	}
+  // 	else {
+  // 	  _valueChanged = false;
+  // 	}
+  // 	*(getRef()) = newVal;
+  // 	markSolved();
+  // 	execCbs();
+  //     }
+  //     else {
+  // 	assert (false, "setBool called on a non-boolean domain");
+  //     }
+  //   }
+  //   else {
+  //     assert(false);
+  //   }
+  // }
+
+  override long value() {
+    return cast(long) *(getRef());
+  }
+
+  override void setVal(ulong[] value) {
+    static if (HAS_RAND_ATTRIB) {
+      Unconst!T newVal;
+      foreach (i, v; value) {
+	static if(isIntegral!T || isBoolean!T) {
+	  if (i == 0) {
+	    newVal = cast(T) v;
+	  }
+	  else {
+	    assert(false, "word has to be 0 for integrals");
+	  }
+	}
+	else {
+	  newVal._setNthWord(v, i);
+	}
+      }
+      if (newVal != *(getRef())) {
+	_valueChanged = true;
+      }
+      else {
+	_valueChanged = false;
+      }
+      *(getRef()) = newVal;
+      markSolved();
+      execCbs();
+    }
+    else {
+      assert(false);
+    }
+  }
+
+  override void setVal(ulong val) {
+    static if (isBitVector!T) {
+      assert (T.SIZE <= 64);
+    }
+    static if (HAS_RAND_ATTRIB) {
+      Unconst!T newVal;
+      static if (isIntegral!T || isBoolean!T) {
+	newVal = cast(T) val;
+      }
+      else {
+	newVal._setNthWord(val, 0);
+      }
+      assert (getRef() !is null);
+      if (newVal != *(getRef())) {
+	_valueChanged = true;
+      }
+      else {
+	_valueChanged = false;
+      }
+      *(getRef()) = newVal;
+      markSolved();
+      execCbs();
+    }
+    else {
+      assert(false);
+    }
+  }
+
+  override void _esdl__doRandomize(_esdl__RandGen randGen) {
+    static if (HAS_RAND_ATTRIB) {
+      if (! isSolved()) {
+	Unconst!T newVal;
+	randGen.gen(newVal);
+	if (newVal != *(getRef())) {
+	  _valueChanged = true;
+	  *(getRef()) = newVal;
+	}
+	else {
+	  _valueChanged = false;
+	}
+      }
+    }
+    else {
+      assert(false);
+    }
+  }
+
+  bool _valueChanged = true;
+
+  override bool hasChanged() {
+    return _valueChanged;
+  }
+  
+  override bool updateVal() {
+    assert(isRand() !is true);
+    Unconst!T newVal;
+    assert (_root !is null);
+    if (! this.isSolved()) {
+      newVal = *(getRef());
+      this.markSolved();
+      if (newVal != _shadowValue) {
+	_shadowValue = newVal;
+	_valueChanged = true;
+	return true;
+      }
+      else {
+	_valueChanged = false;
+	return false;
+      }
+    }
+    return true;
+  }
+
+  static if (isIntegral!T) {
+    import std.traits;
+    static if (isSigned!T) {
+      enum bool tSigned = true;
+    }
+    else {
+      enum bool tSigned = false;
+    }
+    enum size_t tSize = T.sizeof * 8;
+  }
+  else static if (isBoolean!T) {
+    enum bool tSigned = false;
+    enum size_t tSize = 1;
+  }
+  else static if (isBitVector!T) {
+    static if (T.ISSIGNED) {
+      enum bool tSigned = true;
+    }
+    else {
+      enum bool tSigned = false;
+    }
+    static if (T.SIZE <= 64) {
+      enum size_t tSize = T.SIZE;
+    }
+  }
+
+
+  override void registerRndPred(CstPredicate rndPred) {
+    foreach (pred; _rndPreds) {
+      if (pred is rndPred) {
+	return;
+      }
+    }
+    _rndPreds ~= rndPred;
+  }
+  
+  // override void registerVarPred(CstPredicate varPred) {
+  //   foreach (pred; _varPreds) {
+  //     if (pred is varPred) {
+  // 	return;
+  //     }
+  //   }
+  //   _varPreds ~= varPred;
+  // }
+  
+  override void markSolved() {
+    super.markSolved();
+    static if (HAS_RAND_ATTRIB) {
+      if (this.isRand()) {
+	_domN = uint.max;
+      }
+    }
+  }
+  
+  final override string describe() {
+    import std.conv: to;
+    string desc = "CstDomain: " ~ name();
+    // desc ~= "\n	DomType: " ~ _type.to!string();
+    // if (_type !is DomType.MULTI) {
+    //   desc ~= "\nIntRS: " ~ _rs.toString();
+    // }
+    if (_rndPreds.length > 0) {
+      desc ~= "\n	Preds:";
+      foreach (pred; _rndPreds) {
+	desc ~= "\n		" ~ pred.name();
+      }
+      desc ~= "\n";
+    }
+    if (_tempPreds.length > 0) {
+      desc ~= "\n	Temporary Preds:";
+      foreach (pred; _tempPreds) {
+	desc ~= "\n		" ~ pred.name();
+      }
+      desc ~= "\n";
+    }
+    return desc;
+  }
+}
+
+class CstArrIterator(RV): CstIterator
+{
+  RV _arrVar;
+
+  RV arrVar() {
+    return _arrVar;
+  }
+
+  string _name;
+
+  this(RV arrVar) {
+    _name = "iterVar";
+    _arrVar = arrVar;
+    // _arrVar._arrLen.iterVar(this);
+  }
+
+  final override CstDomain getLenVec() {
+    return _arrVar.arrLen();
+  }
+  
+  final override ulong mapIter(size_t i) {
+    return _arrVar.mapIter(i);
+  }
+
+  override ulong size() {
+    if(! getLenVec().isSolved()) {
+      assert(false, "Can not find size since the " ~
+	     "Iter Variable has not been unrolled");
+    }
+    // import std.stdio;
+    // writeln("size for arrVar: ", _arrVar.name(), " is ",
+    // 	    _arrVar.arrLen.value);
+    return _arrVar.arrLen.value;
+  }
+
+  override string name() {
+    string n = _arrVar.name();
+    return n ~ "->iterator";
+  }
+
+  override string fullName() {
+    string n = _arrVar.fullName();
+    return n ~ "->iterator";
+  }
+
+  string describe() {
+    return name();
+  }
+
+  // while an iterator is a singleton wrt to an array, the array
+  // itself could have multiple object instances in case it is not
+  // concrete -- eg foo[foo.iter].iter
+  override bool opEquals(Object other) {
+    auto rhs = cast(typeof(this)) other;
+    if (rhs is null) return false;
+    else return (_arrVar == rhs._arrVar);
+  }
+
+  CstVecExpr unroll(CstIterator iter, ulong n) {
+    if(this !is iter) {
+      return _arrVar.unroll(iter,n).arrLen().makeIterVar();
+    }
+    else {
+      return new CstVecValue!size_t(n); // CstVecValue!size_t.allocate(n);
+    }
+  }
+
+  override CstIterator unrollIterator(CstIterator iter, uint n) {
+    assert(this !is iter);
+    return _arrVar.unroll(iter,n).arrLen().makeIterVar();
+  }
+
+  void visit(CstSolver solver) {
+    assert (false, "Can not visit an Iter Variable without unrolling");
+  }
+
+  // override bool getVal(ref long val) {
+  //   return false;
+  // }
+
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
+    deps ~= getLenVec();
+    iters ~= this;
+  }
+
+  bool signed() {
+    return false;
+  }
+
+  uint bitcount() {
+    return 64;
+  }
+  
+  bool isSolved() {
+    return _arrVar._arrLen.isSolved();
+  }
+
+
+  void writeExprString(ref Charbuf str) {
+    // assert(false);
+  }
+}
+
+class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecPrim
+{
+
+  enum HAS_RAND_ATTRIB = RV.RAND.isRand();
+
+  CstArrIterator!RV _iterVar;
+
+  RV _parent;
+
+  string _name;
+
+  CstVecPrim[] _preReqs;
+
+  override string name() {
+    return _name;
+  }
+
+  override string fullName() {
+    return _parent.fullName() ~ "->length";
+  }
+
+  this(string name, RV parent) {
+    assert (parent !is null);
+    super(name, parent.getProxyRoot());
+    _name = name;
+    _parent = parent;
+    _iterVar = new CstArrIterator!RV(_parent);
+  }
+
+  ~this() { }
+
+  override _esdl__Proxy getProxyRoot() {
+    return _parent.getProxyRoot();
+  }
+
+  override CstArrLength!RV getResolved() { // always self
+    return this;
+  }
+
+  override void visit(CstSolver solver) {
+    solver.pushToEvalStack(this);
+  }
+
+  override void randomizeIfUnconstrained(_esdl__Proxy proxy) {
+    if ((! isSolved()) && isStatic() && (! isRolled())) {
+      if (_rndPreds.length == 0) {
+	_esdl__doRandomize(getProxyRoot()._esdl__getRandGen());
+	proxy.solvedSome();
+	markSolved();
+	proxy.addSolvedDomain(this);
+	execCbs();
+      }
+    }
+    if (! isRand()) {
+      _parent.buildElements(_parent.getLen());
+      execCbs();
+    }
+  }
+
+  override void _esdl__doRandomize(_esdl__RandGen randGen) {
+    // this function will only be called when array lenght is
+    // unconstrainted
+    _parent.buildElements(_parent.getLen());
+  }
+  
+  override bool isRand() {
+    static if (HAS_RAND_ATTRIB) {
+      import std.traits;
+      if (isStaticArray!(RV.L)) return false;
+      else return true;
+    }
+    else {
+      return false;
+    }
+  }
+
+  T to(T)()
+    if(is(T == string)) {
+      import std.conv;
+      if(isRand) {
+	return "RAND-" ~ "#" ~ _name ~ ":" ~ value().to!string();
+      }
+      else {
+	return "VAL#" ~ _name ~ ":" ~ value().to!string();
+      }
+    }
+
+  override string toString() {
+    return this.to!string();
+  }
+
+  void iterVar(CstArrIterator!RV var) {
+    _iterVar = var;
+  }
+
+  CstArrIterator!RV iterVar() {
+    return _iterVar;
+  }
+
+  CstArrIterator!RV makeIterVar() {
+    if(_iterVar is null) {
+      _iterVar = new CstArrIterator!RV(_parent);
+    }
+    return _iterVar;
+  }
+
+  override uint bitcount() {
+    if (_parent.maxArrLen == -1) {
+      return 32;
+    }
+    uint i = 1;
+    for (size_t c=1; c < _parent.maxArrLen; c *= 2) {
+      i++;
+    }
+    return i;
+  }
+
+  override bool signed() {
+    return false;
+  }
+
+  override long value() {
+    return _parent.getLen();
+  }
+
+  override void setVal(ulong value) {
+    _parent.setLen(cast(size_t) value);
+    markSolved();
+    execCbs();
+  }
+
+  override void setVal(ulong[] v) {
+    assert(v.length == 1);
+    _parent.setLen(cast(size_t) v[0]);
+    markSolved();
+    execCbs();
+  }
+
+  override void markSolved() {
+    super.markSolved();
+    _parent.markArrLen(value());
+  }
+
+  // override void collate(ulong v, int word = 0) {
+  //   assert(word == 0);
+  //   _parent.setLen(cast(size_t) v);
+  // }
+
+  CstVecExpr unroll(CstIterator iter, ulong n) {
+    return _parent.unroll(iter,n).arrLen();
+  }
+
+  void solveBefore(CstVecPrim other) {
+    other.addPreRequisite(this);
+  }
+
+  void addPreRequisite(CstVecPrim domain) {
+    _preReqs ~= domain;
+  }
+
+  bool isConst() {
+    return false;
+  }
+  
+  bool isIterator() {
+    return false;
+  }
+  
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
+    bool listed;
+    foreach (rnd; rnds) {
+      if (rnd is this) {
+	listed = true;
+	break;
+      }
+    }
+    if (listed is false) {
+      rnds ~= this;
+    }
+    static if (HAS_RAND_ATTRIB) {
+      if (! this.isStatic()) {
+	if (_type <= DomType.LAZYMONO) _type = DomType.MAYBEMONO;
+      }
+    }
+    _parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs,
+			     vals, iters, idxs, bitIdxs, deps);
+  }
+
+  override void execIterCbs() {
+    assert(_iterVar !is null);
+    _iterVar.unrollCbs();
+  }
+
+  override uint* getRef() {
+    assert(false);
+  }
+
+  override bool updateVal() {
+    assert(isRand() !is true);
+    uint newVal;
+    assert(_root !is null);
+    if (! this.isSolved()) {
+      newVal = cast(uint)_parent.getLen();
+      this.markSolved();
+      if (newVal != _shadowValue) {
+	_shadowValue = cast(uint) newVal;
+	_valueChanged = true;
+	return true;
+      }
+      else {
+	_valueChanged = false;
+	return false;
+      }
+    }
+    return true;
+  }
+  
+  final override bool isStatic() {
+    return _parent.isStatic();
+  }
+
+  final override bool isRolled() {
+    return _parent.isRolled();
+  }
+
+  override CstDomSet getParentDomSet() {
+    static if (is (RV: CstDomSet)) return _parent;
+    else return null;
+  }
+}
+
+class CstVecValue(T): CstValue
+{
+  static if (isIntegral!T) {
+    import std.traits;
+    enum bool SIGNED = isSigned!T;
+    enum uint BITCOUNT = T.sizeof * 8;
+  }
+  else static if (isBitVector!T) {
+    enum bool SIGNED = T.ISSIGNED;
+    enum uint BITCOUNT = T.SIZE;
+  }
+  else static if (isBoolean!T) {
+    enum bool SIGNED = false;
+    enum uint BITCOUNT = 1;
+  }
+
+  override bool isBool() {
+    return isBoolean!T;
+  }
+
+  bool signed() {
+    return SIGNED;
+  }
+
+  uint bitcount() {
+    return BITCOUNT;
+  }
+
+  override bool getBool() {
+    static if (isBoolean!T) {
+      return _val;
+    }
+    else {
+      assert (false, "getBool called on non-boolean CstVecValue");
+    }
+  }
+
+  override long value() {
+    return cast(long) _val;
+  }
+
+  import std.conv;
+
+  // static Allocator _allocator;
+
+  // static this() {
+  //   CstVecValue!T._allocator = new Allocator;
+  //   CstValueAllocator.allocators ~= CstVecValue!T._allocator;
+  // }
+
+  T _val;			// the value of the constant
+
+  string describe() {
+    return _val.to!string();
+  }
+
+  // static CstVecValue!T allocate(T value) {
+  //   Allocator allocator = _allocator;
+  //   if (allocator is null) {
+  //     allocator = new Allocator;
+  //     _allocator = allocator;
+  //     CstValueAllocator.allocators ~= allocator;
+  //   }
+
+  //   // return new CstVecValue!T(value);
+  //   return allocator.allocate(value);
+  // }
+
+  this(T value) {
+    _val = value;
+  }
+
+  ~this() {
+  }
+
+  void visit(CstSolver solver) {
+    solver.pushToEvalStack(this);
+  }
+
+  const(T)* getRef() {
+    return &_val;
+  }
+
+  // bool getVal(ref long val) {
+  //   val = _val;
+  //   return true;
+  // }
+
+  long evaluate() {
+    return cast(long) _val;
+  }
+
+  bool isSolved() {
+    return true;
+  }
+
+  void setDomainContext(CstPredicate pred,
+			ref CstDomain[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomain[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomain[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
+    vals ~= this;
+  }
+
+  void writeExprString(ref Charbuf str) {
+    // VSxxxxx or VUxxxxx
+    str ~= 'V';
+    static if (isBoolean!T) {
+      str ~= 'U';
+    }
+    else static if (isIntegral!T) {
+      static if (isSigned!T) {
+	str ~= 'S';
+      }
+      else {
+	str ~= 'U';
+      }
+    }
+    else static if (isBitVector!T) {
+      static if (T.ISSIGNED) {
+	str ~= 'S';
+      }
+      else {
+	str ~= 'U';
+      }
+    }
+    else {
+      static assert (false);
+    }
+    _val.writeHexString(str);
+  }
+}
