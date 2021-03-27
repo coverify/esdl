@@ -425,42 +425,42 @@ class CstVecDomain(T, rand RAND_ATTR): CstDomain
   //   }
   // }
 
-  override bool isBool() {
-    return isBoolean!T;
-  }
+  // override bool isBool() {
+  //   return isBoolean!T;
+  // }
   
-  override bool getBool() {
-    static if (isBoolean!T) {
-      return *(getRef());
-    }
-    else {
-      assert (false, "getBool called on a non-boolean domain");
-    }
-  }
+  // override bool getBool() {
+  //   static if (isBoolean!T) {
+  //     return *(getRef());
+  //   }
+  //   else {
+  //     assert (false, "getBool called on a non-boolean domain");
+  //   }
+  // }
     
-  override void setBool(bool val) {
-    static if (HAS_RAND_ATTRIB) {
-      static if (isBoolean!T) {
-	Unconst!T newVal= cast (Unconst!T) val;
-	assert (getRef() !is null);
-	if (newVal != *(getRef())) {
-	  _valueChanged = true;
-	}
-	else {
-	  _valueChanged = false;
-	}
-	*(getRef()) = newVal;
-	markSolved();
-	execCbs();
-      }
-      else {
-	assert (false, "setBool called on a non-boolean domain");
-      }
-    }
-    else {
-      assert(false);
-    }
-  }
+  // override void setBool(bool val) {
+  //   static if (HAS_RAND_ATTRIB) {
+  //     static if (isBoolean!T) {
+  // 	Unconst!T newVal= cast (Unconst!T) val;
+  // 	assert (getRef() !is null);
+  // 	if (newVal != *(getRef())) {
+  // 	  _valueChanged = true;
+  // 	}
+  // 	else {
+  // 	  _valueChanged = false;
+  // 	}
+  // 	*(getRef()) = newVal;
+  // 	markSolved();
+  // 	execCbs();
+  //     }
+  //     else {
+  // 	assert (false, "setBool called on a non-boolean domain");
+  //     }
+  //   }
+  //   else {
+  //     assert(false);
+  //   }
+  // }
 
   override long value() {
     return cast(long) *(getRef());

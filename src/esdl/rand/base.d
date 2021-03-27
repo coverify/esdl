@@ -239,9 +239,9 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
   abstract void setVal(ulong[] v);
   abstract void setVal(ulong v);
 
-  abstract bool isBool();
-  abstract void setBool(bool v);
-  abstract bool getBool();
+  // abstract bool isBool();
+  // abstract void setBool(bool v);
+  // abstract bool getBool();
   
   // abstract uint domIndex();
   // abstract void domIndex(uint s);
