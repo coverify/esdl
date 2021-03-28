@@ -1618,6 +1618,10 @@ class CstIteLogicExpr: CstLogicTerm
     assert (false);
   }
   override bool eval() {assert (false, "Enable to evaluate CstIteLogicExpr");}
+
+  void writeExprString(ref Charbuf str) {
+    assert (false, "TBD");
+  }
 }
 
 class CstVec2LogicExpr: CstLogicTerm
