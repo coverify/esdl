@@ -786,15 +786,9 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     this(_esdl__Proxy eng, string name) {
       super(eng, name);
     }
-    debug(CSTPARSER) {
-      pragma(msg, "/* Constraint Soecification STARTS\n");
-      pragma(msg, _esdl__CstString);
-      pragma(msg, "\nConstraint Soecification ENDS */");
-      pragma(msg, "// constraintXlate! STARTS\n");
-      pragma(msg, constraintXlate("this.outer", _esdl__CstString, FILE, LINE));
-      pragma(msg, "// constraintXlate! ENDS\n");
-    }
-    mixin(constraintXlate("this.outer", _esdl__CstString, FILE, LINE));
+
+    mixin(CST_PARSE_DATA.cstDecls);
+    mixin(CST_PARSE_DATA.cstDefines);
   }
 
   class _esdl__ConstraintWith(string _esdl__CstString, string FILE, size_t LINE, ARGS...): // size_t N):
@@ -825,12 +819,9 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       return _withArgs[VAR];
     }
 
-    mixin(constraintXlate("this.outer", _esdl__CstString, FILE, LINE));
-    debug(CSTPARSER) {
-      pragma(msg, "// randomizeWith! STARTS\n");
-      pragma(msg, constraintXlate("this.outer", _esdl__CstString, FILE, LINE));
-      pragma(msg, "// randomizeWith! ENDS\n");
-    }
+    mixin(CST_PARSE_DATA.cstDecls);
+    mixin(CST_PARSE_DATA.cstDefines);
+
   }
 
   void _esdl__with(string _esdl__CstString, string FILE, size_t LINE, ARGS...)(ARGS values) {

@@ -12,10 +12,11 @@ import esdl.rand.dist: DistRangeSetBase;
 
 import std.container: Array;
 import std.array;
+import esdl.rand.cstx: CstParseData, CstParser;
 
-static char[] constraintXlate(string PROXY, string CST,
+
+static CstParseData constraintXlate(string PROXY, string CST,
 			      string FILE, size_t LINE, string NAME="") {
-  import esdl.rand.cstx;
   CstParser parser = CstParser(CST, FILE, LINE);
   return parser.translate(PROXY, NAME);
 }
@@ -72,6 +73,21 @@ abstract class _esdl__ConstraintBase: rand.disable
 abstract class Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=__LINE__)
   : _esdl__ConstraintBase
 {
+
+  debug(CSTPARSER) {
+    pragma(msg, "/* Constraint Specification STARTS\n");
+    pragma(msg, CONSTRAINT);
+    pragma(msg, "\nConstraint Specification ENDS */");
+    pragma(msg, "// cstDecls STARTS\n");
+    pragma(msg, CST_PARSE_DATA.cstDecls);
+    pragma(msg, "// cstDecls ENDS\n");
+    pragma(msg, "// cstDefines STARTS\n");
+    pragma(msg, CST_PARSE_DATA.cstDefines);
+    pragma(msg, "// cstDefines! ENDS\n");
+  }
+    
+  enum CstParseData CST_PARSE_DATA = constraintXlate("this.outer", CONSTRAINT, FILE, LINE);
+  
   protected CstPredicate[] _preds;
   protected CstPredicate[] _guards;
   

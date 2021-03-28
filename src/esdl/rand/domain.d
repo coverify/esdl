@@ -335,7 +335,8 @@ class CstVecDomain(T, rand RAND_ATTR): CstDomain
       else {
 	newVal._setNthWord(val, 0);
       }
-      assert (getRef() !is null);
+      assert (getRef() !is null,
+	      "Domain does not have a valid R-Value pointer: " ~ fullName());
       if (newVal != *(getRef())) {
 	_valueChanged = true;
       }

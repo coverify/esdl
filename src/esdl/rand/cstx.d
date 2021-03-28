@@ -49,6 +49,13 @@
 module esdl.rand.cstx;
 import std.conv;
 
+struct CstParseData {
+  string cstDecls;
+  string cstDefines;
+  string guardDecls;
+  string guardUpdator;
+}
+
 struct CstParser {
 
   immutable string CST;
@@ -63,6 +70,9 @@ struct CstParser {
   char[] outBuffer;
   
   string _proxy;
+
+  size_t guardDeclCursor;
+  size_t guardUpdtCursor;
   
   size_t outCursor = 0;
   size_t dclCursor = 0;
@@ -1075,12 +1085,15 @@ struct CstParser {
     assert (curs == 11);
   }
 
-  char[] translate(string proxy, string name) {
+  CstParseData translate(string proxy, string name) {
+    CstParseData data;
     _proxy = proxy;
     translateBlock(name);
     setupBuffer();
     translateBlock(name);
-    return outBuffer;
+    data.cstDecls = cast(string) outBuffer[0..dclCursor];
+    data.cstDefines = cast(string) outBuffer[dclCursor..$];
+    return data;
   }
 
   void translateBlock(string name) {
