@@ -2820,6 +2820,10 @@ class CstIteLogicExpr: CstLogicTerm
   DistRangeSetBase getDist() {
     assert (false);
   }
+
+  void writeExprString(ref Charbuf str) {
+    assert (false);
+  }
 }
 
 class CstVec2LogicExpr: CstLogicTerm
