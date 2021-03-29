@@ -193,7 +193,7 @@ struct BvVar
     return _dom.equ(getValExpr());
   }
   
-  void update(CstDomain dom, CstBuddySolver solver) {
+  void update(CstDomBase dom, CstBuddySolver solver) {
     assert (dom.isSolved());
     long val = dom.value();
     if (_val != val) {
@@ -271,7 +271,7 @@ class CstBuddySolver: CstSolver
 
     _context = new BuddyContext(_esdl__buddy);
 
-    CstDomain[] doms = group.domains();
+    CstDomBase[] doms = group.domains();
 
     _domains.length = doms.length;
 
@@ -282,7 +282,7 @@ class CstBuddySolver: CstSolver
       dom = d;
     }
 
-    CstDomain[] vars = group.variables();
+    CstDomBase[] vars = group.variables();
     _variables.length = vars.length;
 
     foreach (i, ref var; _variables) {
@@ -343,7 +343,7 @@ class CstBuddySolver: CstSolver
   ulong[] _solveValue;
   
   override bool solve(CstPredGroup group) {
-    CstDomain[] doms = group.domains();
+    CstDomBase[] doms = group.domains();
     updateVars(group);
     _context.updateDist();
 
@@ -386,7 +386,7 @@ class CstBuddySolver: CstSolver
   }
   
   void updateVars(CstPredGroup group) {
-    CstDomain[] vars = group.variables();
+    CstDomBase[] vars = group.variables();
     _refreshVar = false;
     uint pcount0 = _count0;
     uint pcount1 = _count1;
@@ -419,7 +419,7 @@ class CstBuddySolver: CstSolver
     }
   }
 
-  override void pushToEvalStack(CstDomain domain) {
+  override void pushToEvalStack(CstDomBase domain) {
     uint n = domain.annotation();
     // writeln("push: ", domain.name(), " annotation: ", n);
     // writeln("_domains has a length: ", _domains.length);

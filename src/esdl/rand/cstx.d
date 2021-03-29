@@ -1955,7 +1955,7 @@ struct CstParser {
 	fill(")._esdl__dist(");
 	break;
       case OpCmpToken.NONE:
-	fill("._esdl__bool()");
+	// fill("._esdl__bool()");
 	return true;
       }
       // RHS

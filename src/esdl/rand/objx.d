@@ -8,7 +8,7 @@ import std.traits: isIntegral, isBoolean, isArray, KeyType,
 
 import esdl.rand.misc;
 import esdl.rand.base: CstValue, CstVecExpr, CstIterator, DomType,
-  CstDomain, CstDomSet, CstObjectStubBase, CstObjArrStubBase, CstObjSet,
+  CstDomBase, CstDomSet, CstObjectStubBase, CstObjArrStubBase, CstObjSet,
   CstVarNodeIntf, CstVecNodeIntf, CstObjArrIntf, CstVarGlobIntf,
   CstObjectVoid, CstObjArrVoid;
 import esdl.rand.pred: CstPredicate;
@@ -274,14 +274,14 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       void setDomainContext(CstPredicate pred,
-			    ref CstDomain[] rnds,
+			    ref CstDomBase[] rnds,
 			    ref CstDomSet[] rndArrs,
-			    ref CstDomain[] vars,
+			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstVecNodeIntf[] idxs,
-			    ref CstDomain[] bitIdxs,
+			    ref CstDomBase[] bitIdxs,
 			    ref CstVecNodeIntf[] deps) {
 	// no parent
       }
@@ -417,14 +417,14 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       void setDomainContext(CstPredicate pred,
-			    ref CstDomain[] rnds,
+			    ref CstDomBase[] rnds,
 			    ref CstDomSet[] rndArrs,
-			    ref CstDomain[] vars,
+			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstVecNodeIntf[] idxs,
-			    ref CstDomain[] bitIdxs,
+			    ref CstDomBase[] bitIdxs,
 			    ref CstVecNodeIntf[] deps) {
 	static if (RAND_ATTR.isRand()) {
 	  // 	if (! canFind(rnds, this)) rnds ~= this;
@@ -445,7 +445,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	  // not. When the indexExpr gets resolved, it should inform
 	  // the parent about resolution which in turn should inform
 	  // the pred that it can go ahead
-	  CstDomain[] indexes;
+	  CstDomBase[] indexes;
 	  _indexExpr.setDomainContext(pred, indexes, rndArrs, indexes, varArrs, vals, iters, idxs, bitIdxs, deps);
 	  foreach (index; indexes) idxs ~= index;
 	}
@@ -798,14 +798,14 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       void setDomainContext(CstPredicate pred,
-			    ref CstDomain[] rnds,
+			    ref CstDomBase[] rnds,
 			    ref CstDomSet[] rndArrs,
-			    ref CstDomain[] vars,
+			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstVecNodeIntf[] idxs,
-			    ref CstDomain[] bitIdxs,
+			    ref CstDomBase[] bitIdxs,
 			    ref CstVecNodeIntf[] deps) {
 	// arrlen should not be handled here. It is handled as part
 	// of the indexExpr in the elements when required (that is
@@ -968,14 +968,14 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       void setDomainContext(CstPredicate pred,
-			    ref CstDomain[] rnds,
+			    ref CstDomBase[] rnds,
 			    ref CstDomSet[] rndArrs,
-			    ref CstDomain[] vars,
+			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstVecNodeIntf[] idxs,
-			    ref CstDomain[] bitIdxs,
+			    ref CstDomBase[] bitIdxs,
 			    ref CstVecNodeIntf[] deps) {
 	// arrlen should not be handled here. It is handled as part
 	// of the indexExpr in the elements when required (that is
@@ -989,7 +989,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	_parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs,
 				 vals, iters, idxs, bitIdxs, deps);
 	if (_indexExpr !is null) {
-	  CstDomain[] indexes;
+	  CstDomBase[] indexes;
 	  _indexExpr.setDomainContext(pred, indexes, rndArrs, indexes, varArrs,
 				      vals, iters, idxs, bitIdxs, deps);
 	  foreach (index; indexes) idxs ~= index;

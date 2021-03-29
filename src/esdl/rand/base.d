@@ -47,7 +47,7 @@ interface CstVecNodeIntf: CstVarNodeIntf {
 interface CstVectorIntf: CstVecNodeIntf {}
 
 interface CstVecArrIntf: CstVecNodeIntf {
-  CstDomain _esdl__nthLeaf(uint idx);
+  CstDomBase _esdl__nthLeaf(uint idx);
   uint _esdl__leafsCount();
 
   struct Range {
@@ -216,8 +216,7 @@ enum DomDistEnum: ubyte
     PROPER = 2
     }
 
-
-abstract class CstDomain: CstVecTerm, CstVectorIntf
+abstract class CstDomBase: CstVecTerm, CstVectorIntf
 {
 
   public enum State: ubyte
@@ -257,7 +256,7 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
   // abstract uint bitcount();
   abstract _esdl__Proxy getProxyRoot();
   abstract void _esdl__doRandomize(_esdl__RandGen randGen);
-  abstract CstDomain getResolved();
+  abstract CstDomBase getResolved();
   abstract bool updateVal();
   abstract bool hasChanged();
   abstract bool isStatic();
@@ -474,7 +473,7 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
     _depCbs ~= idxCb; // use same callbacks as deps for now
   }
   uint _markBefore = 0;
-  void orderBefore(CstDomain x, uint lap){
+  void orderBefore(CstDomBase x, uint lap){
     if(isSolved() || x.isSolved()){
       return;
     }
@@ -483,7 +482,7 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
     foreach(elem; a){
       if(!elem.getmarkBefore()){
 	elem.setmarkBefore(true);
-	CstDomain [] b = elem.getDomains();
+	CstDomBase [] b = elem.getDomains();
 	foreach(j, e; b){
 	  if(e != this && e.getmarkBefore() != lap){
 	    orderBefore(e, lap);
@@ -659,14 +658,14 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   }
 
   abstract void setDomainArrContext(CstPredicate pred,
-				    ref CstDomain[] rnds,
+				    ref CstDomBase[] rnds,
 				    ref CstDomSet[] rndArrs,
-				    ref CstDomain[] vars,
+				    ref CstDomBase[] vars,
 				    ref CstDomSet[] varArrs,
 				    ref CstValue[] vals,
 				    ref CstIterator[] iters,
 				    ref CstVecNodeIntf[] idxs,
-				    ref CstDomain[] bitIdxs,
+				    ref CstDomBase[] bitIdxs,
 				    ref CstVecNodeIntf[] deps);
 
   void writeExprString(ref Charbuf str) {
@@ -720,7 +719,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     else {			// only for the top arr
       _state = State.GROUPED;
       foreach (dom; this[]) {
-	if (dom._state is CstDomain.State.INIT && (! dom.isSolved())) {
+	if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
 	  dom.setGroupContext(group);
 	}
       }
@@ -752,14 +751,14 @@ interface CstExpr
   string describe();
 
   void setDomainContext(CstPredicate pred,
-  			 ref CstDomain[] rnds,
+  			 ref CstDomBase[] rnds,
   			 ref CstDomSet[] rndArrs,
-  			 ref CstDomain[] vars,
+  			 ref CstDomBase[] vars,
   			 ref CstDomSet[] varArrs,
   			 ref CstValue[] vals,
   			 ref CstIterator[] iters,
   			 ref CstVecNodeIntf[] idxs,
-  			 ref CstDomain[] bitIdxs,
+  			 ref CstDomBase[] bitIdxs,
   			 ref CstVecNodeIntf[] deps);
 
   bool isSolved();
@@ -785,10 +784,11 @@ interface CstVecExpr: CstExpr
 interface CstLogicExpr: CstExpr
 {
   DistRangeSetBase getDist();
-  CstVecExpr isNot(CstDomain A);
+  CstVecExpr isNot(CstDomBase A);
   CstLogicExpr unroll(CstIterator iter, ulong n);
   bool isOrderingExpr();
   bool eval();
+  void setBool(bool val);
 }
 
 
@@ -808,7 +808,7 @@ abstract class CstIterator: CstVecTerm
   abstract string name();
   abstract string fullName();
   abstract CstIterator unrollIterator(CstIterator iter, uint n);
-  abstract CstDomain getLenVec();
+  abstract CstDomBase getLenVec();
   abstract ulong mapIter(size_t i);
   final bool isUnrollable() {
     return getLenVec().isSolved();

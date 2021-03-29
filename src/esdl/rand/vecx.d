@@ -7,13 +7,13 @@ import std.traits: isIntegral, isBoolean, isArray, KeyType,
   isStaticArray, isDynamicArray, isSigned, isAssociativeArray;
 
 import esdl.rand.misc;
-import esdl.rand.base: CstVecPrim, CstVecExpr, CstIterator, DomType, CstDomain,
+import esdl.rand.base: CstVecPrim, CstVecExpr, CstIterator, DomType, CstDomBase,
   CstDomSet, CstVarNodeIntf, CstVecNodeIntf, CstVarGlobIntf, CstValue,
   CstLogicTerm;
 import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.expr: CstRangeExpr, CstVec2LogicExpr;
-import esdl.rand.domain: CstVecValue, CstArrIterator, CstArrLength, CstVecDomain;
+import esdl.rand.domain: CstVecValue, CstArrIterator, CstArrLength, CstDomain;
 import esdl.rand.meta: _esdl__ProxyResolve, _esdl__staticCast;
 
 import std.algorithm.searching: canFind;
@@ -72,7 +72,7 @@ class CstVectorIdx(V, rand RAND_ATTR, int N, int IDX,
 
 class CstVectorBase(V, rand RAND_ATTR, int N)
   if (_esdl__ArrOrder!(V, N) == 0):
-    CstVecDomain!(LeafElementType!V, RAND_ATTR), CstVecPrim
+    CstDomain!(LeafElementType!V, RAND_ATTR), CstVecPrim
       {
 	enum HAS_RAND_ATTRIB = RAND_ATTR.isRand();
 	alias LEAF = LeafElementType!V;
@@ -190,14 +190,14 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       void setDomainContext(CstPredicate pred,
-			    ref CstDomain[] rnds,
+			    ref CstDomBase[] rnds,
 			    ref CstDomSet[] rndArrs,
-			    ref CstDomain[] vars,
+			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstVecNodeIntf[] idxs,
-			    ref CstDomain[] bitIdxs,
+			    ref CstDomBase[] bitIdxs,
 			    ref CstVecNodeIntf[] deps) {
 	static if (RAND_ATTR.isRand()) {
 	  if (! canFind(rnds, this)) rnds ~= this;
@@ -335,14 +335,14 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       void setDomainContext(CstPredicate pred,
-			    ref CstDomain[] rnds,
+			    ref CstDomBase[] rnds,
 			    ref CstDomSet[] rndArrs,
-			    ref CstDomain[] vars,
+			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstVecNodeIntf[] idxs,
-			    ref CstDomain[] bitIdxs,
+			    ref CstDomBase[] bitIdxs,
 			    ref CstVecNodeIntf[] deps) {
 	static if (RAND_ATTR.isRand()) {
 	  if (! this.isStatic()) {
@@ -363,7 +363,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	  // not. When the indexExpr gets resolved, it should inform
 	  // the parent about resolution which in turn should inform
 	  // the pred that it can go ahead
-	  CstDomain[] indexes;
+	  CstDomBase[] indexes;
 	  _indexExpr.setDomainContext(pred, indexes, rndArrs, indexes, varArrs, vals, iters, idxs, bitIdxs, deps);
 	  foreach (index; indexes) idxs ~= index;
 	}
@@ -569,7 +569,7 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
     buildElements(length);
     // import std.stdio;
     // writeln("buildElements: ", length);
-    static if (is (EV: CstDomain)) {
+    static if (is (EV: CstDomBase)) {
       _esdl__unresolvedArrLen = 0;
       _esdl__leafElemsCount = cast(uint) length;
       markSolved();
@@ -596,8 +596,8 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
     return this[cast(size_t) n];
   }
 
-  final CstDomain _esdl__nthLeaf(uint idx) {
-    static if (is (EV: CstDomain)) {
+  final CstDomBase _esdl__nthLeaf(uint idx) {
+    static if (is (EV: CstDomBase)) {
       return _elems[idx];
     }
     else {
@@ -616,14 +616,14 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
   }
 
   override void setDomainArrContext(CstPredicate pred,
-				    ref CstDomain[] rnds,
+				    ref CstDomBase[] rnds,
 				    ref CstDomSet[] rndArrs,
-				    ref CstDomain[] vars,
+				    ref CstDomBase[] vars,
 				    ref CstDomSet[] varArrs,
 				    ref CstValue[] vals,
 				    ref CstIterator[] iters,
 				    ref CstVecNodeIntf[] idxs,
-				    ref CstDomain[] bitIdxs,
+				    ref CstDomBase[] bitIdxs,
 				    ref CstVecNodeIntf[] deps) {
     static if (RAND_ATTR.isRand()) {
       if (! canFind(rndArrs, this)) rndArrs ~= this;
@@ -760,14 +760,14 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       void setDomainContext(CstPredicate pred,
-			    ref CstDomain[] rnds,
+			    ref CstDomBase[] rnds,
 			    ref CstDomSet[] rndArrs,
-			    ref CstDomain[] vars,
+			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstVecNodeIntf[] idxs,
-			    ref CstDomain[] bitIdxs,
+			    ref CstDomBase[] bitIdxs,
 			    ref CstVecNodeIntf[] deps) {
 	// arrlen should not be handled here. It is handled as part
 	// of the indexExpr in the elements when required (that is
@@ -944,14 +944,14 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       void setDomainContext(CstPredicate pred,
-			    ref CstDomain[] rnds,
+			    ref CstDomBase[] rnds,
 			    ref CstDomSet[] rndArrs,
-			    ref CstDomain[] vars,
+			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstVecNodeIntf[] idxs,
-			    ref CstDomain[] bitIdxs,
+			    ref CstDomBase[] bitIdxs,
 			    ref CstVecNodeIntf[] deps) {
 	// arrlen should not be handled here. It is handled as part
 	// of the indexExpr in the elements when required (that is
@@ -961,7 +961,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	// iters ~= iter;
 	_parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
 	if (_indexExpr !is null) {
-	  CstDomain[] indexes;
+	  CstDomBase[] indexes;
 	  _indexExpr.setDomainContext(pred, indexes, rndArrs, indexes, varArrs, vals, iters, idxs, bitIdxs, deps);
 	  foreach (index; indexes) idxs ~= index;
 	}

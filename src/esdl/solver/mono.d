@@ -1,7 +1,7 @@
 module esdl.solver.mono;
 
 import esdl.solver.base;
-import esdl.rand.base: CstDomain, CstValue;
+import esdl.rand.base: CstDomBase, CstValue;
 import esdl.rand.pred: CstPredGroup, CstPredicate;
 import esdl.rand.misc;
 import esdl.rand.proxy: _esdl__Proxy;
@@ -174,7 +174,7 @@ struct Term
 class CstMonoSolver (S): CstSolver
 {
   Term [] _prevVariableVals;
-  CstDomain [] _variables;
+  CstDomBase [] _variables;
   bool _hasBeenSolved = false;
   bool _hasRand ;
   Term [] _evalStack;
@@ -200,7 +200,7 @@ class CstMonoSolver (S): CstSolver
   override string describe() {
     return "Mono Solver"  ~ super.describe();
   }
-  override void pushToEvalStack(CstDomain domain) {
+  override void pushToEvalStack(CstDomBase domain) {
     if (domain.isRand() && !domain.isSolved()) {
       debug (MONOSOLVER){
 	if(_debugFlag){
@@ -538,7 +538,7 @@ class CstMonoSolver (S): CstSolver
     return false;
   }
   override bool solve(CstPredGroup group) {
-    CstDomain [] doms = group.domains();
+    CstDomBase [] doms = group.domains();
     assert (doms.length == 1);
     if(!checkDifference()){
       _count = counter();

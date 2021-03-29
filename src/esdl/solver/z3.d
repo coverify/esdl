@@ -132,7 +132,7 @@ struct BvVar
     return _rule;
   }
   
-  void update(CstDomain dom, CstZ3Solver solver) {
+  void update(CstDomBase dom, CstZ3Solver solver) {
     assert (dom.isSolved());
     long val = dom.value();
     if (_val != val) {
@@ -217,7 +217,7 @@ class CstZ3Solver: CstSolver
 
     // _vector = BvExprVector(_context);
     
-    CstDomain[] doms = group.domains();
+    CstDomBase[] doms = group.domains();
     _domains.length = doms.length;
 
     foreach (i, ref dom; _domains) {
@@ -228,7 +228,7 @@ class CstZ3Solver: CstSolver
       dom = d;
     }
 
-    CstDomain[] vars = group.variables();
+    CstDomBase[] vars = group.variables();
     _variables.length = vars.length;
 
     foreach (i, ref var; _variables) {
@@ -249,7 +249,7 @@ class CstZ3Solver: CstSolver
     }
 
     foreach (dom; doms) {
-      if (dom.visitDomain(this)) {
+      if (dom.visitDomain(this)) { // enum predicates
 	assert(_evalStack.length == 1);
 	addRule(_solver, _evalStack[0].toBool());
 	if (_needOptimize) addRule(_optimize, _evalStack[0].toBool());
@@ -450,7 +450,7 @@ class CstZ3Solver: CstSolver
 	      " _pushOptimizeCount: " ~ _pushSolverCount.to!string());
     }
     
-    CstDomain[] doms = group.domains();
+    CstDomBase[] doms = group.domains();
 
     if (_proxy._esdl__debugSolver()) {
       import std.stdio;
@@ -489,7 +489,7 @@ class CstZ3Solver: CstSolver
   
   void updateVars(CstPredGroup group) {
     
-    CstDomain[] vars = group.variables();
+    CstDomBase[] vars = group.variables();
     _refreshVar = false;
     uint pcountStable = _countStable;
     uint pcountVariable = _countVariable;
@@ -622,7 +622,7 @@ class CstZ3Solver: CstSolver
     }
   }
 
-  override void pushToEvalStack(CstDomain domain) {
+  override void pushToEvalStack(CstDomBase domain) {
     // import std.stdio;
     uint n = domain.annotation();
     // writeln("push: ", domain.name(), " annotation: ", n);

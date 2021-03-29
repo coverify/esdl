@@ -8,7 +8,7 @@ import esdl.data.folder;
 import esdl.data.charbuf;
 import esdl.rand.proxy: _esdl__Proxy, _esdl__ConstraintBase;
 import esdl.rand.misc;
-import esdl.rand.base: CstDomain, CstDomSet, CstIterCallback, DomType,
+import esdl.rand.base: CstDomBase, CstDomSet, CstIterCallback, DomType,
   CstDepCallback, CstScope, CstLogicExpr, CstIterator, CstVecNodeIntf,
   CstVecExpr;
 import esdl.rand.base: CstValue;
@@ -93,29 +93,29 @@ class CstPredGroup			// group of related predicates
   // typically that would mean a random variable dependancy as part of index 
   bool _hasDynamicBinding;
 
-  Folder!(CstDomain, "doms") _doms;
-  uint addDomain(CstDomain dom) {
+  Folder!(CstDomBase, "doms") _doms;
+  uint addDomain(CstDomBase dom) {
     uint index = cast (uint) _doms.length;
     _doms ~= dom;
     return index;
   }
 
-  Folder!(CstDomain, "distDoms") _distDoms;
-  uint addDistDomain(CstDomain dom) {
+  Folder!(CstDomBase, "distDoms") _distDoms;
+  uint addDistDomain(CstDomBase dom) {
     uint index = cast (uint) _distDoms.length;
     _distDoms ~= dom;
     return index;
   }
 
-  Folder!(CstDomain, "rnds") _rnds;
-  uint addRandom(CstDomain rnd) {
+  Folder!(CstDomBase, "rnds") _rnds;
+  uint addRandom(CstDomBase rnd) {
     uint index = cast (uint) _rnds.length;
     _rnds ~= rnd;
     return index;
   }
 
 
-  CstDomain[] domains() {
+  CstDomBase[] domains() {
     return _doms[];
   }
   
@@ -123,14 +123,14 @@ class CstPredGroup			// group of related predicates
     return _domArrs[];
   }
   
-  Folder!(CstDomain, "vars") _vars;
-  uint addVariable(CstDomain var) {
+  Folder!(CstDomBase, "vars") _vars;
+  uint addVariable(CstDomBase var) {
     uint index = cast (uint) _vars.length;
     _vars ~= var;
     return index;
   }
 
-  CstDomain[] variables() {
+  CstDomBase[] variables() {
     return _vars[];
   }
 
@@ -389,7 +389,7 @@ class CstPredGroup			// group of related predicates
       // writeln(pred.name(), " guard enabled: ", pred.isGuardEnabled());
       if (pred.isGuardEnabled()) {
 	DistRangeSetBase dist = pred._expr.getDist();
-	CstDomain distDomain = pred.distDomain();
+	CstDomBase distDomain = pred.distDomain();
 	dist.reset();
 	foreach (wp; _withDistPreds) {
 	  if (wp.isGuardEnabled()) {
@@ -725,20 +725,20 @@ class CstPredicate: CstIterCallback, CstDepCallback
   }
 
   // Excl. Conds -- The special case of mono and dist preds
-  CstDomain _dom;	    	// would be null if multiple domains
-  CstDomain getDom() {
+  CstDomBase _dom;	    	// would be null if multiple domains
+  CstDomBase getDom() {
     return _dom;
   }
   
-  CstDomain[] _rnds;
+  CstDomBase[] _rnds;
   CstDomSet[] _rndArrs;
-  CstDomain[] _dynRnds;
-  CstDomain[] _vars;
+  CstDomBase[] _dynRnds;
+  CstDomBase[] _vars;
   CstDomSet[] _varArrs;
   CstValue[]  _vals;
   CstVecNodeIntf[] _deps;
   CstVecNodeIntf[] _idxs;
-  CstDomain[] _bitIdxs;
+  CstDomBase[] _bitIdxs;
   CstIterator[] _iters;
   CstIterator[] _parsedIters;
   CstIterator[] _varIters;
@@ -753,11 +753,11 @@ class CstPredicate: CstIterCallback, CstDepCallback
     else return false;
   }
 
-  final CstDomain[] getRnds() {
+  final CstDomBase[] getRnds() {
     return _rnds;
   }
 
-  final CstDomain[] getVars() {
+  final CstDomBase[] getVars() {
     return _vars;
   }
 
@@ -765,7 +765,7 @@ class CstPredicate: CstIterCallback, CstDepCallback
     return _vals;
   }
 
-  final CstDomain[] getDomains() {
+  final CstDomBase[] getDomains() {
     return _rnds;
   }
 
@@ -896,7 +896,7 @@ class CstPredicate: CstIterCallback, CstDepCallback
 
       // When the parent unrolls, its dependencies would already be take care of
       // if (_parent !is null) {
-      //   CstDomain[] _foundDeps = _deps ~ _idxs;
+      //   CstDomBase[] _foundDeps = _deps ~ _idxs;
       //   _deps = _foundDeps.filter!(dep => (! canFind(_parent._deps, dep))).array;
       // }
 
@@ -1033,7 +1033,7 @@ class CstPredicate: CstIterCallback, CstDepCallback
     }
     foreach (dom; _rnds) {
       // if (dom.group is null && (! dom.isSolved())) {
-      if (dom._state is CstDomain.State.INIT && (! dom.isSolved())) {
+      if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
 	dom.setGroupContext(group);
       }
     }
@@ -1084,12 +1084,12 @@ class CstPredicate: CstIterCallback, CstDepCallback
   }
 
   bool isDist() { return _distDomain !is null; }
-  CstDomain _distDomain;
-  void distDomain(CstDomain vec) {
+  CstDomBase _distDomain;
+  void distDomain(CstDomBase vec) {
     assert (_distDomain is null);
     _distDomain = vec;
   }
-  CstDomain distDomain() {
+  CstDomBase distDomain() {
     return _distDomain;
   }
 

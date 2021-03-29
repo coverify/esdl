@@ -1,7 +1,7 @@
 module esdl.rand.proxy;
 
 import esdl.solver.base: CstSolver;
-import esdl.rand.base: CstVecPrim, CstLogicExpr, CstScope, CstDomain,
+import esdl.rand.base: CstVecPrim, CstLogicExpr, CstScope, CstDomBase,
   DomType, CstVecExpr, CstObjectVoid, CstVarNodeIntf, CstObjectIntf,
   CstIterator, CstDomSet, CstVarGlobIntf;
 import esdl.rand.pred: CstPredicate, CstPredGroup;
@@ -125,16 +125,16 @@ abstract class Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=_
 //     enum bool _esdl__baseHasRandomization = false;
 //   }
 // }
-class CstDomainPair {
-  CstDomain dom1;
-  CstDomain dom2;
-  CstDomain getFirst(){
+class CstDomBasePair {
+  CstDomBase dom1;
+  CstDomBase dom2;
+  CstDomBase getFirst(){
     return dom1;
   }
-  CstDomain getSecond(){
+  CstDomBase getSecond(){
     return dom2;
   }
-  this( CstDomain d1,  CstDomain d2){
+  this( CstDomBase d1,  CstDomBase d2){
     dom1 = d1;
     dom2 = d2;
   }
@@ -144,8 +144,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 {
   // static Buddy _esdl__buddy;
 
-  // CstDomain[] _cstRndDomains;
-  CstDomain[] _cstValDomains;
+  // CstDomBase[] _cstRndDomains;
+  CstDomBase[] _cstValDomains;
 
   // compositional parent -- not inheritance based
   _esdl__Proxy _parent;
@@ -190,7 +190,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   Folder!(CstPredicate, "resolvedPreds") _resolvedPreds;
   Folder!(CstPredicate, "resolvedDynPreds") _resolvedDynPreds;
   // Folder!(CstPredicate, "beforePreds") _beforePreds;
-  Folder!(CstDomainPair, "beforePreds") _beforePreds;
+  Folder!(CstDomBasePair, "beforePreds") _beforePreds;
   Folder!(CstPredicate, "toSolvePreds") _toSolvePreds;
   Folder!(CstPredicate, "dependentPreds") _dependentPreds;
 
@@ -202,12 +202,12 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   // Folder!(CstPredicate, "resolvedDistPreds") _resolvedDistPreds;
   Folder!(CstPredicate, "resolvedMonoPreds") _resolvedMonoPreds;
 
-  Folder!(CstDomain, "solvedDomains") _solvedDomains;
+  Folder!(CstDomBase, "solvedDomains") _solvedDomains;
   Folder!(CstDomSet, "solvedDomainArrs") _solvedDomainArrs;
   
   Folder!(CstPredGroup, "solvedGroups") _solvedGroups;
 
-  void addSolvedDomain(CstDomain domain) {
+  void addSolvedDomain(CstDomBase domain) {
     _solvedDomains ~= domain;
   }
 
@@ -402,11 +402,11 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   
   private bool _solvedSome = false;
   void solvedSome() { _solvedSome = true; }
-  bool checkContinue(ref CstDomainPair pred, uint lap){
+  bool checkContinue(ref CstDomBasePair pred, uint lap){
     if(pred.getSecond.getmarkBefore() == lap){
       return true;
     }
-    CstDomain dom = pred.getFirst;
+    CstDomBase dom = pred.getFirst;
     if(dom.isSolved()){
       return true;
     }
@@ -417,17 +417,17 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     }
     return false;
   }
-  void addpsuedoBeforePreds( CstDomain dom1, CstDomain dom2,  ulong beforeLength) {
+  void addpsuedoBeforePreds( CstDomBase dom1, CstDomBase dom2,  ulong beforeLength) {
     for(uint j = 0; j < beforeLength; j++){
       if(_beforePreds[j].getFirst == dom2){
 	if(!isInBeforePreds(dom1, _beforePreds[j].getSecond, beforeLength)){
-	  _beforePreds ~= new CstDomainPair(dom1, _beforePreds[j].getSecond);
+	  _beforePreds ~= new CstDomBasePair(dom1, _beforePreds[j].getSecond);
 	  addpsuedoBeforePreds( dom1, _beforePreds[j].getSecond, beforeLength);
 	}
       }
     }
   }
-  bool isInBeforePreds(CstDomain dom1, CstDomain dom2, ulong beforeLength){
+  bool isInBeforePreds(CstDomBase dom1, CstDomBase dom2, ulong beforeLength){
     for(uint j = 0; j < beforeLength; j++){
       if(_beforePreds[j].getFirst == dom1 && _beforePreds[j].getSecond == dom2){
 	return true;
@@ -445,8 +445,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     }
     ulong beforeLength = _beforePreds.length;
     for(ulong i = 0; i < beforeLength; i++){
-      CstDomain dom1 = _beforePreds[i].getFirst;
-      CstDomain dom2 = _beforePreds[i].getSecond;
+      CstDomBase dom1 = _beforePreds[i].getFirst;
+      CstDomBase dom2 = _beforePreds[i].getSecond;
       addpsuedoBeforePreds( dom1, dom2, beforeLength);
     }
     while (_newPreds.length > 0 ||
@@ -574,7 +574,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	if(checkContinue(pred, _lap)){
 	  continue;
 	}
-	//CstDomain [] a = pred.getDomains();
+	//CstDomBase [] a = pred.getDomains();
 	//assert(a.length == 2);
 	pred.getFirst.orderBefore(pred.getSecond, _lap);
       }
@@ -624,7 +624,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	pred.setmarkBefore(false);
       }
       foreach (pred; _beforePreds) {
-	CstDomain a = pred.getFirst;
+	CstDomBase a = pred.getFirst;
 	if(a.getmarkBefore < _lap && !(a.isSolved())){
 	  a.randomizeWithoutConstraints(this);
 	}
@@ -673,12 +673,12 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _esdl__needSync = false;
   }
 
-  CstDomain solveDist(CstPredicate pred) {
+  CstDomBase solveDist(CstPredicate pred) {
     if (_esdl__debugSolver) {
       import std.stdio;
       writeln("Solving Dist Predicate: ", pred.describe());
     }
-    CstDomain distDom = pred.distDomain();
+    CstDomBase distDom = pred.distDomain();
     CstPredicate[] distPreds = distDom.getRandPreds();
     // long[] toRemove;
     DistRangeSetBase dist = pred._expr.getDist();
@@ -738,7 +738,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   }
   void makeBeforePreds(CstPredicate pred ){
     if(pred.getExpr().isOrderingExpr()){
-      _beforePreds ~= new CstDomainPair(pred.getDomains[0], pred.getDomains[1]);
+      _beforePreds ~= new CstDomBasePair(pred.getDomains[0], pred.getDomains[1]);
     }
   }
   void procNewPredicate(CstPredicate pred) {

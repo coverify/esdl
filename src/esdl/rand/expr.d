@@ -8,7 +8,7 @@ import esdl.rand.misc: rand, _esdl__RandGen, isVecSigned, Unconst, CstVectorOp, 
 import esdl.rand.misc: CstBinaryOp, CstCompareOp, CstLogicOp,
   CstUnaryOp, CstSliceOp, writeHexString, CstUniqueOp;
 
-import esdl.rand.base: DomDistEnum, CstVecExpr, CstLogicExpr, CstDomain, CstDomSet,
+import esdl.rand.base: DomDistEnum, CstVecExpr, CstLogicExpr, CstDomBase, CstDomSet,
   CstIterator, CstVecNodeIntf, CstVarNodeIntf, CstVecArrIntf, CstVecPrim, DomType,
   CstValue, CstVecTerm, CstLogicTerm;
 import esdl.rand.pred: CstPredicate, CstPredGroup;
@@ -21,10 +21,10 @@ import std.traits: isIntegral, isBoolean, isStaticArray,
 
 class CstOrderingExpr: CstLogicExpr
 {
-  CstDomain _first;
-  CstDomain _second;
+  CstDomBase _first;
+  CstDomBase _second;
   bool _isSolved;
-  this (CstDomain a, CstDomain b) {
+  this (CstDomBase a, CstDomBase b) {
     _first = a;
     _second = b;
   }
@@ -34,21 +34,21 @@ class CstOrderingExpr: CstLogicExpr
   override DistRangeSetBase getDist() {
     assert(false);
   }
-  override CstVecExpr isNot(CstDomain A) {
+  override CstVecExpr isNot(CstDomBase A) {
     assert(false);
   }
   override CstLogicExpr unroll(CstIterator iter, ulong n) {
     assert(false);
   }
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) {
     rnds ~= _first;
     rnds ~= _second;
@@ -68,6 +68,9 @@ class CstOrderingExpr: CstLogicExpr
   }
   void scan() { }
   bool eval() {
+    assert (false);
+  }
+  void setBool(bool val) {
     assert (false);
   }
 }
@@ -92,7 +95,7 @@ class CstVecArrExpr: CstVecTerm
       solver.processEvalStack(CstBinaryOp.ADD);
     }
     // assert (! range.empty());
-    // CstDomain dom = range.front();
+    // CstDomBase dom = range.front();
     // uint bitcount = dom.bitcount();
     // bool signed = dom.signed();
     // if (signed) {
@@ -153,14 +156,14 @@ class CstVecArrExpr: CstVecTerm
   }
 
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) {
     pred._vectorOp = _op;
     _arr.setDomainArrContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
@@ -337,14 +340,14 @@ class CstVec2VecExpr: CstVecTerm
   }
 
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) {
     _lhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
     _rhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
@@ -411,14 +414,14 @@ class CstRangeExpr
   // }
 
   void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
+				 ref CstDomBase[] rnds,
 				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
+				 ref CstDomBase[] vars,
 				 ref CstDomSet[] varArrs,
 				 ref CstValue[] vals,
 				 ref CstIterator[] iters,
 				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
+				 ref CstDomBase[] bitIdxs,
 				 ref CstVecNodeIntf[] deps) {
     _lhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
     if (_rhs !is null)
@@ -485,14 +488,14 @@ class CstDistSetElem
   // }
 
   void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
+				 ref CstDomBase[] rnds,
 				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
+				 ref CstDomBase[] vars,
 				 ref CstDomSet[] varArrs,
 				 ref CstValue[] vals,
 				 ref CstIterator[] iters,
 				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
+				 ref CstDomBase[] bitIdxs,
 				 ref CstVecNodeIntf[] deps) {
     _lhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
     if (_rhs !is null)
@@ -585,14 +588,14 @@ class CstUniqueSetElem
   // }
 
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) {
     if (_arr !is null) {
       _arr.setDomainArrContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
@@ -680,14 +683,14 @@ class CstInsideSetElem
   // }
 
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) {
     if (_arr !is null) {
       _arr.setDomainArrContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
@@ -755,14 +758,14 @@ class CstWeightedDistSetElem
   // }
 
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) { }
 
   bool isSolved() {
@@ -782,12 +785,12 @@ class CstDistExpr(T): CstLogicTerm
 {
   import std.conv;
 
-  CstDomain _vec;
+  CstDomBase _vec;
   CstWeightedDistSetElem[] _dists;
 
   DistRangeSet!T _rs;
   
-  this(CstDomain vec, CstWeightedDistSetElem[] dists) {
+  this(CstDomBase vec, CstWeightedDistSetElem[] dists) {
     _vec = vec;
     _dists = dists;
     _rs = new DistRangeSet!T;
@@ -845,18 +848,18 @@ class CstDistExpr(T): CstLogicTerm
     // writeln(_lhs.describe() ~ " " ~ _op.to!string ~ " " ~ _rhs.describe() ~ " Getting unwound!");
     // writeln("RHS: ", _rhs.unroll(iter, n).describe());
     // writeln("LHS: ", _lhs.unroll(iter, n).describe());
-    return new CstDistExpr!T(cast (CstDomain) (_vec.unroll(iter, n)), _dists);
+    return new CstDistExpr!T(cast (CstDomBase) (_vec.unroll(iter, n)), _dists);
   }
 
   void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
+				 ref CstDomBase[] rnds,
 				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
+				 ref CstDomBase[] vars,
 				 ref CstDomSet[] varArrs,
 				 ref CstValue[] vals,
 				 ref CstIterator[] iters,
 				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
+				 ref CstDomBase[] bitIdxs,
 				 ref CstVecNodeIntf[] deps) {
     rnds ~= _vec;
     pred.distDomain(_vec);
@@ -875,7 +878,7 @@ class CstDistExpr(T): CstLogicTerm
     }
   }
   
-  CstVecExpr isNot(CstDomain dom){
+  CstVecExpr isNot(CstDomBase dom){
     return null;
   }
 
@@ -941,14 +944,14 @@ class CstDistExpr(T): CstLogicTerm
 //   }
 
 //   void setDomainContext(CstPredicate pred,
-// 			ref CstDomain[] rnds,
+// 			ref CstDomBase[] rnds,
 //		        ref CstDomSet[] rndArrs,
-// 			ref CstDomain[] vars,
+// 			ref CstDomBase[] vars,
 //			ref CstDomSet[] varArrs,
 // 			ref CstValue[] vals,
 // 			ref CstIterator[] iters,
 // 			ref CstVecNodeIntf[] idxs,
-// 			ref CstDomain[] bitIdxs,
+// 			ref CstDomBase[] bitIdxs,
 // 			ref CstVecNodeIntf[] deps) {
 //     _vec.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
 //     _lhs.setDomainContext(pred, bitIdxs, rndArrs, bitIdxs, varArrs, vals, iters, idxs, bitIdxs, deps);
@@ -1035,14 +1038,14 @@ class CstVecSliceExpr: CstVecTerm
   }
 
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) {
     _vec.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
     _range.setDomainContext(pred, bitIdxs, rndArrs, bitIdxs, varArrs, vals, iters, idxs, bitIdxs, deps);
@@ -1104,14 +1107,14 @@ class CstVecSliceExpr: CstVecTerm
 //   }
 
 //   void setDomainContext(CstPredicate pred,
-// 			ref CstDomain[] rnds,
+// 			ref CstDomBase[] rnds,
 //			ref CstDomSet[] rndArrs,
-// 			ref CstDomain[] vars,
+// 			ref CstDomBase[] vars,
 //			ref CstDomSet[] varArrs,
 // 			ref CstValue[] vals,
 // 			ref CstIterator[] iters,
 // 			ref CstVecNodeIntf[] idxs,
-// 			ref CstDomain[] bitIdxs,
+// 			ref CstDomBase[] bitIdxs,
 // 			ref CstVecNodeIntf[] deps) {
 //     _vec.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
 //     _index.setDomainContext(pred, bitIdxs, rndArrs, bitIdxs, varArrs, vals, iters, idxs, bitIdxs, deps);
@@ -1187,14 +1190,14 @@ class CstNotVecExpr: CstVecTerm
   }
 
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) {
     _expr.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
@@ -1268,14 +1271,14 @@ class CstNegVecExpr: CstVecTerm
   }
 
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) {
     _expr.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
@@ -1321,20 +1324,20 @@ class CstLogic2LogicExpr: CstLogicTerm
   }
 
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) {
     _lhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
     _rhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
 
-  CstVecExpr isNot(CstDomain dom){
+  CstVecExpr isNot(CstDomBase dom){
     return null;
   }
   
@@ -1443,14 +1446,14 @@ class CstInsideArrExpr: CstLogicTerm
   }
 
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) {
     _term.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
     foreach (elem; _elems) {
@@ -1458,7 +1461,7 @@ class CstInsideArrExpr: CstLogicTerm
     }
   }
 
-  CstVecExpr isNot(CstDomain dom){
+  CstVecExpr isNot(CstDomBase dom){
     return null;
   }
   
@@ -1532,14 +1535,14 @@ class CstUniqueArrExpr: CstLogicTerm
   }
 
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) {
     pred.setUniqueFlag();
     foreach (elem; _elems) {
@@ -1547,7 +1550,7 @@ class CstUniqueArrExpr: CstLogicTerm
     }
   }
 
-  CstVecExpr isNot(CstDomain dom){
+  CstVecExpr isNot(CstDomBase dom){
     return null;
   }
   
@@ -1582,19 +1585,19 @@ class CstIteLogicExpr: CstLogicTerm
   }
 
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) {
     assert(false, "TBD");
   }
 
-  CstVecExpr isNot(CstDomain dom){
+  CstVecExpr isNot(CstDomBase dom){
     return null;
   }
 
@@ -1657,20 +1660,20 @@ class CstVec2LogicExpr: CstLogicTerm
   }
 
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) {
     _lhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
     _rhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
   
-  CstVecExpr isNot(CstDomain dom){
+  CstVecExpr isNot(CstDomBase dom){
     if (_op is CstCompareOp.NEQ) {
       if (_lhs !is dom) {
 	assert(false, "Constraint " ~ describe() ~ " not allowed since " ~ dom.name()
@@ -1809,19 +1812,19 @@ class CstLogicConst: CstLogicTerm
   }
 
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) {
     // nothing for CstLogicConst
   }
 
-  CstVecExpr isNot(CstDomain dom){
+  CstVecExpr isNot(CstDomBase dom){
     return null;
   }
 
@@ -1863,19 +1866,19 @@ class CstNotLogicExpr: CstLogicTerm
   }
 
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) {
     _expr.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
 
-  CstVecExpr isNot(CstDomain dom){
+  CstVecExpr isNot(CstDomBase dom){
     return null;
   }
 
@@ -1930,14 +1933,14 @@ class CstVarVisitorExpr: CstLogicTerm
   }
 
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) {
     assert (_obj !is null);
     CstIterator iter = _obj._esdl__iter();
@@ -1954,7 +1957,7 @@ class CstVarVisitorExpr: CstLogicTerm
     str ~= this.describe();
   }
 
-  CstVecExpr isNot(CstDomain dom){
+  CstVecExpr isNot(CstDomBase dom){
     return null;
   }
 

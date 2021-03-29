@@ -6,18 +6,60 @@ import std.traits: isIntegral, isBoolean, isSigned, Unconst,
 import esdl.data.bvec: isBitVector;
 import esdl.data.charbuf: Charbuf;
 
-import esdl.rand.base: CstValue, CstDomain, CstDomSet, CstIterator,
-  CstVecNodeIntf, CstVecPrim, CstVecExpr, DomType;
+import esdl.rand.base: CstValue, CstDomBase, CstDomSet, CstIterator,
+  CstVecNodeIntf, CstVecPrim, CstVecExpr, DomType, CstLogicExpr;
 // import esdl.rand.misc: rand, writeHexString, _esdl__RandGen;
 import esdl.rand.misc: rand, _esdl__RandGen, writeHexString, isVecSigned,
   CstVectorOp, CstInsideOp, CstCompareOp, CstLogicOp;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.pred: CstPredicate;
+import esdl.rand.dist: DistRangeSetBase;
 
 import esdl.solver.base: CstSolver;
 
 
-class CstVecDomain(T, rand RAND_ATTR): CstDomain
+abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
+  CstVecDomain!(T, RAND_ATTR), CstLogicExpr
+    {
+      this(string name, _esdl__Proxy root) {
+	super(name, root);
+      }
+
+
+      DistRangeSetBase getDist() { assert (false); }
+      CstVecExpr isNot(CstDomBase A) { return null; }
+      bool isOrderingExpr() { return false; }
+      bool eval() {
+	return cast(bool) *(getRef());
+      }
+      void setBool(bool val) {
+	static if (HAS_RAND_ATTRIB) {
+	  assert (getRef() !is null,
+		  "Domain does not have a valid R-Value pointer: " ~ fullName());
+	  if (val != *(getRef())) {
+	    _valueChanged = true;
+	  }
+	  else {
+	    _valueChanged = false;
+	  }
+	  *(getRef()) = val;
+	  markSolved();
+	  execCbs();
+	}
+	else {
+	  assert(false);
+	}
+      }
+    }
+
+class CstDomain(T, rand RAND_ATTR) if (!is (T == bool)):
+  CstVecDomain!(T, RAND_ATTR) {
+    this(string name, _esdl__Proxy root) {
+      super(name, root);
+    }
+  }
+
+class CstVecDomain(T, rand RAND_ATTR): CstDomBase
 {
   enum HAS_RAND_ATTRIB = RAND_ATTR.isRand();
 
@@ -453,7 +495,7 @@ class CstVecDomain(T, rand RAND_ATTR): CstDomain
   
   final override string describe() {
     import std.conv: to;
-    string desc = "CstDomain: " ~ name();
+    string desc = "CstDomBase: " ~ name();
     // desc ~= "\n	DomType: " ~ _type.to!string();
     // if (_type !is DomType.MULTI) {
     //   desc ~= "\nIntRS: " ~ _rs.toString();
@@ -492,7 +534,7 @@ class CstArrIterator(RV): CstIterator
     // _arrVar._arrLen.iterVar(this);
   }
 
-  final override CstDomain getLenVec() {
+  final override CstDomBase getLenVec() {
     return _arrVar.arrLen();
   }
   
@@ -557,14 +599,14 @@ class CstArrIterator(RV): CstIterator
   // }
 
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) {
     deps ~= getLenVec();
     iters ~= this;
@@ -757,14 +799,14 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecPrim
   }
   
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) {
     bool listed;
     foreach (rnd; rnds) {
@@ -925,14 +967,14 @@ class CstVecValue(T): CstValue
   }
 
   void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
+			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
+			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
+			ref CstDomBase[] bitIdxs,
 			ref CstVecNodeIntf[] deps) {
     vals ~= this;
   }

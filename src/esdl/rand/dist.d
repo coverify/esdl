@@ -1,5 +1,5 @@
 module esdl.rand.dist;
-import esdl.rand.base: CstDomain;
+import esdl.rand.base: CstDomBase;
 import esdl.rand.misc: _esdl__RandGen;
 
 struct DistRange(T)
@@ -172,7 +172,7 @@ struct DistRange(T)
 
 abstract class DistRangeSetBase {
   abstract void purge(long item);
-  abstract void uniform(CstDomain dom, _esdl__RandGen randGen);
+  abstract void uniform(CstDomBase dom, _esdl__RandGen randGen);
   abstract void reset();
 }
 
@@ -224,7 +224,7 @@ class DistRangeSet(T): DistRangeSetBase
     }
   }
 
-  override void uniform(CstDomain dom, _esdl__RandGen randGen) {
+  override void uniform(CstDomBase dom, _esdl__RandGen randGen) {
     dom.setVal(this.uniform(randGen));
   }
   
