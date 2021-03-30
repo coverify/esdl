@@ -882,7 +882,10 @@ class CstDistExpr(T): CstLogicTerm
     return null;
   }
 
-  override bool eval() {assert (false, "Enable to evaluate CstDistExpr");}
+  bool eval() {assert (false, "Enable to evaluate CstDistExpr");}
+
+  void scan() { }
+  bool isOrderingExpr() { return false; }
 }
 
 // class CstVecSliceExpr: CstVecTerm
@@ -1376,6 +1379,8 @@ class CstLogic2LogicExpr: CstLogicTerm
     }
   }
   
+  override void scan() { }
+  override bool isOrderingExpr() { return false; }
 }
 
 class CstInsideArrExpr: CstLogicTerm
@@ -1487,6 +1492,10 @@ class CstInsideArrExpr: CstLogicTerm
   }
 
   override bool eval() {assert (false, "Enable to evaluate CstInsideArrExpr");}
+
+  override void scan() { }
+
+  override bool isOrderingExpr() { return false; }
 }
 
 class CstUniqueArrExpr: CstLogicTerm
@@ -1575,6 +1584,9 @@ class CstUniqueArrExpr: CstLogicTerm
   }
 
   override bool eval() {assert (false, "Enable to evaluate CstUniqueArrExpr");}
+
+  override void scan() { }
+  override bool isOrderingExpr() { return false; }
 }
 
 // TBD
@@ -1620,11 +1632,14 @@ class CstIteLogicExpr: CstLogicTerm
   DistRangeSetBase getDist() {
     assert (false);
   }
-  override bool eval() {assert (false, "Enable to evaluate CstIteLogicExpr");}
 
   void writeExprString(ref Charbuf str) {
     assert (false, "TBD");
   }
+
+  override bool eval() {assert (false, "Enable to evaluate CstIteLogicExpr");}
+  override void scan() { }
+  override bool isOrderingExpr() { return false; }
 }
 
 class CstVec2LogicExpr: CstLogicTerm
@@ -1788,6 +1803,9 @@ class CstVec2LogicExpr: CstLogicTerm
     }
     assert(false, "TBD -- Can not yet handle > 64 bit math operations");
   }
+
+  override void scan() { }
+  override bool isOrderingExpr() { return false; }
 }
 
 class CstLogicConst: CstLogicTerm
@@ -1842,6 +1860,9 @@ class CstLogicConst: CstLogicTerm
   }
 
   override bool eval() {return _bool;}
+
+  override void scan() { }
+  override bool isOrderingExpr() { return false; }
 }
 
 class CstNotLogicExpr: CstLogicTerm
@@ -1897,6 +1918,9 @@ class CstNotLogicExpr: CstLogicTerm
   }
 
   override bool eval() {return !_expr.eval();}
+
+  override void scan() { }
+  override bool isOrderingExpr() { return false; }
 }
 
 class CstVarVisitorExpr: CstLogicTerm
@@ -1914,11 +1938,6 @@ class CstVarVisitorExpr: CstLogicTerm
 
   void visit(CstSolver solver) {
     assert (false);
-  }
-
-  override void scan() {
-    assert (_obj !is null);
-    _obj.scan();
   }
 
   override CstVarVisitorExpr unroll(CstIterator iter, ulong n) {
@@ -1965,5 +1984,12 @@ class CstVarVisitorExpr: CstLogicTerm
     assert (false);
   }
 
+  override void scan() {
+    assert (_obj !is null);
+    _obj.scan();
+  }
+
   override bool eval() {assert(false);}
+
+  override bool isOrderingExpr() { return false; }
 }

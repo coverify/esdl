@@ -15,7 +15,7 @@ import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.misc;
 import esdl.intf.z3.z3;
 import esdl.intf.z3.api.z3_types: Z3_ast;
-import esdl.intf.z3.api.z3_api: Z3_mk_int64, Z3_mk_unsigned_int64;
+import esdl.intf.z3.api.z3_api: Z3_mk_int64, Z3_mk_unsigned_int64, Z3_mk_true, Z3_mk_false;
 
 import std.algorithm.searching: canFind;
 
@@ -30,8 +30,8 @@ struct Z3Term
   enum Type: ubyte { BOOLEXPR, BVEXPR, ULONG }
 
   BoolExpr _boolExpr;
-  BvExpr _bvExpr;
-  ulong   _ulong;
+  BvExpr   _bvExpr;
+  ulong    _ulong;
 
   Type _type;
 
@@ -94,38 +94,76 @@ struct Z3Term
 
 }
 
-struct BvVar
+struct Z3Var
 {
+  enum Type: ubyte { BOOLEXPR, BVEXPR }
+
   enum State: ubyte {INIT, STABLE, VARIABLE}
-  BvExpr _dom;
-  long   _val;
+
+  Type   _type;
+  
+  BvExpr _bvDom;
+  BoolExpr _boolDom;
+  
+  long   _bvVal;
+  bool   _boolVal;
+  
   State  _state;
 
   BoolExpr _rule;
 
-  alias _dom this;
+  // alias _bvDom this;
   
   this(BvExpr dom) {
-    _dom = dom;
-    _val = 0;
+    _bvDom = dom;
+    _bvVal = 0;
+    _type  = Type.BVEXPR;
     _state = State.INIT;
   }
 
-  ref BvVar opAssign(ref BvExpr dom) return {
-    assert (_dom.isNull());
-    _dom = dom;
-    _val = 0;
+  this(BoolExpr dom) {
+    _boolDom = dom;
+    _boolVal = false;
+    _type  = Type.BOOLEXPR;
+    _state = State.INIT;
+  }
+
+  ref Z3Var opAssign(ref BvExpr dom) return {
+    assert (_bvDom.isNull());
+    _bvDom = dom;
+    _bvVal = 0;
+    _type = Type.BVEXPR;
     _state = State.INIT;
     return this;
   }
 
-  BvExpr getValExpr() {
-    Sort sort = _dom.getSort();
-    Context context = _dom.context();
+  ref Z3Var opAssign(ref BoolExpr dom) return {
+    assert (_boolDom.isNull());
+    _boolDom = dom;
+    _boolVal = false;
+    _type = Type.BOOLEXPR;
+    _state = State.INIT;
+    return this;
+  }
+
+  BvExpr getValBvExpr() {
+    assert (_type == Type.BVEXPR);
+    Sort sort = _bvDom.getSort();
+    Context context = _bvDom.context();
     Z3_ast r;
-    if (_dom.isSigned()) r = Z3_mk_int64(context, _val, sort);
-    else        r = Z3_mk_unsigned_int64(context, _val, sort);
-    return BvExpr(context, r, _dom.isSigned());
+    if (_bvDom.isSigned()) r = Z3_mk_int64(context, _bvVal, sort);
+    else        r = Z3_mk_unsigned_int64(context, _bvVal, sort);
+    return BvExpr(context, r, _bvDom.isSigned());
+  }
+
+  BoolExpr getValBoolExpr() {
+    assert (_type == Type.BOOLEXPR);
+    Sort sort = _boolDom.getSort();
+    Context context = _boolDom.context();
+    Z3_ast r;
+    if (_boolVal) r = Z3_mk_true(context);
+    else          r = Z3_mk_false(context);
+    return BoolExpr(context, r);
   }
 
   ref BoolExpr getRule() return {
@@ -134,11 +172,27 @@ struct BvVar
   
   void update(CstDomBase dom, CstZ3Solver solver) {
     assert (dom.isSolved());
-    long val = dom.value();
-    if (_val != val) {
-      _val = val;
-      BoolExpr rule = eq(_dom, getValExpr());
-      _rule = rule;
+    bool updated = false;
+    
+    if (dom.isBool()) {
+      bool val = dom.getBool();
+      if (_boolVal != val || _state == State.INIT) {
+	_boolVal = val;
+	BoolExpr rule = eq(_boolDom, getValBoolExpr());
+	_rule = rule;
+	updated = true;
+      }
+    }
+    else {
+      long val = dom.value();
+      if (_bvVal != val || _state == State.INIT) {
+	_bvVal = val;
+	BoolExpr rule = eq(_bvDom, getValBvExpr());
+	_rule = rule;
+	updated = true;
+      }
+    }
+    if (updated is true) {
       final switch (_state) {
       case State.INIT:
 	_state = State.STABLE;
@@ -154,20 +208,19 @@ struct BvVar
 	break;
       }
     }
-    else {
-      final switch (_state) {
-      case State.INIT:
-	BoolExpr rule = eq(_dom, getValExpr());
-	_rule = rule;
-	_state = State.STABLE;
-	solver._countStable += 1;
-	break;
-      case State.STABLE:
-	break;
-      case State.VARIABLE:
-	break;
-      }
-    }
+    // else {
+    //   final switch (_state) {
+    //   case State.INIT:
+    // 	assert (false);
+    // 	// _state = State.STABLE;
+    // 	// solver._countStable += 1;
+    // 	break;
+    //   case State.STABLE:
+    // 	break;
+    //   case State.VARIABLE:
+    // 	break;
+    //   }
+    // }
   }
 }
 
@@ -178,8 +231,8 @@ class CstZ3Solver: CstSolver
 
   Z3Term _term;
 
-  BvExpr[] _domains;
-  BvVar[] _variables;
+  Z3Term[] _domains;
+  Z3Var[] _variables;
 
   Context _context;
 
@@ -224,8 +277,14 @@ class CstZ3Solver: CstSolver
       import std.string: format;
       // import std.stdio;
       // writeln("Adding Z3 Domain for @rand ", doms[i].name());
-      auto d = BvExpr(_context, format("_dom%s", i), doms[i].bitcount, doms[i].signed());
-      dom = d;
+      if (doms[i].isBool()) {
+	auto d = BoolExpr(_context, format("_dom%s", i)); // , doms[i].bitcount, doms[i].signed());
+	dom = Z3Term(d);
+      }
+      else {
+	auto d = BvExpr(_context, format("_dom%s", i), doms[i].bitcount, doms[i].signed());
+	dom = Z3Term(d);
+      }
     }
 
     CstDomBase[] vars = group.variables();
@@ -235,8 +294,16 @@ class CstZ3Solver: CstSolver
       import std.string: format;
       // import std.stdio;
       // writeln("Adding Z3 Domain for variable ", vars[i].name());
-      auto d = BvExpr(_context, format("_var%s", i), vars[i].bitcount, vars[i].signed());
-      var = d;
+      if (vars[i].isBool()) {
+	// writeln("Adding Z3 Domain for bool ", vars[i].name());
+	auto d = BoolExpr(_context, format("_vars%s", i));
+	var = d;
+      }
+      else {
+	// writeln("Adding Z3 Domain for vec ", vars[i].name());
+	auto d = BvExpr(_context, format("_var%s", i), vars[i].bitcount, vars[i].signed());
+	var = d;
+      }
     }
 
     Solver solver = Solver(_context);
@@ -308,7 +375,7 @@ class CstZ3Solver: CstSolver
     return "Z3 SMT Solver"  ~ super.describe();
   }
 
-  // BvVar.State varState;
+  // Z3Var.State varState;
 
   enum State: ubyte
   {   NULL,			// Does not exist, no action          pop n push n
@@ -463,9 +530,16 @@ class CstZ3Solver: CstSolver
     foreach (i, ref dom; _domains) {
       // import std.string: format;
       // string value;
-      BvExpr vdom = dom.mapTo(model, true);
-      ulong vlong = vdom.getNumeralInt64();
-      doms[i].setVal(vlong);
+      if (dom._type == Z3Term.Type.BOOLEXPR) {
+	BoolExpr vdom = dom.toBool.mapTo(model, true);
+	bool val = vdom.getBool();
+	doms[i].setBool(val);
+      }
+      else {
+	BvExpr vdom = dom.toBv.mapTo(model, true);
+	ulong val = vdom.getNumeralUint64();
+	doms[i].setVal(val);
+      }
       // writeln("Value for Domain ", doms[i].name(), ": ",
       // 	      vdom.getNumeralInt64());
       // writeln(vdom.getNumeralInt64());
@@ -552,7 +626,7 @@ class CstZ3Solver: CstSolver
       hasUpdated = true;
       this.pushOptimize();
       foreach (i, ref var; _variables) {
-	if (var._state == BvVar.State.STABLE)
+	if (var._state == Z3Var.State.STABLE)
 	  addRule(_optimize, var.getRule());
       }
     }
@@ -560,7 +634,7 @@ class CstZ3Solver: CstSolver
       hasUpdated = true;
       this.pushOptimize();
       foreach (i, ref var; _variables) {
-	if (var._state == BvVar.State.VARIABLE)
+	if (var._state == Z3Var.State.VARIABLE)
 	  addRule(_optimize, var.getRule());
       }
     }
@@ -591,7 +665,7 @@ class CstZ3Solver: CstSolver
     if (_stableState == State.PROD || _stableState == State.INIT) {
       this.pushSolver();
       foreach (i, ref var; _variables) {
-	if (var._state == BvVar.State.STABLE)
+	if (var._state == Z3Var.State.STABLE)
 	  addRule(_solver, var.getRule());
       }
     }
@@ -616,7 +690,7 @@ class CstZ3Solver: CstSolver
     if (_variableState == State.INIT || _variableState == State.PROD) {
       this.pushSolver();
       foreach (i, ref var; _variables) {
-	if (var._state == BvVar.State.VARIABLE)
+	if (var._state == Z3Var.State.VARIABLE)
 	  addRule(_solver, var.getRule());
       }
     }
@@ -629,7 +703,8 @@ class CstZ3Solver: CstSolver
     // writeln("_domains has a length: ", _domains.length);
 
     if (domain.isSolved()) { // is a variable
-      pushToEvalStack(_variables[n]);
+      if (domain.isBool()) pushToEvalStack(_variables[n]._boolDom);
+      else                 pushToEvalStack(_variables[n]._bvDom);
     }
     else {
       pushToEvalStack(_domains[n]);

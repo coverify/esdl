@@ -6,7 +6,8 @@ import esdl.solver.base;
 import esdl.rand.dist;
 import esdl.rand.domain: CstVecValue;
 import esdl.rand.expr: CstVecArrExpr, CstVecSliceExpr, CstRangeExpr,
-  CstInsideSetElem, CstVec2LogicExpr, CstLogic2LogicExpr, CstVec2VecExpr;
+  CstInsideSetElem, CstVec2LogicExpr, CstLogic2LogicExpr, CstVec2VecExpr,
+  CstNotLogicExpr;
 import esdl.rand.pred: CstPredGroup, CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.misc: _esdl__RandGen, CstVectorOp, CstLogicOp, CstCompareOp,
@@ -245,9 +246,9 @@ abstract class CstDomBase: CstVecTerm, CstVectorIntf
   abstract void setVal(ulong[] v);
   abstract void setVal(ulong v);
 
-  // abstract bool isBool();
-  // abstract void setBool(bool v);
-  // abstract bool getBool();
+  abstract bool isBool();
+  abstract void setBool(bool v);
+  abstract bool getBool();
   
   // abstract uint domIndex();
   // abstract void domIndex(uint s);
@@ -789,6 +790,20 @@ interface CstLogicExpr: CstExpr
   bool isOrderingExpr();
   bool eval();
   void setBool(bool val);
+  // void scan(); // {}		// used for CstVarVisitorExpr
+
+  CstLogicExpr opBinary(string op)(CstLogicExpr other)
+  {
+    static if(op == "&") {
+      return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICAND);
+    }
+    static if(op == "|") {
+      return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICOR);
+    }
+    static if(op == ">>") {
+      return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICIMP);
+    }
+  }
 }
 
 
@@ -970,12 +985,10 @@ abstract class CstVecTerm: CstVecExpr
   //   return new CstVecIndexExpr(this, index);
   // }
 
-  CstNotLogicExpr opUnary(string op)() if(op == "*") {
-    return new CstNotLogicExpr(this.toBoolExpr());
-  }
   CstNotVecExpr opUnary(string op)() if(op == "~") {
     return new CstNotVecExpr(this);
   }
+
   CstNegVecExpr opUnary(string op)() if(op == "-") {
     return new CstNegVecExpr(this);
   }
@@ -1066,5 +1079,5 @@ abstract class CstLogicTerm: CstLogicExpr
 
   void scan() { }
   bool isOrderingExpr() { return false; }
-  bool eval() {assert (false, "Enable to evaluate CstLogicTerm");}
+  bool eval() {assert (false, "Unable to evaluate CstLogicTerm");}
 }

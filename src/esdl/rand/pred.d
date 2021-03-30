@@ -100,25 +100,15 @@ class CstPredGroup			// group of related predicates
     return index;
   }
 
-  Folder!(CstDomBase, "distDoms") _distDoms;
-  uint addDistDomain(CstDomBase dom) {
-    uint index = cast (uint) _distDoms.length;
-    _distDoms ~= dom;
-    return index;
-  }
-
-  Folder!(CstDomBase, "rnds") _rnds;
-  uint addRandom(CstDomBase rnd) {
-    uint index = cast (uint) _rnds.length;
-    _rnds ~= rnd;
-    return index;
-  }
-
-
   CstDomBase[] domains() {
     return _doms[];
   }
   
+  Folder!(CstDomSet, "domArrs") _domArrs;
+  void addDomainArr(CstDomSet domArr) {
+    _domArrs ~= domArr;
+  }
+
   CstDomSet[] domainArrs() {
     return _domArrs[];
   }
@@ -134,16 +124,23 @@ class CstPredGroup			// group of related predicates
     return _vars[];
   }
 
-  Folder!(CstDomSet, "domArrs") _domArrs;
-  
-  void addDomainArr(CstDomSet domArr) {
-    _domArrs ~= domArr;
-  }
-
   Folder!(CstDomSet, "varArrs") _varArrs;
-  
   void addVariableArr(CstDomSet varArr) {
     _varArrs ~= varArr;
+  }
+
+  Folder!(CstDomBase, "distDoms") _distDoms;
+  uint addDistDomain(CstDomBase dom) {
+    uint index = cast (uint) _distDoms.length;
+    _distDoms ~= dom;
+    return index;
+  }
+
+  Folder!(CstDomBase, "rnds") _rnds;
+  uint addRandom(CstDomBase rnd) {
+    uint index = cast (uint) _rnds.length;
+    _rnds ~= rnd;
+    return index;
   }
 
   // If there are groups that are related. This will only be true if
@@ -481,13 +478,10 @@ class CstPredicate: CstIterCallback, CstDepCallback
     }
     else {
       _guard.visit(solver);
-      if (_guardInv)
-	solver.processEvalStack(CstLogicOp.LOGICNOT);
+      if (_guardInv) solver.processEvalStack(CstLogicOp.LOGICNOT);
       _expr.visit(solver);
-      if (this.isGuard())
-	solver.processEvalStack(CstLogicOp.LOGICAND);
-      else
-	solver.processEvalStack(CstLogicOp.LOGICIMP);
+      if (this.isGuard()) solver.processEvalStack(CstLogicOp.LOGICAND);
+      else                solver.processEvalStack(CstLogicOp.LOGICIMP);
     }
   }
   // alias _expr this;

@@ -14,6 +14,7 @@ import esdl.rand.misc: rand, _esdl__RandGen, writeHexString, isVecSigned,
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.pred: CstPredicate;
 import esdl.rand.dist: DistRangeSetBase;
+import esdl.rand.expr: CstNotLogicExpr, CstLogic2LogicExpr;
 
 import esdl.solver.base: CstSolver;
 
@@ -27,12 +28,37 @@ abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
 
 
       DistRangeSetBase getDist() { assert (false); }
+
       CstVecExpr isNot(CstDomBase A) { return null; }
+
       bool isOrderingExpr() { return false; }
+
       bool eval() {
 	return cast(bool) *(getRef());
       }
-      void setBool(bool val) {
+
+      final override bool getBool() {
+	return eval();
+      }
+
+      CstNotLogicExpr opUnary(string op)() if(op == "*") {
+	return new CstNotLogicExpr(this);
+      }
+
+      CstLogic2LogicExpr opBinary(string op)(CstLogicExpr other)
+      {
+	static if(op == "&") {
+	  return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICAND);
+	}
+	static if(op == "|") {
+	  return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICOR);
+	}
+	static if(op == ">>") {
+	  return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICIMP);
+	}
+      }
+
+      final override void setBool(bool val) {
 	static if (HAS_RAND_ATTRIB) {
 	  assert (getRef() !is null,
 		  "Domain does not have a valid R-Value pointer: " ~ fullName());
@@ -50,6 +76,9 @@ abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
 	  assert(false);
 	}
       }
+
+      final override bool isBool() {return true;}
+      
     }
 
 class CstDomain(T, rand RAND_ATTR) if (!is (T == bool)):
@@ -57,9 +86,15 @@ class CstDomain(T, rand RAND_ATTR) if (!is (T == bool)):
     this(string name, _esdl__Proxy root) {
       super(name, root);
     }
+
+    final override bool isBool() {return false;}
+
+    final override bool getBool() {assert (false);}
+
+    final override void setBool(bool val) {assert (false);}
   }
 
-class CstVecDomain(T, rand RAND_ATTR): CstDomBase
+abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
 {
   enum HAS_RAND_ATTRIB = RAND_ATTR.isRand();
 
@@ -868,6 +903,12 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecPrim
     static if (is (RV: CstDomSet)) return _parent;
     else return null;
   }
+
+  final override bool isBool() {return false;}
+
+  final override bool getBool() {assert (false);}
+
+  final override void setBool(bool val) {assert (false);}
 }
 
 class CstVecValue(T): CstValue
