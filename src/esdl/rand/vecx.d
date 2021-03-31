@@ -7,7 +7,7 @@ import std.traits: isIntegral, isBoolean, isArray, KeyType,
   isStaticArray, isDynamicArray, isSigned, isAssociativeArray;
 
 import esdl.rand.misc;
-import esdl.rand.base: CstVecPrim, CstVecExpr, CstIterator, DomType, CstDomBase,
+import esdl.rand.base: CstVecPrim, CstVecTerm, CstIterator, DomType, CstDomBase,
   CstDomSet, CstVarNodeIntf, CstVecNodeIntf, CstVarGlobIntf, CstValue,
   CstLogicTerm;
 import esdl.rand.pred: CstPredicate;
@@ -27,6 +27,7 @@ interface CstVecIndexed { }
 class CstVectorGlob(V, rand RAND_ATTR, int N, alias SYM)
   : CstVector!(V, RAND_ATTR, N), CstVarGlobIntf
 {
+  alias RV = typeof(this);
   enum _esdl__ISRAND = RAND_ATTR.isRand();
   enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
 
@@ -39,7 +40,7 @@ class CstVectorGlob(V, rand RAND_ATTR, int N, alias SYM)
   }
   
   // no unrolling is possible without adding rand proxy
-  override CstVecExpr unroll(CstIterator iter, ulong n) {
+  override RV unroll(CstIterator iter, ulong n) {
     return this;
   }
 }
@@ -47,6 +48,7 @@ class CstVectorGlob(V, rand RAND_ATTR, int N, alias SYM)
 class CstVectorIdx(V, rand RAND_ATTR, int N, int IDX,
 		   P, int PIDX): CstVector!(V, RAND_ATTR, N)
 {
+  alias RV = typeof(this);
   enum _esdl__ISRAND = RAND_ATTR.isRand();
   enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
   alias _esdl__PROXYT = P;
@@ -57,7 +59,7 @@ class CstVectorIdx(V, rand RAND_ATTR, int N, int IDX,
   }
 
   static if (PIDX >= 0) {	// exclude randomize_with
-    override CstVecExpr unroll(CstIterator iter, ulong n) {
+    override RV unroll(CstIterator iter, ulong n) {
       if (_parent !is _root) {
 	P uparent = cast(P)(_parent.unroll(iter, n));
 	assert (uparent !is null);
@@ -167,7 +169,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       // RV
-      CstVecExpr unroll(CstIterator iter, ulong n) {
+      RV unroll(CstIterator iter, ulong n) {
 	return this;
       }
 
@@ -215,13 +217,13 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
       alias P = CstVecArr!(V, RAND_ATTR, N-1);
       P _parent;
 
-      CstVecExpr _indexExpr = null;
+      CstVecTerm _indexExpr = null;
       ulong _pindex = 0;
 
       uint _resolvedCycle;	// cycle for which indexExpr has been resolved
       RV _resolvedVec;
 
-      this(string name, P parent, CstVecExpr indexExpr) {
+      this(string name, P parent, CstVecTerm indexExpr) {
 	if (indexExpr.isConst()) {
 	  ulong index = indexExpr.evaluate();
 	  this(name, parent, index);
@@ -302,7 +304,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       // RV
-      CstVecExpr unroll(CstIterator iter, ulong n) {
+      RV unroll(CstIterator iter, ulong n) {
 	if (_indexExpr) {
 	  return _parent.unroll(iter,n)[_indexExpr.unroll(iter,n)];
 	}
@@ -445,7 +447,7 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
   EV[] _elems;
 
   abstract EV createElem(uint i);
-  abstract EV createElem(CstVecExpr index);
+  abstract EV createElem(CstVecTerm index);
 
   bool _isRand = true;
   bool rand_mode() { return _isRand; }
@@ -488,7 +490,7 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
   abstract ulong mapIter(size_t iter);
   abstract size_t mapIndex(ulong index);
 
-  EV opIndex(CstVecExpr indexExpr) {
+  EV opIndex(CstVecTerm indexExpr) {
     if (indexExpr.isConst()) {
       ulong index = indexExpr.evaluate();
       return this[index];
@@ -804,7 +806,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 		      this, i);
       }
 
-      override EV createElem(CstVecExpr index) {
+      override EV createElem(CstVecTerm index) {
 	return new EV(name() ~ "[#" ~ index.describe() ~ "]",
 		      this, index);
       }
@@ -840,7 +842,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
     {
       alias P = CstVecArr!(V, RAND_ATTR, N-1);
       P _parent;
-      CstVecExpr _indexExpr = null;
+      CstVecTerm _indexExpr = null;
       ulong _pindex = 0;
 
       alias RAND=RAND_ATTR;
@@ -848,7 +850,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
       uint _resolvedCycle;	// cycle for which indexExpr has been resolved
       RV _resolvedVec;
 
-      this(string name, P parent, CstVecExpr indexExpr) {
+      this(string name, P parent, CstVecTerm indexExpr) {
 	// import std.stdio;
 	// writeln("New ", name);
 	assert (parent !is null);
@@ -981,7 +983,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 		      this, i);
       }
 
-      override EV createElem(CstVecExpr index) {
+      override EV createElem(CstVecTerm index) {
 	return new EV(name() ~ "[#" ~ index.describe() ~ "]",
 		      this, index);
       }

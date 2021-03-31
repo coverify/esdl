@@ -10,7 +10,7 @@ import esdl.rand.proxy: _esdl__Proxy, _esdl__ConstraintBase;
 import esdl.rand.misc;
 import esdl.rand.base: CstDomBase, CstDomSet, CstIterCallback, DomType,
   CstDepCallback, CstScope, CstLogicExpr, CstIterator, CstVecNodeIntf,
-  CstVecExpr;
+  CstVecTerm, CstLogicTerm;
 import esdl.rand.base: CstValue;
 import esdl.rand.dist: DistRangeSetBase;
 import esdl.solver.base;
@@ -390,7 +390,7 @@ class CstPredGroup			// group of related predicates
 	dist.reset();
 	foreach (wp; _withDistPreds) {
 	  if (wp.isGuardEnabled()) {
-	    CstVecExpr ex = wp._expr.isNot(distDomain);
+	    CstVecTerm ex = wp._expr.isNot(distDomain);
 	    if (ex is null) assert (false, "can only use != operator on distributed domains");
 	    dist.purge(ex.evaluate());
 	    wp.markPredSolved();
@@ -507,7 +507,7 @@ class CstPredicate: CstIterCallback, CstDepCallback
   uint _statement;
   _esdl__Proxy _proxy;
   CstScope _scope;
-  CstLogicExpr _expr;
+  CstLogicTerm _expr;
   CstPredicate _parent;
   CstPredicate _guard;
 
@@ -557,7 +557,7 @@ class CstPredicate: CstIterCallback, CstDepCallback
   immutable uint _id;
 
   this(_esdl__ConstraintBase cst, CstPredicate guard, bool guardInv,
-       uint stmt, _esdl__Proxy proxy, uint soft, CstLogicExpr expr,
+       uint stmt, _esdl__Proxy proxy, uint soft, CstLogicTerm expr,
        bool isGuard, CstPredicate parent=null,
        CstIterator unrollIter=null, uint unrollIterVal=0 // ,
        // CstIterator[] iters ...
@@ -919,7 +919,7 @@ class CstPredicate: CstIterCallback, CstDepCallback
     }
   }
 
-  CstLogicExpr getExpr() {
+  CstLogicTerm getExpr() {
     return _expr;
   }
 
@@ -1100,7 +1100,7 @@ class CstPredicate: CstIterCallback, CstDepCallback
 class CstVisitorPredicate: CstPredicate
 {
   this(_esdl__ConstraintBase cst, CstPredicate guard, bool guardInv, uint stmt,
-       _esdl__Proxy proxy, uint soft, CstLogicExpr expr, bool isGuard, CstPredicate parent=null,
+       _esdl__Proxy proxy, uint soft, CstLogicTerm expr, bool isGuard, CstPredicate parent=null,
        CstIterator unrollIter=null, uint unrollIterVal=0// ,
        // CstIterator[] iters ...
        ) {

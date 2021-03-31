@@ -27,7 +27,7 @@ import esdl.rand.vecx: CstVectorIdx, CstVecArrIdx,
   CstVectorGlob, CstVecArrGlob;
 import esdl.rand.objx: CstObjectIdx, CstObjArrIdx, CstObjectGlob,
   CstObjectStub, CstObjArrStub;
-import esdl.rand.domain: CstVecValue;
+import esdl.rand.domain: CstVecValue, CstLogicValue;
 import esdl.rand.proxy;
 import esdl.rand.func;
 
@@ -860,7 +860,12 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 
 auto _esdl__sym(L)(L l, string name,
 		   _esdl__Proxy parent) if (isRandomizable!L) {
-  return new CstVecValue!L(l); // CstVecValue!L.allocate(l);
+  static if (is (L: bool)) {
+    return new CstLogicValue(l);
+  }
+  else {
+    return new CstVecValue!L(l); // CstVecValue!L.allocate(l);
+  }
  }
 
 struct _esdl__rand_type_proxy(T, P)
@@ -942,7 +947,12 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       }
     }
     else {
-      return new CstVecValue!L(V); // CstVecValue!L.allocate(l);
+      static if (is (L: bool)) {
+	return new CstLogicValue(V);
+      }
+      else {
+	return new CstVecValue!L(V);
+      }
     }
   }
   else static if (is (L == class) || is (L == struct) ||

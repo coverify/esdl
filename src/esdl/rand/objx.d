@@ -7,7 +7,7 @@ import std.traits: isIntegral, isBoolean, isArray, KeyType,
   isStaticArray, isDynamicArray, isAssociativeArray;
 
 import esdl.rand.misc;
-import esdl.rand.base: CstValue, CstVecExpr, CstIterator, DomType,
+import esdl.rand.base: CstValue, CstVecTerm, CstIterator, DomType,
   CstDomBase, CstDomSet, CstObjectStubBase, CstObjArrStubBase, CstObjSet,
   CstVarNodeIntf, CstVecNodeIntf, CstObjArrIntf, CstVarGlobIntf,
   CstObjectVoid, CstObjArrVoid;
@@ -297,7 +297,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
       alias P = CstObjArr!(V, RAND_ATTR, N-1);
       P _parent;
 
-      CstVecExpr _indexExpr = null;
+      CstVecTerm _indexExpr = null;
       ulong _pindex = 0;
 
       uint _resolvedCycle;	// cycle for which indexExpr has been resolved
@@ -305,7 +305,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 
       _esdl__Proxy _root;
 
-      this(string name, P parent, CstVecExpr indexExpr) {
+      this(string name, P parent, CstVecTerm indexExpr) {
 	if (indexExpr.isConst()) {
 	  ulong index = indexExpr.evaluate();
 	  this(name, parent, index);
@@ -573,7 +573,7 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
 
   EV[] _elems;
 
-  abstract EV createElem(CstVecExpr indexExpr);
+  abstract EV createElem(CstVecTerm indexExpr);
   abstract EV createElem(uint i);
     
   bool _isRand = true;
@@ -617,7 +617,7 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
   abstract ulong mapIter(size_t iter);
   abstract size_t mapIndex(ulong index);
 
-  EV opIndex(CstVecExpr indexExpr) {
+  EV opIndex(CstVecTerm indexExpr) {
     if (indexExpr.isConst()) {
       ulong index = indexExpr.evaluate();
       return this[index];
@@ -842,7 +842,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	}
       }
 
-      override EV createElem(CstVecExpr indexExpr) {
+      override EV createElem(CstVecTerm indexExpr) {
 	return new EV(name ~ "[" ~ indexExpr.describe() ~ "]", this, indexExpr);
       }
   
@@ -877,7 +877,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
     {
       alias P = CstObjArr!(V, RAND_ATTR, N-1);
       P _parent;
-      CstVecExpr _indexExpr = null;
+      CstVecTerm _indexExpr = null;
       ulong _pindex = 0;
 
       alias RAND=RAND_ATTR;
@@ -885,7 +885,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
       uint _resolvedCycle;	// cycle for which indexExpr has been resolved
       RV _resolvedObj;
 
-      this(string name, P parent, CstVecExpr indexExpr) {
+      this(string name, P parent, CstVecTerm indexExpr) {
 	// import std.stdio;
 	// writeln("New ", name);
 	assert (parent !is null);
@@ -1010,7 +1010,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	else return cast(size_t) index;
       }
 
-      override EV createElem(CstVecExpr indexExpr) {
+      override EV createElem(CstVecTerm indexExpr) {
 	return new EV(name ~ "[" ~ indexExpr.describe() ~ "]", this, indexExpr);
       }
   

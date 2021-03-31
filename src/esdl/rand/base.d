@@ -217,7 +217,7 @@ enum DomDistEnum: ubyte
     PROPER = 2
     }
 
-abstract class CstDomBase: CstVecExpr, CstVectorIntf
+abstract class CstDomBase: CstExpr, CstVectorIntf
 {
 
   public enum State: ubyte
@@ -505,19 +505,15 @@ abstract class CstDomBase: CstVecExpr, CstVectorIntf
   void scan() { }
 }
 
-abstract class CstValue: CstVecTerm
+abstract class CstValue: CstVecExpr
 {
-  CstLogicExpr _cstExpr;
+  // CstLogicExpr _cstExpr;
   
-  bool isConst() {
-    return true;
-  }
+  bool isConst() { return true; }
 
-  bool isIterator() {
-    return false;
-  }
+  bool isIterator() { return false; }
 
-  CstVecExpr unroll(CstIterator iters, ulong n) {
+  CstValue unroll(CstIterator iters, ulong n) {
     return this;
   }
 
@@ -528,6 +524,11 @@ abstract class CstValue: CstVecTerm
   // abstract uint bitcount();
 
   void scan() { }
+}
+
+abstract class CstVecValueBase: CstValue, CstVecTerm {
+  override bool isConst() {return true;}
+  override bool isIterator() {return false;}
 }
 
 
@@ -779,11 +780,10 @@ interface CstVecExpr: CstExpr
 {
   bool isConst();
   bool isIterator();
-  
+
   long evaluate();
   uint bitcount();
   bool signed();
-
 
   CstVecExpr unroll(CstIterator iter, ulong n);
 
@@ -792,7 +792,7 @@ interface CstVecExpr: CstExpr
 interface CstLogicExpr: CstExpr
 {
   DistRangeSetBase getDist();
-  CstVecExpr isNot(CstDomBase A);
+  CstVecTerm isNot(CstDomBase A);
   CstLogicExpr unroll(CstIterator iter, ulong n);
 
   bool isOrderingExpr();
@@ -837,6 +837,8 @@ abstract class CstIterator: CstVecTerm
 
 interface CstVecTerm: CstVecExpr
 {
+  
+  CstVecTerm unroll(CstIterator iter, ulong n);
 
   final CstLogicTerm toBoolExpr() {
     auto zero = new CstVecValue!int(0); // CstVecValue!int.allocate(0);
@@ -1006,6 +1008,8 @@ interface CstVecTerm: CstVecExpr
 
 interface CstLogicTerm: CstLogicExpr
 {
+
+  CstLogicTerm unroll(CstIterator iter, ulong n);
 
   CstLogicTerm opBinary(string op)(CstLogicTerm other)
   {

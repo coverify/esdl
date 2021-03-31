@@ -1,7 +1,7 @@
 module esdl.solver.mono;
 
 import esdl.solver.base;
-import esdl.rand.base: CstDomBase, CstValue;
+import esdl.rand.base: CstDomBase, CstVecValueBase;
 import esdl.rand.pred: CstPredGroup, CstPredicate;
 import esdl.rand.misc;
 import esdl.rand.proxy: _esdl__Proxy;
@@ -331,7 +331,7 @@ class CstMonoSolver (S): CstSolver
       }
     }
   }
-  override void pushToEvalStack(CstValue value) {
+  override void pushToEvalStack(CstVecValueBase value) {
     uint n = value.bitcount();
     /*if (n>32){
       if (value.signed()){
@@ -1065,6 +1065,12 @@ class CstMonoSolver (S): CstSolver
       case CstLogicOp.LOGICIMP:
 	writeln("logical operator IMP");
 	break;
+      case CstLogicOp.LOGICEQ:
+	writeln("logical operator EQ");
+	break;
+      case CstLogicOp.LOGICNEQ:
+	writeln("logical operator NEQ");
+	break;
       }
       
       writeln("previous _rangeStack :");
@@ -1256,6 +1262,10 @@ class CstMonoSolver (S): CstSolver
 	break;
       }
       break;
+    case CstLogicOp.LOGICEQ:
+      assert (false, "TBD");
+    case CstLogicOp.LOGICNEQ:
+      assert (false, "TBD");
     }
     debug (MONOSOLVER){
       import std.stdio;

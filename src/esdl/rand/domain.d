@@ -8,7 +8,7 @@ import esdl.data.charbuf: Charbuf;
 
 import esdl.rand.base: CstValue, CstDomBase, CstDomSet, CstIterator,
   CstVecNodeIntf, CstVecPrim, CstVecExpr, DomType, CstLogicExpr,
-  CstLogicTerm, CstVecTerm;
+  CstLogicTerm, CstVecTerm, CstVecValueBase;
 // import esdl.rand.misc: rand, writeHexString, _esdl__RandGen;
 import esdl.rand.misc: rand, _esdl__RandGen, writeHexString, isVecSigned,
   CstVectorOp, CstInsideOp, CstCompareOp, CstLogicOp;
@@ -30,7 +30,7 @@ abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
 
       DistRangeSetBase getDist() { assert (false); }
 
-      CstVecExpr isNot(CstDomBase A) { return null; }
+      CstVecTerm isNot(CstDomBase A) { return null; }
 
       override bool getBool() {
 	return eval();
@@ -64,6 +64,10 @@ abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
       }
 
       override void scan() { }
+
+      override uint bitcount() { return 1; }
+      
+      override bool signed() { return false; }
     }
 
 abstract class CstDomain(T, rand RAND_ATTR) if (!is (T == bool)):
@@ -78,6 +82,43 @@ abstract class CstDomain(T, rand RAND_ATTR) if (!is (T == bool)):
       final override bool getBool() {assert (false);}
 
       final override void setBool(bool val) {assert (false);}
+
+      long evaluate() {
+	static if (HAS_RAND_ATTRIB) {
+	  if (! this.isRand || this.isSolved()) {
+	    return value();
+	  }
+	  else {
+	    assert (false, "Error evaluating " ~ _name);
+	  }
+	}
+	else {
+	  return value();
+	}
+      }
+
+      override uint bitcount() {
+	static if (isBoolean!T)         return 1;
+	else static if (isIntegral!T || isSomeChar!T)   return T.sizeof * 8;
+	else static if (isBitVector!T)  return T.SIZE;
+	else static if (is (T == enum)) {
+	  alias OT = OriginalType!T;
+	  static if (isBoolean!OT)         return 1;
+	  else static if (isIntegral!OT || isSomeChar!OT)   return OT.sizeof * 8;
+	  else static if (isBitVector!OT)  return OT.SIZE;
+	  else static assert(false, "bitcount can not operate on: " ~ T.stringof);
+	}
+	else static assert(false, "bitcount can not operate on: " ~ T.stringof);
+      }
+
+      override bool signed() {
+	static if (isVecSigned!T) {
+	  return true;
+	}
+	else  {
+	  return false;
+	}
+      }
     }
 
 abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
@@ -231,125 +272,8 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
     _root = root;
   }
 
-  ~this() {
-  }    
-
-  long evaluate() {
-    static if (HAS_RAND_ATTRIB) {
-      if (! this.isRand || this.isSolved()) {
-	return value();
-      }
-      else {
-	assert (false, "Error evaluating " ~ _name);
-      }
-    }
-    else {
-      return value();
-    }
-  }
-
-  // S to(S)()
-  //   if (is (S == string)) {
-  //     import std.conv;
-  //     static if (HAS_RAND_ATTRIB) {
-  // 	if (isRand) {
-  // 	  return "RAND#" ~ _name ~ ":" ~ value().to!string();
-  // 	}
-  // 	else {
-  // 	  return "VAL#" ~ _name ~ ":" ~ value().to!string();
-  // 	}
-  //     }
-  //     else {
-  // 	return "VAR#" ~ _name ~ ":" ~ value().to!string();
-  //     }
-  //   }
-
-  // override string toString() {
-  //   return this.to!string();
-  // }
-
-  override uint bitcount() {
-    static if (isBoolean!T)         return 1;
-    else static if (isIntegral!T || isSomeChar!T)   return T.sizeof * 8;
-    else static if (isBitVector!T)  return T.SIZE;
-    else static if (is (T == enum)) {
-      alias OT = OriginalType!T;
-      static if (isBoolean!OT)         return 1;
-      else static if (isIntegral!OT || isSomeChar!OT)   return OT.sizeof * 8;
-      else static if (isBitVector!OT)  return OT.SIZE;
-      else static assert(false, "bitcount can not operate on: " ~ T.stringof);
-    }
-    else static assert(false, "bitcount can not operate on: " ~ T.stringof);
-  }
-
-  override bool signed() {
-    static if (isVecSigned!T) {
-      return true;
-    }
-    else  {
-      return false;
-    }
-  }
   
   abstract T* getRef();
-  
-  // override void collate(ulong v, int word = 0) {
-  //   static if (HAS_RAND_ATTRIB) {
-  //     T* var = getRef();
-  //     static if(isIntegral!T) {
-  // 	if(word == 0) {
-  // 	  *var = cast(T) v;
-  // 	}
-  // 	else {
-  // 	  assert(false, "word has to be 0 for integrals");
-  // 	}
-  //     }
-  //     else {
-  // 	(*var)._setNthWord(v, word);
-  //     }
-  //     markSolved();
-  //   }
-  //   else {
-  //     assert(false);
-  //   }
-  // }
-
-  // override bool isBool() {
-  //   return isBoolean!T;
-  // }
-  
-  // override bool getBool() {
-  //   static if (isBoolean!T) {
-  //     return *(getRef());
-  //   }
-  //   else {
-  //     assert (false, "getBool called on a non-boolean domain");
-  //   }
-  // }
-    
-  // override void setBool(bool val) {
-  //   static if (HAS_RAND_ATTRIB) {
-  //     static if (isBoolean!T) {
-  // 	Unconst!T newVal= cast (Unconst!T) val;
-  // 	assert (getRef() !is null);
-  // 	if (newVal != *(getRef())) {
-  // 	  _valueChanged = true;
-  // 	}
-  // 	else {
-  // 	  _valueChanged = false;
-  // 	}
-  // 	*(getRef()) = newVal;
-  // 	markSolved();
-  // 	execCbs();
-  //     }
-  //     else {
-  // 	assert (false, "setBool called on a non-boolean domain");
-  //     }
-  //   }
-  //   else {
-  //     assert(false);
-  //   }
-  // }
 
   override long value() {
     return cast(long) *(getRef());
@@ -597,7 +521,7 @@ class CstArrIterator(RV): CstIterator
     else return (_arrVar == rhs._arrVar);
   }
 
-  CstVecExpr unroll(CstIterator iter, ulong n) {
+  CstVecTerm unroll(CstIterator iter, ulong n) {
     if(this !is iter) {
       return _arrVar.unroll(iter,n).arrLen().makeIterVar();
     }
@@ -654,6 +578,8 @@ class CstArrIterator(RV): CstIterator
 class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 {
 
+  alias AV = typeof(this);
+  
   enum HAS_RAND_ATTRIB = RV.RAND.isRand();
 
   CstArrIterator!RV _iterVar;
@@ -686,7 +612,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     return _parent.getProxyRoot();
   }
 
-  override CstArrLength!RV getResolved() { // always self
+  override AV getResolved() { // always self
     return this;
   }
 
@@ -799,7 +725,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   //   _parent.setLen(cast(size_t) v);
   // }
 
-  CstVecExpr unroll(CstIterator iter, ulong n) {
+  CstVecTerm unroll(CstIterator iter, ulong n) {
     return _parent.unroll(iter,n).arrLen();
   }
 
@@ -811,13 +737,9 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     _preReqs ~= domain;
   }
 
-  bool isConst() {
-    return false;
-  }
+  bool isConst() { return false; }
   
-  bool isIterator() {
-    return false;
-  }
+  bool isIterator() { return false; }
   
   void setDomainContext(CstPredicate pred,
 			ref CstDomBase[] rnds,
@@ -895,10 +817,91 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   final override bool getBool() {assert (false);}
 
   final override void setBool(bool val) {assert (false);}
+
+  final override long evaluate() {
+    static if (HAS_RAND_ATTRIB) {
+      if (! this.isRand || this.isSolved()) {
+	return value();
+      }
+      else {
+	assert (false, "Error evaluating " ~ _name);
+      }
+    }
+    else {
+      return value();
+    }
+  }
 }
 
-class CstVecValue(T): CstValue
+class CstLogicValue: CstValue, CstLogicTerm
 {
+  bool _val;
+  
+  this(bool value) {
+    _val = value;
+  }
+
+  override bool isBool() {
+    return true;
+  }
+
+  override bool getBool() {
+    return _val;
+  }
+
+  override long value() {
+    return cast(long) _val;
+  }
+
+  override bool eval() {
+    return _val;
+  }
+
+  string describe() {
+    import std.conv: to;
+    return _val.to!string();
+  }
+
+  void visit(CstSolver solver) {
+    solver.pushToEvalStack(_val);
+  }
+
+  long evaluate() {
+    return cast(long) _val;
+  }
+
+  bool isSolved() {
+    return true;
+  }
+
+  void setDomainContext(CstPredicate pred,
+			ref CstDomBase[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomBase[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomBase[] bitIdxs,
+			ref CstVecNodeIntf[] deps) {
+    vals ~= this;
+  }
+
+  void writeExprString(ref Charbuf str) {
+    // VSxxxxx or VUxxxxx
+    str ~= 'V';
+    _val.writeHexString(str);
+  }
+
+  override bool isOrderingExpr() { return false; }
+  override DistRangeSetBase getDist() { assert(false); }
+  override CstVecTerm isNot(CstDomBase A) { assert(false); }
+  override CstLogicValue unroll(CstIterator iter, ulong n) { return this; }
+}
+
+class CstVecValue(T): CstVecValueBase
+{
+  alias RV = typeof(this);
   static if (isIntegral!T) {
     import std.traits;
     enum bool SIGNED = isSigned!T;
@@ -938,8 +941,6 @@ class CstVecValue(T): CstValue
     return cast(long) _val;
   }
 
-  import std.conv;
-
   // static Allocator _allocator;
 
   // static this() {
@@ -949,7 +950,13 @@ class CstVecValue(T): CstValue
 
   T _val;			// the value of the constant
 
+  override RV unroll(CstIterator iters, ulong n) {
+    return this;
+  }
+
+
   string describe() {
+    import std.conv;
     return _val.to!string();
   }
 
@@ -969,16 +976,13 @@ class CstVecValue(T): CstValue
     _val = value;
   }
 
-  ~this() {
-  }
-
   void visit(CstSolver solver) {
     solver.pushToEvalStack(this);
   }
 
-  const(T)* getRef() {
-    return &_val;
-  }
+  // const(T)* getRef() {
+  //   return &_val;
+  // }
 
   // bool getVal(ref long val) {
   //   val = _val;
@@ -1033,4 +1037,5 @@ class CstVecValue(T): CstValue
     }
     _val.writeHexString(str);
   }
+  
 }

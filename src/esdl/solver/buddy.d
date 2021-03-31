@@ -524,7 +524,7 @@ class CstBuddySolver: CstSolver
     }
   }
 
-  override void pushToEvalStack(CstValue value) {
+  override void pushToEvalStack(CstVecValueBase value) {
     // writeln("push: value ", value.value());
     BddVec v = _esdl__buddy.buildVec(value.bitcount(),
 				     value.value(), value.signed);
@@ -538,8 +538,14 @@ class CstBuddySolver: CstSolver
 
   override void pushToEvalStack(bool value) {
     // writeln("push: ", value);
-    BuddyTerm e = BuddyTerm(BDD(BddFalse, _esdl__buddy));
-    pushToEvalStack(e);
+    if (value) {
+      BuddyTerm e = BuddyTerm(BDD(BddTrue, _esdl__buddy));
+      pushToEvalStack(e);
+    }
+    else {
+      BuddyTerm e = BuddyTerm(BDD(BddFalse, _esdl__buddy));
+      pushToEvalStack(e);
+    }
   }
 
   override void pushIndexToEvalStack(ulong value) {
@@ -703,6 +709,18 @@ class CstBuddySolver: CstSolver
       BDD e = ~ _evalStack[$-1].toBool();
       popEvalStack();
       // _evalStack.length = _evalStack.length - 1;
+      pushToEvalStack(e);
+      break;
+    case CstLogicOp.LOGICEQ:
+      BDD e = _evalStack[$-2].toBool().biimp(_evalStack[$-1].toBool());
+      popEvalStack(2);
+      // _evalStack.length = _evalStack.length - 2;
+      pushToEvalStack(e);
+      break;
+    case CstLogicOp.LOGICNEQ:
+      BDD e = _evalStack[$-2].toBool() ^ _evalStack[$-1].toBool();
+      popEvalStack(2);
+      // _evalStack.length = _evalStack.length - 2;
       pushToEvalStack(e);
       break;
     }

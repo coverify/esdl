@@ -614,6 +614,8 @@ enum CstLogicOp: byte
     LOGICOR,
     LOGICIMP,
     LOGICNOT,
+    LOGICEQ,
+    LOGICNEQ
     }
 
 

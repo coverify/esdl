@@ -4,7 +4,7 @@ module esdl.solver.base;
 
 import esdl.rand.misc;
 import esdl.rand.pred: CstPredGroup;
-import esdl.rand.base: CstDomBase, CstValue;
+import esdl.rand.base: CstDomBase, CstVecValueBase;
 
 abstract class CstSolver
 {
@@ -29,13 +29,13 @@ abstract class CstSolver
   }
 
   // abstract void registerDomain(CstDomBase domain);
-  // abstract void registerValue(CstValue value);
+  // abstract void registerValue(CstVecValueBase value);
 
   abstract bool solve(CstPredGroup group);
 
   // abstract void pushToEvalStack();
   abstract void pushToEvalStack(CstDomBase domain);
-  abstract void pushToEvalStack(CstValue value);
+  abstract void pushToEvalStack(CstVecValueBase value);
 
   abstract void pushToEvalStack(ulong value, uint bitcount, bool signed);
   abstract void pushToEvalStack(bool value);

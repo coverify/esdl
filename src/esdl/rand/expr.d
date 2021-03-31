@@ -20,7 +20,7 @@ import esdl.data.charbuf;
 import std.traits: isIntegral, isBoolean, isStaticArray,
   isSomeChar, EnumMembers, isSigned, OriginalType;
 
-class CstOrderingExpr: CstLogicExpr
+class CstOrderingExpr: CstLogicTerm
 {
   CstDomBase _first;
   CstDomBase _second;
@@ -29,18 +29,11 @@ class CstOrderingExpr: CstLogicExpr
     _first = a;
     _second = b;
   }
-  override bool isOrderingExpr() {
-    return true;
-  }
-  override DistRangeSetBase getDist() {
-    assert(false);
-  }
-  override CstVecExpr isNot(CstDomBase A) {
-    assert(false);
-  }
-  override CstLogicExpr unroll(CstIterator iter, ulong n) {
-    assert(false);
-  }
+  override bool isOrderingExpr() { return true; }
+  override DistRangeSetBase getDist() { assert(false); }
+  override CstVecTerm isNot(CstDomBase A) { assert(false); }
+  override CstLogicTerm unroll(CstIterator iter, ulong n) { assert(false); }
+
   void setDomainContext(CstPredicate pred,
 			ref CstDomBase[] rnds,
 			ref CstDomSet[] rndArrs,
@@ -189,8 +182,8 @@ class CstVec2VecExpr: CstVecTerm
 {
   import std.conv;
 
-  CstVecExpr _lhs;
-  CstVecExpr _rhs;
+  CstVecTerm _lhs;
+  CstVecTerm _rhs;
   CstBinaryOp _op;
 
   string describe() {
@@ -294,7 +287,7 @@ class CstVec2VecExpr: CstVecTerm
     return new CstVec2VecExpr(_lhs.unroll(iter, n), _rhs.unroll(iter, n), _op);
   }
 
-  this(CstVecExpr lhs, CstVecExpr rhs, CstBinaryOp op) {
+  this(CstVecTerm lhs, CstVecTerm rhs, CstBinaryOp op) {
     _lhs = lhs;
     _rhs = rhs;
     _op = op;
@@ -374,8 +367,8 @@ class CstRangeExpr
 {
   import std.conv;
 
-  CstVecExpr _lhs;
-  CstVecExpr _rhs;
+  CstVecTerm _lhs;
+  CstVecTerm _rhs;
 
   bool _inclusive = false;
 
@@ -401,7 +394,7 @@ class CstRangeExpr
 			      _rhs.unroll(iter, n), _inclusive);
   }
 
-  this(CstVecExpr lhs, CstVecExpr rhs, bool inclusive=false) {
+  this(CstVecTerm lhs, CstVecTerm rhs, bool inclusive=false) {
     _lhs = lhs;
     _rhs = rhs;
     _inclusive = inclusive;
@@ -448,8 +441,8 @@ class CstDistSetElem
 {
   import std.conv;
 
-  CstVecExpr _lhs;
-  CstVecExpr _rhs;
+  CstVecTerm _lhs;
+  CstVecTerm _rhs;
 
   bool _inclusive = false;
 
@@ -475,7 +468,7 @@ class CstDistSetElem
 				  _rhs.unroll(iter, n), _inclusive);
   }
 
-  this(CstVecExpr lhs, CstVecExpr rhs, bool inclusive=false) {
+  this(CstVecTerm lhs, CstVecTerm rhs, bool inclusive=false) {
     _lhs = lhs;
     _rhs = rhs;
     _inclusive = inclusive;
@@ -522,7 +515,7 @@ class CstUniqueSetElem
 {
   import std.conv;
 
-  CstVecExpr _vec;
+  CstVecTerm _vec;
   CstDomSet  _arr;
 
   bool _inclusive = false;
@@ -549,7 +542,7 @@ class CstUniqueSetElem
     }
   }
 
-  this(CstVecExpr vec) {
+  this(CstVecTerm vec) {
     _vec = vec;
   }
 
@@ -628,8 +621,8 @@ class CstInsideSetElem
 {
   import std.conv;
 
-  CstVecExpr _lhs;
-  CstVecExpr _rhs;
+  CstVecTerm _lhs;
+  CstVecTerm _rhs;
 
   CstDomSet  _arr;
 
@@ -664,7 +657,7 @@ class CstInsideSetElem
     }
   }
 
-  this(CstVecExpr lhs, CstVecExpr rhs, bool inclusive=false) {
+  this(CstVecTerm lhs, CstVecTerm rhs, bool inclusive=false) {
     _lhs = lhs;
     _rhs = rhs;
     _inclusive = inclusive;
@@ -730,7 +723,7 @@ class CstWeightedDistSetElem
   import std.conv;
 
   CstDistSetElem _range;
-  CstVecExpr   _weight;
+  CstVecTerm   _weight;
   bool         _perItem = false;
 
   string describe() {
@@ -745,7 +738,7 @@ class CstWeightedDistSetElem
     return this;
   }
 
-  this(CstDistSetElem range, CstVecExpr weight, bool perItem=false) {
+  this(CstDistSetElem range, CstVecTerm weight, bool perItem=false) {
     _range = range;
     _weight = weight;
     _perItem = perItem;
@@ -880,7 +873,7 @@ class CstDistExpr(T): CstLogicTerm
     }
   }
   
-  CstVecExpr isNot(CstDomBase dom){
+  CstVecTerm isNot(CstDomBase dom){
     return null;
   }
 
@@ -892,9 +885,9 @@ class CstDistExpr(T): CstLogicTerm
 
 // class CstVecSliceExpr: CstVecTerm
 // {
-//   CstVecExpr _vec;
-//   CstVecExpr _lhs;
-//   CstVecExpr _rhs;
+//   CstVecTerm _vec;
+//   CstVecTerm _lhs;
+//   CstVecTerm _rhs;
   
 //   string describe() {
 //     if (_rhs is null)
@@ -934,7 +927,7 @@ class CstDistExpr(T): CstLogicTerm
 // 				 _lhs.unroll(iter, n), _rhs.unroll(iter, n));
 //   }
 
-//   this(CstVecExpr vec, CstVecExpr lhs, CstVecExpr rhs) {
+//   this(CstVecTerm vec, CstVecTerm lhs, CstVecTerm rhs) {
 //     _vec = vec;
 //     _lhs = lhs;
 //     _rhs = rhs;
@@ -983,7 +976,7 @@ class CstDistExpr(T): CstLogicTerm
 
 class CstVecSliceExpr: CstVecTerm
 {
-  CstVecExpr _vec;
+  CstVecTerm _vec;
   CstRangeExpr _range;
   
   string describe() {
@@ -1021,7 +1014,7 @@ class CstVecSliceExpr: CstVecTerm
 			       _range.unroll(iter, n));
   }
 
-  this(CstVecExpr vec, CstRangeExpr range) {
+  this(CstVecTerm vec, CstRangeExpr range) {
     _vec = vec;
     _range = range;
   }
@@ -1072,8 +1065,8 @@ class CstVecSliceExpr: CstVecTerm
 
 // class CstVecIndexExpr: CstVecTerm
 // {
-//   CstVecExpr _vec;
-//   CstVecExpr _index;
+//   CstVecTerm _vec;
+//   CstVecTerm _index;
   
 //   string describe() {
 //     return _vec.describe() ~ "[ " ~ _index.describe() ~ " ]";
@@ -1100,7 +1093,7 @@ class CstVecSliceExpr: CstVecTerm
 // 			       _index.unroll(iter, n));
 //   }
 
-//   this(CstVecExpr vec, CstVecExpr index) {
+//   this(CstVecTerm vec, CstVecTerm index) {
 //     _vec = vec;
 //     _index = index;
 //   }
@@ -1143,7 +1136,7 @@ class CstNotVecExpr: CstVecTerm
 {
   import std.conv;
 
-  CstVecExpr _expr;
+  CstVecTerm _expr;
 
   string describe() {
     return "( ~ " ~ _expr.describe ~ " )";
@@ -1168,7 +1161,7 @@ class CstNotVecExpr: CstVecTerm
     return new CstNotVecExpr(_expr.unroll(iter, n));
   }
 
-  this(CstVecExpr expr) {
+  this(CstVecTerm expr) {
     _expr = expr;
   }
 
@@ -1226,7 +1219,7 @@ class CstNegVecExpr: CstVecTerm
 {
   import std.conv;
 
-  CstVecExpr _expr;
+  CstVecTerm _expr;
 
   string describe() {
     return "( - " ~ _expr.describe ~ " )";
@@ -1251,7 +1244,7 @@ class CstNegVecExpr: CstVecTerm
     return new CstNegVecExpr(_expr.unroll(iter, n));
   }
 
-  this(CstVecExpr expr) {
+  this(CstVecTerm expr) {
     _expr = expr;
   }
 
@@ -1310,11 +1303,11 @@ class CstLogic2LogicExpr: CstLogicTerm
 {
   import std.conv;
 
-  CstLogicExpr _lhs;
-  CstLogicExpr _rhs;
+  CstLogicTerm _lhs;
+  CstLogicTerm _rhs;
   CstLogicOp _op;
 
-  this(CstLogicExpr lhs, CstLogicExpr rhs, CstLogicOp op) {
+  this(CstLogicTerm lhs, CstLogicTerm rhs, CstLogicOp op) {
     _lhs = lhs;
     _rhs = rhs;
     _op = op;
@@ -1348,7 +1341,7 @@ class CstLogic2LogicExpr: CstLogicTerm
     _rhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
 
-  CstVecExpr isNot(CstDomBase dom){
+  CstVecTerm isNot(CstDomBase dom){
     return null;
   }
   
@@ -1384,6 +1377,10 @@ class CstLogic2LogicExpr: CstLogicTerm
       return (! _lhs.eval()) || _rhs.eval();
     case CstLogicOp.LOGICNOT:
       assert (false);
+    case CstLogicOp.LOGICEQ:
+      return (_lhs.eval() == _rhs.eval());
+    case CstLogicOp.LOGICNEQ:
+      return (_lhs.eval() != _rhs.eval());
     }
   }
   
@@ -1395,7 +1392,7 @@ class CstInsideArrExpr: CstLogicTerm
 {
   CstInsideSetElem[] _elems;
 
-  CstVecExpr _term;
+  CstVecTerm _term;
 
   bool _notinside = false;
 
@@ -1442,7 +1439,7 @@ class CstInsideArrExpr: CstLogicTerm
     if (_notinside) solver.processEvalStack(CstLogicOp.LOGICNOT);
   }
 
-  this(CstVecExpr term) {
+  this(CstVecTerm term) {
     _term = term;
   }
 
@@ -1474,7 +1471,7 @@ class CstInsideArrExpr: CstLogicTerm
     }
   }
 
-  CstVecExpr isNot(CstDomBase dom){
+  CstVecTerm isNot(CstDomBase dom){
     return null;
   }
   
@@ -1568,7 +1565,7 @@ class CstUniqueArrExpr: CstLogicTerm
     }
   }
 
-  CstVecExpr isNot(CstDomBase dom){
+  CstVecTerm isNot(CstDomBase dom){
     return null;
   }
   
@@ -1619,7 +1616,7 @@ class CstIteLogicExpr: CstLogicTerm
     assert(false, "TBD");
   }
 
-  CstVecExpr isNot(CstDomBase dom){
+  CstVecTerm isNot(CstDomBase dom){
     return null;
   }
 
@@ -1657,11 +1654,11 @@ class CstVec2LogicExpr: CstLogicTerm
 {
   import std.conv;
 
-  CstVecExpr _lhs;
-  CstVecExpr _rhs;
+  CstVecTerm _lhs;
+  CstVecTerm _rhs;
   CstCompareOp _op;
 
-  this(CstVecExpr lhs, CstVecExpr rhs, CstCompareOp op) {
+  this(CstVecTerm lhs, CstVecTerm rhs, CstCompareOp op) {
     _lhs = lhs;
     _rhs = rhs;
     _op = op;
@@ -1699,7 +1696,7 @@ class CstVec2LogicExpr: CstLogicTerm
     _rhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
   
-  CstVecExpr isNot(CstDomBase dom){
+  CstVecTerm isNot(CstDomBase dom){
     if (_op is CstCompareOp.NEQ) {
       CstExpr lhs = _lhs;
       if (lhs !is dom) {
@@ -1821,69 +1818,11 @@ class CstVec2LogicExpr: CstLogicTerm
 
 }
 
-class CstLogicConst: CstLogicTerm
-{
-  immutable bool _bool;
-
-  this(bool val) {
-    _bool = val;
-  }
-
-  void visit(CstSolver solver) {
-    solver.pushToEvalStack(_bool);
-  }
-
-  string describe() {
-    if(_bool) return "TRUE";
-    else return "FALSE";
-  }
-
-  override CstLogicConst unroll(CstIterator iter, ulong n) {
-    return this;
-  }
-
-  void setDomainContext(CstPredicate pred,
-			ref CstDomBase[] rnds,
-			ref CstDomSet[] rndArrs,
-			ref CstDomBase[] vars,
-			ref CstDomSet[] varArrs,
-			ref CstValue[] vals,
-			ref CstIterator[] iters,
-			ref CstVecNodeIntf[] idxs,
-			ref CstDomBase[] bitIdxs,
-			ref CstVecNodeIntf[] deps) {
-    // nothing for CstLogicConst
-  }
-
-  CstVecExpr isNot(CstDomBase dom){
-    return null;
-  }
-
-  bool isSolved() {
-    return true;
-  }
-
-  void writeExprString(ref Charbuf str) {
-    if (_bool) str ~= "TRUE";
-    else str ~= "FALSE";
-  }
-
-  DistRangeSetBase getDist() {
-    assert (false);
-  }
-
-  override bool eval() {return _bool;}
-
-  override void scan() { }
-  override bool isOrderingExpr() { return false; }
-
-}
-
 class CstNotLogicExpr: CstLogicTerm
 {
-  CstLogicExpr _expr;
+  CstLogicTerm _expr;
 
-  this(CstLogicExpr expr) {
+  this(CstLogicTerm expr) {
     _expr = expr;
   }
 
@@ -1913,7 +1852,7 @@ class CstNotLogicExpr: CstLogicTerm
     _expr.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
 
-  CstVecExpr isNot(CstDomBase dom){
+  CstVecTerm isNot(CstDomBase dom){
     return null;
   }
 
@@ -1991,7 +1930,7 @@ class CstVarVisitorExpr: CstLogicTerm
     str ~= this.describe();
   }
 
-  CstVecExpr isNot(CstDomBase dom){
+  CstVecTerm isNot(CstDomBase dom){
     return null;
   }
 

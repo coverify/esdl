@@ -2,8 +2,8 @@ module esdl.rand.proxy;
 
 import esdl.solver.base: CstSolver;
 import esdl.rand.base: CstVecPrim, CstLogicExpr, CstScope, CstDomBase,
-  DomType, CstVecExpr, CstObjectVoid, CstVarNodeIntf, CstObjectIntf,
-  CstIterator, CstDomSet, CstVarGlobIntf;
+  DomType, CstVecTerm, CstObjectVoid, CstVarNodeIntf, CstObjectIntf,
+  CstIterator, CstDomSet, CstVarGlobIntf, CstLogicTerm;
 import esdl.rand.pred: CstPredicate, CstPredGroup;
 import esdl.rand.misc;
 import esdl.data.folder;
@@ -684,7 +684,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     DistRangeSetBase dist = pred._expr.getDist();
     dist.reset();
     foreach (predicate; distPreds){
-      CstVecExpr ex = predicate._expr.isNot(distDom);
+      CstVecTerm ex = predicate._expr.isNot(distDom);
       // isNot returns rhs if the predicate is of != type,
       // otherwise it returns null
       if (predicate.getRnds().length == 1 && ! predicate.isDist()) {

@@ -712,7 +712,7 @@ class CstZ3Solver: CstSolver
 
   }
 
-  override void pushToEvalStack(CstValue value) {
+  override void pushToEvalStack(CstVecValueBase value) {
     // writeln("push: value ", value.value());
     BvExpr bv = bvNumVal(_context, value.value(),
 			 value.bitcount(), value.signed());
@@ -868,6 +868,16 @@ class CstZ3Solver: CstSolver
     case CstLogicOp.LOGICNOT:
       BoolExpr e = not(_evalStack[$-1].toBool());
       popEvalStack();
+      pushToEvalStack(e);
+      break;
+    case CstLogicOp.LOGICEQ:
+      BoolExpr e = eq(_evalStack[$-2].toBool(), _evalStack[$-1].toBool());
+      popEvalStack(2);
+      pushToEvalStack(e);
+      break;
+    case CstLogicOp.LOGICNEQ:
+      BoolExpr e = xor(_evalStack[$-2].toBool(), _evalStack[$-1].toBool());
+      popEvalStack(2);
       pushToEvalStack(e);
       break;
     }
