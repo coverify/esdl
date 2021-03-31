@@ -67,7 +67,7 @@ template _esdl__RandProxyType(T, int I, P, int PI)
   else static if (isRandVectorSet!L) {
     alias _esdl__RandProxyType = CstVecArrIdx!(L, RAND, 0, I, P, PI);
   }
-  else static if (is (L == struct)) {
+  else static if (is (L == struct) && !isQueue!L) {
     alias _esdl__RandProxyType = CstObjectIdx!(L, RAND, 0, I, P, PI);
   }
   else static if (isRandStructSet!L) {
@@ -258,7 +258,7 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
     static if (is (Q == CstObjectIdx!(L, RAND, N, IDX, P, PIDX),
 		   L, rand RAND, int N, int IDX, P, int PIDX)) {
       if (p.tupleof[I] !is null) {
-	static if (is (L == struct)) {
+	static if (is (L == struct) && !isQueue!L) {
 	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
 	}
 	else {
@@ -269,7 +269,7 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
     static if (is (Q == CstObjectStub!(L, RAND, N, IDX, P, PIDX),
 		   L, rand RAND, int N, int IDX, P, int PIDX)) {
       if (p.tupleof[I] !is null && p.tupleof[I]._esdl__obj !is null) {
-	static if (is (L == struct)) {
+	static if (is (L == struct) && !isQueue!L) {
 	  p.tupleof[I]._esdl__get().
 	    _esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
 	}
@@ -955,7 +955,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       }
     }
   }
-  else static if (is (L == class) || is (L == struct) ||
+  else static if (is (L == class) || (is (L == struct) && !isQueue!L) ||
 		  (is (L == U*, U) && is (U == struct))) {
     // pragma(msg, "inside: ", NAME);
     static if (is (L == class) || is (L == struct)) {
@@ -969,7 +969,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       return cast(CstObjType) global;
     else {
       // pragma(msg, CstObjType.stringof);
-      static if (is (L == struct)) {
+      static if (is (L == struct) && !isQueue!L) {
 	CstObjType obj = new CstObjType(name, parent, &V);
       }
       else {
