@@ -588,6 +588,26 @@ struct CstParser {
     return start;
   }
 
+  size_t parseIdentifierChain() {
+    size_t srcUpto;
+    size_t start = srcCursor;
+    parseIdentifier();
+    srcUpto = srcCursor;
+    if (start < srcCursor) {
+      parseSpace();
+      if (CST.length > srcCursor && CST[srcCursor] == '.') {
+	srcCursor += 1;
+	parseSpace();
+	parseIdentifierChain();
+	srcUpto = srcCursor;
+      }
+      else {
+	srcCursor = srcUpto;
+      }
+    }
+    return start;
+  }
+
   bool parseMappedChain(string mapped, ref int cursor) {
     if (cursor >= mapped.length) return false;
     while (cursor < mapped.length && mapped[cursor] != '.') cursor += 1;
@@ -1227,7 +1247,7 @@ struct CstParser {
     }
 
     // Parse array
-    srcTag = parseIdentifier();
+    srcTag = parseIdentifierChain();
     if (srcCursor > srcTag) {
       // FIXME -- check if the variable names do not shadow earlier
       // names in the table
