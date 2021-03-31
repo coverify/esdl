@@ -4,13 +4,14 @@ import esdl.rand.dist;
 
 import esdl.solver.base: CstSolver;
 
-import esdl.rand.misc: rand, _esdl__RandGen, isVecSigned, Unconst, CstVectorOp, CstInsideOp;
+import esdl.rand.misc: rand, _esdl__RandGen, isVecSigned, Unconst,
+  CstVectorOp, CstInsideOp;
 import esdl.rand.misc: CstBinaryOp, CstCompareOp, CstLogicOp,
   CstUnaryOp, CstSliceOp, writeHexString, CstUniqueOp;
 
-import esdl.rand.base: DomDistEnum, CstVecExpr, CstLogicExpr, CstDomBase, CstDomSet,
-  CstIterator, CstVecNodeIntf, CstVarNodeIntf, CstVecArrIntf, CstVecPrim, DomType,
-  CstValue, CstVecTerm, CstLogicTerm;
+import esdl.rand.base: DomDistEnum, CstVecExpr, CstLogicExpr, CstExpr,
+  CstDomBase, CstDomSet, CstIterator, CstVecNodeIntf, CstVarNodeIntf,
+  CstVecArrIntf, CstVecPrim, DomType,  CstValue, CstVecTerm, CstLogicTerm;
 import esdl.rand.pred: CstPredicate, CstPredGroup;
 import esdl.rand.func;
 
@@ -68,9 +69,6 @@ class CstOrderingExpr: CstLogicExpr
   }
   void scan() { }
   bool eval() {
-    assert (false);
-  }
-  void setBool(bool val) {
     assert (false);
   }
 }
@@ -181,6 +179,8 @@ class CstVecArrExpr: CstVecTerm
     _arr.writeExprString(str);
     str ~= ')';
   }
+
+  void scan() { }
 }
 
 // This class would hold two(bin) vector nodes and produces a vector
@@ -366,6 +366,8 @@ class CstVec2VecExpr: CstVecTerm
     _rhs.writeExprString(str);
     str ~= ')';
   }
+
+  void scan() { }
 }
 
 class CstRangeExpr
@@ -884,8 +886,8 @@ class CstDistExpr(T): CstLogicTerm
 
   bool eval() {assert (false, "Enable to evaluate CstDistExpr");}
 
-  void scan() { }
-  bool isOrderingExpr() { return false; }
+  override void scan() { }
+  override bool isOrderingExpr() { return false; }
 }
 
 // class CstVecSliceExpr: CstVecTerm
@@ -1064,6 +1066,8 @@ class CstVecSliceExpr: CstVecTerm
     _range.writeExprString(str);
     str ~= ']';
   }
+
+  void scan() { }
 }
 
 // class CstVecIndexExpr: CstVecTerm
@@ -1214,6 +1218,8 @@ class CstNotVecExpr: CstVecTerm
     _expr.writeExprString(str);
     str ~= ')';
   }
+
+  void scan() { }
 }
 
 class CstNegVecExpr: CstVecTerm
@@ -1295,6 +1301,8 @@ class CstNegVecExpr: CstVecTerm
     _expr.writeExprString(str);
     str ~= ')';
   }
+
+  void scan() { }
 }
 
 
@@ -1496,6 +1504,7 @@ class CstInsideArrExpr: CstLogicTerm
   override void scan() { }
 
   override bool isOrderingExpr() { return false; }
+
 }
 
 class CstUniqueArrExpr: CstLogicTerm
@@ -1587,6 +1596,7 @@ class CstUniqueArrExpr: CstLogicTerm
 
   override void scan() { }
   override bool isOrderingExpr() { return false; }
+
 }
 
 // TBD
@@ -1640,6 +1650,7 @@ class CstIteLogicExpr: CstLogicTerm
   override bool eval() {assert (false, "Enable to evaluate CstIteLogicExpr");}
   override void scan() { }
   override bool isOrderingExpr() { return false; }
+
 }
 
 class CstVec2LogicExpr: CstLogicTerm
@@ -1690,7 +1701,8 @@ class CstVec2LogicExpr: CstLogicTerm
   
   CstVecExpr isNot(CstDomBase dom){
     if (_op is CstCompareOp.NEQ) {
-      if (_lhs !is dom) {
+      CstExpr lhs = _lhs;
+      if (lhs !is dom) {
 	assert(false, "Constraint " ~ describe() ~ " not allowed since " ~ dom.name()
 	       ~ " is dist");
       }
@@ -1806,6 +1818,7 @@ class CstVec2LogicExpr: CstLogicTerm
 
   override void scan() { }
   override bool isOrderingExpr() { return false; }
+
 }
 
 class CstLogicConst: CstLogicTerm
@@ -1863,6 +1876,7 @@ class CstLogicConst: CstLogicTerm
 
   override void scan() { }
   override bool isOrderingExpr() { return false; }
+
 }
 
 class CstNotLogicExpr: CstLogicTerm
@@ -1921,6 +1935,7 @@ class CstNotLogicExpr: CstLogicTerm
 
   override void scan() { }
   override bool isOrderingExpr() { return false; }
+
 }
 
 class CstVarVisitorExpr: CstLogicTerm
@@ -1992,4 +2007,5 @@ class CstVarVisitorExpr: CstLogicTerm
   override bool eval() {assert(false);}
 
   override bool isOrderingExpr() { return false; }
+
 }

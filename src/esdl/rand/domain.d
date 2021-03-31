@@ -7,7 +7,8 @@ import esdl.data.bvec: isBitVector;
 import esdl.data.charbuf: Charbuf;
 
 import esdl.rand.base: CstValue, CstDomBase, CstDomSet, CstIterator,
-  CstVecNodeIntf, CstVecPrim, CstVecExpr, DomType, CstLogicExpr;
+  CstVecNodeIntf, CstVecPrim, CstVecExpr, DomType, CstLogicExpr,
+  CstLogicTerm, CstVecTerm;
 // import esdl.rand.misc: rand, writeHexString, _esdl__RandGen;
 import esdl.rand.misc: rand, _esdl__RandGen, writeHexString, isVecSigned,
   CstVectorOp, CstInsideOp, CstCompareOp, CstLogicOp;
@@ -20,7 +21,7 @@ import esdl.solver.base: CstSolver;
 
 
 abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
-  CstVecDomain!(T, RAND_ATTR), CstLogicExpr
+  CstVecDomain!(T, RAND_ATTR), CstLogicTerm
     {
       this(string name, _esdl__Proxy root) {
 	super(name, root);
@@ -31,34 +32,11 @@ abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
 
       CstVecExpr isNot(CstDomBase A) { return null; }
 
-      bool isOrderingExpr() { return false; }
-
-      bool eval() {
-	return cast(bool) *(getRef());
-      }
-
-      final override bool getBool() {
+      override bool getBool() {
 	return eval();
       }
 
-      CstNotLogicExpr opUnary(string op)() if(op == "*") {
-	return new CstNotLogicExpr(this);
-      }
-
-      CstLogic2LogicExpr opBinary(string op)(CstLogicExpr other)
-      {
-	static if(op == "&") {
-	  return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICAND);
-	}
-	static if(op == "|") {
-	  return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICOR);
-	}
-	static if(op == ">>") {
-	  return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICIMP);
-	}
-      }
-
-      final override void setBool(bool val) {
+      override void setBool(bool val) {
 	static if (HAS_RAND_ATTRIB) {
 	  assert (getRef() !is null,
 		  "Domain does not have a valid R-Value pointer: " ~ fullName());
@@ -77,22 +55,30 @@ abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
 	}
       }
 
-      final override bool isBool() {return true;}
+      override bool isBool() {return true;}
       
+      bool isOrderingExpr() { return false; }
+
+      bool eval() {
+	return cast(bool) *(getRef());
+      }
+
+      override void scan() { }
     }
 
-class CstDomain(T, rand RAND_ATTR) if (!is (T == bool)):
-  CstVecDomain!(T, RAND_ATTR) {
-    this(string name, _esdl__Proxy root) {
-      super(name, root);
+abstract class CstDomain(T, rand RAND_ATTR) if (!is (T == bool)):
+  CstVecDomain!(T, RAND_ATTR), CstVecTerm
+    {
+      this(string name, _esdl__Proxy root) {
+	super(name, root);
+      }
+
+      final override bool isBool() {return false;}
+
+      final override bool getBool() {assert (false);}
+
+      final override void setBool(bool val) {assert (false);}
     }
-
-    final override bool isBool() {return false;}
-
-    final override bool getBool() {assert (false);}
-
-    final override void setBool(bool val) {assert (false);}
-  }
 
 abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
 {
@@ -282,7 +268,7 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
   //   return this.to!string();
   // }
 
-  uint bitcount() {
+  override uint bitcount() {
     static if (isBoolean!T)         return 1;
     else static if (isIntegral!T || isSomeChar!T)   return T.sizeof * 8;
     else static if (isBitVector!T)  return T.SIZE;
@@ -296,7 +282,7 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
     else static assert(false, "bitcount can not operate on: " ~ T.stringof);
   }
 
-  bool signed() {
+  override bool signed() {
     static if (isVecSigned!T) {
       return true;
     }
@@ -665,7 +651,7 @@ class CstArrIterator(RV): CstIterator
   }
 }
 
-class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecPrim
+class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 {
 
   enum HAS_RAND_ATTRIB = RV.RAND.isRand();

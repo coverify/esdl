@@ -27,17 +27,11 @@ auto _esdl__logicOr(P, Q)(P p, Q q) {
   static if (is (P == bool)) {
     _p = new CstLogicConst(p);
   }
-  else static if (is (P: CstVecExpr)) {
-    _p = toBoolExpr(p);
-  }
   else {
     _p = p;
   }
   static if(is(Q == bool)) {
     _q = new CstLogicConst(q);
-  }
-  else static if (is (Q: CstVecExpr)) {
-    _q = toBoolExpr(q);
   }
   else {
     _q = q;
@@ -51,17 +45,11 @@ auto _esdl__logicAnd(P, Q)(P p, Q q) {
   static if(is(P == bool)) {
     _p = new CstLogicConst(p);
   }
-  else static if (is (P: CstVecExpr)) {
-    _p = toBoolExpr(p);
-  }
   else {
     _p = p;
   }
   static if(is(Q == bool)) {
     _q = new CstLogicConst(q);
-  }
-  else static if (is (Q: CstVecExpr)) {
-    _q = toBoolExpr(q);
   }
   else {
     _q = q;

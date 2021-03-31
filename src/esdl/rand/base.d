@@ -217,7 +217,7 @@ enum DomDistEnum: ubyte
     PROPER = 2
     }
 
-abstract class CstDomBase: CstVecTerm, CstVectorIntf
+abstract class CstDomBase: CstVecExpr, CstVectorIntf
 {
 
   public enum State: ubyte
@@ -252,9 +252,9 @@ abstract class CstDomBase: CstVecTerm, CstVectorIntf
   
   // abstract uint domIndex();
   // abstract void domIndex(uint s);
-  // abstract bool signed();
   abstract bool isRand();
-  // abstract uint bitcount();
+  abstract bool signed();
+  abstract uint bitcount();
   abstract _esdl__Proxy getProxyRoot();
   abstract void _esdl__doRandomize(_esdl__RandGen randGen);
   abstract CstDomBase getResolved();
@@ -501,6 +501,8 @@ abstract class CstDomBase: CstVecTerm, CstVectorIntf
 
   bool _esdl__parentIsConstrained;
   abstract string describe();
+
+  void scan() { }
 }
 
 abstract class CstValue: CstVecTerm
@@ -524,6 +526,8 @@ abstract class CstValue: CstVecTerm
   abstract bool getBool();
   // abstract bool signed();
   // abstract uint bitcount();
+
+  void scan() { }
 }
 
 
@@ -764,8 +768,11 @@ interface CstExpr
 
   bool isSolved();
   void visit(CstSolver solver);
-  void scan(); // {}		// used for CstVarVisitorExpr
   void writeExprString(ref Charbuf str);
+
+  CstExpr unroll(CstIterator iter, ulong n);
+  
+  void scan(); // {}		// used for CstVarVisitorExpr
 }
 
 interface CstVecExpr: CstExpr
@@ -774,11 +781,11 @@ interface CstVecExpr: CstExpr
   bool isIterator();
   
   long evaluate();
-
-  CstVecExpr unroll(CstIterator iter, ulong n);
-
   uint bitcount();
   bool signed();
+
+
+  CstVecExpr unroll(CstIterator iter, ulong n);
 
 }
 
@@ -787,23 +794,10 @@ interface CstLogicExpr: CstExpr
   DistRangeSetBase getDist();
   CstVecExpr isNot(CstDomBase A);
   CstLogicExpr unroll(CstIterator iter, ulong n);
+
   bool isOrderingExpr();
   bool eval();
-  void setBool(bool val);
-  // void scan(); // {}		// used for CstVarVisitorExpr
 
-  CstLogicExpr opBinary(string op)(CstLogicExpr other)
-  {
-    static if(op == "&") {
-      return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICAND);
-    }
-    static if(op == "|") {
-      return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICOR);
-    }
-    static if(op == ">>") {
-      return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICIMP);
-    }
-  }
 }
 
 
@@ -837,12 +831,14 @@ abstract class CstIterator: CstVecTerm
   long evaluate() {
     assert(false, "Can not evaluate an Iterator: " ~ this.name());
   }
+
+  void scan() { }
 }
 
-abstract class CstVecTerm: CstVecExpr
+interface CstVecTerm: CstVecExpr
 {
 
-  CstLogicTerm toBoolExpr() {
+  final CstLogicTerm toBoolExpr() {
     auto zero = new CstVecValue!int(0); // CstVecValue!int.allocate(0);
     return new CstVec2LogicExpr(this, zero, CstCompareOp.NEQ);
   }
@@ -1006,12 +1002,10 @@ abstract class CstVecTerm: CstVecExpr
     }
   }
 
-  void scan() { }
 }
 
-abstract class CstLogicTerm: CstLogicExpr
+interface CstLogicTerm: CstLogicExpr
 {
-  abstract override CstLogicTerm unroll(CstIterator iter, ulong n);
 
   CstLogicTerm opBinary(string op)(CstLogicTerm other)
   {
@@ -1052,19 +1046,9 @@ abstract class CstLogicTerm: CstLogicExpr
     return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICIMP);
   }
 
-  final CstLogicTerm implies(CstVecTerm other)
-  {
-    return new CstLogic2LogicExpr(this, other.toBoolExpr(), CstLogicOp.LOGICIMP);
-  }
-
   final CstLogicTerm logicOr(CstLogicTerm other)
   {
     return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICOR);
-  }
-
-  final CstLogicTerm logicOr(CstVecTerm other)
-  {
-    return new CstLogic2LogicExpr(this, other.toBoolExpr(), CstLogicOp.LOGICOR);
   }
 
   final CstLogicTerm logicAnd(CstLogicTerm other)
@@ -1072,12 +1056,4 @@ abstract class CstLogicTerm: CstLogicExpr
     return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICAND);
   }
 
-  final CstLogicTerm logicAnd(CstVecTerm other)
-  {
-    return new CstLogic2LogicExpr(this, other.toBoolExpr(), CstLogicOp.LOGICAND);
-  }
-
-  void scan() { }
-  bool isOrderingExpr() { return false; }
-  bool eval() {assert (false, "Unable to evaluate CstLogicTerm");}
 }

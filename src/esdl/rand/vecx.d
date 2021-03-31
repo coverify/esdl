@@ -85,12 +85,6 @@ class CstVectorBase(V, rand RAND_ATTR, int N)
 	  super(name, root);
 	}
 
-	override CstLogicTerm toBoolExpr() {
-	  CstVecValue!LEAF zero = new CstVecValue!LEAF(cast(LEAF) 0);
-	  return new CstVec2LogicExpr(this, zero,
-				      CstCompareOp.NEQ);
-	}
-
 	override string name() {
 	  return _name;
 	}
