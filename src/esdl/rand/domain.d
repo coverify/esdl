@@ -14,10 +14,9 @@ import esdl.rand.misc: rand, _esdl__RandGen, writeHexString, isVecSigned,
   CstVectorOp, CstInsideOp, CstCompareOp, CstLogicOp;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.pred: CstPredicate;
-import esdl.rand.dist: DistRangeSetBase;
 import esdl.rand.expr: CstNotLogicExpr, CstLogic2LogicExpr;
 
-import esdl.solver.base: CstSolver;
+import esdl.solver.base: CstSolver, DistRangeSetBase;
 
 
 abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):

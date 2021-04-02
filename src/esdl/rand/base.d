@@ -3,11 +3,11 @@ module esdl.rand.base;
 import std.traits: isIntegral;
 
 import esdl.solver.base;
-import esdl.rand.dist;
+
 import esdl.rand.domain: CstVecValue;
 import esdl.rand.expr: CstVecArrExpr, CstVecSliceExpr, CstRangeExpr,
   CstInsideSetElem, CstVec2LogicExpr, CstLogic2LogicExpr, CstVec2VecExpr,
-  CstNotLogicExpr;
+  CstNotLogicExpr, CstNegVecExpr;
 import esdl.rand.pred: CstPredGroup, CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.misc: _esdl__RandGen, CstVectorOp, CstLogicOp, CstCompareOp,

@@ -1,6 +1,6 @@
 module esdl.rand.proxy;
 
-import esdl.solver.base: CstSolver;
+import esdl.solver.base: CstSolver, DistRangeSetBase;
 import esdl.rand.base: CstVecPrim, CstLogicExpr, CstScope, CstDomBase,
   DomType, CstVecTerm, CstObjectVoid, CstVarNodeIntf, CstObjectIntf,
   CstIterator, CstDomSet, CstVarGlobIntf, CstLogicTerm;
@@ -8,7 +8,6 @@ import esdl.rand.pred: CstPredicate, CstPredGroup;
 import esdl.rand.misc;
 import esdl.data.folder;
 import esdl.data.charbuf;
-import esdl.rand.dist: DistRangeSetBase;
 
 import std.container: Array;
 import std.array;

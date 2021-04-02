@@ -1,8 +1,6 @@
 module esdl.rand.expr;
 
-import esdl.rand.dist;
-
-import esdl.solver.base: CstSolver;
+import esdl.solver.base: CstSolver, DistRangeSetBase;
 
 import esdl.rand.misc: rand, _esdl__RandGen, isVecSigned, Unconst,
   CstVectorOp, CstInsideOp;
@@ -779,6 +777,7 @@ class CstWeightedDistSetElem
 class CstDistExpr(T): CstLogicTerm
 {
   import std.conv;
+  import esdl.solver.dist: DistRangeSet, DistRange;
 
   CstDomBase _vec;
   CstWeightedDistSetElem[] _dists;
