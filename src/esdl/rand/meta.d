@@ -118,6 +118,9 @@ void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy) {
       static if (p.tupleof[I].stringof != "p._esdl__cstWith") {
 	// import std.stdio;
 	// writeln("Adding constraint: ", p.tupleof[I].stringof);
+
+	// Update constraint guards if any
+	p.tupleof[I]._esdl__updateCst();
 	foreach (pred; p.tupleof[I].getConstraintGuards()) {
 	  // writeln("Adding predicate: ", pred.name());
 	  proxy.addNewPredicate(pred);
@@ -498,6 +501,12 @@ mixin template Randomization()
   // that since in that case _esdl__outer object would have an
   // implicit pointer to the outer object which can not be changed
 
+  // Need this function for evaluatig constraint guards within the
+  // ambit of user code
+  auto _esdl__guardEval(string str)() {
+    return mixin(str);
+  }
+  
   static if (is (typeof(this) == class)) {
     static class _esdl__ProxyRand(_esdl__T): _esdl__ProxyBase!_esdl__T
     {
@@ -785,10 +794,15 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   {
     this(_esdl__Proxy eng, string name) {
       super(eng, name);
+      this._esdl__initCst();
     }
 
-    mixin(CST_PARSE_DATA.cstDecls);
-    mixin(CST_PARSE_DATA.cstDefines);
+    mixin (CST_PARSE_DATA.cstDecls);
+    mixin (CST_PARSE_DATA.cstDefines);
+    mixin (CST_PARSE_DATA.guardDecls);
+    mixin (CST_PARSE_DATA.guardInits);
+    mixin (CST_PARSE_DATA.guardUpdts);
+  
   }
 
   class _esdl__ConstraintWith(string _esdl__CstString, string FILE, size_t LINE, ARGS...): // size_t N):
@@ -811,6 +825,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       foreach (i, arg; args) {
 	_withArgs[i] = arg;
       }
+      this._esdl__initCst();
     }
 
     ref auto _esdl__arg(size_t VAR)() {
@@ -819,8 +834,11 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       return _withArgs[VAR];
     }
 
-    mixin(CST_PARSE_DATA.cstDecls);
-    mixin(CST_PARSE_DATA.cstDefines);
+    mixin (CST_PARSE_DATA.cstDecls);
+    mixin (CST_PARSE_DATA.cstDefines);
+    mixin (CST_PARSE_DATA.guardDecls);
+    mixin (CST_PARSE_DATA.guardInits);
+    mixin (CST_PARSE_DATA.guardUpdts);
 
   }
 

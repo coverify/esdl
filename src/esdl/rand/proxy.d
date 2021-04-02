@@ -64,6 +64,10 @@ abstract class _esdl__ConstraintBase: rand.disable
     return _proxy;
   }
 
+  void _esdl__initCst() { }
+
+  void _esdl__updateCst() { }
+  
   abstract void makeConstraints();
   abstract CstPredicate[] getConstraintGuards();
   abstract CstPredicate[] getConstraints();
@@ -72,7 +76,10 @@ abstract class _esdl__ConstraintBase: rand.disable
 abstract class Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=__LINE__)
   : _esdl__ConstraintBase
 {
-
+  import esdl.rand.vecx: CstVector;
+  
+  alias CstBoolVar = CstVector!(bool, rand(true, true), 0);
+  
   debug(CSTPARSER) {
     pragma(msg, "/* Constraint Specification STARTS\n");
     pragma(msg, CONSTRAINT);
@@ -83,10 +90,18 @@ abstract class Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=_
     pragma(msg, "// cstDefines STARTS\n");
     pragma(msg, CST_PARSE_DATA.cstDefines);
     pragma(msg, "// cstDefines! ENDS\n");
+    pragma(msg, "// guardDecls STARTS\n");
+    pragma(msg, CST_PARSE_DATA.guardDecls);
+    pragma(msg, "// guardDecls! ENDS\n");
+    pragma(msg, "// guardInits STARTS\n");
+    pragma(msg, CST_PARSE_DATA.guardInits);
+    pragma(msg, "// guardUpdts! ENDS\n");
+    pragma(msg, CST_PARSE_DATA.guardUpdts);
+    pragma(msg, "// guardUpdts! ENDS\n");
   }
     
   enum CstParseData CST_PARSE_DATA = constraintXlate("this.outer", CONSTRAINT, FILE, LINE);
-  
+
   protected CstPredicate[] _preds;
   protected CstPredicate[] _guards;
   
