@@ -458,7 +458,7 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
     }
   }
   // overridded in derived classes
-  bool isRand() { assert (false); }
+  override bool isRand() { assert (false); }
 
   abstract size_t getLen();
   abstract void setLen(size_t len);

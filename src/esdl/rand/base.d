@@ -645,8 +645,15 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     return _esdl__leafElemsCount;
   }
   
+  abstract bool isRand();
+
   final bool isResolved() {
-    return _esdl__unresolvedArrLen == 0;
+    if (isRand()) {
+      return _esdl__unresolvedArrLen == 0;
+    }
+    else {
+      return true;
+    }
   }
 
   abstract void markSolved();

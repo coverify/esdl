@@ -764,7 +764,15 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       _toRolledPreds ~= pred;
     }
     else if (pred._deps.length > 0) {
-      _unresolvedPreds ~= pred;
+      bool allDepsResolved = true;
+      foreach (dep; pred._deps) {
+	if (! dep.isSolved()) {
+	  allDepsResolved = false;
+	  break;
+	}
+      }
+      if (allDepsResolved) procResolved(pred);
+      else _unresolvedPreds ~= pred;
     }
     else {
       procResolved(pred);
