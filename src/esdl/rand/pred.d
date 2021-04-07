@@ -462,7 +462,7 @@ class CstPredicate: CstIterCallback, CstDepCallback
     import std.conv;
     if (_parent is null) {
       return _constraint.fullName() ~ '/' ~
-	(_isGuard ? "g_" : "p_") ~
+	(_isGuard ? "guard_" : "pred_") ~
 	_statement.to!string() ~ '%' ~ _id.to!string();
     }
     else {
