@@ -443,6 +443,24 @@ template _esdl__ConstraintDefaults(string NAME, int I, rand RAND) {
   }
 }
 
+void _esdl__preRandomize(T)(T t) {
+  static if (__traits(hasMember, t, "preRandomize")) {
+    __traits(getMember, t, "preRandomize")();
+  }
+  else static if (__traits(hasMember, t, "pre_randomize")) {
+    __traits(getMember, t, "pre_randomize")();
+  }
+}
+
+void _esdl__postRandomize(T)(T t) {
+  static if (__traits(hasMember, t, "postRandomize")) {
+    __traits(getMember, t, "postRandomize")();
+  }
+  else static if (__traits(hasMember, t, "post_randomize")) {
+    __traits(getMember, t, "post_randomize")();
+  }
+}
+
 void _esdl__randomize(T) (T t, _esdl__ConstraintBase withCst = null) {
 
   t._esdl__initProxy();
@@ -455,14 +473,11 @@ void _esdl__randomize(T) (T t, _esdl__ConstraintBase withCst = null) {
   //   t._esdl__proxyInst._esdl__cstWithChanged = false;
   // }
 
-  static if(__traits(compiles, t.preRandomize())) {
-    t.preRandomize();
-  }
-  else static if(__traits(compiles, t.pre_randomize())) {
-    t.pre_randomize();
-  }
+  // _esdl__preRandomize(t);
 
   t._esdl__proxyInst.reset();
+
+  t._esdl__proxyInst._esdl__doConstrain(t._esdl__proxyInst);
 
   if (withCst !is null) {
     foreach (pred; withCst.getConstraintGuards()) {
@@ -473,16 +488,10 @@ void _esdl__randomize(T) (T t, _esdl__ConstraintBase withCst = null) {
     }
   }
   
-  t._esdl__proxyInst._esdl__doConstrain(t._esdl__proxyInst);
   t._esdl__proxyInst.solve();
   t._esdl__proxyInst._esdl__doRandomize(t._esdl__proxyInst._esdl__getRandGen);
 
-  static if(__traits(compiles, t.postRandomize())) {
-    t.postRandomize();
-  }
-  else static if(__traits(compiles, t.post_randomize())) {
-    t.post_randomize();
-  }
+  // _esdl__postRandomize(t);
 
 }
 
@@ -850,11 +859,15 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 
 
   override void _esdl__doConstrain(_esdl__Proxy proxy) {
+    assert (this._esdl__outer !is null);
+    _esdl__preRandomize(this._esdl__outer);
     _esdl__doConstrainElems(this, proxy);
   }
 
   override void _esdl__doRandomize(_esdl__RandGen randGen) {
     _esdl__doRandomizeElems(this, randGen);
+    assert (this._esdl__outer !is null);
+    _esdl__postRandomize(this._esdl__outer);
   }
 
   void _esdl__doSetOuter()(bool changed) {
