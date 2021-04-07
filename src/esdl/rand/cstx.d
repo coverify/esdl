@@ -1133,7 +1133,15 @@ struct CstParser {
 	  num -= 1;
 	  // srcCursor += 1; // just before the closing paren
 	  if (num == 0) break;
-	  else continue;
+	  else {
+	    srcCursor += 1;
+	    continue;
+	  }
+	}
+	else if (srcCursor < CST.length && CST[srcCursor] == '(') {
+	  num += 1;
+	  srcCursor += 1;
+	  continue;
 	}
 	else {
 	  srcCursor += 1;
