@@ -16,7 +16,7 @@ import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.pred: CstPredicate;
 import esdl.rand.expr: CstNotLogicExpr, CstLogic2LogicExpr;
 
-import esdl.solver.base: CstSolver, DistRangeSetBase;
+import esdl.solver.base: CstSolver, CstDistSolverBase;
 
 
 abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
@@ -27,13 +27,12 @@ abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
       }
 
 
-      DistRangeSetBase getDist() { assert (false); }
+      CstDistSolverBase getDist() { assert (false); }
 
-      CstVecTerm isNot(CstDomBase A) { return null; }
+      bool isCompatWithDist(CstDomBase A) { return false; }
+      void visit(CstDistSolverBase solver) { assert (false); }
 
-      override bool getBool() {
-	return eval();
-      }
+      override bool getBool() {	return eval(); }
 
       override void setBool(bool val) {
 	static if (HAS_RAND_ATTRIB) {
@@ -830,6 +829,9 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
       return value();
     }
   }
+
+  final void visit(CstDistSolverBase dist) { assert(false); }
+
 }
 
 class CstLogicValue: CstValue, CstLogicTerm
@@ -893,8 +895,9 @@ class CstLogicValue: CstValue, CstLogicTerm
   }
 
   override bool isOrderingExpr() { return false; }
-  override DistRangeSetBase getDist() { assert(false); }
-  override CstVecTerm isNot(CstDomBase A) { assert(false); }
+  override CstDistSolverBase getDist() { assert(false); }
+  override bool isCompatWithDist(CstDomBase A) { assert(false); }
+  override void visit(CstDistSolverBase solver) { assert(false); }
   override CstLogicValue unroll(CstIterator iter, ulong n) { return this; }
 }
 

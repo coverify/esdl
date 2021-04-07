@@ -1,6 +1,6 @@
 module esdl.rand.expr;
 
-import esdl.solver.base: CstSolver, DistRangeSetBase;
+import esdl.solver.base: CstSolver, CstDistSolverBase;
 
 import esdl.rand.misc: rand, _esdl__RandGen, isVecSigned, Unconst,
   CstVectorOp, CstInsideOp;
@@ -28,8 +28,10 @@ class CstOrderingExpr: CstLogicTerm
     _second = b;
   }
   override bool isOrderingExpr() { return true; }
-  override DistRangeSetBase getDist() { assert(false); }
-  override CstVecTerm isNot(CstDomBase A) { assert(false); }
+  override CstDistSolverBase getDist() { assert(false); }
+  override bool isCompatWithDist(CstDomBase A) { assert(false); }
+  override void visit(CstDistSolverBase solver) { assert(false); }
+  
   override CstLogicTerm unroll(CstIterator iter, ulong n) { assert(false); }
 
   void setDomainContext(CstPredicate pred,
@@ -172,6 +174,9 @@ class CstVecArrExpr: CstVecTerm
   }
 
   void scan() { }
+
+  final void visit(CstDistSolverBase dist) { assert(false); }
+
 }
 
 // This class would hold two(bin) vector nodes and produces a vector
@@ -359,6 +364,9 @@ class CstVec2VecExpr: CstVecTerm
   }
 
   void scan() { }
+
+  final void visit(CstDistSolverBase dist) { assert(false); }
+
 }
 
 class CstRangeExpr
@@ -714,6 +722,29 @@ class CstInsideSetElem
       }
     }
   }
+
+  final void visit(CstDistSolverBase dist) {
+    if (_arr !is null) _arr.visit(dist);
+    else if (_lhs !is null) {
+      if (_rhs !is null) {
+	if (_inclusive) {
+	  assert (_lhs.evaluate() <= _rhs.evaluate());
+	  for (ulong val = _lhs.evaluate(); val <= _rhs.evaluate(); val += 1) {
+	    dist.purge(val);
+	  }
+	}
+	else {
+	  assert (_lhs.evaluate() < _rhs.evaluate());
+	  for (ulong val = _lhs.evaluate(); val < _rhs.evaluate(); val += 1) {
+	    dist.purge(val);
+	  }
+	}
+      }
+      else {
+	dist.purge(_lhs.evaluate());
+      }
+    }
+  }
 }
 
 class CstWeightedDistSetElem
@@ -777,17 +808,17 @@ class CstWeightedDistSetElem
 class CstDistExpr(T): CstLogicTerm
 {
   import std.conv;
-  import esdl.solver.dist: DistRangeSet, DistRange;
+  import esdl.solver.dist: CstDistSolver, CstDistRange;
 
   CstDomBase _vec;
   CstWeightedDistSetElem[] _dists;
 
-  DistRangeSet!T _rs;
+  CstDistSolver!T _rs;
   
   this(CstDomBase vec, CstWeightedDistSetElem[] dists) {
     _vec = vec;
     _dists = dists;
-    _rs = new DistRangeSet!T;
+    _rs = new CstDistSolver!T(vec);
     foreach (dist; _dists) {
       T lhs = cast(T) dist._range._lhs.evaluate();
       T rhs;
@@ -799,11 +830,11 @@ class CstDistExpr(T): CstLogicTerm
       }
       int weight = cast(int) dist._weight.evaluate();
       bool perItem = dist._perItem;
-      _rs ~= DistRange!T(lhs, rhs, weight, perItem);
+      _rs ~= CstDistRange!T(lhs, rhs, weight, perItem);
     }
   }
 
-  DistRangeSetBase getDist() {
+  CstDistSolverBase getDist() {
     return _rs;
   }
 
@@ -872,10 +903,10 @@ class CstDistExpr(T): CstLogicTerm
     }
   }
   
-  CstVecTerm isNot(CstDomBase dom){
-    return null;
-  }
+  bool isCompatWithDist(CstDomBase dom) { return false; }
 
+  void visit (CstDistSolverBase solver) { assert (false); }
+  
   bool eval() {assert (false, "Enable to evaluate CstDistExpr");}
 
   override void scan() { }
@@ -1060,6 +1091,9 @@ class CstVecSliceExpr: CstVecTerm
   }
 
   void scan() { }
+
+  final void visit(CstDistSolverBase dist) { assert(false); }
+
 }
 
 // class CstVecIndexExpr: CstVecTerm
@@ -1212,6 +1246,9 @@ class CstNotVecExpr: CstVecTerm
   }
 
   void scan() { }
+
+  final void visit(CstDistSolverBase dist) { assert(false); }
+
 }
 
 class CstNegVecExpr: CstVecTerm
@@ -1295,6 +1332,9 @@ class CstNegVecExpr: CstVecTerm
   }
 
   void scan() { }
+
+  final void visit(CstDistSolverBase dist) { assert(false); }
+
 }
 
 
@@ -1340,17 +1380,13 @@ class CstLogic2LogicExpr: CstLogicTerm
     _rhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
 
-  CstVecTerm isNot(CstDomBase dom){
-    return null;
-  }
-  
-  bool cstExprIsNop() {
-    return false;
-  }
+  bool isCompatWithDist(CstDomBase dom) { return false; }
+  void visit (CstDistSolverBase solver) { assert (false); }
 
-  bool isSolved() {
-    return _lhs.isSolved && _rhs.isSolved();
-  }
+  
+  bool cstExprIsNop() { return false; }
+
+  bool isSolved() { return _lhs.isSolved && _rhs.isSolved(); }
 
   void writeExprString(ref Charbuf str) {
     str ~= '(';
@@ -1362,7 +1398,7 @@ class CstLogic2LogicExpr: CstLogicTerm
     str ~= ")\n";
   }
 
-  DistRangeSetBase getDist() {
+  CstDistSolverBase getDist() {
     assert (false);
   }
 
@@ -1470,17 +1506,21 @@ class CstInsideArrExpr: CstLogicTerm
     }
   }
 
-  CstVecTerm isNot(CstDomBase dom){
-    return null;
+  bool isCompatWithDist(CstDomBase dom) {
+    CstExpr term = cast(CstExpr) _term;
+    if (_notinside && term == dom) return true;
+    else return false;
   }
   
-  bool cstExprIsNop() {
-    return false;
+  void visit (CstDistSolverBase solver) {
+    assert (_term == solver.getDomain());
+    assert (_notinside is true);
+    foreach (elem; _elems) elem.visit(solver);
   }
+  
+  bool cstExprIsNop() { return false; }
 
-  bool isSolved() {
-    return false;
-  }
+  bool isSolved() { return false; }
 
   void writeExprString(ref Charbuf str) {
     str ~= "(INSIDE ";
@@ -1491,7 +1531,7 @@ class CstInsideArrExpr: CstLogicTerm
     str ~= "])\n";
   }
 
-  DistRangeSetBase getDist() {
+  CstDistSolverBase getDist() {
     assert (false);
   }
 
@@ -1564,9 +1604,8 @@ class CstUniqueArrExpr: CstLogicTerm
     }
   }
 
-  CstVecTerm isNot(CstDomBase dom){
-    return null;
-  }
+  bool isCompatWithDist(CstDomBase dom) { return false; }
+  void visit (CstDistSolverBase solver) { assert (false); }
   
   bool cstExprIsNop() {
     return false;
@@ -1584,7 +1623,7 @@ class CstUniqueArrExpr: CstLogicTerm
     str ~= "])\n";
   }
 
-  DistRangeSetBase getDist() {
+  CstDistSolverBase getDist() {
     assert (false);
   }
 
@@ -1615,9 +1654,9 @@ class CstIteLogicExpr: CstLogicTerm
     assert(false, "TBD");
   }
 
-  CstVecTerm isNot(CstDomBase dom){
-    return null;
-  }
+  bool isCompatWithDist(CstDomBase dom) { return false; }
+  void visit (CstDistSolverBase solver) { assert (false); }
+  
 
   bool cstExprIsNop() {
     return false;
@@ -1635,7 +1674,7 @@ class CstIteLogicExpr: CstLogicTerm
     assert(false, "TBD");
   }
 
-  DistRangeSetBase getDist() {
+  CstDistSolverBase getDist() {
     assert (false);
   }
 
@@ -1695,16 +1734,24 @@ class CstVec2LogicExpr: CstLogicTerm
     _rhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
   
-  CstVecTerm isNot(CstDomBase dom){
+  bool isCompatWithDist(CstDomBase dom) {
     if (_op is CstCompareOp.NEQ) {
       CstExpr lhs = _lhs;
-      if (lhs !is dom) {
+      CstExpr dom_ = dom;
+      if (lhs != dom_) {
 	assert(false, "Constraint " ~ describe() ~ " not allowed since " ~ dom.name()
 	       ~ " is dist");
       }
-      return _rhs;
+      return true;
     }
-    return null;
+    return false;
+  }
+
+  void visit (CstDistSolverBase solver) {
+    CstExpr lhs = _lhs;
+    CstExpr dom = solver.getDomain();
+    assert (lhs == dom);
+    solver.purge(_rhs.evaluate());
   }
     
   bool isSolved() {
@@ -1721,7 +1768,7 @@ class CstVec2LogicExpr: CstLogicTerm
     str ~= ")\n";
   }
 
-  DistRangeSetBase getDist() {
+  CstDistSolverBase getDist() {
     assert (false);
   }
 
@@ -1851,9 +1898,8 @@ class CstNotLogicExpr: CstLogicTerm
     _expr.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
   }
 
-  CstVecTerm isNot(CstDomBase dom){
-    return null;
-  }
+  bool isCompatWithDist(CstDomBase dom) { return false; }
+  void visit (CstDistSolverBase solver) { assert (false); }
 
   bool isSolved() {
     return _expr.isSolved();
@@ -1865,7 +1911,7 @@ class CstNotLogicExpr: CstLogicTerm
     str ~= ")\n";
   }
   
-  DistRangeSetBase getDist() {
+  CstDistSolverBase getDist() {
     assert (false);
   }
 
@@ -1929,11 +1975,10 @@ class CstVarVisitorExpr: CstLogicTerm
     str ~= this.describe();
   }
 
-  CstVecTerm isNot(CstDomBase dom){
-    return null;
-  }
+  bool isCompatWithDist(CstDomBase dom) { return false; }
+  void visit (CstDistSolverBase solver) { assert (false); }
 
-  DistRangeSetBase getDist() {
+  CstDistSolverBase getDist() {
     assert (false);
   }
 

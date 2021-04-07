@@ -1,6 +1,6 @@
 module esdl.rand.proxy;
 
-import esdl.solver.base: CstSolver, DistRangeSetBase;
+import esdl.solver.base: CstSolver, CstDistSolverBase;
 import esdl.rand.base: CstVecPrim, CstLogicExpr, CstScope, CstDomBase,
   DomType, CstVecTerm, CstObjectVoid, CstVarNodeIntf, CstObjectIntf,
   CstIterator, CstDomSet, CstVarGlobIntf, CstLogicTerm;
@@ -687,30 +687,30 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _esdl__needSync = false;
   }
 
-  CstDomBase solveDist(CstPredicate pred) {
-    if (_esdl__debugSolver) {
-      import std.stdio;
-      writeln("Solving Dist Predicate: ", pred.describe());
-    }
-    CstDomBase distDom = pred.distDomain();
-    CstPredicate[] distPreds = distDom.getRandPreds();
-    // long[] toRemove;
-    DistRangeSetBase dist = pred._expr.getDist();
-    dist.reset();
-    foreach (predicate; distPreds){
-      CstVecTerm ex = predicate._expr.isNot(distDom);
-      // isNot returns rhs if the predicate is of != type,
-      // otherwise it returns null
-      if (predicate.getRnds().length == 1 && ! predicate.isDist()) {
-	if (ex is null) {
-	  assert (false, "can only use != operator on distributed domains");
-	}
-	dist.purge(ex.evaluate());
-      }
-    }
-    dist.uniform(distDom, _esdl__getRandGen());
-    return distDom;
-  }
+  // CstDomBase solveDist(CstPredicate pred) {
+  //   if (_esdl__debugSolver) {
+  //     import std.stdio;
+  //     writeln("Solving Dist Predicate: ", pred.describe());
+  //   }
+  //   CstDomBase distDom = pred.distDomain();
+  //   CstPredicate[] distPreds = distDom.getRandPreds();
+  //   // long[] toRemove;
+  //   CstDistSolverBase dist = pred._expr.getDist();
+  //   dist.reset();
+  //   foreach (predicate; distPreds){
+  //     CstVecTerm ex = predicate._expr.isCompatWithDist(distDom);
+  //     // isCompatWithDist returns rhs if the predicate is of != type,
+  //     // otherwise it returns null
+  //     if (predicate.getRnds().length == 1 && ! predicate.isDist()) {
+  // 	if (ex is null) {
+  // 	  assert (false, "can only use != operator on distributed domains");
+  // 	}
+  // 	dist.purge(ex.evaluate());
+  //     }
+  //   }
+  //   dist.uniform(distDom, _esdl__getRandGen());
+  //   return distDom;
+  // }
 
   void procResolved(CstPredicate pred) {
     assert (pred._rnds.length > 0 || pred._rndArrs.length > 0 || pred.isGuard(),
@@ -750,14 +750,14 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     // writeln("Adding: ", pred.describe());
     _unrolledPreds ~= pred;
   }
-  void makeBeforePreds(CstPredicate pred ){
-    if(pred.getExpr().isOrderingExpr()){
+  void makeBeforePreds(CstPredicate pred ) {
+    if(pred.getExpr().isOrderingExpr()) {
       _beforePreds ~= new CstDomBasePair(pred.getDomains[0], pred.getDomains[1]);
     }
   }
   void procNewPredicate(CstPredicate pred) {
     pred.randomizeDeps(this);
-    if(pred.getExpr().isOrderingExpr()){
+    if(pred.getExpr().isOrderingExpr()) {
       
     }
     else if (pred._iters.length > 0) {

@@ -385,14 +385,17 @@ class CstPredGroup			// group of related predicates
       // import std.stdio;
       // writeln(pred.name(), " guard enabled: ", pred.isGuardEnabled());
       if (pred.isGuardEnabled()) {
-	DistRangeSetBase dist = pred._expr.getDist();
+	CstDistSolverBase dist = pred._expr.getDist();
 	CstDomBase distDomain = pred.distDomain();
 	dist.reset();
 	foreach (wp; _withDistPreds) {
 	  if (wp.isGuardEnabled()) {
-	    CstVecTerm ex = wp._expr.isNot(distDomain);
-	    if (ex is null) assert (false, "can only use != operator on distributed domains");
-	    dist.purge(ex.evaluate());
+	    bool compat = wp._expr.isCompatWithDist(distDomain);
+	    if (compat is false) assert (false, "can only use != operator on distributed domains");
+	    wp._expr.visit(dist);
+	    wp.markPredSolved();
+	  }
+	  else {
 	    wp.markPredSolved();
 	  }
 	}
@@ -500,6 +503,10 @@ class CstPredicate: CstIterCallback, CstDepCallback
   }
 
   bool withDist() {
+    if (getDom() is null) return false;
+    // else {
+    //   getDom().isProperDist();
+    // }
     return _hasDistDomain || isDist();
   }
   
@@ -1021,9 +1028,15 @@ class CstPredicate: CstIterCallback, CstDepCallback
       else                 group.addDynPredicate(this);
     }
     else {
-      if (this.isDist())        group.addDistPredicate(this);
-      else if (this.withDist()) group.addWithDistPredicate(this);
-      else                      group.addPredicate(this);
+      if (this.isDist()) {
+	group.addDistPredicate(this);
+      }
+      else if (this.withDist()) {
+	group.addWithDistPredicate(this);
+      }
+      else {
+	group.addPredicate(this);
+      }
     }
     foreach (dom; _rnds) {
       // if (dom.group is null && (! dom.isSolved())) {

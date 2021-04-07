@@ -52,7 +52,8 @@ abstract class CstSolver
   abstract void processEvalStack(CstUniqueOp op);
 }
 
-abstract class DistRangeSetBase {
+abstract class CstDistSolverBase {
+  abstract CstDomBase getDomain();
   abstract void purge(long item);
   abstract void uniform(CstDomBase dom, _esdl__RandGen randGen);
   abstract void reset();

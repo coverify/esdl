@@ -287,8 +287,10 @@ abstract class CstDomBase: CstExpr, CstVectorIntf
       if (pred.getDom() is this) {
 	pred.hasDistDomain(true);
       }
-      else isProper = false;
-      break;
+      else {
+	isProper = false;
+	break;
+      }
     }
 
     if (isProper) {
@@ -663,6 +665,14 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     }
   }
 
+  void visit(CstDistSolverBase solver) {
+    foreach (dom; this[]) {
+      // import std.stdio;
+      // writeln("Visiting: ", dom.fullName());
+      solver.purge(dom.value());
+    }
+  }
+
   abstract void setDomainArrContext(CstPredicate pred,
 				    ref CstDomBase[] rnds,
 				    ref CstDomSet[] rndArrs,
@@ -769,6 +779,8 @@ interface CstExpr
 
   bool isSolved();
   void visit(CstSolver solver);
+  void visit(CstDistSolverBase dist);
+
   void writeExprString(ref Charbuf str);
 
   CstExpr unroll(CstIterator iter, ulong n);
@@ -791,8 +803,8 @@ interface CstVecExpr: CstExpr
 
 interface CstLogicExpr: CstExpr
 {
-  DistRangeSetBase getDist();
-  CstVecTerm isNot(CstDomBase A);
+  CstDistSolverBase getDist();
+  bool isCompatWithDist(CstDomBase A);
   CstLogicExpr unroll(CstIterator iter, ulong n);
 
   bool isOrderingExpr();

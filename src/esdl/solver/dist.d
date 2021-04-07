@@ -1,11 +1,11 @@
 module esdl.solver.dist;
 
-import esdl.solver.base: DistRangeSetBase;
+import esdl.solver.base: CstDistSolverBase;
 
 import esdl.rand.base: CstDomBase;
 import esdl.rand.misc: _esdl__RandGen;
 
-struct DistRange(T)
+struct CstDistRange(T)
 {
   T _min;
   T _max;
@@ -173,13 +173,18 @@ struct DistRange(T)
 }
 
 
-class DistRangeSet(T): DistRangeSetBase
+class CstDistSolver(T): CstDistSolverBase
 {
   import std.random: uniform, rndGen, Random;
 
-  DistRange!T [] _set;
+  CstDistRange!T [] _set;
+  CstDomBase _dom;
 
-  void opOpAssign(string op)(DistRange!T dist) if(op == "~") {
+  this(CstDomBase dom) { _dom = dom; }
+
+  final override CstDomBase getDomain() { return _dom; }
+
+  void opOpAssign(string op)(CstDistRange!T dist) if(op == "~") {
     import std.algorithm.searching: countUntil;
     ptrdiff_t pos = countUntil!((a, b) {return a._min >= b._min;})(_set, dist);
     if (pos == -1) {
