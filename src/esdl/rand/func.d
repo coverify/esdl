@@ -6,10 +6,11 @@ import esdl.data.bvec: isBitVector;
 import esdl.rand.misc;
 import esdl.rand.base: CstLogicTerm, CstLogicExpr, CstVecTerm, CstVecExpr,
   CstDomSet, CstDomBase;
-import esdl.rand.expr: CstVec2LogicExpr, CstRangeExpr, CstDistSetElem,
-  CstInsideSetElem, CstUniqueSetElem, CstUniqueArrExpr, CstOrderingExpr,
-  CstWeightedDistSetElem, CstInsideArrExpr, CstDistExpr, CstLogic2LogicExpr;
-import esdl.rand.domain: CstVecDomain;
+import esdl.rand.expr: CstVec2LogicExpr, CstRangeExpr, CstVecDistSetElem,
+  CstInsideSetElem, CstUniqueSetElem, CstUniqueArrExpr,
+  CstOrderingExpr, CstVecWeightedDistSetElem, CstLogicWeightedDistSetElem,
+  CstInsideArrExpr, CstVecDistExpr, CstLogicDistExpr, CstLogic2LogicExpr;
+import esdl.rand.domain: CstVecDomain, CstDomain;
 
 
 
@@ -233,6 +234,10 @@ auto _esdl__dist_range(P, Q)(P p, Q q) {
   static if(is(P: CstVecTerm)) {
     return _esdl__dist_range_impl(p, q);
   }
+  else static if(is(P: CstLogicTerm)) {
+    assert (q is null);
+    return p;
+  }
   else static if(is(Q: CstVecTerm)) {
     return _esdl__dist_range_impl(q, p);
   }
@@ -242,15 +247,16 @@ auto _esdl__dist_range(P, Q)(P p, Q q) {
   }
 }
 
-CstDistSetElem _esdl__dist_range_impl(Q)(CstVecTerm p, Q q)
+
+CstVecDistSetElem _esdl__dist_range_impl(Q)(CstVecTerm p, Q q)
   if (isBitVector!Q || isIntegral!Q) {
     if (q is null) return _esdl__dist_range_impl(p, q);
     auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
     return _esdl__dist_range_impl(p, qq);
   }
 
-CstDistSetElem _esdl__dist_range_impl(CstVecTerm p, CstVecTerm q) {
-  return new CstDistSetElem(p, q);
+CstVecDistSetElem _esdl__dist_range_impl(CstVecTerm p, CstVecTerm q) {
+  return new CstVecDistSetElem(p, q);
 }
 
 auto _esdl__dist_rangeinc(P, Q)(P p, Q q) {
@@ -266,14 +272,14 @@ auto _esdl__dist_rangeinc(P, Q)(P p, Q q) {
   }
 }
 
-CstDistSetElem _esdl__dist_rangeinc_impl(Q)(CstVecTerm p, Q q)
+CstVecDistSetElem _esdl__dist_rangeinc_impl(Q)(CstVecTerm p, Q q)
   if(isBitVector!Q || isIntegral!Q) {
     auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
     return _esdl__dist_rangeinc_impl(p, qq);
   }
 
-CstDistSetElem _esdl__dist_rangeinc_impl(CstVecTerm p, CstVecTerm q) {
-  return new CstDistSetElem(p, q, true);
+CstVecDistSetElem _esdl__dist_rangeinc_impl(CstVecTerm p, CstVecTerm q) {
+  return new CstVecDistSetElem(p, q, true);
 }
 
 auto _esdl__inside_range(P, Q)(P p, Q q) {
@@ -389,17 +395,26 @@ CstUniqueArrExpr _esdl__unique(CstUniqueSetElem[] ranges) {
   return expr;
 }
 
-CstWeightedDistSetElem _esdl__rangeWeight(CstDistSetElem range, CstVecTerm weight) {
-  return new CstWeightedDistSetElem(range, weight, false);
+CstVecWeightedDistSetElem _esdl__rangeWeight(CstVecDistSetElem range, CstVecTerm weight) {
+  return new CstVecWeightedDistSetElem(range, weight, false);
 }
 
-CstWeightedDistSetElem _esdl__itemWeight(CstDistSetElem range, CstVecTerm weight) {
-  return new CstWeightedDistSetElem(range, weight, true);
+CstVecWeightedDistSetElem _esdl__itemWeight(CstVecDistSetElem range, CstVecTerm weight) {
+  return new CstVecWeightedDistSetElem(range, weight, true);
 }
 
-auto _esdl__dist(T, rand RAND)(CstVecDomain!(T, RAND) vec,
-			       CstWeightedDistSetElem[] ranges) {
-  return new CstDistExpr!T(vec, ranges);
+CstLogicWeightedDistSetElem _esdl__itemWeight(CstLogicTerm term, CstVecTerm weight) {
+  return new CstLogicWeightedDistSetElem(term, weight, true);
+}
+
+auto _esdl__dist(T, rand RAND)(CstDomain!(T, RAND) vec,
+			       CstLogicWeightedDistSetElem[] ranges) if (isBoolean!T) {
+  return new CstLogicDistExpr!T(vec, ranges);
+}
+
+auto _esdl__dist(T, rand RAND)(CstDomain!(T, RAND) vec,
+			       CstVecWeightedDistSetElem[] ranges) if (! isBoolean!T) {
+  return new CstVecDistExpr!T(vec, ranges);
 }
 
 auto _esdl__order(CstDomBase a, CstDomBase b){

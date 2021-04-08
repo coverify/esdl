@@ -443,7 +443,7 @@ class CstRangeExpr
   }
 }
 
-class CstDistSetElem
+class CstVecDistSetElem
 {
   import std.conv;
 
@@ -466,11 +466,11 @@ class CstDistSetElem
     return _lhs.evaluate();
   }
 
-  CstDistSetElem unroll(CstIterator iter, ulong n) {
+  CstVecDistSetElem unroll(CstIterator iter, ulong n) {
     if (_rhs is null)
-      return new CstDistSetElem(_lhs.unroll(iter, n), null, _inclusive);
+      return new CstVecDistSetElem(_lhs.unroll(iter, n), null, _inclusive);
     else
-      return new CstDistSetElem(_lhs.unroll(iter, n),
+      return new CstVecDistSetElem(_lhs.unroll(iter, n),
 				  _rhs.unroll(iter, n), _inclusive);
   }
 
@@ -747,11 +747,69 @@ class CstInsideSetElem
   }
 }
 
-class CstWeightedDistSetElem
+class CstLogicWeightedDistSetElem
 {
   import std.conv;
 
-  CstDistSetElem _range;
+  CstLogicTerm _term;
+  CstVecTerm   _weight;
+  bool         _perItem = false;
+
+  string describe() {
+    string str = "( " ~ _term.describe;
+    if (_perItem) str ~= " := ";
+    else str ~= " :/ ";
+    str ~= _weight.describe() ~ " )";
+    return str;
+  }
+
+  CstLogicWeightedDistSetElem unroll(CstIterator iter, ulong n) {
+    return this;
+  }
+
+  this(CstLogicTerm term, CstVecTerm weight, bool perItem=false) {
+    _term = term;
+    _weight = weight;
+    _perItem = perItem;
+  }
+
+  // bool isConst() {
+  //   return false;
+  // }
+
+  // bool isIterator() {
+  //   return false;
+  // }
+
+  void setDomainContext(CstPredicate pred,
+			ref CstDomBase[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomBase[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstVecNodeIntf[] idxs,
+			ref CstDomBase[] bitIdxs,
+			ref CstVecNodeIntf[] deps) { }
+
+  bool isSolved() {
+    return _term.isSolved() && _weight.isSolved();
+  }
+
+  void writeExprString(ref Charbuf str) {
+    import std.conv: to;
+    _term.writeExprString(str);
+    if (_perItem) str ~= " := ";
+    else str ~= " :/ ";
+    str ~= _weight.evaluate().to!string;
+  }
+}
+
+class CstVecWeightedDistSetElem
+{
+  import std.conv;
+
+  CstVecDistSetElem _range;
   CstVecTerm   _weight;
   bool         _perItem = false;
 
@@ -763,11 +821,11 @@ class CstWeightedDistSetElem
     return str;
   }
 
-  CstWeightedDistSetElem unroll(CstIterator iter, ulong n) {
+  CstVecWeightedDistSetElem unroll(CstIterator iter, ulong n) {
     return this;
   }
 
-  this(CstDistSetElem range, CstVecTerm weight, bool perItem=false) {
+  this(CstVecDistSetElem range, CstVecTerm weight, bool perItem=false) {
     _range = range;
     _weight = weight;
     _perItem = perItem;
@@ -805,20 +863,114 @@ class CstWeightedDistSetElem
   }
 }
 
-class CstDistExpr(T): CstLogicTerm
+class CstLogicDistExpr(T): CstLogicTerm
 {
   import std.conv;
-  import esdl.solver.dist: CstDistSolver, CstDistRange;
+  import esdl.solver.dist: CstLogicDistSolver, CstLogicDistRange;
 
   CstDomBase _vec;
-  CstWeightedDistSetElem[] _dists;
+  CstLogicWeightedDistSetElem[] _dists;
 
-  CstDistSolver!T _rs;
+  CstLogicDistSolver!T _rs;
   
-  this(CstDomBase vec, CstWeightedDistSetElem[] dists) {
+  this(CstDomBase vec, CstLogicWeightedDistSetElem[] dists) {
     _vec = vec;
     _dists = dists;
-    _rs = new CstDistSolver!T(vec);
+    _rs = new CstLogicDistSolver!T(vec);
+    foreach (dist; _dists) {
+      T term = cast(T) dist._term.eval();
+      T rhs;
+      int weight = cast(int) dist._weight.evaluate();
+      bool perItem = dist._perItem;
+      _rs ~= CstLogicDistRange!T(term, weight, perItem);
+    }
+  }
+
+  CstDistSolverBase getDist() {
+    return _rs;
+  }
+
+  string describe() {
+    string str = "( " ~ _vec.describe() ~ " dist ";
+    foreach (dist; _dists) {
+      assert (dist !is null);
+      str ~= dist.describe() ~ ", ";
+    }
+    str ~= " )";
+    return str;
+  }
+
+  void visit(CstSolver solver) {
+    solver.pushToEvalStack(false);
+    _vec.visit(solver);
+    solver.processEvalStack(CstInsideOp.INSIDE);
+    foreach (dist; _dists) {
+      auto elem = dist._term;
+      elem.visit(solver);
+      solver.processEvalStack(CstInsideOp.EQUAL);
+    }
+    solver.processEvalStack(CstInsideOp.DONE);
+  }
+  
+  override CstLogicDistExpr!T unroll(CstIterator iter, ulong n) {
+    // import std.stdio;
+    // writeln(_lhs.describe() ~ " " ~ _op.to!string ~ " " ~ _rhs.describe() ~ " Getting unwound!");
+    // writeln("RHS: ", _rhs.unroll(iter, n).describe());
+    // writeln("LHS: ", _lhs.unroll(iter, n).describe());
+    return new CstLogicDistExpr!T(cast (CstDomBase) (_vec.unroll(iter, n)), _dists);
+  }
+
+  void setDomainContext(CstPredicate pred,
+				 ref CstDomBase[] rnds,
+				 ref CstDomSet[] rndArrs,
+				 ref CstDomBase[] vars,
+				 ref CstDomSet[] varArrs,
+				 ref CstValue[] vals,
+				 ref CstIterator[] iters,
+				 ref CstVecNodeIntf[] idxs,
+				 ref CstDomBase[] bitIdxs,
+				 ref CstVecNodeIntf[] deps) {
+    rnds ~= _vec;
+    pred.distDomain(_vec);
+    _vec.isDist(DomDistEnum.DETECT);
+  }
+
+  bool isSolved() {
+    return _vec.isSolved();
+  }
+
+  void writeExprString(ref Charbuf str) {
+    str ~= "DIST ";
+    _vec.writeExprString(str);
+    foreach (dist; _dists) {
+      dist.writeExprString(str);
+    }
+  }
+  
+  bool isCompatWithDist(CstDomBase dom) { return false; }
+
+  void visit (CstDistSolverBase solver) { assert (false); }
+  
+  bool eval() {assert (false, "Enable to evaluate CstLogicDistExpr");}
+
+  override void scan() { }
+  override bool isOrderingExpr() { return false; }
+}
+
+class CstVecDistExpr(T): CstLogicTerm
+{
+  import std.conv;
+  import esdl.solver.dist: CstVecDistSolver, CstVecDistRange;
+
+  CstDomBase _vec;
+  CstVecWeightedDistSetElem[] _dists;
+
+  CstVecDistSolver!T _rs;
+  
+  this(CstDomBase vec, CstVecWeightedDistSetElem[] dists) {
+    _vec = vec;
+    _dists = dists;
+    _rs = new CstVecDistSolver!T(vec);
     foreach (dist; _dists) {
       T lhs = cast(T) dist._range._lhs.evaluate();
       T rhs;
@@ -830,7 +982,7 @@ class CstDistExpr(T): CstLogicTerm
       }
       int weight = cast(int) dist._weight.evaluate();
       bool perItem = dist._perItem;
-      _rs ~= CstDistRange!T(lhs, rhs, weight, perItem);
+      _rs ~= CstVecDistRange!T(lhs, rhs, weight, perItem);
     }
   }
 
@@ -868,12 +1020,12 @@ class CstDistExpr(T): CstLogicTerm
     solver.processEvalStack(CstInsideOp.DONE);
   }
   
-  override CstDistExpr!T unroll(CstIterator iter, ulong n) {
+  override CstVecDistExpr!T unroll(CstIterator iter, ulong n) {
     // import std.stdio;
     // writeln(_lhs.describe() ~ " " ~ _op.to!string ~ " " ~ _rhs.describe() ~ " Getting unwound!");
     // writeln("RHS: ", _rhs.unroll(iter, n).describe());
     // writeln("LHS: ", _lhs.unroll(iter, n).describe());
-    return new CstDistExpr!T(cast (CstDomBase) (_vec.unroll(iter, n)), _dists);
+    return new CstVecDistExpr!T(cast (CstDomBase) (_vec.unroll(iter, n)), _dists);
   }
 
   void setDomainContext(CstPredicate pred,
@@ -907,7 +1059,7 @@ class CstDistExpr(T): CstLogicTerm
 
   void visit (CstDistSolverBase solver) { assert (false); }
   
-  bool eval() {assert (false, "Enable to evaluate CstDistExpr");}
+  bool eval() {assert (false, "Enable to evaluate CstVecDistExpr");}
 
   override void scan() { }
   override bool isOrderingExpr() { return false; }
