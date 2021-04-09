@@ -95,7 +95,7 @@ struct BddDomain // fdd.c:52
   }
 
   BDD var() {
-    return var;
+    return _var;
   }
 
 
@@ -3767,6 +3767,14 @@ class Buddy
 	  return r;
 	if(r == 1)
 	  return 1;
+	break;
+      case BddOp.BIIMP :
+	if(l == r)
+	  return 1;
+	if(l == 1)
+	  return r;
+	if(r == 1)
+	  return l;
 	break;
       default:
 	assert(applyop != BddOp.NOT && applyop != BddOp.SIMPLIFY);
@@ -9247,7 +9255,10 @@ class Buddy
     return BddDomain(this, a, b);
   }
 
-  alias createDomain = Domain_create;
+  BDD createDomain() {
+    uint di = extDomain(1);
+    return _domains[di].var();
+  }
 
   BddVec createDomVec(uint domainSize, bool signed) {
     BddVec dom;

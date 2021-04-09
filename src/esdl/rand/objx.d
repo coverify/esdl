@@ -7,14 +7,14 @@ import std.traits: isIntegral, isBoolean, isArray, KeyType,
   isStaticArray, isDynamicArray, isAssociativeArray;
 
 import esdl.rand.misc;
-import esdl.rand.base: CstVecExpr, CstIterator, DomType, CstDomain,
-  CstDomSet, CstObjectStubBase, CstObjArrStubBase, CstObjSet,
+import esdl.rand.base: CstValue, CstVecTerm, CstIterator, DomType,
+  CstDomBase, CstDomSet, CstObjectStubBase, CstObjArrStubBase, CstObjSet,
   CstVarNodeIntf, CstVecNodeIntf, CstObjArrIntf, CstVarGlobIntf,
   CstObjectVoid, CstObjArrVoid;
 import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy;
-import esdl.rand.expr: CstArrLength, _esdl__cstVal,
-  CstArrIterator, CstValue, CstRangeExpr;
+import esdl.rand.expr: CstRangeExpr;
+import esdl.rand.domain: CstArrIterator, CstArrLength;
 
 import esdl.rand.meta: _esdl__ProxyResolve, _esdl__staticCast;
 
@@ -274,14 +274,14 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       void setDomainContext(CstPredicate pred,
-			    ref CstDomain[] rnds,
+			    ref CstDomBase[] rnds,
 			    ref CstDomSet[] rndArrs,
-			    ref CstDomain[] vars,
+			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstVecNodeIntf[] idxs,
-			    ref CstDomain[] bitIdxs,
+			    ref CstDomBase[] bitIdxs,
 			    ref CstVecNodeIntf[] deps) {
 	// no parent
       }
@@ -297,7 +297,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
       alias P = CstObjArr!(V, RAND_ATTR, N-1);
       P _parent;
 
-      CstVecExpr _indexExpr = null;
+      CstVecTerm _indexExpr = null;
       ulong _pindex = 0;
 
       uint _resolvedCycle;	// cycle for which indexExpr has been resolved
@@ -305,7 +305,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 
       _esdl__Proxy _root;
 
-      this(string name, P parent, CstVecExpr indexExpr) {
+      this(string name, P parent, CstVecTerm indexExpr) {
 	if (indexExpr.isConst()) {
 	  ulong index = indexExpr.evaluate();
 	  this(name, parent, index);
@@ -417,14 +417,14 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       void setDomainContext(CstPredicate pred,
-			    ref CstDomain[] rnds,
+			    ref CstDomBase[] rnds,
 			    ref CstDomSet[] rndArrs,
-			    ref CstDomain[] vars,
+			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstVecNodeIntf[] idxs,
-			    ref CstDomain[] bitIdxs,
+			    ref CstDomBase[] bitIdxs,
 			    ref CstVecNodeIntf[] deps) {
 	static if (RAND_ATTR.isRand()) {
 	  // 	if (! canFind(rnds, this)) rnds ~= this;
@@ -445,7 +445,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	  // not. When the indexExpr gets resolved, it should inform
 	  // the parent about resolution which in turn should inform
 	  // the pred that it can go ahead
-	  CstDomain[] indexes;
+	  CstDomBase[] indexes;
 	  _indexExpr.setDomainContext(pred, indexes, rndArrs, indexes, varArrs, vals, iters, idxs, bitIdxs, deps);
 	  foreach (index; indexes) idxs ~= index;
 	}
@@ -573,7 +573,7 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
 
   EV[] _elems;
 
-  abstract EV createElem(CstVecExpr indexExpr);
+  abstract EV createElem(CstVecTerm indexExpr);
   abstract EV createElem(uint i);
     
   bool _isRand = true;
@@ -617,7 +617,7 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
   abstract ulong mapIter(size_t iter);
   abstract size_t mapIndex(ulong index);
 
-  EV opIndex(CstVecExpr indexExpr) {
+  EV opIndex(CstVecTerm indexExpr) {
     if (indexExpr.isConst()) {
       ulong index = indexExpr.evaluate();
       return this[index];
@@ -798,14 +798,14 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       void setDomainContext(CstPredicate pred,
-			    ref CstDomain[] rnds,
+			    ref CstDomBase[] rnds,
 			    ref CstDomSet[] rndArrs,
-			    ref CstDomain[] vars,
+			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstVecNodeIntf[] idxs,
-			    ref CstDomain[] bitIdxs,
+			    ref CstDomBase[] bitIdxs,
 			    ref CstVecNodeIntf[] deps) {
 	// arrlen should not be handled here. It is handled as part
 	// of the indexExpr in the elements when required (that is
@@ -842,7 +842,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	}
       }
 
-      override EV createElem(CstVecExpr indexExpr) {
+      override EV createElem(CstVecTerm indexExpr) {
 	return new EV(name ~ "[" ~ indexExpr.describe() ~ "]", this, indexExpr);
       }
   
@@ -877,7 +877,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
     {
       alias P = CstObjArr!(V, RAND_ATTR, N-1);
       P _parent;
-      CstVecExpr _indexExpr = null;
+      CstVecTerm _indexExpr = null;
       ulong _pindex = 0;
 
       alias RAND=RAND_ATTR;
@@ -885,7 +885,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
       uint _resolvedCycle;	// cycle for which indexExpr has been resolved
       RV _resolvedObj;
 
-      this(string name, P parent, CstVecExpr indexExpr) {
+      this(string name, P parent, CstVecTerm indexExpr) {
 	// import std.stdio;
 	// writeln("New ", name);
 	assert (parent !is null);
@@ -968,14 +968,14 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       void setDomainContext(CstPredicate pred,
-			    ref CstDomain[] rnds,
+			    ref CstDomBase[] rnds,
 			    ref CstDomSet[] rndArrs,
-			    ref CstDomain[] vars,
+			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstVecNodeIntf[] idxs,
-			    ref CstDomain[] bitIdxs,
+			    ref CstDomBase[] bitIdxs,
 			    ref CstVecNodeIntf[] deps) {
 	// arrlen should not be handled here. It is handled as part
 	// of the indexExpr in the elements when required (that is
@@ -989,7 +989,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	_parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs,
 				 vals, iters, idxs, bitIdxs, deps);
 	if (_indexExpr !is null) {
-	  CstDomain[] indexes;
+	  CstDomBase[] indexes;
 	  _indexExpr.setDomainContext(pred, indexes, rndArrs, indexes, varArrs,
 				      vals, iters, idxs, bitIdxs, deps);
 	  foreach (index; indexes) idxs ~= index;
@@ -1010,7 +1010,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	else return cast(size_t) index;
       }
 
-      override EV createElem(CstVecExpr indexExpr) {
+      override EV createElem(CstVecTerm indexExpr) {
 	return new EV(name ~ "[" ~ indexExpr.describe() ~ "]", this, indexExpr);
       }
   

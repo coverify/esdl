@@ -2,11 +2,9 @@ module esdl.solver.base;
 
 // import esdl.rand.base;
 
-import esdl.rand.expr: CstValue;
-
 import esdl.rand.misc;
 import esdl.rand.pred: CstPredGroup;
-import esdl.rand.base: CstDomain;
+import esdl.rand.base: CstDomBase, CstVecValueBase;
 
 abstract class CstSolver
 {
@@ -30,14 +28,14 @@ abstract class CstSolver
     return "\nID: " ~ _id.to!string ~ "\nSignature: " ~ _signature;
   }
 
-  // abstract void registerDomain(CstDomain domain);
-  // abstract void registerValue(CstValue value);
+  // abstract void registerDomain(CstDomBase domain);
+  // abstract void registerValue(CstVecValueBase value);
 
   abstract bool solve(CstPredGroup group);
 
   // abstract void pushToEvalStack();
-  abstract void pushToEvalStack(CstDomain domain);
-  abstract void pushToEvalStack(CstValue value);
+  abstract void pushToEvalStack(CstDomBase domain);
+  abstract void pushToEvalStack(CstVecValueBase value);
 
   abstract void pushToEvalStack(ulong value, uint bitcount, bool signed);
   abstract void pushToEvalStack(bool value);
@@ -52,4 +50,11 @@ abstract class CstSolver
   abstract void processEvalStack(CstVectorOp op);
   abstract void processEvalStack(CstInsideOp op);
   abstract void processEvalStack(CstUniqueOp op);
+}
+
+abstract class CstDistSolverBase {
+  abstract CstDomBase getDomain();
+  abstract void purge(long item);
+  abstract void uniform(CstDomBase dom, _esdl__RandGen randGen);
+  abstract void reset();
 }

@@ -1,11 +1,19 @@
 module esdl.rand.base;
 
+import std.traits: isIntegral;
+
 import esdl.solver.base;
-import esdl.rand.dist;
-import esdl.rand.expr: CstValue, CstVecTerm, CstVecArrExpr;
+
+import esdl.rand.domain: CstVecValue;
+import esdl.rand.expr: CstVecArrExpr, CstVecSliceExpr, CstRangeExpr,
+  CstInsideSetElem, CstVec2LogicExpr, CstLogic2LogicExpr, CstVec2VecExpr,
+  CstNotLogicExpr, CstNegVecExpr;
 import esdl.rand.pred: CstPredGroup, CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy;
-import esdl.rand.misc: _esdl__RandGen, CstVectorOp;
+import esdl.rand.misc: _esdl__RandGen, CstVectorOp, CstLogicOp, CstCompareOp,
+  CstBinaryOp;
+
+import esdl.data.bvec: isBitVector;
 import esdl.data.folder;
 import esdl.data.charbuf;
 
@@ -40,7 +48,7 @@ interface CstVecNodeIntf: CstVarNodeIntf {
 interface CstVectorIntf: CstVecNodeIntf {}
 
 interface CstVecArrIntf: CstVecNodeIntf {
-  CstDomain _esdl__nthLeaf(uint idx);
+  CstDomBase _esdl__nthLeaf(uint idx);
   uint _esdl__leafsCount();
 
   struct Range {
@@ -203,7 +211,13 @@ class CstScope {
   }
 }
 
-abstract class CstDomain: CstVecTerm, CstVectorIntf
+enum DomDistEnum: ubyte
+{   NONE = 0,
+    DETECT = 1,
+    PROPER = 2
+    }
+
+abstract class CstDomBase: CstExpr, CstVectorIntf
 {
 
   public enum State: ubyte
@@ -238,12 +252,12 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
   
   // abstract uint domIndex();
   // abstract void domIndex(uint s);
-  // abstract bool signed();
   abstract bool isRand();
-  // abstract uint bitcount();
+  abstract bool signed();
+  abstract uint bitcount();
   abstract _esdl__Proxy getProxyRoot();
   abstract void _esdl__doRandomize(_esdl__RandGen randGen);
-  abstract CstDomain getResolved();
+  abstract CstDomBase getResolved();
   abstract bool updateVal();
   abstract bool hasChanged();
   abstract bool isStatic();
@@ -259,10 +273,49 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
   final CstIterator _esdl__iter() {return null;}
   final CstVarNodeIntf _esdl__getChild(ulong n) {assert (false);}
 
-  bool _isDist;
-  final bool isDist() { return _isDist; }
-  final void isDist(bool b) { _isDist = b; }
+  DomDistEnum _dist;
+  final bool isDist() { return _dist >= DomDistEnum.DETECT; }
+  final bool isProperDist() {
+    if (_dist == DomDistEnum.NONE) return false;
+    if (_dist >= DomDistEnum.PROPER) return true;
 
+    bool isProper = true;
+
+    // now make sure that all the predicates related to this domain are
+    // not related to any other domain (ignoring conditions)
+    foreach (pred; getRandPreds()) {
+      if (pred.getDom() is this) {
+	pred.hasDistDomain(true);
+      }
+      else {
+	isProper = false;
+	break;
+      }
+    }
+
+    if (isProper) {
+      _dist = DomDistEnum.PROPER;
+    }
+    else {
+      foreach (pred; getRandPreds()) {
+	pred.hasDistDomain(false);
+      }
+    }
+
+    return isProper;
+  }
+
+  final void isDist(bool b) {
+    if (b) {
+      if (_dist == DomDistEnum.NONE) _dist = DomDistEnum.DETECT;
+    }
+    else 
+      _dist = DomDistEnum.NONE;
+  }
+  final void isDist(DomDistEnum d) {
+    _dist = d;
+  }
+  
   abstract long value();
   
   void randomizeIfUnconstrained(_esdl__Proxy proxy) {
@@ -286,7 +339,8 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
       stderr.writeln("Marking ", this.name(), " as SOLVED");
     }
     _tempPreds.reset();
-    assert (_state != State.SOLVED);
+    assert (_state != State.SOLVED, this.name() ~
+	    " already marked as solved");
     _state = State.SOLVED;
   }
 
@@ -315,14 +369,47 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
   //   return _group;
   // }
 
+  final void annotate(CstPredGroup group, bool withDist) {
+    // import std.stdio;
+    // writeln(this.name(), ": ", withDist);
+    if (_domN == uint.max) {
+      if (withDist) {
+	if (this.isProperDist() && ! this.isSolved()) {
+	  _domN = group.addDistDomain(this);
+	}
+	else {
+	  if (! this.isSolved()) {
+	    _domN = group.addRandom(this);
+	  }
+	}
+      }
+      else {
+	if (this.isSolved()) {
+	  _domN = group.addVariable(this);
+	  if (_varN == uint.max) _varN = _root.indexVar();
+	}
+	else {
+	  // if (this.isProperDist()) {
+	  //   group.addDistDomain(this);
+	  // }
+	  _domN = group.addDomain(this);
+	}
+      }
+    }
+  }
+
   void setGroupContext(CstPredGroup group) {
+    if (isDist()) this.isProperDist();
+
     assert (_state is State.INIT && (! this.isSolved()));
     _state = State.GROUPED;
     // assert (_group is null && (! this.isSolved()));
     // _group = group;
     foreach (pred; _rndPreds) {
-      if (pred._state is CstPredicate.State.INIT && !pred.getmarkBefore()) {
-	pred.setGroupContext(group);
+      if (! pred.isGuard()) {
+	if (pred._state is CstPredicate.State.INIT && !pred.getmarkBefore()) {
+	  pred.setGroupContext(group);
+	}
       }
     }
     if (_esdl__parentIsConstrained) {
@@ -334,7 +421,7 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
     }
   }
 
-  abstract void annotate(CstPredGroup group);
+  // abstract void annotate(CstPredGroup group);
   abstract bool visitDomain(CstSolver solver);
   
   // init value has to be different from proxy._cycle init value
@@ -389,7 +476,7 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
     _depCbs ~= idxCb; // use same callbacks as deps for now
   }
   uint _markBefore = 0;
-  void orderBefore(CstDomain x, uint lap){
+  void orderBefore(CstDomBase x, uint lap){
     if(isSolved() || x.isSolved()){
       return;
     }
@@ -398,7 +485,7 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
     foreach(elem; a){
       if(!elem.getmarkBefore()){
 	elem.setmarkBefore(true);
-	CstDomain [] b = elem.getDomains();
+	CstDomBase [] b = elem.getDomains();
 	foreach(j, e; b){
 	  if(e != this && e.getmarkBefore() != lap){
 	    orderBefore(e, lap);
@@ -416,7 +503,36 @@ abstract class CstDomain: CstVecTerm, CstVectorIntf
 
   bool _esdl__parentIsConstrained;
   abstract string describe();
+
+  void scan() { }
 }
+
+abstract class CstValue: CstVecExpr
+{
+  // CstLogicExpr _cstExpr;
+  
+  bool isConst() { return true; }
+
+  bool isIterator() { return false; }
+
+  CstValue unroll(CstIterator iters, ulong n) {
+    return this;
+  }
+
+  abstract bool isBool();
+  abstract long value();
+  abstract bool getBool();
+  // abstract bool signed();
+  // abstract uint bitcount();
+
+  void scan() { }
+}
+
+abstract class CstVecValueBase: CstValue, CstVecTerm {
+  override bool isConst() {return true;}
+  override bool isIterator() {return false;}
+}
+
 
 abstract class CstObjSet: CstObjArrVoid, CstObjArrIntf
 {
@@ -529,8 +645,15 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     return _esdl__leafElemsCount;
   }
   
+  abstract bool isRand();
+
   final bool isResolved() {
-    return _esdl__unresolvedArrLen == 0;
+    if (isRand()) {
+      return _esdl__unresolvedArrLen == 0;
+    }
+    else {
+      return true;
+    }
   }
 
   abstract void markSolved();
@@ -549,15 +672,23 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     }
   }
 
+  void visit(CstDistSolverBase solver) {
+    foreach (dom; this[]) {
+      // import std.stdio;
+      // writeln("Visiting: ", dom.fullName());
+      solver.purge(dom.value());
+    }
+  }
+
   abstract void setDomainArrContext(CstPredicate pred,
-				    ref CstDomain[] rnds,
+				    ref CstDomBase[] rnds,
 				    ref CstDomSet[] rndArrs,
-				    ref CstDomain[] vars,
+				    ref CstDomBase[] vars,
 				    ref CstDomSet[] varArrs,
 				    ref CstValue[] vals,
 				    ref CstIterator[] iters,
 				    ref CstVecNodeIntf[] idxs,
-				    ref CstDomain[] bitIdxs,
+				    ref CstDomBase[] bitIdxs,
 				    ref CstVecNodeIntf[] deps);
 
   void writeExprString(ref Charbuf str) {
@@ -595,8 +726,10 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     assert (this.isResolved());
     assert (_state is State.INIT);
     foreach (pred; _rndPreds) {
-      if (pred._state is CstPredicate.State.INIT) {
-	pred.setGroupContext(group);
+      if (! pred.isGuard()) {
+	if (pred._state is CstPredicate.State.INIT) {
+	  pred.setGroupContext(group);
+	}
       }
     }
     if (_esdl__parentIsConstrained) {
@@ -609,7 +742,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     else {			// only for the top arr
       _state = State.GROUPED;
       foreach (dom; this[]) {
-	if (dom._state is CstDomain.State.INIT && (! dom.isSolved())) {
+	if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
 	  dom.setGroupContext(group);
 	}
       }
@@ -641,44 +774,49 @@ interface CstExpr
   string describe();
 
   void setDomainContext(CstPredicate pred,
-  			 ref CstDomain[] rnds,
+  			 ref CstDomBase[] rnds,
   			 ref CstDomSet[] rndArrs,
-  			 ref CstDomain[] vars,
+  			 ref CstDomBase[] vars,
   			 ref CstDomSet[] varArrs,
   			 ref CstValue[] vals,
   			 ref CstIterator[] iters,
   			 ref CstVecNodeIntf[] idxs,
-  			 ref CstDomain[] bitIdxs,
+  			 ref CstDomBase[] bitIdxs,
   			 ref CstVecNodeIntf[] deps);
 
   bool isSolved();
   void visit(CstSolver solver);
-  void scan(); // {}		// used for CstVarVisitorExpr
+  void visit(CstDistSolverBase dist);
+
   void writeExprString(ref Charbuf str);
+
+  CstExpr unroll(CstIterator iter, ulong n);
+  
+  void scan(); // {}		// used for CstVarVisitorExpr
 }
 
 interface CstVecExpr: CstExpr
 {
   bool isConst();
   bool isIterator();
-  
+
   long evaluate();
-
-  CstVecExpr unroll(CstIterator iter, ulong n);
-
-  bool isOrderingExpr();
-
   uint bitcount();
   bool signed();
+
+  CstVecExpr unroll(CstIterator iter, ulong n);
 
 }
 
 interface CstLogicExpr: CstExpr
 {
-  DistRangeSetBase getDist();
-  CstVecExpr isNot(CstDomain A);
+  CstDistSolverBase getDist();
+  bool isCompatWithDist(CstDomBase A);
   CstLogicExpr unroll(CstIterator iter, ulong n);
-  bool isOrderingExpr(); // {return false;}
+
+  bool isOrderingExpr();
+  bool eval();
+
 }
 
 
@@ -698,7 +836,7 @@ abstract class CstIterator: CstVecTerm
   abstract string name();
   abstract string fullName();
   abstract CstIterator unrollIterator(CstIterator iter, uint n);
-  abstract CstDomain getLenVec();
+  abstract CstDomBase getLenVec();
   abstract ulong mapIter(size_t i);
   final bool isUnrollable() {
     return getLenVec().isSolved();
@@ -712,7 +850,233 @@ abstract class CstIterator: CstVecTerm
   long evaluate() {
     assert(false, "Can not evaluate an Iterator: " ~ this.name());
   }
-  bool isOrderingExpr() {
-    return false;		// only CstVecOrderingExpr return true
+
+  void scan() { }
+}
+
+interface CstVecTerm: CstVecExpr
+{
+  
+  CstVecTerm unroll(CstIterator iter, ulong n);
+
+  final CstLogicTerm toBoolExpr() {
+    auto zero = new CstVecValue!int(0); // CstVecValue!int.allocate(0);
+    return new CstVec2LogicExpr(this, zero, CstCompareOp.NEQ);
   }
+
+  // abstract CstVecExpr unroll(CstIterator iter, ulong n);
+
+  CstVec2VecExpr opBinary(string op)(CstVecTerm other)
+  {
+    static if(op == "&") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.AND);
+    }
+    static if(op == "|") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.OR);
+    }
+    static if(op == "^") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.XOR);
+    }
+    static if(op == "+") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.ADD);
+    }
+    static if(op == "-") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.SUB);
+    }
+    static if(op == "*") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.MUL);
+    }
+    static if(op == "/") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.DIV);
+    }
+    static if(op == "%") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.REM);
+    }
+    static if(op == "<<") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.LSH);
+    }
+    static if(op == ">>") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.RSH);
+    }
+    static if(op == ">>>") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.LRSH);
+    }
+    static if(op == "~") {
+      return new CstVec2VecExpr(this, other, CstBinaryOp.RANGE);
+    }
+  }
+
+  CstVec2VecExpr opBinary(string op, Q)(Q q)
+    if(isBitVector!Q || isIntegral!Q)
+      {
+  	auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
+  	static if(op == "&") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.AND);
+  	}
+  	static if(op == "|") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.OR);
+  	}
+  	static if(op == "^") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.XOR);
+  	}
+  	static if(op == "+") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.ADD);
+  	}
+  	static if(op == "-") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.SUB);
+  	}
+  	static if(op == "*") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.MUL);
+  	}
+  	static if(op == "/") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.DIV);
+  	}
+  	static if(op == "%") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.REM);
+  	}
+  	static if(op == "<<") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.LSH);
+  	}
+  	static if(op == ">>") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.RSH);
+  	}
+  	static if(op == ">>>") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.LRSH);
+  	}
+  	static if(op == "~") {
+  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.RANGE);
+  	}
+      }
+
+  CstVec2VecExpr opBinaryRight(string op, Q)(Q q)
+    if(isBitVector!Q || isIntegral!Q)
+      {
+	auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
+	static if(op == "&") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.AND);
+	}
+	static if(op == "|") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.OR);
+	}
+	static if(op == "^") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.XOR);
+	}
+	static if(op == "+") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.ADD);
+	}
+	static if(op == "-") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.SUB);
+	}
+	static if(op == "*") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.MUL);
+	}
+	static if(op == "/") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.DIV);
+	}
+	static if(op == "%") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.REM);
+	}
+	static if(op == "<<") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.LSH);
+	}
+	static if(op == ">>") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.RSH);
+	}
+	static if(op == ">>>") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.LRSH);
+	}
+	static if(op == "~") {
+	  return new CstVec2VecExpr(qq, this, CstBinaryOp.RANGE);
+	}
+      }
+
+  // final CstVecSliceExpr opSlice(CstVecTerm lhs, CstVecTerm rhs) {
+  //   return new CstVecSliceExpr(this, lhs, rhs);
+  // }
+
+  final CstVecSliceExpr opIndex(CstRangeExpr range) {
+    return new CstVecSliceExpr(this, range);
+  }
+
+  // final CstVecIndexExpr opIndex(CstVecTerm index) {
+  //   return new CstVecIndexExpr(this, index);
+  // }
+
+  CstNotVecExpr opUnary(string op)() if(op == "~") {
+    return new CstNotVecExpr(this);
+  }
+
+  CstNegVecExpr opUnary(string op)() if(op == "-") {
+    return new CstNegVecExpr(this);
+  }
+
+  final CstLogicTerm inside(CstInsideSetElem range) {
+    if (range._rhs is null) {
+      return new CstVec2LogicExpr(this, range._lhs, CstCompareOp.EQU);
+    }
+    else {
+      CstLogicTerm lhs = new CstVec2LogicExpr(this, range._lhs, CstCompareOp.GTE);
+      CstLogicTerm rhs;
+      if (range._inclusive) rhs = new CstVec2LogicExpr(this, range._rhs, CstCompareOp.LTE);
+      else rhs = new CstVec2LogicExpr(this, range._rhs, CstCompareOp.LTH);
+      return lhs & rhs;
+    }
+  }
+
+}
+
+interface CstLogicTerm: CstLogicExpr
+{
+
+  CstLogicTerm unroll(CstIterator iter, ulong n);
+
+  CstLogicTerm opBinary(string op)(CstLogicTerm other)
+  {
+    static if(op == "&") {
+      return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICAND);
+    }
+    static if(op == "|") {
+      return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICOR);
+    }
+    static if(op == ">>") {
+      return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICIMP);
+    }
+  }
+
+  CstLogicTerm opOpAssign(string op)(CstLogicTerm other)
+  {
+    static if(op == ">>>") {
+      return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICIMP);
+    }
+  }
+  
+  CstLogicTerm opUnary(string op)() if(op == "*")
+    {
+      static if(op == "*") {	// "!" in cstx is translated as "*"
+	return new CstNotLogicExpr(this);
+      }
+    }
+
+  CstLogicTerm opUnary(string op)() if(op == "~")
+    {
+      static if(op == "~") {	// "!" in cstx is translated as "*"
+	return new CstNotLogicExpr(this);
+      }
+    }
+
+  final CstLogicTerm implies(CstLogicTerm other)
+  {
+    return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICIMP);
+  }
+
+  final CstLogicTerm logicOr(CstLogicTerm other)
+  {
+    return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICOR);
+  }
+
+  final CstLogicTerm logicAnd(CstLogicTerm other)
+  {
+    return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICAND);
+  }
+
 }

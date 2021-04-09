@@ -116,6 +116,18 @@ struct BuddyTerm
     return this;
   }
 
+  ref BuddyTerm opAssign(ref BddVec expr) return {
+    _bvExpr = expr;
+    _type = Type.BVEXPR;
+    return this;
+  }
+			 
+  ref BuddyTerm opAssign(ref BDD expr) return {
+    _boolExpr = expr;
+    _type = Type.BOOLEXPR;
+    return this;
+  }
+			 
   this(ref BddVec expr) {
     _bvExpr = expr;
     _type = Type.BVEXPR;
@@ -162,42 +174,96 @@ struct BuddyTerm
   }
 }
 
-struct BvVar
+struct BuddyVar
 {
+  enum Type: ubyte { BOOLEXPR, BVEXPR }
+
   enum State: ubyte {INIT, CONST, VAR}
-  BddVec _dom;
-  long   _val;
+
+  Type   _type;
+
+  BddVec _bvDom;
+  BDD    _boolDom;
+
+  long   _bvVal;
+  bool   _boolVal;
+  
   State  _state;
 
-  alias _dom this;
+  // alias _bvDom this;
   
   this(BddVec dom) {
-    _dom = dom;
-    _val = 0;
+    _bvDom = dom;
+    _bvVal = 0;
+    _type = Type.BVEXPR;
     _state = State.INIT;
   }
 
-  ref BvVar opAssign(ref BddVec dom) return {
-    assert (_dom.isNull());
-    _dom = dom;
-    _val = 0;
+  this(BDD dom) {
+    _boolDom = dom;
+    _boolVal = false;
+    _type = Type.BOOLEXPR;
+    _state = State.INIT;
+  }
+
+  ref BuddyVar opAssign(ref BddVec dom) return {
+    assert (_bvDom.isNull());
+    _bvDom = dom;
+    _bvVal = 0;
+    _type = Type.BVEXPR;
     _state = State.INIT;
     return this;
   }
 
-  BddVec getValExpr() {
-    return _dom._buddy.buildVec(_dom.length, _val, _dom.signed());
+  ref BuddyVar opAssign(ref BDD dom) return {
+    // assert (_boolDom.isNull());
+    _boolDom = dom;
+    _boolVal = 0;
+    _type = Type.BOOLEXPR;
+    _state = State.INIT;
+    return this;
+  }
+
+  BddVec getBvValExpr() {
+    assert (_type == Type.BVEXPR);
+    return _bvDom._buddy.buildVec(_bvDom.length, _bvVal, _bvDom.signed());
+  }
+
+  BDD getBoolValExpr() {
+    assert (_type == Type.BOOLEXPR);
+    if (_boolVal) return _boolDom._buddy.one();
+    else          return _boolDom._buddy.zero();
   }
 
   BDD getRule() {
-    return _dom.equ(getValExpr());
+    if (_type == Type.BVEXPR) {
+      return _bvDom.equ(getBvValExpr());
+    }
+    else {
+      return _boolDom.biimp(getBoolValExpr());
+    }
   }
   
-  void update(CstDomain dom, CstBuddySolver solver) {
+  void update(CstDomBase dom, CstBuddySolver solver) {
     assert (dom.isSolved());
-    long val = dom.value();
-    if (_val != val) {
-      _val = val;
+    bool updated = false;
+
+    if (dom.isBool()) {
+      bool val = dom.getBool();
+      if (_boolVal != val) {
+	_boolVal = val;
+	updated = true;
+      }
+    }
+    else {
+      long val = dom.value();
+      if (_bvVal != val) {
+	_bvVal = val;
+	updated = true;
+      }
+    }
+    
+    if (updated) {
       final switch (_state) {
       case State.INIT:
 	_state = State.CONST;
@@ -236,9 +302,8 @@ class CstBuddySolver: CstSolver
 
   BuddyTerm _term;		// for inside constraint processing
 
-  BddVec[] _domains;
-
-  BvVar[] _variables;
+  BuddyTerm[] _domains;
+  BuddyVar[] _variables;
 
   BuddyContext _context;
 
@@ -271,25 +336,37 @@ class CstBuddySolver: CstSolver
 
     _context = new BuddyContext(_esdl__buddy);
 
-    CstDomain[] doms = group.domains();
+    CstDomBase[] doms = group.domains();
 
     _domains.length = doms.length;
 
     foreach (i, ref dom; _domains) {
       // import std.stdio;
       // writeln("Adding Buddy Domain for @rand ", doms[i].name(), " of size: ", doms[i].bitcount);
-      auto d = _esdl__buddy.createDomVec(doms[i].bitcount, doms[i].signed());
-      dom = d;
+      if (doms[i].isBool()) {
+	auto d = _context._buddy.createDomain(); // , doms[i].bitcount, doms[i].signed());
+	dom = d;
+      }
+      else {
+	auto d = _esdl__buddy.createDomVec(doms[i].bitcount, doms[i].signed());
+	dom = d;
+      }
     }
 
-    CstDomain[] vars = group.variables();
+    CstDomBase[] vars = group.variables();
     _variables.length = vars.length;
 
     foreach (i, ref var; _variables) {
       // import std.stdio;
       // writeln("Adding Buddy Domain for variable ", vars[i].name(), " of length: ", vars[i].bitcount);
-      auto d = _esdl__buddy.createDomVec(vars[i].bitcount, vars[i].signed());
-      var = d;
+      if (vars[i].isBool()) {
+	auto d = _esdl__buddy.createDomain();
+	var = d;
+      }
+      else {
+	auto d = _esdl__buddy.createDomVec(vars[i].bitcount, vars[i].signed());
+	var = d;
+      }
     }
 
     foreach (dom; doms) {
@@ -302,11 +379,13 @@ class CstBuddySolver: CstSolver
 
     foreach (pred; group.predicates()) {
       // import std.stdio;
-      // writeln("Working on: ", pred.name());
+      // writeln("Buddy Working on: ", pred.name());
       if (pred.group() !is group) {
 	assert (false, "Group Violation " ~ pred.name());
       }
-      if (! pred.isGuard()) {
+      if (! pred.isGuard() && ! pred.withDist()) {
+	// import std.stdio;
+	// writeln(pred.describe());
 	pred.visit(this);
 	_context.addRule(_evalStack[0].toBool());
 	popEvalStack();
@@ -324,7 +403,7 @@ class CstBuddySolver: CstSolver
     return "OBDD Solver\n" ~ super.describe();
   }
 
-  BvVar.State varState;
+  BuddyVar.State varState;
 
   void push() {
     assert(_pushCount <= 2);
@@ -341,7 +420,7 @@ class CstBuddySolver: CstSolver
   ulong[] _solveValue;
   
   override bool solve(CstPredGroup group) {
-    CstDomain[] doms = group.domains();
+    CstDomBase[] doms = group.domains();
     updateVars(group);
     _context.updateDist();
 
@@ -354,37 +433,52 @@ class CstBuddySolver: CstSolver
       bits = solVecs[0];
     }
     
-    foreach (n, vec; doms) {
-      ulong v;
-      enum WORDSIZE = 8 * v.sizeof;
-      auto bitvals = _context._bdd.getIndices(cast(uint) n);
-      auto NUMWORDS = (bitvals.length+WORDSIZE-1)/WORDSIZE;
-      
-      if (_solveValue.length < NUMWORDS) {
-	_solveValue.length = NUMWORDS;
-      }
-      
-      foreach (i, ref j; bitvals) {
-	uint pos = (cast(uint) i) % WORDSIZE;
-	uint word = (cast(uint) i) / WORDSIZE;
-	if (bits.length == 0 || bits[j] == -1) {
-	  v = v + ((cast(size_t) _proxy._esdl__rGen.flip()) << pos);
+    foreach (n, ref dom; doms) {
+      auto bitindices = _context._bdd.getIndices(cast(uint) n);
+
+      if (dom.isBool()) {
+	int index = bitindices[0];
+	assert (bitindices.length == 1);
+	if (bits.length == 0 || bits[index] == -1) {
+	  dom.setBool(_proxy._esdl__rGen.flip());
 	}
-	else if (bits[j] == 1) {
-	  v = v + ((cast(ulong) 1) << pos);
-	}
-	if (pos == WORDSIZE - 1 || i == bitvals.length - 1) {
-	  _solveValue[word] = v;
-	  v = 0;
+	else {
+	  dom.setBool(bits[index] == 1);
 	}
       }
-      vec.setVal(array(_solveValue[0..NUMWORDS]));
+      else {
+	ulong v;
+	enum WORDSIZE = 8 * v.sizeof;
+
+	auto NUMWORDS = (bitindices.length+WORDSIZE-1)/WORDSIZE;
+
+	if (_solveValue.length < NUMWORDS) {
+	  _solveValue.length = NUMWORDS;
+	}
+      
+	foreach (i, ref j; bitindices) {
+	  uint pos = (cast(uint) i) % WORDSIZE;
+	  uint word = (cast(uint) i) / WORDSIZE;
+	  if (bits.length == 0 || bits[j] == -1) {
+	    v = v + ((cast(size_t) _proxy._esdl__rGen.flip()) << pos);
+	  }
+	  else if (bits[j] == 1) {
+	    v = v + ((cast(ulong) 1) << pos);
+	  }
+	  if (pos == WORDSIZE - 1 || i == bitindices.length - 1) {
+	    _solveValue[word] = v;
+	    v = 0;
+	  }
+	}
+	
+	dom.setVal(array(_solveValue[0..NUMWORDS]));
+      }
     }
     return true;
   }
   
   void updateVars(CstPredGroup group) {
-    CstDomain[] vars = group.variables();
+    CstDomBase[] vars = group.variables();
     _refreshVar = false;
     uint pcount0 = _count0;
     uint pcount1 = _count1;
@@ -404,32 +498,33 @@ class CstBuddySolver: CstSolver
     if (pcount0 != _count0 && _count0 > 0) {
       push();
       foreach (i, ref var; _variables) {
-	if (var._state == BvVar.State.CONST)
+	if (var._state == BuddyVar.State.CONST)
 	  _context.addRule(var.getRule());
       }
     }
     if (_refreshVar || pcount1 != _count1) {
       push();
       foreach (i, ref var; _variables) {
-	if (var._state == BvVar.State.VAR)
+	if (var._state == BuddyVar.State.VAR)
 	  _context.addRule(var.getRule());
       }
     }
   }
 
-  override void pushToEvalStack(CstDomain domain) {
+  override void pushToEvalStack(CstDomBase domain) {
     uint n = domain.annotation();
     // writeln("push: ", domain.name(), " annotation: ", n);
     // writeln("_domains has a length: ", _domains.length);
     if (domain.isSolved()) { // is a variable
-      pushToEvalStack(_variables[n]);
+      if (domain.isBool()) pushToEvalStack(_variables[n]._boolDom);
+      else                 pushToEvalStack(_variables[n]._bvDom);
     }
     else {
       pushToEvalStack(_domains[n]);
     }
   }
 
-  override void pushToEvalStack(CstValue value) {
+  override void pushToEvalStack(CstVecValueBase value) {
     // writeln("push: value ", value.value());
     BddVec v = _esdl__buddy.buildVec(value.bitcount(),
 				     value.value(), value.signed);
@@ -443,8 +538,14 @@ class CstBuddySolver: CstSolver
 
   override void pushToEvalStack(bool value) {
     // writeln("push: ", value);
-    BuddyTerm e = BuddyTerm(BDD(BddFalse, _esdl__buddy));
-    pushToEvalStack(e);
+    if (value) {
+      BuddyTerm e = BuddyTerm(BDD(BddTrue, _esdl__buddy));
+      pushToEvalStack(e);
+    }
+    else {
+      BuddyTerm e = BuddyTerm(BDD(BddFalse, _esdl__buddy));
+      pushToEvalStack(e);
+    }
   }
 
   override void pushIndexToEvalStack(ulong value) {
@@ -608,6 +709,18 @@ class CstBuddySolver: CstSolver
       BDD e = ~ _evalStack[$-1].toBool();
       popEvalStack();
       // _evalStack.length = _evalStack.length - 1;
+      pushToEvalStack(e);
+      break;
+    case CstLogicOp.LOGICEQ:
+      BDD e = _evalStack[$-2].toBool().biimp(_evalStack[$-1].toBool());
+      popEvalStack(2);
+      // _evalStack.length = _evalStack.length - 2;
+      pushToEvalStack(e);
+      break;
+    case CstLogicOp.LOGICNEQ:
+      BDD e = _evalStack[$-2].toBool() ^ _evalStack[$-1].toBool();
+      popEvalStack(2);
+      // _evalStack.length = _evalStack.length - 2;
       pushToEvalStack(e);
       break;
     }

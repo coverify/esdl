@@ -18,7 +18,7 @@ import std.exception: enforce;
 import std.range: ElementType;
 
 import esdl.rand.misc;
-import esdl.rand.expr: CstVecValue, CstVarVisitorExpr;
+import esdl.rand.expr: CstVarVisitorExpr;
 import esdl.rand.base: CstVecPrim, CstVarGlobIntf, CstVarNodeIntf,
   CstObjectIntf, CstObjArrIntf, CstObjectStubBase,
   CstObjArrStubBase;
@@ -27,6 +27,7 @@ import esdl.rand.vecx: CstVectorIdx, CstVecArrIdx,
   CstVectorGlob, CstVecArrGlob;
 import esdl.rand.objx: CstObjectIdx, CstObjArrIdx, CstObjectGlob,
   CstObjectStub, CstObjArrStub;
+import esdl.rand.domain: CstVecValue, CstLogicValue;
 import esdl.rand.proxy;
 import esdl.rand.func;
 
@@ -66,7 +67,7 @@ template _esdl__RandProxyType(T, int I, P, int PI)
   else static if (isRandVectorSet!L) {
     alias _esdl__RandProxyType = CstVecArrIdx!(L, RAND, 0, I, P, PI);
   }
-  else static if (is (L == struct)) {
+  else static if (is (L == struct) && !isQueue!L) {
     alias _esdl__RandProxyType = CstObjectIdx!(L, RAND, 0, I, P, PI);
   }
   else static if (isRandStructSet!L) {
@@ -117,6 +118,9 @@ void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy) {
       static if (p.tupleof[I].stringof != "p._esdl__cstWith") {
 	// import std.stdio;
 	// writeln("Adding constraint: ", p.tupleof[I].stringof);
+
+	// Update constraint guards if any
+	p.tupleof[I]._esdl__updateCst();
 	foreach (pred; p.tupleof[I].getConstraintGuards()) {
 	  // writeln("Adding predicate: ", pred.name());
 	  proxy.addNewPredicate(pred);
@@ -257,7 +261,7 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
     static if (is (Q == CstObjectIdx!(L, RAND, N, IDX, P, PIDX),
 		   L, rand RAND, int N, int IDX, P, int PIDX)) {
       if (p.tupleof[I] !is null) {
-	static if (is (L == struct)) {
+	static if (is (L == struct) && !isQueue!L) {
 	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
 	}
 	else {
@@ -268,7 +272,7 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
     static if (is (Q == CstObjectStub!(L, RAND, N, IDX, P, PIDX),
 		   L, rand RAND, int N, int IDX, P, int PIDX)) {
       if (p.tupleof[I] !is null && p.tupleof[I]._esdl__obj !is null) {
-	static if (is (L == struct)) {
+	static if (is (L == struct) && !isQueue!L) {
 	  p.tupleof[I]._esdl__get().
 	    _esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
 	}
@@ -439,6 +443,24 @@ template _esdl__ConstraintDefaults(string NAME, int I, rand RAND) {
   }
 }
 
+void _esdl__preRandomize(T)(T t) {
+  static if (__traits(hasMember, t, "preRandomize")) {
+    __traits(getMember, t, "preRandomize")();
+  }
+  else static if (__traits(hasMember, t, "pre_randomize")) {
+    __traits(getMember, t, "pre_randomize")();
+  }
+}
+
+void _esdl__postRandomize(T)(T t) {
+  static if (__traits(hasMember, t, "postRandomize")) {
+    __traits(getMember, t, "postRandomize")();
+  }
+  else static if (__traits(hasMember, t, "post_randomize")) {
+    __traits(getMember, t, "post_randomize")();
+  }
+}
+
 void _esdl__randomize(T) (T t, _esdl__ConstraintBase withCst = null) {
 
   t._esdl__initProxy();
@@ -451,14 +473,11 @@ void _esdl__randomize(T) (T t, _esdl__ConstraintBase withCst = null) {
   //   t._esdl__proxyInst._esdl__cstWithChanged = false;
   // }
 
-  static if(__traits(compiles, t.preRandomize())) {
-    t.preRandomize();
-  }
-  else static if(__traits(compiles, t.pre_randomize())) {
-    t.pre_randomize();
-  }
+  // _esdl__preRandomize(t);
 
   t._esdl__proxyInst.reset();
+
+  t._esdl__proxyInst._esdl__doConstrain(t._esdl__proxyInst);
 
   if (withCst !is null) {
     foreach (pred; withCst.getConstraintGuards()) {
@@ -469,16 +488,10 @@ void _esdl__randomize(T) (T t, _esdl__ConstraintBase withCst = null) {
     }
   }
   
-  t._esdl__proxyInst._esdl__doConstrain(t._esdl__proxyInst);
   t._esdl__proxyInst.solve();
   t._esdl__proxyInst._esdl__doRandomize(t._esdl__proxyInst._esdl__getRandGen);
 
-  static if(__traits(compiles, t.postRandomize())) {
-    t.postRandomize();
-  }
-  else static if(__traits(compiles, t.post_randomize())) {
-    t.post_randomize();
-  }
+  // _esdl__postRandomize(t);
 
 }
 
@@ -497,6 +510,12 @@ mixin template Randomization()
   // that since in that case _esdl__outer object would have an
   // implicit pointer to the outer object which can not be changed
 
+  // Need this function for evaluatig constraint guards within the
+  // ambit of user code
+  auto _esdl__guardEval(string str)() {
+    return mixin(str);
+  }
+  
   static if (is (typeof(this) == class)) {
     static class _esdl__ProxyRand(_esdl__T): _esdl__ProxyBase!_esdl__T
     {
@@ -784,13 +803,15 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   {
     this(_esdl__Proxy eng, string name) {
       super(eng, name);
+      this._esdl__initCst();
     }
-    debug(CSTPARSER) {
-      pragma(msg, "// constraintXlate! STARTS\n");
-      pragma(msg, constraintXlate("this.outer", _esdl__CstString, FILE, LINE));
-      pragma(msg, "// constraintXlate! ENDS\n");
-    }
-    mixin(constraintXlate("this.outer", _esdl__CstString, FILE, LINE));
+
+    mixin (CST_PARSE_DATA.cstDecls);
+    mixin (CST_PARSE_DATA.cstDefines);
+    mixin (CST_PARSE_DATA.guardDecls);
+    mixin (CST_PARSE_DATA.guardInits);
+    mixin (CST_PARSE_DATA.guardUpdts);
+  
   }
 
   class _esdl__ConstraintWith(string _esdl__CstString, string FILE, size_t LINE, ARGS...): // size_t N):
@@ -813,6 +834,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       foreach (i, arg; args) {
 	_withArgs[i] = arg;
       }
+      this._esdl__initCst();
     }
 
     ref auto _esdl__arg(size_t VAR)() {
@@ -821,12 +843,12 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       return _withArgs[VAR];
     }
 
-    mixin(constraintXlate("this.outer", _esdl__CstString, FILE, LINE));
-    debug(CSTPARSER) {
-      pragma(msg, "// randomizeWith! STARTS\n");
-      pragma(msg, constraintXlate("this.outer", _esdl__CstString, FILE, LINE));
-      pragma(msg, "// randomizeWith! ENDS\n");
-    }
+    mixin (CST_PARSE_DATA.cstDecls);
+    mixin (CST_PARSE_DATA.cstDefines);
+    mixin (CST_PARSE_DATA.guardDecls);
+    mixin (CST_PARSE_DATA.guardInits);
+    mixin (CST_PARSE_DATA.guardUpdts);
+
   }
 
   void _esdl__with(string _esdl__CstString, string FILE, size_t LINE, ARGS...)(ARGS values) {
@@ -837,11 +859,15 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 
 
   override void _esdl__doConstrain(_esdl__Proxy proxy) {
+    assert (this._esdl__outer !is null);
+    _esdl__preRandomize(this._esdl__outer);
     _esdl__doConstrainElems(this, proxy);
   }
 
   override void _esdl__doRandomize(_esdl__RandGen randGen) {
     _esdl__doRandomizeElems(this, randGen);
+    assert (this._esdl__outer !is null);
+    _esdl__postRandomize(this._esdl__outer);
   }
 
   void _esdl__doSetOuter()(bool changed) {
@@ -865,7 +891,12 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 
 auto _esdl__sym(L)(L l, string name,
 		   _esdl__Proxy parent) if (isRandomizable!L) {
-  return new CstVecValue!L(l); // CstVecValue!L.allocate(l);
+  static if (is (L: bool)) {
+    return new CstLogicValue(l);
+  }
+  else {
+    return new CstVecValue!L(l); // CstVecValue!L.allocate(l);
+  }
  }
 
 struct _esdl__rand_type_proxy(T, P)
@@ -947,10 +978,15 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       }
     }
     else {
-      return new CstVecValue!L(V); // CstVecValue!L.allocate(l);
+      static if (is (L: bool)) {
+	return new CstLogicValue(V);
+      }
+      else {
+	return new CstVecValue!L(V);
+      }
     }
   }
-  else static if (is (L == class) || is (L == struct) ||
+  else static if (is (L == class) || (is (L == struct) && !isQueue!L) ||
 		  (is (L == U*, U) && is (U == struct))) {
     // pragma(msg, "inside: ", NAME);
     static if (is (L == class) || is (L == struct)) {
@@ -964,7 +1000,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       return cast(CstObjType) global;
     else {
       // pragma(msg, CstObjType.stringof);
-      static if (is (L == struct)) {
+      static if (is (L == struct) && !isQueue!L) {
 	CstObjType obj = new CstObjType(name, parent, &V);
       }
       else {

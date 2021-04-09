@@ -1,8 +1,11 @@
-module esdl.rand.dist;
-import esdl.rand.base: CstDomain;
+module esdl.solver.dist;
+
+import esdl.solver.base: CstDistSolverBase;
+
+import esdl.rand.base: CstDomBase;
 import esdl.rand.misc: _esdl__RandGen;
 
-struct DistRange(T)
+struct CstVecDistRange(T)
 {
   T _min;
   T _max;
@@ -170,19 +173,18 @@ struct DistRange(T)
 }
 
 
-abstract class DistRangeSetBase {
-  abstract void purge(long item);
-  abstract void uniform(CstDomain dom, _esdl__RandGen randGen);
-  abstract void reset();
-}
-
-class DistRangeSet(T): DistRangeSetBase
+class CstVecDistSolver(T): CstDistSolverBase
 {
   import std.random: uniform, rndGen, Random;
 
-  DistRange!T [] _set;
+  CstVecDistRange!T [] _set;
+  CstDomBase _dom;
 
-  void opOpAssign(string op)(DistRange!T dist) if(op == "~") {
+  this(CstDomBase dom) { _dom = dom; }
+
+  final override CstDomBase getDomain() { return _dom; }
+
+  void opOpAssign(string op)(CstVecDistRange!T dist) if(op == "~") {
     import std.algorithm.searching: countUntil;
     ptrdiff_t pos = countUntil!((a, b) {return a._min >= b._min;})(_set, dist);
     if (pos == -1) {
@@ -224,7 +226,7 @@ class DistRangeSet(T): DistRangeSetBase
     }
   }
 
-  override void uniform(CstDomain dom, _esdl__RandGen randGen) {
+  override void uniform(CstDomBase dom, _esdl__RandGen randGen) {
     dom.setVal(this.uniform(randGen));
   }
   
@@ -254,3 +256,171 @@ class DistRangeSet(T): DistRangeSetBase
     return var;
   }
 }
+
+struct CstLogicDistRange(T)
+{
+  T _term;
+  bool _purge;
+
+  uint _weight;			// per item weight
+  bool _perItem;
+  
+  size_t _adjTotalWeight;
+
+  static if (is (T == enum)) {
+    static T[] _elems;
+
+    static this() {
+      getSortedMembers(_elems);
+    }
+
+    static void getSortedMembers(T)(out T[] foo) {
+      import std.algorithm.sorting;
+      import std.array;
+      import std.traits: EnumMembers;
+
+      T[] unordered;
+      static T[] ordered;
+  
+      if (ordered.length == 0) {
+	foreach (t; EnumMembers!T) {
+	  unordered ~= t;
+	}
+	ordered = array(unordered.sort());
+      }
+
+      foo = ordered;
+    }
+  }
+
+  static size_t distance(T max, T min) {
+    assert (max >= min);
+    return max - min + 1;
+  }
+
+  static T travel(T min, size_t distance) {
+    return cast(T) (min + distance);
+  }
+
+
+  this(T term, uint weight, bool perItem=false) {
+    _term = term;
+    _perItem = perItem;
+    _weight = weight;
+    reset();
+  }
+  
+  size_t getWeight() {
+    return _adjTotalWeight;
+  }
+
+  void adjustWeights() {
+    if (_purge) _adjTotalWeight = 0;
+    else _adjTotalWeight = _weight;
+  }
+
+  void reset() {
+    _purge = false;
+    adjustWeights();
+  }
+
+  bool purge(T elem) {
+    if (elem == _term) {
+      _purge = true;
+      adjustWeights();
+      return true;
+    }
+    else return false;
+  }
+
+  string describe() {
+    import std.conv: to;
+    string str;
+    str ~= "Term: " ~ _term.to!string;
+    str ~= "\nPurge: " ~ _purge.to!string;
+    str ~= "\nWeight: " ~ _weight.to!string;
+    str ~= "\nPer Item: " ~ _perItem.to!string;
+    str ~= "\nTotal Adjusted Weight: " ~ _adjTotalWeight.to!string;
+    return str;
+  }
+
+  bool setVal(ref T var, ref double select) {
+    if (select >= _adjTotalWeight) {
+      select -= _adjTotalWeight;
+      return false;
+    }
+    else {
+      if (_purge) return false;
+      else {
+	var = _term;
+	select = -1;
+	return true;
+      }
+    }
+  }
+}
+
+class CstLogicDistSolver(T): CstDistSolverBase
+{
+  import std.random: uniform, rndGen, Random;
+
+  CstLogicDistRange!T [] _set;
+  CstDomBase _dom;
+
+  this(CstDomBase dom) { _dom = dom; }
+
+  final override CstDomBase getDomain() { return _dom; }
+
+  void opOpAssign(string op)(CstLogicDistRange!T dist) if(op == "~") {
+    _set ~= dist;
+  }
+
+  uint getTotalWeight() {
+    uint weight = 0;
+    foreach (ref dist; _set) {
+      weight += dist.getWeight();
+    }
+    return weight;
+  }
+
+  override void purge(long elem) {
+    T e = cast(T) elem;
+    foreach (ref dist; _set) {
+      if (dist.purge(e)) break;
+    }
+  }
+
+  override void uniform(CstDomBase dom, _esdl__RandGen randGen) {
+    dom.setVal(this.uniform(randGen));
+  }
+  
+  override void reset() {
+    foreach (ref dist; _set) {
+      dist.reset();
+    }
+  }
+
+  T uniform(ref Random gen = rndGen()) {
+    double select = getTotalWeight() * uniform(0.0, 1.0, gen);
+    T var;
+    foreach (ref dist; _set) {
+      if (dist.setVal(var, select)) break;
+    }
+    assert(select <  0);
+    return var;
+  }
+
+  T uniform(_esdl__RandGen rgen) {
+    double select = getTotalWeight() * rgen.get();
+    T var;
+    foreach (ref dist; _set) {
+      if (dist.setVal(var, select)) break;
+    }
+    assert(select <  0);
+    return var;
+  }
+}
+
+
+
+

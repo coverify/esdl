@@ -1,8 +1,7 @@
 module esdl.solver.mono;
 
 import esdl.solver.base;
-import esdl.rand.expr: CstValue;
-import esdl.rand.base: CstDomain;
+import esdl.rand.base: CstDomBase, CstVecValueBase;
 import esdl.rand.pred: CstPredGroup, CstPredicate;
 import esdl.rand.misc;
 import esdl.rand.proxy: _esdl__Proxy;
@@ -175,7 +174,7 @@ struct Term
 class CstMonoSolver (S): CstSolver
 {
   Term [] _prevVariableVals;
-  CstDomain [] _variables;
+  CstDomBase [] _variables;
   bool _hasBeenSolved = false;
   bool _hasRand ;
   Term [] _evalStack;
@@ -201,7 +200,7 @@ class CstMonoSolver (S): CstSolver
   override string describe() {
     return "Mono Solver"  ~ super.describe();
   }
-  override void pushToEvalStack(CstDomain domain) {
+  override void pushToEvalStack(CstDomBase domain) {
     if (domain.isRand() && !domain.isSolved()) {
       debug (MONOSOLVER){
 	if(_debugFlag){
@@ -332,7 +331,7 @@ class CstMonoSolver (S): CstSolver
       }
     }
   }
-  override void pushToEvalStack(CstValue value) {
+  override void pushToEvalStack(CstVecValueBase value) {
     uint n = value.bitcount();
     /*if (n>32){
       if (value.signed()){
@@ -539,7 +538,7 @@ class CstMonoSolver (S): CstSolver
     return false;
   }
   override bool solve(CstPredGroup group) {
-    CstDomain [] doms = group.domains();
+    CstDomBase [] doms = group.domains();
     assert (doms.length == 1);
     if(!checkDifference()){
       _count = counter();
@@ -1066,6 +1065,12 @@ class CstMonoSolver (S): CstSolver
       case CstLogicOp.LOGICIMP:
 	writeln("logical operator IMP");
 	break;
+      case CstLogicOp.LOGICEQ:
+	writeln("logical operator EQ");
+	break;
+      case CstLogicOp.LOGICNEQ:
+	writeln("logical operator NEQ");
+	break;
       }
       
       writeln("previous _rangeStack :");
@@ -1257,6 +1262,10 @@ class CstMonoSolver (S): CstSolver
 	break;
       }
       break;
+    case CstLogicOp.LOGICEQ:
+      assert (false, "TBD");
+    case CstLogicOp.LOGICNEQ:
+      assert (false, "TBD");
     }
     debug (MONOSOLVER){
       import std.stdio;
