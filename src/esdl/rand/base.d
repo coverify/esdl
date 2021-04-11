@@ -399,6 +399,8 @@ abstract class CstDomBase: CstExpr, CstVectorIntf
   }
 
   void setGroupContext(CstPredGroup group) {
+    // import std.stdio;
+    // writeln("setGroupContext on: ", this.name());
     if (isDist()) this.isProperDist();
 
     assert (_state is State.INIT && (! this.isSolved()));
@@ -720,10 +722,14 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
 
   override void reset() {
     _state = State.INIT;
+    _esdl__unresolvedArrLen = uint.max;
+    _esdl__leafElemsCount = 0;
   }
   
   void setGroupContext(CstPredGroup group) {
-    assert (this.isResolved());
+    // import std.stdio;
+    // writeln("setGroupContext on: ", this.name());
+    assert (this.isResolved(), this.name() ~ " is unresolved");
     assert (_state is State.INIT);
     foreach (pred; _rndPreds) {
       if (! pred.isGuard()) {
