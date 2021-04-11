@@ -2,8 +2,8 @@ module esdl.rand.proxy;
 
 import esdl.solver.base: CstSolver, CstDistSolverBase;
 import esdl.rand.base: CstVecPrim, CstScope, CstDomBase,
-  DomType, CstVecTerm, CstObjectVoid, CstVarNodeIntf, CstObjectIntf,
-  CstIterator, CstDomSet, CstVarGlobIntf, CstLogicTerm;
+  DomType, CstObjectVoid, CstVarNodeIntf, CstObjectIntf,
+  CstIterator, CstDomSet, CstVarGlobIntf;
 import esdl.rand.pred: CstPredicate, CstPredGroup;
 import esdl.rand.misc;
 import esdl.data.folder;
@@ -624,6 +624,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 		writeln("Created new group ", group._id, " for predicate: ", pred.name());
 	      }
 	    }
+	    else if (_esdl__debugSolver) {
+	      import std.stdio;
+	      writeln("Reuse group ", group._id, " for predicate: ", pred.name());
+	    }
 	    assert (! group.isSolved(),
 		    "Group can not be solved when the predicate is still not solved; group id: " ~
 		    group._id.to!string() ~ " predicate id: " ~ pred._id.to!string());
@@ -771,7 +775,11 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	  break;
 	}
       }
-      if (allDepsResolved) procResolved(pred);
+      if (allDepsResolved) {
+	// import std.stdio;
+	// writeln("All Deps resolved: ", pred.name());
+	procResolved(pred);
+      }
       else _unresolvedPreds ~= pred;
     }
     else {

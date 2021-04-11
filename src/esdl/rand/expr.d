@@ -20,6 +20,7 @@ import std.traits: isIntegral, isBoolean, isStaticArray,
 
 abstract class CstLogicExpr: CstLogicTerm
 {
+  override void setPredContext(CstPredicate pred) {}
 }
 
 abstract class CstVecExpr: CstVecTerm

@@ -66,6 +66,7 @@ abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
       override uint bitcount() { return 1; }
       
       override bool signed() { return false; }
+      override void setPredContext(CstPredicate pred) {}
     }
 
 abstract class CstDomain(T, rand RAND_ATTR) if (!is (T == bool)):
@@ -899,6 +900,7 @@ class CstLogicValue: CstValue, CstLogicTerm
   override bool isCompatWithDist(CstDomBase A) { assert(false); }
   override void visit(CstDistSolverBase solver) { assert(false); }
   override CstLogicValue unroll(CstIterator iter, ulong n) { return this; }
+  override void setPredContext(CstPredicate pred) {}
 }
 
 class CstVecValue(T): CstVecValueBase

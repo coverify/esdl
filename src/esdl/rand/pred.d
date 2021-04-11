@@ -605,6 +605,7 @@ class CstPredicate: CstIterCallback, CstDepCallback
 				     unrollIterVal)).array;
     }
       
+    this.setPredContext();
     this.setDomainContext(this);
 
     debug(CSTPREDS) {
@@ -830,6 +831,10 @@ class CstPredicate: CstIterCallback, CstDepCallback
   
   bool hasDynamicBinding() {
     return _dynRnds.length > 0;
+  }
+
+  final void setPredContext() {
+    _expr.setPredContext(this);
   }
 
   final void setDomainContext(CstPredicate pred) {

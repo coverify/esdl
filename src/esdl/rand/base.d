@@ -1015,6 +1015,8 @@ interface CstLogicTerm: CstTerm
   CstDistSolverBase getDist();
   bool isCompatWithDist(CstDomBase A);
 
+  void setPredContext(CstPredicate pred);
+
   bool isOrderingExpr();
   bool eval();
 
