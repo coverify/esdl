@@ -7,8 +7,8 @@ import esdl.data.bvec: isBitVector;
 import esdl.data.charbuf: Charbuf;
 
 import esdl.rand.base: CstValue, CstDomBase, CstDomSet, CstIterator,
-  CstVecNodeIntf, CstVecPrim, CstVecExpr, DomType, CstLogicExpr,
-  CstLogicTerm, CstVecTerm, CstVecValueBase;
+  CstVecNodeIntf, CstVecPrim, DomType, CstLogicTerm, CstVecTerm,
+  CstVecValueBase;
 // import esdl.rand.misc: rand, writeHexString, _esdl__RandGen;
 import esdl.rand.misc: rand, _esdl__RandGen, writeHexString, isVecSigned,
   CstVectorOp, CstInsideOp, CstCompareOp, CstLogicOp;

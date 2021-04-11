@@ -9,7 +9,7 @@ import esdl.data.charbuf;
 import esdl.rand.proxy: _esdl__Proxy, _esdl__ConstraintBase;
 import esdl.rand.misc;
 import esdl.rand.base: CstDomBase, CstDomSet, CstIterCallback, DomType,
-  CstDepCallback, CstScope, CstLogicExpr, CstIterator, CstVecNodeIntf,
+  CstDepCallback, CstScope, CstIterator, CstVecNodeIntf,
   CstVecTerm, CstLogicTerm;
 import esdl.rand.base: CstValue;
 

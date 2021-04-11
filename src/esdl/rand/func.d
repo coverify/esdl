@@ -4,8 +4,7 @@ import std.traits: isIntegral, isBoolean, isStaticArray,
   isSomeChar, EnumMembers, isSigned, OriginalType;
 import esdl.data.bvec: isBitVector;
 import esdl.rand.misc;
-import esdl.rand.base: CstLogicTerm, CstLogicExpr, CstVecTerm, CstVecExpr,
-  CstDomSet, CstDomBase;
+import esdl.rand.base: CstLogicTerm, CstVecTerm, CstDomSet, CstDomBase;
 import esdl.rand.expr: CstVec2LogicExpr, CstRangeExpr, CstVecDistSetElem,
   CstInsideSetElem, CstUniqueSetElem, CstUniqueArrExpr,
   CstOrderingExpr, CstVecWeightedDistSetElem, CstLogicWeightedDistSetElem,
@@ -17,11 +16,6 @@ import esdl.rand.domain: CstVecDomain, CstDomain;
 auto _esdl__cstVal(T)(T val) {
   return new CstVecValue!(T)(val); // CstVecValue!(T).allocate(val);
 }
-
-// CstLogic2LogicExpr logicOr(CstVecExpr other)
-// {
-//   return new CstLogic2LogicExpr(toBoolExpr(this), toBoolExpr(other), CstLogicOp.LOGICOR);
-// }
 
 auto _esdl__logicOr(P, Q)(P p, Q q) {
   CstLogicTerm _p;

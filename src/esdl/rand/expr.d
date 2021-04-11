@@ -7,9 +7,9 @@ import esdl.rand.misc: rand, _esdl__RandGen, isVecSigned, Unconst,
 import esdl.rand.misc: CstBinaryOp, CstCompareOp, CstLogicOp,
   CstUnaryOp, CstSliceOp, writeHexString, CstUniqueOp;
 
-import esdl.rand.base: DomDistEnum, CstVecExpr, CstLogicExpr, CstExpr,
-  CstDomBase, CstDomSet, CstIterator, CstVecNodeIntf, CstVarNodeIntf,
-  CstVecArrIntf, CstVecPrim, DomType,  CstValue, CstVecTerm, CstLogicTerm;
+import esdl.rand.base: DomDistEnum, CstTerm, CstDomBase, CstDomSet,
+  CstIterator, CstVecNodeIntf, CstVarNodeIntf, CstVecArrIntf,
+  CstVecPrim, DomType,  CstValue, CstVecTerm, CstLogicTerm;
 import esdl.rand.pred: CstPredicate, CstPredGroup;
 import esdl.rand.func;
 
@@ -18,7 +18,15 @@ import esdl.data.charbuf;
 import std.traits: isIntegral, isBoolean, isStaticArray,
   isSomeChar, EnumMembers, isSigned, OriginalType;
 
-class CstOrderingExpr: CstLogicTerm
+abstract class CstLogicExpr: CstLogicTerm
+{
+}
+
+abstract class CstVecExpr: CstVecTerm
+{
+}
+
+class CstOrderingExpr: CstLogicExpr
 {
   CstDomBase _first;
   CstDomBase _second;
@@ -66,7 +74,7 @@ class CstOrderingExpr: CstLogicTerm
   }
 }
 
-class CstVecArrExpr: CstVecTerm
+class CstVecArrExpr: CstVecExpr
 {
   import std.conv;
 
@@ -181,7 +189,7 @@ class CstVecArrExpr: CstVecTerm
 
 // This class would hold two(bin) vector nodes and produces a vector
 // only after processing those two nodes
-class CstVec2VecExpr: CstVecTerm
+class CstVec2VecExpr: CstVecExpr
 {
   import std.conv;
 
@@ -863,7 +871,7 @@ class CstVecWeightedDistSetElem
   }
 }
 
-class CstLogicDistExpr(T): CstLogicTerm
+class CstLogicDistExpr(T): CstLogicExpr
 {
   import std.conv;
   import esdl.solver.dist: CstLogicDistSolver, CstLogicDistRange;
@@ -957,7 +965,7 @@ class CstLogicDistExpr(T): CstLogicTerm
   override bool isOrderingExpr() { return false; }
 }
 
-class CstVecDistExpr(T): CstLogicTerm
+class CstVecDistExpr(T): CstLogicExpr
 {
   import std.conv;
   import esdl.solver.dist: CstVecDistSolver, CstVecDistRange;
@@ -1065,7 +1073,7 @@ class CstVecDistExpr(T): CstLogicTerm
   override bool isOrderingExpr() { return false; }
 }
 
-// class CstVecSliceExpr: CstVecTerm
+// class CstVecSliceExpr: CstVecExpr
 // {
 //   CstVecTerm _vec;
 //   CstVecTerm _lhs;
@@ -1156,7 +1164,7 @@ class CstVecDistExpr(T): CstLogicTerm
 //   }
 // }
 
-class CstVecSliceExpr: CstVecTerm
+class CstVecSliceExpr: CstVecExpr
 {
   CstVecTerm _vec;
   CstRangeExpr _range;
@@ -1248,7 +1256,7 @@ class CstVecSliceExpr: CstVecTerm
 
 }
 
-// class CstVecIndexExpr: CstVecTerm
+// class CstVecIndexExpr: CstVecExpr
 // {
 //   CstVecTerm _vec;
 //   CstVecTerm _index;
@@ -1317,7 +1325,7 @@ class CstVecSliceExpr: CstVecTerm
 //   }
 // }
 
-class CstNotVecExpr: CstVecTerm
+class CstNotVecExpr: CstVecExpr
 {
   import std.conv;
 
@@ -1403,7 +1411,7 @@ class CstNotVecExpr: CstVecTerm
 
 }
 
-class CstNegVecExpr: CstVecTerm
+class CstNegVecExpr: CstVecExpr
 {
   import std.conv;
 
@@ -1490,7 +1498,7 @@ class CstNegVecExpr: CstVecTerm
 }
 
 
-class CstLogic2LogicExpr: CstLogicTerm
+class CstLogic2LogicExpr: CstLogicExpr
 {
   import std.conv;
 
@@ -1575,7 +1583,7 @@ class CstLogic2LogicExpr: CstLogicTerm
   override bool isOrderingExpr() { return false; }
 }
 
-class CstInsideArrExpr: CstLogicTerm
+class CstInsideArrExpr: CstLogicExpr
 {
   CstInsideSetElem[] _elems;
 
@@ -1659,7 +1667,7 @@ class CstInsideArrExpr: CstLogicTerm
   }
 
   bool isCompatWithDist(CstDomBase dom) {
-    CstExpr term = cast(CstExpr) _term;
+    CstTerm term = cast(CstTerm) _term;
     if (_notinside && term == dom) return true;
     else return false;
   }
@@ -1695,7 +1703,7 @@ class CstInsideArrExpr: CstLogicTerm
 
 }
 
-class CstUniqueArrExpr: CstLogicTerm
+class CstUniqueArrExpr: CstLogicExpr
 {
   CstUniqueSetElem[] _elems;
 
@@ -1787,7 +1795,7 @@ class CstUniqueArrExpr: CstLogicTerm
 }
 
 // TBD
-class CstIteLogicExpr: CstLogicTerm
+class CstIteLogicExpr: CstLogicExpr
 {
   string describe() {
     return "CstIteLogicExpr";
@@ -1840,7 +1848,7 @@ class CstIteLogicExpr: CstLogicTerm
 
 }
 
-class CstVec2LogicExpr: CstLogicTerm
+class CstVec2LogicExpr: CstLogicExpr
 {
   import std.conv;
 
@@ -1888,8 +1896,8 @@ class CstVec2LogicExpr: CstLogicTerm
   
   bool isCompatWithDist(CstDomBase dom) {
     if (_op is CstCompareOp.NEQ) {
-      CstExpr lhs = _lhs;
-      CstExpr dom_ = dom;
+      CstTerm lhs = _lhs;
+      CstTerm dom_ = dom;
       if (lhs != dom_) {
 	assert(false, "Constraint " ~ describe() ~ " not allowed since " ~ dom.name()
 	       ~ " is dist");
@@ -1900,8 +1908,8 @@ class CstVec2LogicExpr: CstLogicTerm
   }
 
   void visit (CstDistSolverBase solver) {
-    CstExpr lhs = _lhs;
-    CstExpr dom = solver.getDomain();
+    CstTerm lhs = _lhs;
+    CstTerm dom = solver.getDomain();
     assert (lhs == dom);
     solver.purge(_rhs.evaluate());
   }
@@ -2016,7 +2024,7 @@ class CstVec2LogicExpr: CstLogicTerm
 
 }
 
-class CstNotLogicExpr: CstLogicTerm
+class CstNotLogicExpr: CstLogicExpr
 {
   CstLogicTerm _expr;
 
@@ -2074,7 +2082,7 @@ class CstNotLogicExpr: CstLogicTerm
 
 }
 
-class CstVarVisitorExpr: CstLogicTerm
+class CstVarVisitorExpr: CstLogicExpr
 {
   CstVarNodeIntf _obj;
 

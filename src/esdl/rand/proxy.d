@@ -1,7 +1,7 @@
 module esdl.rand.proxy;
 
 import esdl.solver.base: CstSolver, CstDistSolverBase;
-import esdl.rand.base: CstVecPrim, CstLogicExpr, CstScope, CstDomBase,
+import esdl.rand.base: CstVecPrim, CstScope, CstDomBase,
   DomType, CstVecTerm, CstObjectVoid, CstVarNodeIntf, CstObjectIntf,
   CstIterator, CstDomSet, CstVarGlobIntf, CstLogicTerm;
 import esdl.rand.pred: CstPredicate, CstPredGroup;

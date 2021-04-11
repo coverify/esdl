@@ -217,7 +217,7 @@ enum DomDistEnum: ubyte
     PROPER = 2
     }
 
-abstract class CstDomBase: CstExpr, CstVectorIntf
+abstract class CstDomBase: CstTerm, CstVectorIntf
 {
 
   public enum State: ubyte
@@ -509,10 +509,8 @@ abstract class CstDomBase: CstExpr, CstVectorIntf
   void scan() { }
 }
 
-abstract class CstValue: CstVecExpr
+abstract class CstValue: CstTerm
 {
-  // CstLogicExpr _cstExpr;
-  
   bool isConst() { return true; }
 
   bool isIterator() { return false; }
@@ -775,7 +773,7 @@ interface CstVecPrim
   void addPreRequisite(CstVecPrim other);
 }
 
-interface CstExpr
+interface CstTerm
 {
   string describe();
 
@@ -796,35 +794,10 @@ interface CstExpr
 
   void writeExprString(ref Charbuf str);
 
-  CstExpr unroll(CstIterator iter, ulong n);
+  CstTerm unroll(CstIterator iter, ulong n);
   
   void scan(); // {}		// used for CstVarVisitorExpr
 }
-
-interface CstVecExpr: CstExpr
-{
-  bool isConst();
-  bool isIterator();
-
-  long evaluate();
-  uint bitcount();
-  bool signed();
-
-  CstVecExpr unroll(CstIterator iter, ulong n);
-
-}
-
-interface CstLogicExpr: CstExpr
-{
-  CstDistSolverBase getDist();
-  bool isCompatWithDist(CstDomBase A);
-  CstLogicExpr unroll(CstIterator iter, ulong n);
-
-  bool isOrderingExpr();
-  bool eval();
-
-}
-
 
 // This class represents an unwound Foreach iter at vec level
 abstract class CstIterator: CstVecTerm
@@ -860,17 +833,22 @@ abstract class CstIterator: CstVecTerm
   void scan() { }
 }
 
-interface CstVecTerm: CstVecExpr
+interface CstVecTerm: CstTerm
 {
   
+  bool isConst();
+  bool isIterator();
+
+  long evaluate();
+  uint bitcount();
+  bool signed();
+
   CstVecTerm unroll(CstIterator iter, ulong n);
 
   final CstLogicTerm toBoolExpr() {
     auto zero = new CstVecValue!int(0); // CstVecValue!int.allocate(0);
     return new CstVec2LogicExpr(this, zero, CstCompareOp.NEQ);
   }
-
-  // abstract CstVecExpr unroll(CstIterator iter, ulong n);
 
   CstVec2VecExpr opBinary(string op)(CstVecTerm other)
   {
@@ -1031,8 +1009,14 @@ interface CstVecTerm: CstVecExpr
 
 }
 
-interface CstLogicTerm: CstLogicExpr
+interface CstLogicTerm: CstTerm
 {
+
+  CstDistSolverBase getDist();
+  bool isCompatWithDist(CstDomBase A);
+
+  bool isOrderingExpr();
+  bool eval();
 
   CstLogicTerm unroll(CstIterator iter, ulong n);
 
