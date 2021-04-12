@@ -491,9 +491,6 @@ class CstPredicate: CstIterCallback, CstDepCallback
 
   enum State: byte { INIT = 0, GROUPED = 1, SOLVED = 2 }
 
-  bool _markBefore;
-
-  bool _hasDistDomain;
 
   void hasDistDomain(bool v) {
     _hasDistDomain = v;
@@ -512,6 +509,10 @@ class CstPredicate: CstIterCallback, CstDepCallback
   
   _esdl__ConstraintBase _constraint;
   uint _statement;
+  bool _markBefore;
+  bool _hasDistDomain;
+  bool _domainContextSet;
+
   _esdl__Proxy _proxy;
   CstScope _scope;
   CstLogicTerm _expr;
@@ -606,7 +607,10 @@ class CstPredicate: CstIterCallback, CstDepCallback
     }
       
     this.setPredContext();
-    this.setDomainContext(this);
+
+    // setDomainContext is now being called on the newly unrolled predicates
+    // using procUnrolledNewPredicates method in the proxy
+    // if (parent !is null) this.setDomainContext(this); // unrolled
 
     debug(CSTPREDS) {
       import std.stdio;
@@ -661,10 +665,11 @@ class CstPredicate: CstIterCallback, CstDepCallback
 	     ~ this.describe());
     }
     auto currLen = iter.size();
+    auto prevLen = _uwPreds.length;
     // import std.stdio;
     // writeln("size is ", currLen);
 
-    if (currLen > _uwPreds.length) {
+    if (currLen > prevLen) {
       // import std.stdio;
       // writeln("Need to unroll ", currLen - _uwPreds.length, " times");
       for (uint i = cast(uint) _uwPreds.length;
@@ -695,6 +700,10 @@ class CstPredicate: CstIterCallback, CstDepCallback
 					 );
 	  }
 	}
+      }
+      for (size_t i=prevLen; i!=currLen; ++i) {
+	_proxy.addUnrolledNewPredicate(_uwPreds[i]);
+	// _uwPreds[i].setDomainContext(_uwPreds[i]);
       }
     }
 
@@ -771,9 +780,9 @@ class CstPredicate: CstIterCallback, CstDepCallback
     return _rnds;
   }
 
-  // final void randomizeDepsRolled() {
+  // final void tryResolveDepsRolled() {
   //   for (size_t i=0; i!=_uwLength; ++i) {
-  //     _uwPreds[i].randomizeDeps();
+  //     _uwPreds[i].tryResolveDeps();
   //   }
   // }
 
@@ -837,13 +846,17 @@ class CstPredicate: CstIterCallback, CstDepCallback
     _expr.setPredContext(this);
   }
 
-  final void setDomainContext(CstPredicate pred) {
-    
+  final void setDomainContext(CstPredicate pred, bool thisPred=true) {
+    if (thisPred) {
+      if (_domainContextSet) return;
+      else _domainContextSet = true;
+    }
+
     _expr.setDomainContext(pred, pred._rnds, pred._rndArrs, pred._vars,
 			   pred._varArrs, pred._vals, pred._varIters,
 			   pred._idxs, pred._bitIdxs, pred._deps);
 
-    if (this is pred && _rnds.length == 1 && _rndArrs.length == 0)
+    if (thisPred && _rnds.length == 1 && _rndArrs.length == 0)
       _dom = _rnds[0];
 
     // if (this is pred && this.isDist()) {
@@ -851,10 +864,10 @@ class CstPredicate: CstIterCallback, CstDepCallback
     // }
 
     if (_guard !is null) {
-      _guard.setDomainContext(pred);
+      _guard.setDomainContext(pred, false);
     }
 
-    if (this is pred) {
+    if (thisPred) {
     
       // foreach (varIter; varIters) {
       //   import std.stdio;
@@ -935,9 +948,9 @@ class CstPredicate: CstIterCallback, CstDepCallback
     return _expr;
   }
 
-  void randomizeDeps(_esdl__Proxy proxy) {
-    foreach (dep; _deps) dep.randomizeIfUnconstrained(proxy);
-    foreach (dep; _idxs) dep.randomizeIfUnconstrained(proxy);
+  void tryResolveDeps(_esdl__Proxy proxy) {
+    foreach (dep; _deps) dep.tryResolve(proxy);
+    foreach (dep; _idxs) dep.tryResolve(proxy);
   }
 
   bool hasUpdate() {
@@ -957,8 +970,10 @@ class CstPredicate: CstIterCallback, CstDepCallback
   string describe() {
     import std.string:format;
     import std.conv: to;
-    string description = "    Predicate ID: " ~ _id.to!string() ~ "\n    ";
+    string description = "Predicate Name: " ~ name() ~ "\n";
+    description ~= "Predicate ID: " ~ _id.to!string() ~ "\n    ";
     description ~= "Expr: " ~ _expr.describe() ~ "\n    ";
+    description ~= "Context Set? " ~ _domainContextSet.to!string() ~ "\n    ";
     description ~= _scope.describe();
     description ~= format("    Level: %s\n", _level);
     if (_iters.length > 0) {
@@ -1142,10 +1157,11 @@ class CstVisitorPredicate: CstPredicate
 	      ~ this.describe());
     }
     auto currLen = iter.size();
+    auto prevLen = _uwPreds.length;
     // import std.stdio;
     // writeln("size is ", currLen);
 
-    if (currLen > _uwPreds.length) {
+    if (currLen > prevLen) {
       // import std.stdio;
       // writeln("Need to unroll ", currLen - _uwPreds.length, " times");
       for (uint i = cast(uint) _uwPreds.length;
@@ -1156,6 +1172,9 @@ class CstVisitorPredicate: CstPredicate
 					    _expr.unroll(iter, iter.mapIter(i)), false, this, iter, i// ,
 					    // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
 					    );
+      }
+      for (size_t i=prevLen; i!=currLen; ++i) {
+	_uwPreds[i].setDomainContext(_uwPreds[i]);
       }
     }
 

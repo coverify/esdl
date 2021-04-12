@@ -619,7 +619,11 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     solver.pushToEvalStack(this);
   }
 
-  override void randomizeIfUnconstrained(_esdl__Proxy proxy) {
+  override void tryResolve(_esdl__Proxy proxy) {
+    if (isSolved()) {
+      execCbs();
+      return;
+    }
     if ((! isSolved()) && isStatic() && (! isRolled())) {
       if (_rndPreds.length == 0) {
 	_esdl__doRandomize(getProxyRoot()._esdl__getRandGen());
@@ -772,6 +776,8 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   override void execIterCbs() {
     assert(_iterVar !is null);
     _iterVar.unrollCbs();
+    assert (_root !is null);
+    _root.procUnrolledNewPredicates();
   }
 
   override uint* getRef() {

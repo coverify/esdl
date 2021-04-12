@@ -40,7 +40,7 @@ interface CstVecNodeIntf: CstVarNodeIntf {
   abstract void registerDepPred(CstDepCallback depCb);
   abstract void registerIdxPred(CstDepCallback idxCb);
   abstract bool isSolved();
-  abstract void randomizeIfUnconstrained(_esdl__Proxy proxy);
+  abstract void tryResolve(_esdl__Proxy proxy);
   abstract void setGroupContext(CstPredGroup group);
   abstract void reset();
 }
@@ -318,8 +318,9 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   
   abstract long value();
   
-  void randomizeIfUnconstrained(_esdl__Proxy proxy) {
-    if (! isSolved()) {
+  void tryResolve(_esdl__Proxy proxy) {
+    if (isSolved()) execCbs();
+    else {
       if (_rndPreds.length == 0) {
 	randomizeWithoutConstraints(proxy);
       }
@@ -662,7 +663,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     assert (false);
   }
 
-  void randomizeIfUnconstrained(_esdl__Proxy proxy) {}
+  void tryResolve(_esdl__Proxy proxy) {}
 	
   void visit(CstSolver solver) {
     foreach (dom; this[]) {

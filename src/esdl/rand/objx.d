@@ -210,18 +210,19 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
       _esdl__Proxy _root;
       _esdl__Proxy _parent;
       
+      // Call super only after the _parent has been set
       static if (is (LEAF == struct)) {
 	this(string name, _esdl__Proxy parent, V* var) {
-	  super(name, parent, var);
 	  _parent = parent;
 	  _root = _parent.getProxyRoot();
+	  super(name, parent, var);
 	}
       }
       else {
 	this(string name, _esdl__Proxy parent, V var) {
-	  super(name, parent, var);
 	  _parent = parent;
 	  _root = _parent.getProxyRoot();
+	  super(name, parent, var);
 	}
       }
 
@@ -305,6 +306,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 
       _esdl__Proxy _root;
 
+      // Call super only after the _parent has been set
       this(string name, P parent, CstVecTerm indexExpr) {
 	if (indexExpr.isConst()) {
 	  ulong index = indexExpr.evaluate();
@@ -312,22 +314,22 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	}
 	else {
 	  assert (parent !is null);
-	  super(name, parent.getProxyRoot(), null);
 	  _name = name;
 	  _parent = parent;
 	  _root = _parent.getProxyRoot();
 	  _indexExpr = indexExpr;
+	  super(name, parent.getProxyRoot(), null);
 	}
       }
 
+      // Call super only after the _parent has been set
       this(string name, P parent, ulong index) {
 	assert (parent !is null);
-	super(name, parent.getProxyRoot(), null);
-	// super(parent.getProxyRoot());
 	_name = name;
 	_parent = parent;
 	_pindex = index;
 	_root = _parent.getProxyRoot();
+	super(name, parent.getProxyRoot(), null);
       }
 
       final override bool isRand() {
@@ -755,12 +757,13 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	_var = var;
       }
       
+      // Call super only after the _parent has been set
       this(string name, _esdl__Proxy parent, V* var) {
-	super(name);
 	_var = var;
 	_parent = parent;
 	_root = _parent.getProxyRoot();
 	_arrLen = new CstArrLength!RV(name ~ "->length", this);
+	super(name);
       }
 
       final override bool isRand() {
@@ -885,27 +888,29 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
       uint _resolvedCycle;	// cycle for which indexExpr has been resolved
       RV _resolvedObj;
 
+      // Call super only after the _parent has been set
       this(string name, P parent, CstVecTerm indexExpr) {
 	// import std.stdio;
 	// writeln("New ", name);
 	assert (parent !is null);
-	super(name);
 	_parent = parent;
 	_indexExpr = indexExpr;
 	_root = _parent.getProxyRoot();
 	_arrLen = new CstArrLength!RV(name ~ "->length", this);
+	super(name);
       }
 
+      // Call super only after the _parent has been set
       this(string name, P parent, ulong index) {
 	// import std.stdio;
 	// writeln("New ", name);
 	assert (parent !is null);
-	super(name);
 	_parent = parent;
 	// _indexExpr = _esdl__cstVal(index);
 	_pindex = index;
 	_root = _parent.getProxyRoot();
 	_arrLen = new CstArrLength!RV(name ~ "->length", this);
+	super(name);
       }
 
       final override bool isRand() {

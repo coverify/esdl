@@ -168,13 +168,13 @@ void _esdl__doRandomizeElems(P, int I=0)(P p, _esdl__RandGen randGen) {
   }
 }
 
-void _esdl__doInitRandsElems(P, int I=0)(P p) {
+void _esdl__doInitRandObjectElems(P, int I=0)(P p) {
   // static if (I == 0 &&
   // 	     is (P B == super) &&
   // 	     is (B[0]: _esdl__Proxy) &&
   // 	     is (B[0] == class)) {
   //   B[0] b = p;			// super object
-  //   _esdl__doInitRandsElems(b);
+  //   _esdl__doInitRandObjectElems(b);
   // }
   static if (I == P.tupleof.length) {
     return;
@@ -212,17 +212,17 @@ void _esdl__doInitRandsElems(P, int I=0)(P p) {
       }
       // }
     }
-    _esdl__doInitRandsElems!(P, I+1)(p);
+    _esdl__doInitRandObjectElems!(P, I+1)(p);
   }
 }
 
-void _esdl__doInitCstsElems(P, int I=0)(P p) {
+void _esdl__doInitConstraintElems(P, int I=0)(P p) {
   // static if (I == 0 &&
   // 	     is (P B == super) &&
   // 	     is (B[0]: _esdl__Proxy) &&
   // 	     is (B[0] == class)) {
   //   B[0] b = p;			// super object
-  //   _esdl__doInitCstsElems(b);
+  //   _esdl__doInitConstraintElems(b);
   // }
   static if (I == P.tupleof.length) {
     return;
@@ -233,7 +233,28 @@ void _esdl__doInitCstsElems(P, int I=0)(P p) {
     static if (is (Q: _esdl__ConstraintBase)) {
       p.tupleof[I] = p.new Q(p, p.tupleof[I].stringof[2..$]);
     }
-    _esdl__doInitCstsElems!(P, I+1)(p);
+    _esdl__doInitConstraintElems!(P, I+1)(p);
+  }
+}
+
+void _esdl__doSetDomainContextElems(P, int I=0)(P p) {
+  // static if (I == 0 &&
+  // 	     is (P B == super) &&
+  // 	     is (B[0]: _esdl__Proxy) &&
+  // 	     is (B[0] == class)) {
+  //   B[0] b = p;			// super object
+  //   _esdl__doSetDomainContextElems(b);
+  // }
+  static if (I == P.tupleof.length) {
+    return;
+  }
+  else {
+    alias Q = typeof (P.tupleof[I]);
+    // pragma(msg, Q.stringof);
+    static if (is (Q: _esdl__ConstraintBase)) {
+      p.tupleof[I].setDomainContext();
+    }
+    _esdl__doSetDomainContextElems!(P, I+1)(p);
   }
 }
 
@@ -533,8 +554,9 @@ mixin template Randomization()
       this(_esdl__Proxy parent, _esdl__T outer) {
 	_esdl__outer = outer;
 	super(parent, outer);
-	_esdl__doInitRandsElems(this);
-	_esdl__doInitCstsElems(this);
+	_esdl__doInitRandObjectElems(this);
+	_esdl__doInitConstraintElems(this);
+	_esdl__doSetDomainContextElems(this);
       }
     }
   }
@@ -559,8 +581,9 @@ mixin template Randomization()
       this(_esdl__Proxy parent, _esdl__T* outer) {
 	_esdl__outer = outer;
 	super(parent);
-	_esdl__doInitRandsElems(this);
-	_esdl__doInitCstsElems(this);
+	_esdl__doInitRandObjectElems(this);
+	_esdl__doInitConstraintElems(this);
+	_esdl__doSetDomainContextElems(this);
       }
     }
   }
@@ -694,8 +717,9 @@ class _esdl__ProxyNoRand(_esdl__T)
 	this(_esdl__Proxy parent, _esdl__T outer) {
 	  _esdl__outer = outer;
 	  super(parent, outer);
-	  _esdl__doInitRandsElems(this);
-	  _esdl__doInitCstsElems(this);
+	  _esdl__doInitRandObjectElems(this);
+	  _esdl__doInitConstraintElems(this);
+	  _esdl__doSetDomainContextElems(this);
 	}
 
       }
@@ -723,8 +747,9 @@ class _esdl__ProxyNoRand(_esdl__T)
 	this(_esdl__Proxy parent, _esdl__T* outer) {
 	  _esdl__outer = outer;
 	  super(parent);
-	  _esdl__doInitRandsElems(this);
-	  _esdl__doInitCstsElems(this);
+	  _esdl__doInitRandObjectElems(this);
+	  _esdl__doInitConstraintElems(this);
+	  _esdl__doSetDomainContextElems(this);
 	}
       }
 
@@ -764,6 +789,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   {
     this(_esdl__Proxy eng, string name) {
       super(eng, name, OBJ);
+      this.makeConstraints();
     }
 
     CstPredicate[] _preds;
@@ -792,8 +818,13 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     }
 
     final override CstPredicate[] getConstraints() {
-      if (! _initialized) makeConstraints();
+      assert (_initialized);
       return _preds;
+    }
+
+    final override void setDomainContext() {
+      // foreach (pred; _guards) pred.setDomainContext(pred);
+      foreach (pred; _preds)  pred.setDomainContext(pred);
     }
 
   }
@@ -804,6 +835,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     this(_esdl__Proxy eng, string name) {
       super(eng, name);
       this._esdl__initCst();
+      makeConstraints();
     }
 
     mixin (CST_PARSE_DATA.cstDecls);
@@ -835,6 +867,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 	_withArgs[i] = arg;
       }
       this._esdl__initCst();
+      makeConstraints();
     }
 
     ref auto _esdl__arg(size_t VAR)() {
@@ -853,6 +886,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 
   void _esdl__with(string _esdl__CstString, string FILE, size_t LINE, ARGS...)(ARGS values) {
     auto cstWith = new _esdl__ConstraintWith!(_esdl__CstString, FILE, LINE, ARGS)(this, "randWith", values);
+    cstWith.setDomainContext();
     // cstWith.withArgs(values);
     _esdl__cstWith = cstWith;
   }

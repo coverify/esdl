@@ -940,6 +940,9 @@ class CstLogicDistExpr(T): CstLogicExpr
 				 ref CstDomBase[] bitIdxs,
 				 ref CstVecNodeIntf[] deps) {
     rnds ~= _vec;
+  }
+
+  override void setPredContext(CstPredicate pred) {
     pred.distDomain(_vec);
     _vec.isDist(DomDistEnum.DETECT);
   }
