@@ -646,7 +646,8 @@ class CstPredicate: CstIterCallback, CstDepCallback
     // }
     CstIterator iter = _iters[0];
 
-    if (_guard !is null && _guard._iters[0] is iter) {
+    if (_guard !is null && _guard._iters.length > 0 &&
+	_guard._iters[0] is iter) {
       _guard.doUnroll();
       guardUnrolled = true;
     }
