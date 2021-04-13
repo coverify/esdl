@@ -8,7 +8,7 @@ import esdl.data.charbuf: Charbuf;
 
 import esdl.rand.base: CstValue, CstDomBase, CstDomSet, CstIterator,
   CstVecNodeIntf, CstVecPrim, DomType, CstLogicTerm, CstVecTerm,
-  CstVecValueBase;
+  CstVecValueBase, CstDepIntf;
 // import esdl.rand.misc: rand, writeHexString, _esdl__RandGen;
 import esdl.rand.misc: rand, _esdl__RandGen, writeHexString, isVecSigned,
   CstVectorOp, CstInsideOp, CstCompareOp, CstLogicOp;
@@ -549,9 +549,9 @@ class CstArrIterator(RV): CstIterator
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
-			ref CstVecNodeIntf[] idxs,
+			ref CstDepIntf[] idxs,
 			ref CstDomBase[] bitIdxs,
-			ref CstVecNodeIntf[] deps) {
+			ref CstDepIntf[] deps) {
     deps ~= getLenVec();
     iters ~= this;
   }
@@ -751,9 +751,9 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
-			ref CstVecNodeIntf[] idxs,
+			ref CstDepIntf[] idxs,
 			ref CstDomBase[] bitIdxs,
-			ref CstVecNodeIntf[] deps) {
+			ref CstDepIntf[] deps) {
     bool listed;
     foreach (rnd; rnds) {
       if (rnd is this) {
@@ -889,9 +889,9 @@ class CstLogicValue: CstValue, CstLogicTerm
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
-			ref CstVecNodeIntf[] idxs,
+			ref CstDepIntf[] idxs,
 			ref CstDomBase[] bitIdxs,
-			ref CstVecNodeIntf[] deps) {
+			ref CstDepIntf[] deps) {
     vals ~= this;
   }
 
@@ -1014,9 +1014,9 @@ class CstVecValue(T): CstVecValueBase
 			ref CstDomSet[] varArrs,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
-			ref CstVecNodeIntf[] idxs,
+			ref CstDepIntf[] idxs,
 			ref CstDomBase[] bitIdxs,
-			ref CstVecNodeIntf[] deps) {
+			ref CstDepIntf[] deps) {
     vals ~= this;
   }
 

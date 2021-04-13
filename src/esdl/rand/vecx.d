@@ -9,7 +9,7 @@ import std.traits: isIntegral, isBoolean, isArray, KeyType,
 import esdl.rand.misc;
 import esdl.rand.base: CstVecPrim, CstVecTerm, CstIterator, DomType, CstDomBase,
   CstDomSet, CstVarNodeIntf, CstVecNodeIntf, CstVarGlobIntf, CstValue,
-  CstLogicTerm;
+  CstLogicTerm, CstDepIntf;
 import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.expr: CstRangeExpr, CstVec2LogicExpr;
@@ -192,9 +192,9 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
-			    ref CstVecNodeIntf[] idxs,
+			    ref CstDepIntf[] idxs,
 			    ref CstDomBase[] bitIdxs,
-			    ref CstVecNodeIntf[] deps) {
+			    ref CstDepIntf[] deps) {
 	static if (RAND_ATTR.isRand()) {
 	  if (! canFind(rnds, this)) rnds ~= this;
 	}
@@ -337,9 +337,9 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
-			    ref CstVecNodeIntf[] idxs,
+			    ref CstDepIntf[] idxs,
 			    ref CstDomBase[] bitIdxs,
-			    ref CstVecNodeIntf[] deps) {
+			    ref CstDepIntf[] deps) {
 	static if (RAND_ATTR.isRand()) {
 	  if (! this.isStatic()) {
 	    if (_type <= DomType.LAZYMONO) _type = DomType.MAYBEMONO;
@@ -618,9 +618,9 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
 				    ref CstDomSet[] varArrs,
 				    ref CstValue[] vals,
 				    ref CstIterator[] iters,
-				    ref CstVecNodeIntf[] idxs,
+				    ref CstDepIntf[] idxs,
 				    ref CstDomBase[] bitIdxs,
-				    ref CstVecNodeIntf[] deps) {
+				    ref CstDepIntf[] deps) {
     static if (RAND_ATTR.isRand()) {
       if (! canFind(rndArrs, this)) rndArrs ~= this;
     }
@@ -762,9 +762,9 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
-			    ref CstVecNodeIntf[] idxs,
+			    ref CstDepIntf[] idxs,
 			    ref CstDomBase[] bitIdxs,
-			    ref CstVecNodeIntf[] deps) {
+			    ref CstDepIntf[] deps) {
 	// arrlen should not be handled here. It is handled as part
 	// of the indexExpr in the elements when required (that is
 	// when indexExpr is not contant, but an expression)
@@ -946,9 +946,9 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
-			    ref CstVecNodeIntf[] idxs,
+			    ref CstDepIntf[] idxs,
 			    ref CstDomBase[] bitIdxs,
-			    ref CstVecNodeIntf[] deps) {
+			    ref CstDepIntf[] deps) {
 	// arrlen should not be handled here. It is handled as part
 	// of the indexExpr in the elements when required (that is
 	// when indexExpr is not contant, but an expression)

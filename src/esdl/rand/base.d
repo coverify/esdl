@@ -29,18 +29,25 @@ interface CstVarNodeIntf {
   void scan();			// when an object is unrolled
 }
 
-interface CstVecNodeIntf: CstVarNodeIntf {
+interface CstDepIntf {
+  string name();
+  string fullName();
+
   abstract bool hasChanged();
+
+  abstract void registerIdxPred(CstDepCallback idxCb);
+  abstract void registerDepPred(CstDepCallback depCb);
+  abstract bool isSolved();
+  abstract void tryResolve(_esdl__Proxy proxy);
+}
+
+interface CstVecNodeIntf: CstVarNodeIntf, CstDepIntf {
 
   // This function is used in setDomainArrContext to register all the
   // predicates with the domain variables that this predicate
   // constrains
   abstract void registerRndPred(CstPredicate rndPred);  
 
-  abstract void registerDepPred(CstDepCallback depCb);
-  abstract void registerIdxPred(CstDepCallback idxCb);
-  abstract bool isSolved();
-  abstract void tryResolve(_esdl__Proxy proxy);
   abstract void setGroupContext(CstPredGroup group);
   abstract void reset();
 }
@@ -688,9 +695,9 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
 				    ref CstDomSet[] varArrs,
 				    ref CstValue[] vals,
 				    ref CstIterator[] iters,
-				    ref CstVecNodeIntf[] idxs,
+				    ref CstDepIntf[] idxs,
 				    ref CstDomBase[] bitIdxs,
-				    ref CstVecNodeIntf[] deps);
+				    ref CstDepIntf[] deps);
 
   void writeExprString(ref Charbuf str) {
     assert (isResolved());
@@ -785,9 +792,9 @@ interface CstTerm
   			 ref CstDomSet[] varArrs,
   			 ref CstValue[] vals,
   			 ref CstIterator[] iters,
-  			 ref CstVecNodeIntf[] idxs,
+  			 ref CstDepIntf[] idxs,
   			 ref CstDomBase[] bitIdxs,
-  			 ref CstVecNodeIntf[] deps);
+  			 ref CstDepIntf[] deps);
 
   bool isSolved();
   void visit(CstSolver solver);

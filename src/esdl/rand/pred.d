@@ -10,7 +10,7 @@ import esdl.rand.proxy: _esdl__Proxy, _esdl__ConstraintBase;
 import esdl.rand.misc;
 import esdl.rand.base: CstDomBase, CstDomSet, CstIterCallback, DomType,
   CstDepCallback, CstScope, CstIterator, CstVecNodeIntf,
-  CstVecTerm, CstLogicTerm;
+  CstVecTerm, CstLogicTerm, CstDepIntf;
 import esdl.rand.base: CstValue;
 
 import esdl.solver.base;
@@ -456,7 +456,7 @@ class CstPredGroup			// group of related predicates
   }
 }
 
-class CstPredicate: CstIterCallback, CstDepCallback
+class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 {
   string name() {
     import std.conv;
@@ -469,6 +469,10 @@ class CstPredicate: CstIterCallback, CstDepCallback
       return _parent.name() ~
 	'[' ~ _unrollIterVal.to!string() ~ ']' ~'%' ~ _id.to!string();
     }
+  }
+
+  string fullName() {
+    return name();
   }
 
   bool isVisitor() {
@@ -748,8 +752,8 @@ class CstPredicate: CstIterCallback, CstDepCallback
   CstDomBase[] _vars;
   CstDomSet[] _varArrs;
   CstValue[]  _vals;
-  CstVecNodeIntf[] _deps;
-  CstVecNodeIntf[] _idxs;
+  CstDepIntf[] _deps;
+  CstDepIntf[] _idxs;
   CstDomBase[] _bitIdxs;
   CstIterator[] _iters;
   CstIterator[] _parsedIters;
@@ -1124,11 +1128,40 @@ class CstPredicate: CstIterCallback, CstDepCallback
   void markPredSolved() {
     assert (_state == State.GROUPED);
     _state = State.SOLVED;
+
+    this.execDepCbs();
   }
+
+  void tryResolve(_esdl__Proxy proxy) { }
   
   bool isSolved() {
     return (_state == State.SOLVED);
   }
+
+  CstDepCallback[] _depCbs;
+  void registerDepPred(CstDepCallback depCb) {
+    foreach (cb; _depCbs) {
+      if (cb is depCb) {
+	return;
+      }
+    }
+    _depCbs ~= depCb;
+  }
+
+  void registerIdxPred(CstDepCallback depCb) {
+    assert (false);
+  }
+
+  bool hasChanged() {
+    assert (false);
+  }
+
+  void execDepCbs() {
+    foreach (cb; _depCbs) {
+      cb.doResolve();
+    }
+  }
+
 }
 
 class CstVisitorPredicate: CstPredicate

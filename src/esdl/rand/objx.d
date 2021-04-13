@@ -10,7 +10,7 @@ import esdl.rand.misc;
 import esdl.rand.base: CstValue, CstVecTerm, CstIterator, DomType,
   CstDomBase, CstDomSet, CstObjectStubBase, CstObjArrStubBase, CstObjSet,
   CstVarNodeIntf, CstVecNodeIntf, CstObjArrIntf, CstVarGlobIntf,
-  CstObjectVoid, CstObjArrVoid;
+  CstObjectVoid, CstObjArrVoid, CstDepIntf;
 import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.expr: CstRangeExpr;
@@ -281,9 +281,9 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
-			    ref CstVecNodeIntf[] idxs,
+			    ref CstDepIntf[] idxs,
 			    ref CstDomBase[] bitIdxs,
-			    ref CstVecNodeIntf[] deps) {
+			    ref CstDepIntf[] deps) {
 	// no parent
       }
 
@@ -425,9 +425,9 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
-			    ref CstVecNodeIntf[] idxs,
+			    ref CstDepIntf[] idxs,
 			    ref CstDomBase[] bitIdxs,
-			    ref CstVecNodeIntf[] deps) {
+			    ref CstDepIntf[] deps) {
 	static if (RAND_ATTR.isRand()) {
 	  // 	if (! canFind(rnds, this)) rnds ~= this;
 	  // }
@@ -807,9 +807,9 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
-			    ref CstVecNodeIntf[] idxs,
+			    ref CstDepIntf[] idxs,
 			    ref CstDomBase[] bitIdxs,
-			    ref CstVecNodeIntf[] deps) {
+			    ref CstDepIntf[] deps) {
 	// arrlen should not be handled here. It is handled as part
 	// of the indexExpr in the elements when required (that is
 	// when indexExpr is not contant, but an expression)
@@ -979,9 +979,9 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 			    ref CstDomSet[] varArrs,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
-			    ref CstVecNodeIntf[] idxs,
+			    ref CstDepIntf[] idxs,
 			    ref CstDomBase[] bitIdxs,
-			    ref CstVecNodeIntf[] deps) {
+			    ref CstDepIntf[] deps) {
 	// arrlen should not be handled here. It is handled as part
 	// of the indexExpr in the elements when required (that is
 	// when indexExpr is not contant, but an expression)
