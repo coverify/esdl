@@ -7,7 +7,7 @@ import esdl.solver.base;
 import esdl.rand.domain: CstVecValue;
 import esdl.rand.expr: CstVecArrExpr, CstVecSliceExpr, CstRangeExpr,
   CstInsideSetElem, CstVec2LogicExpr, CstLogic2LogicExpr, CstVec2VecExpr,
-  CstNotLogicExpr, CstNegVecExpr;
+  CstNotLogicExpr, CstNegVecExpr, CstInsideArrExpr;
 import esdl.rand.pred: CstPredGroup, CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.misc: _esdl__RandGen, CstVectorOp, CstLogicOp, CstCompareOp,
@@ -38,7 +38,9 @@ interface CstDepIntf {
   abstract void registerIdxPred(CstDepCallback idxCb);
   abstract void registerDepPred(CstDepCallback depCb);
   abstract bool isSolved();
-  abstract void tryResolve(_esdl__Proxy proxy);
+  abstract bool tryResolve(_esdl__Proxy proxy);
+
+  abstract CstDomBase getDomain();
 }
 
 interface CstVecNodeIntf: CstVarNodeIntf, CstDepIntf {
@@ -247,7 +249,12 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     return _name;
   }
 
+  // Dependencies
+  CstDepIntf[] _deps;
 
+  void addDep(CstDepIntf dep) { _deps ~= dep; }
+  CstDepIntf[] getDeps() { return _deps; }
+  
   abstract string fullName();
   // abstract void collate(ulong v, int word=0);
   abstract void setVal(ulong[] v);
@@ -325,13 +332,20 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   
   abstract long value();
   
-  void tryResolve(_esdl__Proxy proxy) {
-    if (isSolved()) execCbs();
+  bool tryResolve(_esdl__Proxy proxy) {
+    import std.algorithm.iteration: filter;
+    if (isSolved()) {
+      execCbs();
+      return true;
+    }
     else {
-      if (_rndPreds.length == 0) {
+      if (_rndPreds.length == 0 ||
+	  _rndPreds.filter!(pred => ! pred.isGuard()).empty()) {
 	randomizeWithoutConstraints(proxy);
+	return true;
       }
     }
+    return false;
   }
   void randomizeWithoutConstraints(_esdl__Proxy proxy){
     _esdl__doRandomize(getProxyRoot()._esdl__getRandGen());
@@ -416,11 +430,11 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     // assert (_group is null && (! this.isSolved()));
     // _group = group;
     foreach (pred; _rndPreds) {
-      if (! pred.isGuard()) {
-	if (pred._state is CstPredicate.State.INIT && !pred.getmarkBefore()) {
-	  pred.setGroupContext(group);
-	}
+      // if (! pred.isGuard()) {
+      if (pred._state is CstPredicate.State.INIT && !pred.getmarkBefore()) {
+	pred.setGroupContext(group);
       }
+      // }
     }
     if (_esdl__parentIsConstrained) {
       CstDomSet parent = getParentDomSet();
@@ -515,6 +529,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   abstract string describe();
 
   void scan() { }
+  CstDomBase getDomain() { return this; }
 }
 
 abstract class CstValue: CstTerm
@@ -534,11 +549,13 @@ abstract class CstValue: CstTerm
   // abstract uint bitcount();
 
   void scan() { }
+
 }
 
 abstract class CstVecValueBase: CstValue, CstVecTerm {
-  override bool isConst() {return true;}
-  override bool isIterator() {return false;}
+  final override bool isConst() { return true; }
+  final override bool isIterator() { return false; }
+  final override CstDomBase getDomain() { return null; }
 }
 
 
@@ -588,6 +605,12 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   // Callbacks
   CstDepCallback[] _depCbs;
 
+  // Dependencies
+  CstDepIntf[] _deps;
+
+  void addDep(CstDepIntf dep) { _deps ~= dep; }
+  CstDepIntf[] getDeps() { return _deps; }
+  
   uint _unresolveLap;
 
   abstract void markAsUnresolved(uint lap, bool hier);
@@ -670,7 +693,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     assert (false);
   }
 
-  void tryResolve(_esdl__Proxy proxy) {}
+  bool tryResolve(_esdl__Proxy proxy) { return false; }
 	
   void visit(CstSolver solver) {
     foreach (dom; this[]) {
@@ -693,6 +716,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
 				    ref CstDomSet[] rndArrs,
 				    ref CstDomBase[] vars,
 				    ref CstDomSet[] varArrs,
+				    ref CstDomBase[] dists,
 				    ref CstValue[] vals,
 				    ref CstIterator[] iters,
 				    ref CstDepIntf[] idxs,
@@ -760,17 +784,21 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
       }
     }
   }
+
+  CstDomBase getDomain() { return null; }
 }
 
 
 // The client keeps a list of agents that when resolved makes the client happy
 interface CstIterCallback
 {
+  string name();
   void doUnroll();
 }
 
 interface CstDepCallback
 {
+  string name();
   void doResolve();
 }
 
@@ -786,15 +814,16 @@ interface CstTerm
   string describe();
 
   void setDomainContext(CstPredicate pred,
-  			 ref CstDomBase[] rnds,
-  			 ref CstDomSet[] rndArrs,
-  			 ref CstDomBase[] vars,
-  			 ref CstDomSet[] varArrs,
-  			 ref CstValue[] vals,
-  			 ref CstIterator[] iters,
-  			 ref CstDepIntf[] idxs,
-  			 ref CstDomBase[] bitIdxs,
-  			 ref CstDepIntf[] deps);
+			ref CstDomBase[] rnds,
+			ref CstDomSet[] rndArrs,
+			ref CstDomBase[] vars,
+			ref CstDomSet[] varArrs,
+			ref CstDomBase[] dists,
+			ref CstValue[] vals,
+			ref CstIterator[] iters,
+			ref CstDepIntf[] idxs,
+			ref CstDomBase[] bitIdxs,
+			ref CstDepIntf[] deps);
 
   bool isSolved();
   void visit(CstSolver solver);
@@ -805,6 +834,9 @@ interface CstTerm
   CstTerm unroll(CstIterator iter, ulong n);
   
   void scan(); // {}		// used for CstVarVisitorExpr
+
+  CstDomBase getDomain(); // Return the domain if the expression is a domain
+  // bool isDomain();
 }
 
 // This class represents an unwound Foreach iter at vec level
@@ -843,7 +875,6 @@ abstract class CstIterator: CstVecTerm
 
 interface CstVecTerm: CstTerm
 {
-  
   bool isConst();
   bool isIterator();
 
@@ -1019,7 +1050,6 @@ interface CstVecTerm: CstTerm
 
 interface CstLogicTerm: CstTerm
 {
-
   CstDistSolverBase getDist();
   bool isCompatWithDist(CstDomBase A);
 
@@ -1053,7 +1083,13 @@ interface CstLogicTerm: CstTerm
   CstLogicTerm opUnary(string op)() if(op == "*")
     {
       static if(op == "*") {	// "!" in cstx is translated as "*"
-	return new CstNotLogicExpr(this);
+	CstInsideArrExpr expr = cast(CstInsideArrExpr) this;
+	if (expr !is null) {
+	  CstInsideArrExpr notExpr =  expr.dup();
+	  notExpr.negate();
+	  return notExpr;
+	}
+	else return new CstNotLogicExpr(this);
       }
     }
 

@@ -70,6 +70,7 @@ abstract class _esdl__ConstraintBase: rand.disable
   
   abstract void makeConstraints();
   abstract void setDomainContext();
+  abstract void procDomainContext();
 
   abstract CstPredicate[] getConstraintGuards();
   abstract CstPredicate[] getConstraints();
@@ -126,6 +127,11 @@ abstract class Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=_
   final override void setDomainContext() {
     foreach (pred; _guards) pred.setDomainContext(pred);
     foreach (pred; _preds)  pred.setDomainContext(pred);
+  }
+
+  final override void procDomainContext() {
+    foreach (pred; _guards) pred.procDomainContext();
+    foreach (pred; _preds)  pred.procDomainContext();
   }
 
 };
@@ -211,6 +217,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   void procUnrolledNewPredicates() {
     foreach (pred; _unrolledNewPreds) pred.setDomainContext(pred);
+    foreach (pred; _unrolledNewPreds) pred.procDomainContext();
     _unrolledNewPreds.reset();
   }
   
@@ -496,7 +503,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	   // _resolvedPreds.length > 0 ||
 	   _toResolvedDynPreds.length > 0 ||
 	   _toResolvedPreds.length > 0 ||
-	   _unresolvedPreds.length > 0 ||
+	   _toUnresolvedPreds.length > 0 ||
 	   _toRolledPreds.length > 0 ||
 	   _dependentPreds.length > 0) {
       assert (_newPreds.length == 0);
@@ -532,6 +539,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       // with new predicates
 
       _resolvedPreds.swap(_toResolvedPreds);
+      _resolvedDynPreds.swap(_toResolvedDynPreds);
+      _unresolvedPreds.swap(_toUnresolvedPreds);
 
       if (_toUnrolledPreds.length > 0 || _toNewPreds.length > 0) {
 	_unrolledPreds.swap(_toUnrolledPreds);
@@ -591,6 +600,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       foreach (pred; _unresolvedPreds) {
 	if (pred.isResolved()) {
 	  procResolved(pred);
+	  _solvedSome = true;
 	}
 	else {
 	  _toUnresolvedPreds ~= pred;
@@ -598,6 +608,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	}
       }
 
+      _unresolvedPreds.reset();
+      
       // _resolvedMonoPreds.swap(_toSolvePreds);
 
       // foreach (pred; _toSolvePreds) {
@@ -646,7 +658,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       _dependentPreds.reset();
       
       foreach (pred; _beforePreds) {
-	if(checkContinue(pred, _lap)){
+	if (checkContinue(pred, _lap)){
 	  continue;
 	}
 	//CstDomBase [] a = pred.getDomains();
@@ -655,7 +667,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       }
       
       foreach (pred; _toSolvePreds) {
-	if(pred.getmarkBefore()){
+	if (pred.getmarkBefore()){
 	  _dependentPreds ~= pred;
 	  //pred.setmarkBefore(false);
 	}
@@ -689,9 +701,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	      import std.stdio;
 	      writeln("Reuse group ", group._id, " for predicate: ", pred.name());
 	    }
+	    if (pred.withDist()) group.markDist();
 	    assert (! group.isSolved(),
-		    "Group can not be solved when the predicate is still not solved; group id: " ~
-		    group._id.to!string() ~ " predicate id: " ~ pred._id.to!string());
+		    "Group can not be solved when the predicate is still not solved; group: " ~
+		    group.describe() ~ " predicate: " ~ pred.describe());
 	    group.setGroupContext(pred);
 	    group.solve();
 	    _solvedGroups ~= group;
@@ -734,9 +747,9 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	  stderr.writeln("_resolvedPreds: ");
 	  foreach (pred; _resolvedPreds) stderr.writeln(pred.describe());
 	}
-	if (_unresolvedPreds.length > 0) {
-	  stderr.writeln("_unresolvedPreds: ");
-	  foreach (pred; _unresolvedPreds) stderr.writeln(pred.describe());
+	if (_toUnresolvedPreds.length > 0) {
+	  stderr.writeln("_toUresolvedPreds: ");
+	  foreach (pred; _toUnresolvedPreds) stderr.writeln(pred.describe());
 	}
 	if (_toRolledPreds.length > 0) {
 	  stderr.writeln("_toRolledPreds: ");
@@ -747,9 +760,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
       _solvePreds.reset();
 
-      
-      _unresolvedPreds.reset();
-      _unresolvedPreds.swap(_toUnresolvedPreds);
     }
     foreach (group; _solvedGroups) {
       group.reset();
@@ -811,7 +821,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	auto dom = rnd.getResolved();
 	dom._tempPreds ~= pred;
       }
-      _resolvedDynPreds ~= pred;
+      _toResolvedDynPreds ~= pred;
     }
     else {
       _toResolvedPreds ~= pred;

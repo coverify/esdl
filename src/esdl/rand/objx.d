@@ -279,6 +279,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 			    ref CstDomSet[] rndArrs,
 			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
+			    ref CstDomBase[] dists,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstDepIntf[] idxs,
@@ -423,6 +424,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 			    ref CstDomSet[] rndArrs,
 			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
+			    ref CstDomBase[] dists,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstDepIntf[] idxs,
@@ -437,7 +439,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	if (_parent.isStatic()) {
 	  deps ~= _parent._arrLen;
 	}
-	_parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
+	_parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
 
 	if (_indexExpr !is null) {
 	  // Here we need to put the parent as a dep for the pred
@@ -448,7 +450,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	  // the parent about resolution which in turn should inform
 	  // the pred that it can go ahead
 	  CstDomBase[] indexes;
-	  _indexExpr.setDomainContext(pred, indexes, rndArrs, indexes, varArrs, vals, iters, idxs, bitIdxs, deps);
+	  _indexExpr.setDomainContext(pred, indexes, rndArrs, indexes, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
 	  foreach (index; indexes) idxs ~= index;
 	}
       }
@@ -805,6 +807,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 			    ref CstDomSet[] rndArrs,
 			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
+			    ref CstDomBase[] dists,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstDepIntf[] idxs,
@@ -977,6 +980,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 			    ref CstDomSet[] rndArrs,
 			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
+			    ref CstDomBase[] dists,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstDepIntf[] idxs,
@@ -992,11 +996,11 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	  deps ~= _parent._arrLen;
 	}
 	_parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs,
-				 vals, iters, idxs, bitIdxs, deps);
+				 dists, vals, iters, idxs, bitIdxs, deps);
 	if (_indexExpr !is null) {
 	  CstDomBase[] indexes;
 	  _indexExpr.setDomainContext(pred, indexes, rndArrs, indexes, varArrs,
-				      vals, iters, idxs, bitIdxs, deps);
+				      dists, vals, iters, idxs, bitIdxs, deps);
 	  foreach (index; indexes) idxs ~= index;
 	}
       }

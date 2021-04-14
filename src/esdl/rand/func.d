@@ -377,7 +377,7 @@ CstInsideArrExpr _esdl__inside(CstVecTerm vec, CstInsideSetElem[] ranges) {
 
 CstInsideArrExpr _esdl__notinside(CstVecTerm vec, CstInsideSetElem[] ranges) {
   CstInsideArrExpr expr = _esdl__inside(vec, ranges);
-  expr.setNotInside();
+  expr.negate();
   return expr;
 }
 

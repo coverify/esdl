@@ -190,13 +190,19 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 			    ref CstDomSet[] rndArrs,
 			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
+			    ref CstDomBase[] dists,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstDepIntf[] idxs,
 			    ref CstDomBase[] bitIdxs,
 			    ref CstDepIntf[] deps) {
 	static if (RAND_ATTR.isRand()) {
-	  if (! canFind(rnds, this)) rnds ~= this;
+	  if (this.isDist()) {
+	    if (! canFind(dists, this)) dists ~= this;
+	  }
+	  else {
+	    if (! canFind(rnds, this)) rnds ~= this;
+	  }
 	}
 	else {
 	  if (! canFind(vars, this)) vars ~= this;
@@ -335,6 +341,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 			    ref CstDomSet[] rndArrs,
 			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
+			    ref CstDomBase[] dists,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstDepIntf[] idxs,
@@ -344,12 +351,17 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	  if (! this.isStatic()) {
 	    if (_type <= DomType.LAZYMONO) _type = DomType.MAYBEMONO;
 	  }
-	  if (! canFind(rnds, this)) rnds ~= this;
+	  if (this.isDist()) {
+	    if (! canFind(dists, this)) dists ~= this;
+	  }
+	  else {
+	    if (! canFind(rnds, this)) rnds ~= this;
+	  }
 	}
 	else {
 	  if (! canFind(vars, this)) vars ~= this;
 	}
-	_parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
+	_parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
 
 	if (_indexExpr !is null) {
 	  // Here we need to put the parent as a dep for the pred
@@ -360,7 +372,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	  // the parent about resolution which in turn should inform
 	  // the pred that it can go ahead
 	  CstDomBase[] indexes;
-	  _indexExpr.setDomainContext(pred, indexes, rndArrs, indexes, varArrs, vals, iters, idxs, bitIdxs, deps);
+	  _indexExpr.setDomainContext(pred, indexes, rndArrs, indexes, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
 	  foreach (index; indexes) idxs ~= index;
 	}
       }
@@ -616,6 +628,7 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
 				    ref CstDomSet[] rndArrs,
 				    ref CstDomBase[] vars,
 				    ref CstDomSet[] varArrs,
+				    ref CstDomBase[] dists,
 				    ref CstValue[] vals,
 				    ref CstIterator[] iters,
 				    ref CstDepIntf[] idxs,
@@ -628,6 +641,7 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
       if (! canFind(varArrs, this)) varArrs ~= this;
     }
 
+    // Unless the array gets resolved, we can not solve the elements
     if (! canFind(deps, this)) deps ~= this;
   }
 
@@ -760,6 +774,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 			    ref CstDomSet[] rndArrs,
 			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
+			    ref CstDomBase[] dists,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstDepIntf[] idxs,
@@ -944,6 +959,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 			    ref CstDomSet[] rndArrs,
 			    ref CstDomBase[] vars,
 			    ref CstDomSet[] varArrs,
+			    ref CstDomBase[] dists,
 			    ref CstValue[] vals,
 			    ref CstIterator[] iters,
 			    ref CstDepIntf[] idxs,
@@ -955,10 +971,10 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	  
 	// auto iter = arrLen.makeIterVar();
 	// iters ~= iter;
-	_parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
+	_parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
 	if (_indexExpr !is null) {
 	  CstDomBase[] indexes;
-	  _indexExpr.setDomainContext(pred, indexes, rndArrs, indexes, varArrs, vals, iters, idxs, bitIdxs, deps);
+	  _indexExpr.setDomainContext(pred, indexes, rndArrs, indexes, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
 	  foreach (index; indexes) idxs ~= index;
 	}
       }

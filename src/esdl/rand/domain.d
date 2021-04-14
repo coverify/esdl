@@ -67,6 +67,8 @@ abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
       
       override bool signed() { return false; }
       override void setPredContext(CstPredicate pred) {}
+
+      override CstDomBase getDomain() { return this; }
     }
 
 abstract class CstDomain(T, rand RAND_ATTR) if (!is (T == bool)):
@@ -118,6 +120,8 @@ abstract class CstDomain(T, rand RAND_ATTR) if (!is (T == bool)):
 	  return false;
 	}
       }
+
+      override CstDomBase getDomain() { return this; }
     }
 
 abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
@@ -547,6 +551,7 @@ class CstArrIterator(RV): CstIterator
 			ref CstDomSet[] rndArrs,
 			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
+			ref CstDomBase[] dists,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstDepIntf[] idxs,
@@ -619,24 +624,29 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     solver.pushToEvalStack(this);
   }
 
-  override void tryResolve(_esdl__Proxy proxy) {
+  override bool tryResolve(_esdl__Proxy proxy) {
+    import std.algorithm.iteration: filter;
     if (isSolved()) {
       execCbs();
-      return;
+      return true;
     }
     if ((! isSolved()) && isStatic() && (! isRolled())) {
-      if (_rndPreds.length == 0) {
+      if (_rndPreds.length == 0 ||
+	  _rndPreds.filter!(pred => ! pred.isGuard()).empty()) {
 	_esdl__doRandomize(getProxyRoot()._esdl__getRandGen());
 	proxy.solvedSome();
 	markSolved();
 	proxy.addSolvedDomain(this);
 	execCbs();
+	return true;
       }
     }
     if (! isRand()) {
       _parent.buildElements(_parent.getLen());
       execCbs();
+      return true;
     }
+    return false;
   }
 
   override void _esdl__doRandomize(_esdl__RandGen randGen) {
@@ -749,6 +759,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 			ref CstDomSet[] rndArrs,
 			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
+			ref CstDomBase[] dists,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstDepIntf[] idxs,
@@ -769,7 +780,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 	if (_type <= DomType.LAZYMONO) _type = DomType.MAYBEMONO;
       }
     }
-    _parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs,
+    _parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs, dists,
 			     vals, iters, idxs, bitIdxs, deps);
   }
 
@@ -839,6 +850,8 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 
   final void visit(CstDistSolverBase dist) { assert(false); }
 
+  override CstDomBase getDomain() { return this; }
+  
 }
 
 class CstLogicValue: CstValue, CstLogicTerm
@@ -887,6 +900,7 @@ class CstLogicValue: CstValue, CstLogicTerm
 			ref CstDomSet[] rndArrs,
 			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
+			ref CstDomBase[] dists,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstDepIntf[] idxs,
@@ -906,7 +920,8 @@ class CstLogicValue: CstValue, CstLogicTerm
   override bool isCompatWithDist(CstDomBase A) { assert(false); }
   override void visit(CstDistSolverBase solver) { assert(false); }
   override CstLogicValue unroll(CstIterator iter, ulong n) { return this; }
-  override void setPredContext(CstPredicate pred) {}
+  override void setPredContext(CstPredicate pred) { }
+  override CstDomBase getDomain() { return null; }
 }
 
 class CstVecValue(T): CstVecValueBase
@@ -1012,6 +1027,7 @@ class CstVecValue(T): CstVecValueBase
 			ref CstDomSet[] rndArrs,
 			ref CstDomBase[] vars,
 			ref CstDomSet[] varArrs,
+			ref CstDomBase[] dists,
 			ref CstValue[] vals,
 			ref CstIterator[] iters,
 			ref CstDepIntf[] idxs,
