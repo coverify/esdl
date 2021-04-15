@@ -437,7 +437,7 @@ class CstMonoSolver (S): CstSolver
     }
   }
   override void pushIndexToEvalStack(ulong value){
-    _endFlag = 3;
+    _evalStack ~= Term(value);
   }
   void negateLogic(ref CstCompareOp c){
     final switch (c){
@@ -557,12 +557,22 @@ class CstMonoSolver (S): CstSolver
     }
     _prevVariableVals.length = 0;
     _variables.length = 0;
+    _finalRange = [S.min, S.max];
     CstPredicate [] predSet = group.predicates();
-    if(predSet.length == 0){
+    bool isEnum = doms[0].visitDomain(this);
+    if(!isEnum && predSet.length == 0){
       //doms[0].randomizeWithoutConstraints(doms[0].getProxyRoot());
       return true;
     }
-    _finalRange = [S.min, S.max];
+    assert(_rangeStack.length == 1 || !isEnum);
+    if(isEnum){
+      if(_rangeStack[0].getType() == RangeType.DYN){
+	ANDRANGE(_finalRange, _rangeStack[0].getD());
+      }
+      else if(_rangeStack[0].getType() == RangeType.STA){
+	ANDRANGE(_finalRange, _rangeStack[0].getS());
+      }      
+    }
     _proxy = group.getProxy();
     foreach (pred; predSet){
       if (! pred.isGuard()) {
@@ -602,7 +612,7 @@ class CstMonoSolver (S): CstSolver
     if(_finalRange.length == 0){
       assert(false, "no solutions found");
     }
-    debug (CHECKMONO){
+    /* debug (CHECKMONO){
       _debugFlag = true;
       import std.conv;
       while (_currentRangePos < _finalRange.length){
@@ -641,7 +651,7 @@ class CstMonoSolver (S): CstSolver
     debug (MONOSOLVER){
       import std.stdio;
       writeln("all edge elements of the range tested successfully");
-    }
+      }*/
     int bitc = doms[0].bitcount();
     if(bitc != 32 && bitc != 64){
       trim(bitc, doms[0].signed());
@@ -674,14 +684,21 @@ class CstMonoSolver (S): CstSolver
     _hasRand = false;
     _rangeStack.length = 0;
   }
-  
+   
   void NotNum(ref Term a){
+    import std.conv;
     switch (a.getNumType()){
-    case NumType.INT, NumType.UINT:
-      a = Term(!(a.getInt()));
+    case NumType.INT:
+      a = Term(to!int(!(a.getInt())));
       break;
-    case NumType.LONG, NumType.ULONG:
-      a = Term(!(a.getLong()));
+    case NumType.UINT:
+      a = Term(to!uint(!(a.getInt())));
+      break;
+    case NumType.LONG:
+      a = Term(to!long(!(a.getLong())));
+      break;
+    case NumType.ULONG:
+      a = Term(to!ulong(!(a.getLong())));
       break;
     default:
       assert(false);
@@ -1350,7 +1367,33 @@ class CstMonoSolver (S): CstSolver
   }
 
   override void processEvalStack(CstSliceOp op) {
-    _endFlag = 3;
+    if(_evalStack[$-3].getType != Type.NUM || _evalStack[$-2].getType != Type.NUM ||_evalStack[$-1].getType != Type.NUM){
+      _endFlag = 3;
+      return;
+    }
+    final switch (op) {
+    case CstSliceOp.SLICEINC:
+      _evalStack[$-1] = _evalStack[$-1] + Term(1);
+      goto doslice;
+    doslice:
+    case CstSliceOp.SLICE:
+      if(_evalStack[$-3].getNumType == NumType.UINT || _evalStack[$-3].getNumType == NumType.INT){
+	_evalStack[$-3] = _evalStack[$-3] << (Term(32) - _evalStack[$-1]);
+	_evalStack[$-3] = _evalStack[$-3] >> (Term(32) - _evalStack[$-1]);
+      }
+      else{
+	_evalStack[$-3] = _evalStack[$-3] << (Term(64) - _evalStack[$-1]);
+	_evalStack[$-3] = _evalStack[$-3] >> (Term(64) - _evalStack[$-1]);
+      }
+      _evalStack[$-3] = _evalStack[$-3] >> (_evalStack[$-2]);
+      _evalStack[$-3] = _evalStack[$-3] << (_evalStack[$-2]);
+      _evalStack.length -= 2;
+      break;
+    }
+    debug (MONOSOLVER){
+      import std.stdio;
+      writeln("slice operator used");
+    }
   }
   void generateInsideRange() {
     Term [] tempStack = [];
@@ -1409,17 +1452,21 @@ class CstMonoSolver (S): CstSolver
     for(size_t i = 0; i<_insideEqual.length-1; ++i){
       if(doesSatisfy(_insideEqual[i], CstCompareOp.EQU, _insideEqual[i+1])){
 	pushToEvalStack(false);
-	if(_rangeStack.length > 1){
+	_hasRand = false;
+	_insideEqual.length = 0;
+	_insideRange.length = 0;
+	/*if(_rangeStack.length > 1){
 	  processEvalStack(CstLogicOp.LOGICAND);
-	}
+	}*/
 	return;
       }
     }
     if(_insideRange.length == 0){
       pushToEvalStack(true);
-      if(_rangeStack.length > 1){
+      _insideEqual.length = 0;
+      /*if(_rangeStack.length > 1){
 	processEvalStack(CstLogicOp.LOGICAND);
-      }
+      }*/
       return;
     }
     foreach(i, elem; _insideEqual){
@@ -1433,9 +1480,9 @@ class CstMonoSolver (S): CstSolver
     }
     _insideEqual.length = 0;
     _insideRange.length = 0;
-    if(_rangeStack.length > 1){
+    /*if(_rangeStack.length > 1){
       processEvalStack(CstLogicOp.LOGICAND);
-    }
+      }*/
   }
   static bool compareTerms(Term a, Term b){
     return doesSatisfy(a, CstCompareOp.GTH, b);
@@ -2091,7 +2138,7 @@ class CstMonoSolver (S): CstSolver
     ulong num = 0;
     assert(_finalRange.length > 0);
     for(int i = 0; i < _finalRange.length - 1; i += 2){
-      num += _finalRange[i+1] - _finalRange[i] + 1;
+      num += (cast(ulong)(_finalRange[i+1]) - _finalRange[i] + 1);
     }
     return num;
   }
@@ -2103,7 +2150,7 @@ class CstMonoSolver (S): CstSolver
       writeln(rand);
     }
     for(i = 0; i < _finalRange.length - 1; i += 2) {
-      step = _finalRange[i+1] - _finalRange[i] + 1;
+      step = cast(ulong)(_finalRange[i+1]) - _finalRange[i] + 1;
       if (rand < step) break;
       else rand -= step;
     }
