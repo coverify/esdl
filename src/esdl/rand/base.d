@@ -174,6 +174,13 @@ class CstScope {
     else _level = _parent.getLevel() + 1;
   }
 
+  bool isRelated(CstDepIntf dep) {
+    if (_parent && _parent.isRelated(dep)) return true;
+    else if (_iter is null) return false;
+    else if (_iter.getLenVec == dep) return true;
+    else return false;
+  }
+  
   CstScope pop() {
     return _parent;
   }
@@ -429,18 +436,22 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     _state = State.GROUPED;
     // assert (_group is null && (! this.isSolved()));
     // _group = group;
-    foreach (pred; _rndPreds) {
-      // if (! pred.isGuard()) {
-      if (pred._state is CstPredicate.State.INIT && !pred.getmarkBefore()) {
-	pred.setGroupContext(group);
+    if (this.isRand()) {
+      foreach (pred; _rndPreds) {
+	// if (! pred.isGuard()) {
+	if (pred.isEnabled() &&
+	    pred._state is CstPredicate.State.INIT &&
+	    ! pred.getmarkBefore()) {
+	  pred.setGroupContext(group);
+	}
+	// }
       }
-      // }
-    }
-    if (_esdl__parentIsConstrained) {
-      CstDomSet parent = getParentDomSet();
-      assert (parent !is null);
-      if (parent._state is CstDomSet.State.INIT) {
-	parent.setGroupContext(group);
+      if (_esdl__parentIsConstrained) {
+	CstDomSet parent = getParentDomSet();
+	assert (parent !is null);
+	if (parent._state is CstDomSet.State.INIT) {
+	  parent.setGroupContext(group);
+	}
       }
     }
   }

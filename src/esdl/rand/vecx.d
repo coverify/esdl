@@ -196,7 +196,10 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 			    ref CstDepIntf[] idxs,
 			    ref CstDomBase[] bitIdxs,
 			    ref CstDepIntf[] deps) {
-	static if (RAND_ATTR.isRand()) {
+	// setDomainContext is executed right in the start
+	// dynamic rand_mode information is handled later
+	// do not use isRand here
+	static if (HAS_RAND_ATTRIB) {
 	  if (this.isDist()) {
 	    if (! canFind(dists, this)) dists ~= this;
 	  }
@@ -268,7 +271,16 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
       override bool opEquals(Object other) {
 	auto rhs = cast (RV) other;
 	if (rhs is null) return false;
-	else return (_parent == rhs._parent && _indexExpr == _indexExpr);
+	else {
+	  if (_indexExpr is null) {
+	    if (rhs._indexExpr !is null) return false;
+	    else return (_parent == rhs._parent && _pindex == rhs._pindex);
+	  }
+	  else {
+	    if (rhs._indexExpr is null) return false;
+	    else return (_parent == rhs._parent && _indexExpr == rhs._indexExpr);
+	  }
+	}
       }
       
       final override bool isStatic() {
@@ -347,7 +359,10 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 			    ref CstDepIntf[] idxs,
 			    ref CstDomBase[] bitIdxs,
 			    ref CstDepIntf[] deps) {
-	static if (RAND_ATTR.isRand()) {
+	// setDomainContext is executed right in the start
+	// dynamic rand_mode information is handled later
+	// do not use isRand here
+	static if (HAS_RAND_ATTRIB) {
 	  if (! this.isStatic()) {
 	    if (_type <= DomType.LAZYMONO) _type = DomType.MAYBEMONO;
 	  }
@@ -533,7 +548,7 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
   }
 
   void _esdl__doRandomize(_esdl__RandGen randGen) {
-    static if (HAS_RAND_ATTRIB) {
+    if (isRand()) {
       assert (_arrLen !is null);
       // if there is no constraint on the length of the array,
       // do not try to randomize it, since it will probably create a
@@ -552,7 +567,7 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
   // 	 this, cast(uint) i);
 
   uint maxArrLen() {
-    static if (HAS_RAND_ATTRIB) {
+    if (isRand()) {
       static if (isStaticArray!L) {
 	return cast(uint) L.length;
       }
@@ -903,7 +918,16 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
       override bool opEquals(Object other) {
 	auto rhs = cast (RV) other;
 	if (rhs is null) return false;
-	else return (_parent == rhs._parent && _indexExpr == _indexExpr);
+	else {
+	  if (_indexExpr is null) {
+	    if (rhs._indexExpr !is null) return false;
+	    else return (_parent == rhs._parent && _pindex == rhs._pindex);
+	  }
+	  else {
+	    if (rhs._indexExpr is null) return false;
+	    else return (_parent == rhs._parent && _indexExpr == rhs._indexExpr);
+	  }
+	}
       }
       
       final bool isRolled() {

@@ -341,7 +341,7 @@ class CstPredGroup			// group of related predicates
 	_solver.solve(this);
       }
       else if (_doms.length == 0) {
-	assert (_solver is null);
+	// assert (_solver is null);
 	_solver = null;
       }
       else {
@@ -467,13 +467,13 @@ class CstPredGroup			// group of related predicates
       // writeln("Marking Solved: ", pred.name());
       pred.markPredSolved();
     }
-    foreach (pred; _guards) {
-      if (! pred.tryResolve(_proxy)) {
-	assert (false, "Unresolved Guard: " ~ pred.name());
+    foreach (guard; _guards) {
+      if (! guard.tryResolve(_proxy)) {
+	assert (false, "Unresolved Guard: " ~ guard.name());
       }
       // else {
       // 	import std.stdio;
-      // 	writeln("Resolved Guard: ", pred.name());
+      // 	writeln("Resolved Guard: ", guard.name());
       // }
     }
     this.markSolved();
@@ -605,6 +605,16 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
   
+  // When urolling, disable the previously unrolled constraints
+  // if not required -- if the length is less now
+  bool _enabled = true;
+
+  bool isEnabled() {
+    if (_parent is null)
+      return _constraint.isEnabled() && _proxy.isRand();
+    else return _enabled && _parent.isEnabled();
+  }
+  
   uint _level;
   uint _unrollCycle;
   bool _markResolve = true;
@@ -652,6 +662,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     _statement = stmt;
     _proxy = proxy;
     _unrollIterVal = unrollIterVal;
+    _enabled = true;
     if (parent is null) {
       _scope = _proxy.currentScope();
       _level = 0;
@@ -737,73 +748,85 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	     ~ this.describe());
     }
     auto currLen = iter.size();
-    auto prevLen = _uwPreds.length;
     // import std.stdio;
     // writeln("size is ", currLen);
 
-    if (currLen > prevLen) {
-      // import std.stdio;
-      // writeln("Need to unroll ", currLen - _uwPreds.length, " times");
-      for (uint i = cast(uint) _uwPreds.length;
-	   i != currLen; ++i) {
-	// import std.stdio;
-	// writeln("i: ", i, " mapped: ", iter.mapIter(i));
-	if (_guard is null) {
-	  _uwPreds ~= new CstPredicate(_constraint, null, false, _statement, _proxy, _soft,
+    if (_uwPreds.length < currLen) _uwPreds.length = currLen;
+    
+    for (uint i=0; i != _uwPreds.length; ++i) {
+      CstPredicate _uwPred = _uwPreds[i];
+      if (i < currLen) {
+	if (_uwPred is null) {
+	  // import std.stdio;
+	  // writeln("i: ", i, " mapped: ", iter.mapIter(i));
+	  if (_guard is null) {
+	    _uwPred = new CstPredicate(_constraint, null, false, _statement, _proxy, _soft,
 				       _expr.unroll(iter, iter.mapIter(i)), _isGuard, this, iter, i// ,
 				       // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
 				       );
-	}
-	else {
-	  if (guardUnrolled) {
-	    CstPredicate guard = _guard._uwPreds[i];
-	    if (guard.tryResolve()) {
-	      bool enabled = guard.getBool() ^ guard._guardInv;
-	      if (enabled) {
-		_uwPreds ~= new CstPredicate(_constraint, null,
-					     false, _statement, _proxy, _soft,
+	  }
+	  else {
+	    if (guardUnrolled) {
+	      CstPredicate guard = _guard._uwPreds[i];
+	      if (guard !is null && guard.tryResolve(_proxy)) {
+		if (guard._expr.eval() ^ _guardInv) {
+		  _uwPred = new CstPredicate(_constraint, guard,
+					     _guardInv, _statement, _proxy, _soft,
 					     _expr.unroll(iter, iter.mapIter(i)),
 					     _isGuard, this, iter, i// ,
 					     // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
 					     );
+		}
+		else {		// guard disabled -- there is no predicate
+		  _uwPred = cast(CstPredicate) null;
+		}
 	      }
-	      else {		// guard disabled -- there is no predicate
-		_uwPreds ~= null;
-	      }
-	    }
-	    else {
-	      _uwPreds ~= new CstPredicate(_constraint, guard,
+	      else {
+		_uwPred = new CstPredicate(_constraint, guard,
 					   _guardInv, _statement, _proxy, _soft,
 					   _expr.unroll(iter, iter.mapIter(i)),
 					   _isGuard, this, iter, i// ,
 					   // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
 					   );
+	      }
 	    }
-	  }
-	  else {
-	    _uwPreds ~= new CstPredicate(_constraint, _guard,
+	    else {
+	      _uwPred = new CstPredicate(_constraint, _guard,
 					 _guardInv, _statement, _proxy, _soft,
 					 _expr.unroll(iter, iter.mapIter(i)),
 					 _isGuard, this, iter, i// ,
 					 // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
 					 );
+	    }
+	  }
+	  if (_uwPred !is null) {
+	    _uwPreds[i] = _uwPred;
+	    _proxy.addUnrolledNewPredicate(_uwPred);
 	  }
 	}
+	else {
+	  _uwPred._enabled = true;
+	  if (_guard !is null && guardUnrolled) {
+	    CstPredicate guard = _guard._uwPreds[i];
+	    if (guard !is null && guard.tryResolve(_proxy)) {
+	      if (! (guard._expr.eval() ^ _guardInv)) {
+		_uwPred._enabled = false;
+	      }
+	    }
+	  }
+	}
+	if (_uwPred !is null && _uwPred.isEnabled())
+	  _proxy.addUnrolledPredicate(_uwPreds[i]);
+	// for (size_t i=prevLen; i!=currLen; ++i) {
+	// 	if (_uwPreds[i] !is null)
+	// 	  _proxy.addUnrolledNewPredicate(_uwPreds[i]);
+	// 	// _uwPreds[i].setDomainContext(_uwPreds[i]);
+	// }
       }
-      for (size_t i=prevLen; i!=currLen; ++i) {
-	if (_uwPreds[i] !is null)
-	  _proxy.addUnrolledNewPredicate(_uwPreds[i]);
-	// _uwPreds[i].setDomainContext(_uwPreds[i]);
+      else {
+	if (_uwPred !is null) _uwPred._enabled = false;
       }
     }
-
-    // Do not use foreach here since we may have more elements in the
-    // array than the current value of currLen
-    for (size_t i=0; i!=currLen; ++i) {
-      if (_uwPreds[i] !is null)
-	_proxy.addUnrolledPredicate(_uwPreds[i]);
-    }
-    _uwLength = currLen;
   }
 
   final bool isResolved(bool force=false) {
@@ -1121,6 +1144,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     import std.conv: to;
     string description = "Predicate Name: " ~ name() ~ "\n";
     description ~= "Predicate ID: " ~ _id.to!string() ~ "\n    ";
+    description ~= "Is Enabled? " ~ _enabled.to!string ~ "\n    ";
     description ~= "Expr: " ~ _expr.describe() ~ "\n    ";
     description ~= "Context Set? " ~ _domainContextSet.to!string() ~ "\n    ";
     description ~= _scope.describe();
@@ -1282,19 +1306,28 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     this.execDepCbs();
   }
 
+  bool tryResolveFixed(_esdl__Proxy proxy) {
+    assert (isGuard());
+    if (_rnds.length > 0 || _vars.length > 0) return false;
+    else return tryResolve(proxy);
+  }
+  
   bool tryResolve(_esdl__Proxy proxy) {
     assert (isGuard());
-    bool success = true;
-    foreach (rnd; _rnds) {
-      if (! rnd.tryResolve(proxy)) {
-	success = false;
+    if (_varArrs.length > 0 || _rndArrs.length > 0) return false;
+    else {
+      bool success = true;
+      foreach (rnd; _rnds) {
+	if (! rnd.tryResolve(proxy)) {
+	  success = false;
+	}
       }
+      if (success) {
+	this.markPredSolved();
+	proxy.solvedSome();
+      }
+      return success;
     }
-    if (success) {
-      this.markPredSolved();
-      proxy.solvedSome();
-    }
-    return success;
   }
   
   bool isSolved() {

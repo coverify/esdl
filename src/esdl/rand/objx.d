@@ -245,6 +245,10 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	return _parent.isStatic();
       }
 
+      final override bool isReal() {
+	return _parent.isReal();
+      }
+
       final override bool isRolled() {
 	return _parent.isRolled();		// N == 0
       }
@@ -348,6 +352,11 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 		 _indexExpr.isIterator ||
 		 _indexExpr.isConst) &&
 		_parent.isStatic());
+      }
+
+      final override bool isReal() {
+	return (_indexExpr is null &&
+		_parent.isReal());
       }
 
       final override bool isRolled() {
@@ -780,6 +789,10 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	return _parent.isStatic();
       }
 
+      final bool isReal() {
+	return _parent.isReal();
+      }
+
       final string fullName() {
 	if (_parent is _root) return _name;
 	else  
@@ -937,6 +950,11 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 		 _indexExpr.isIterator ||
 		 _indexExpr.isConst) &&
 		_parent.isStatic());
+      }
+
+      final bool isReal() {
+	return (_indexExpr is null &&
+		_parent.isReal());
       }
 
       final string fullName() {

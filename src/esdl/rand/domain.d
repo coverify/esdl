@@ -773,7 +773,10 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
       }
     }
     if (listed is false) {
-      rnds ~= this;
+      if (pred._scope is null || ! pred._scope.isRelated(this))
+	rnds ~= this;
+      else
+	vars ~= this;
     }
     static if (HAS_RAND_ATTRIB) {
       if (! this.isStatic()) {

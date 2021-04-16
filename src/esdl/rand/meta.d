@@ -227,7 +227,7 @@ void _esdl__doInitConstraintElems(P, int I=0)(P p) {
   static if (I == P.tupleof.length) {
     return;
   }
-  else {
+  else if (p.isReal()) {
     alias Q = typeof (P.tupleof[I]);
     // pragma(msg, Q.stringof);
     static if (is (Q: _esdl__ConstraintBase)) {
@@ -251,7 +251,7 @@ void _esdl__doProcPredicateElems(P, int I=0)(P p, void function(_esdl__Constrain
   static if (I == P.tupleof.length) {
     return;
   }
-  else {
+  else if (p.isReal()) {
     alias Q = typeof (P.tupleof[I]);
     // pragma(msg, Q.stringof);
     static if (is (Q: _esdl__ConstraintBase)) {

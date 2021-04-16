@@ -347,6 +347,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     return true;
   }
 
+  bool isReal() {
+    return true;
+  }
+
   bool isRolled() {
     return false;
   }
@@ -836,7 +840,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   void addUnrolledPredicate(CstPredicate pred) {
     // import std.stdio;
-    // writeln("Adding: ", pred.describe());
+    // writeln("Adding : ", pred.name());
     _toUnrolledPreds ~= pred;
   }
 
