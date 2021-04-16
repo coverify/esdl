@@ -756,12 +756,29 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	}
 	else {
 	  if (guardUnrolled) {
-	    _uwPreds ~= new CstPredicate(_constraint, _guard._uwPreds[i],
-					 _guardInv, _statement, _proxy, _soft,
-					 _expr.unroll(iter, iter.mapIter(i)),
-					 _isGuard, this, iter, i// ,
-					 // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
-					 );
+	    CstPredicate guard = _guard._uwPreds[i];
+	    if (guard.tryResolve()) {
+	      bool enabled = guard.getBool() ^ guard._guardInv;
+	      if (enabled) {
+		_uwPreds ~= new CstPredicate(_constraint, null,
+					     false, _statement, _proxy, _soft,
+					     _expr.unroll(iter, iter.mapIter(i)),
+					     _isGuard, this, iter, i// ,
+					     // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
+					     );
+	      }
+	      else {		// guard disabled -- there is no predicate
+		_uwPreds ~= null;
+	      }
+	    }
+	    else {
+	      _uwPreds ~= new CstPredicate(_constraint, guard,
+					   _guardInv, _statement, _proxy, _soft,
+					   _expr.unroll(iter, iter.mapIter(i)),
+					   _isGuard, this, iter, i// ,
+					   // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
+					   );
+	    }
 	  }
 	  else {
 	    _uwPreds ~= new CstPredicate(_constraint, _guard,
@@ -774,7 +791,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	}
       }
       for (size_t i=prevLen; i!=currLen; ++i) {
-	_proxy.addUnrolledNewPredicate(_uwPreds[i]);
+	if (_uwPreds[i] !is null)
+	  _proxy.addUnrolledNewPredicate(_uwPreds[i]);
 	// _uwPreds[i].setDomainContext(_uwPreds[i]);
       }
     }
@@ -782,9 +800,9 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     // Do not use foreach here since we may have more elements in the
     // array than the current value of currLen
     for (size_t i=0; i!=currLen; ++i) {
-      _proxy.addUnrolledPredicate(_uwPreds[i]);
+      if (_uwPreds[i] !is null)
+	_proxy.addUnrolledPredicate(_uwPreds[i]);
     }
-
     _uwLength = currLen;
   }
 
