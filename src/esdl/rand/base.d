@@ -296,35 +296,6 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
 
   DomDistEnum _dist;
   final bool isDist() { return _dist >= DomDistEnum.DETECT; }
-  final bool isProperDist() {
-    if (_dist == DomDistEnum.NONE) return false;
-    if (_dist >= DomDistEnum.PROPER) return true;
-
-    bool isProper = true;
-
-    // now make sure that all the predicates related to this domain are
-    // not related to any other domain (ignoring conditions)
-    foreach (pred; getRandPreds()) {
-      if (pred.getDom() is this) {
-	pred.hasDistDomain(true);
-      }
-      else {
-	isProper = false;
-	break;
-      }
-    }
-
-    if (isProper) {
-      _dist = DomDistEnum.PROPER;
-    }
-    else {
-      foreach (pred; getRandPreds()) {
-	pred.hasDistDomain(false);
-      }
-    }
-
-    return isProper;
-  }
 
   final void isDist(bool b) {
     if (b) {
@@ -398,40 +369,19 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   //   return _group;
   // }
 
-  final void annotate(CstPredGroup group, bool withDist) {
+  final void annotate(CstPredGroup group) {
     // import std.stdio;
-    // writeln(this.name(), ": ", withDist);
+    // writeln("annotate: ", this.name());
     if (_domN == uint.max) {
-      if (withDist) {
-	if (this.isProperDist() && ! this.isSolved()) {
-	  _domN = group.addDistDomain(this);
-	}
-	else {
-	  if (! this.isSolved()) {
-	    _domN = group.addRandom(this);
-	  }
-	}
-      }
-      else {
-	if (this.isSolved()) {
-	  _domN = group.addVariable(this);
-	  if (_varN == uint.max) _varN = _root.indexVar();
-	}
-	else {
-	  // if (this.isProperDist()) {
-	  //   group.addDistDomain(this);
-	  // }
-	  _domN = group.addDomain(this);
-	}
-      }
+      if (_varN == uint.max) _varN = _root.indexVar();
+      if (this.isSolved()) _domN = group.addVariable(this);
+      else _domN = group.addDomain(this);
     }
   }
 
   void setGroupContext(CstPredGroup group) {
     // import std.stdio;
     // writeln("setGroupContext on: ", this.name());
-    if (isDist()) this.isProperDist();
-
     assert (_state is State.INIT && (! this.isSolved()));
     _state = State.GROUPED;
     // assert (_group is null && (! this.isSolved()));
@@ -689,7 +639,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   
   abstract bool isRand();
 
-  final bool isResolved() {
+  bool isResolved() {
     if (isRand()) {
       return _esdl__unresolvedArrLen == 0;
     }

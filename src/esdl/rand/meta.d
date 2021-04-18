@@ -799,7 +799,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       this.makeConstraints();
     }
 
-    CstPredicate[] _preds;
+    CstPredicate _pred;
     protected bool _initialized;
 
     override void makeConstraints() {
@@ -808,12 +808,12 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       static if (is (TOBJ: CstObjectStubBase) ||
 		 is (TOBJ: CstObjArrStubBase)) {
 	assert (obj !is null, OBJ ~ " is null");
-	_preds ~=
+	_pred =
 	  new CstVisitorPredicate(this, null, false, 0, this.outer, 0,
 				  new CstVarVisitorExpr(obj._esdl__get()), false);
       }
       else {
-	_preds ~=
+	_pred =
 	  new CstVisitorPredicate(this, null, false, 0, this.outer, 0,
 				  new CstVarVisitorExpr(obj), false);
       }
@@ -826,17 +826,19 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 
     final override CstPredicate[] getConstraints() {
       assert (_initialized);
-      return _preds;
+      return [_pred];
     }
 
     final override void setDomainContext() {
       // foreach (pred; _guards) pred.setDomainContext(pred);
-      foreach (pred; _preds)  pred.setDomainContext(pred);
+      _pred.setDomainContext(_pred);
+      // import std.stdio;
+      // writeln(_pred.describe());
     }
 
     final override void procDomainContext() {
       // foreach (pred; _guards) pred.procDomainContext();
-      foreach (pred; _preds)  pred.procDomainContext();
+      _pred.procDomainContext();
     }
 
   }

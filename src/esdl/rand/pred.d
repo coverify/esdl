@@ -56,16 +56,12 @@ class CstPredGroup			// group of related predicates
   Folder!(CstPredicate, "guards") _guards;
   Folder!(CstPredicate, "dynPreds") _dynPreds;
 
-  Folder!(CstPredicate, "distPreds") _distPreds;
-  Folder!(CstPredicate, "withDistPreds") _withDistPreds;
-  Folder!(CstPredicate, "disabledPreds") _disabledPreds;
-  
+  CstPredicate _distPred;
+
   Folder!(CstPredicate, "predList") _predList;
   Folder!(CstPredicate, "guardList") _guardList;
   Folder!(CstPredicate, "dynPredList") _dynPredList;
-  Folder!(CstPredicate, "distPredList") _distPredList;
-  Folder!(CstPredicate, "withDistPredList") _withDistPredList;
-  
+
   CstPredicate[] predicates() {
     return _preds[];
   }
@@ -95,14 +91,6 @@ class CstPredGroup			// group of related predicates
 
   void addDynPredicate(CstPredicate pred) {
     _dynPredList ~= pred;
-  }
-
-  void addDistPredicate(CstPredicate pred) {
-    _distPredList ~= pred;
-  }
-
-  void addWithDistPredicate(CstPredicate pred) {
-    _withDistPredList ~= pred;
   }
 
   // The flag _hasDynamicBinding gets set if there is at least one
@@ -146,20 +134,6 @@ class CstPredGroup			// group of related predicates
     _varArrs ~= varArr;
   }
 
-  Folder!(CstDomBase, "distDoms") _distDoms;
-  uint addDistDomain(CstDomBase dom) {
-    uint index = cast (uint) _distDoms.length;
-    _distDoms ~= dom;
-    return index;
-  }
-
-  Folder!(CstDomBase, "rnds") _rnds;
-  uint addRandom(CstDomBase rnd) {
-    uint index = cast (uint) _rnds.length;
-    _rnds ~= rnd;
-    return index;
-  }
-
   // If there are groups that are related. This will only be true if
   // the _hasDynamicBinding flag is true
   Folder!(CstPredGroup, "boundGroups") _boundGroups;
@@ -171,9 +145,7 @@ class CstPredGroup			// group of related predicates
     if (_state is State.NEEDSYNC ||
 	_proxy.needSync() is true ||
 	_predList.length != _preds.length ||
-	_dynPredList.length != _dynPreds.length ||
-	_distPredList.length != _distPreds.length ||
-	_withDistPredList.length != _withDistPreds.length) {
+	_dynPredList.length != _dynPreds.length) {
 
       _hasSoftConstraints = false;
       _hasVectorConstraints = false;
@@ -181,9 +153,6 @@ class CstPredGroup			// group of related predicates
 
       _state = State.NEEDSYNC;	// mark that we need to reassign a solver
 
-      foreach (pred; _disabledPreds) pred._group = null;
-      _disabledPreds.reset();
-      
       foreach (pred; _preds) pred._group = null;
       _preds.reset();
       foreach (pred; sort!((x, y) => x.name() < y.name())(_predList[])) {
@@ -199,18 +168,6 @@ class CstPredGroup			// group of related predicates
 	pred._group = this;
 	_guards ~= pred;
       }
-      foreach (pred; _distPreds) pred._group = null;
-      _distPreds.reset();
-      foreach (pred; sort!((x, y) => x.name() < y.name())(_distPredList[])) {
-	pred._group = this;
-	if (pred.isGuardEnabled) {
-	  _distPreds ~= pred;
-	}
-	else {
-	  pred.markPredSolved();
-	  _disabledPreds ~= pred;
-	}
-      }
       foreach (pred; _dynPreds) pred._group = null;
       _dynPreds.reset();
       foreach (pred; sort!((x, y) => x.name() < y.name())(_dynPredList[])) {
@@ -220,48 +177,17 @@ class CstPredGroup			// group of related predicates
 	if (pred._uniqueFlag is true) _hasUniqueConstraints = true;
 	_dynPreds ~= pred;
       }
-      foreach (pred; _withDistPreds) pred._group = null;
-      _withDistPreds.reset();
-      foreach (pred; sort!((x, y) => x.name() < y.name())(_withDistPredList[])) {
-	pred._group = this;
-	if (pred._soft != 0) _hasSoftConstraints = true;
-	if (pred._vectorOp != CstVectorOp.NONE) _hasVectorConstraints = true;
-	if (pred._uniqueFlag is true) _hasUniqueConstraints = true;
-	if (_distPreds.length > 0) {
-	  if (pred.isGuardEnabled) {
-	    _withDistPreds ~= pred;
-	  }
-	  else {
-	    pred.markPredSolved();
-	    _disabledPreds ~= pred;
-	  }
-	}
-	else {
-	  if (pred.isGuardEnabled) {
-	    _preds ~= pred;
-	  }
-	  else {
-	    pred.markPredSolved();
-	    _disabledPreds ~= pred;
-	  }
-	}
-      }
+      if (_distPred !is null) _distPred._group = this;
     }
     // for the next cycle
     _predList.reset();
     _guardList.reset();
-    _distPredList.reset();
     _dynPredList.reset();
-    _withDistPredList.reset();
   }
 
   void annotate() {
-    foreach (pred; _preds) pred.annotate(this, false);
-    foreach (pred; _distPreds) {
-      // import std.stdio;
-      // writeln("Annotating: ", pred.name);
-      pred.annotate(this, true);
-    }
+    if (_distPred !is null) _distPred.annotate(this);
+    foreach (pred; _preds) pred.annotate(this);
   }
 
   Charbuf _sig;
@@ -270,14 +196,6 @@ class CstPredGroup			// group of related predicates
     _sig.reset();
     _sig ~= "GROUP:\n";
     foreach (pred; _preds) {
-      if (! hasDistConstraints || pred.isGuardEnabled())
-	pred.writeSignature(_sig);
-    }
-    foreach (pred; _distPreds) {
-      if (! hasDistConstraints || pred.isGuardEnabled())
-	pred.writeSignature(_sig);
-    }
-    foreach (pred; _withDistPreds) {
       if (! hasDistConstraints || pred.isGuardEnabled())
 	pred.writeSignature(_sig);
     }
@@ -294,10 +212,13 @@ class CstPredGroup			// group of related predicates
   
   void reset() {
     _state = State.INIT;
+
+    if (_distPred !is null) {
+      _distPred.reset;
+      _distPred = null;
+    }
+    
     foreach (pred; _preds) pred.reset();
-    foreach (pred; _distPreds) pred.reset();
-    foreach (pred; _withDistPreds) pred.reset();
-    foreach (pred; _disabledPreds) pred.reset();
   }
 
   void needSync() {
@@ -322,151 +243,137 @@ class CstPredGroup			// group of related predicates
       writeln(describe());
     }
 
-    if (_state is State.NEEDSYNC) {
-      _doms.reset();
-      _vars.reset();
-      _rnds.reset();
-      annotate();
-      string sig = signature();
+    if (_distPred is null) {
+      if (_state is State.NEEDSYNC) {
+	_doms.reset();
+	_vars.reset();
+	annotate();
+	string sig = signature();
 
-      if (_proxy._esdl__debugSolver()) {
-	import std.stdio;
-	writeln(sig);
-      }
+	if (_proxy._esdl__debugSolver()) {
+	  import std.stdio;
+	  writeln(sig);
+	}
 
-      CstSolver* solverp = sig in _proxy._solvers;
+	CstSolver* solverp = sig in _proxy._solvers;
 
-      if (solverp !is null) {
-	_solver = *solverp;
-	_solver.solve(this);
-      }
-      else if (_doms.length == 0) {
-	// assert (_solver is null);
-	_solver = null;
-      }
-      else {
-	if (_hasSoftConstraints || _hasVectorConstraints) {
-	  if (_proxy._esdl__debugSolver()) {
-	    import std.stdio;
-	    writeln("Invoking Z3 because of Soft/Vector Constraints");
-	    writeln("_preds: ", _preds[]);
-	    foreach (pred; _preds) {
-	      writeln(pred.describe());
-	    }
-	    writeln(describe());
-	  }
-	  _solver = new CstZ3Solver(sig, this);
+	if (solverp !is null) {
+	  _solver = *solverp;
 	  _solver.solve(this);
 	}
 	else {
-	  bool monoFlag = false;
-	  if (_doms.length == 1) {
-	    if (_doms[0].bitcount() < 32) {
-	      _solver = new CstMonoSolver!int(sig, this);
+	  if (_hasSoftConstraints || _hasVectorConstraints) {
+	    if (_proxy._esdl__debugSolver()) {
+	      import std.stdio;
+	      writeln("Invoking Z3 because of Soft/Vector Constraints");
+	      writeln("_preds: ", _preds[]);
+	      foreach (pred; _preds) {
+		writeln(pred.describe());
+	      }
+	      writeln(describe());
 	    }
-	    else if (_doms[0].bitcount == 32) {
-	      if(_doms[0].signed()) {
+	    _solver = new CstZ3Solver(sig, this);
+	    _solver.solve(this);
+	  }
+	  else {
+	    bool monoFlag = false;
+	    if (_doms.length == 1) {
+	      if (_doms[0].bitcount() < 32) {
 		_solver = new CstMonoSolver!int(sig, this);
 	      }
-	      else{
-		_solver = new CstMonoSolver!uint(sig, this);
+	      else if (_doms[0].bitcount == 32) {
+		if(_doms[0].signed()) {
+		  _solver = new CstMonoSolver!int(sig, this);
+		}
+		else{
+		  _solver = new CstMonoSolver!uint(sig, this);
+		}
 	      }
-	    }
-	    else if (_doms[0].bitcount < 64) {
-	      _solver = new CstMonoSolver!long(sig, this);
-	    }
-	    else if (_doms[0].bitcount == 64) {
-	      if(_doms[0].signed()) {
+	      else if (_doms[0].bitcount < 64) {
 		_solver = new CstMonoSolver!long(sig, this);
 	      }
+	      else if (_doms[0].bitcount == 64) {
+		if(_doms[0].signed()) {
+		  _solver = new CstMonoSolver!long(sig, this);
+		}
+		else {
+		  _solver = new CstMonoSolver!ulong(sig, this);
+		}
+	      }
+	      if ( _solver !is null ) {
+		monoFlag = _solver.solve(this);
+	      }
+	    }
+	    if (! monoFlag) {
+	      uint totalBits;
+	      uint domBits;
+	      foreach (dom; _doms) {
+		// assert (! dom.isProperDist());
+		uint domBC = dom.bitcount();
+		totalBits += domBC;
+		domBits += domBC;
+	      }
+	      foreach (var; _vars) totalBits += var.bitcount();
+	      if (totalBits > 32 || _hasUniqueConstraints) {
+		if (_proxy._esdl__debugSolver()) {
+		  import std.stdio;
+		  writeln("Invoking Z3 because of > 32 bits");
+		  writeln(describe());
+		}
+		_solver = new CstZ3Solver(sig, this);
+		_solver.solve(this);
+	      }
 	      else {
-		_solver = new CstMonoSolver!ulong(sig, this);
+		_solver = new CstBuddySolver(sig, this);
+		_solver.solve(this);
 	      }
 	    }
-	    if ( _solver !is null ) {
-	      monoFlag = _solver.solve(this);
-	    }
 	  }
-	  if (! monoFlag) {
-	    uint totalBits;
-	    uint domBits;
-	    foreach (dom; _doms) {
-	      assert (! dom.isProperDist());
-	      uint domBC = dom.bitcount();
-	      totalBits += domBC;
-	      domBits += domBC;
-	    }
-	    foreach (var; _vars) totalBits += var.bitcount();
-	    if (totalBits > 32 || _hasUniqueConstraints) {
-	      if (_proxy._esdl__debugSolver()) {
-		import std.stdio;
-		writeln("Invoking Z3 because of > 32 bits");
-		writeln(describe());
-	      }
-	      _solver = new CstZ3Solver(sig, this);
-	      _solver.solve(this);
-	    }
-	    else {
-	      _solver = new CstBuddySolver(sig, this);
-	      _solver.solve(this);
-	    }
-	  }
+	  _proxy._solvers[sig] = _solver;
 	}
-	_proxy._solvers[sig] = _solver;
+	foreach (var; _vars) {
+	  var._domN = uint.max;
+	}
       }
-      foreach (var; _vars) {
-	var._domN = uint.max;
+      else {
+	// import std.stdio;
+	// writeln(_solver.describe());
+	// writeln("We are here");
+	if (_solver !is null) _solver.solve(this);
+      }
+      // import std.stdio;
+      // writeln(_solver.describe());
+      // _solver.solve(this);
+      foreach (pred; _preds) {
+	// import std.stdio;
+	// writeln("Marking Solved: ", pred.name());
+	pred.markPredSolved();
       }
     }
     else {
-      // import std.stdio;
-      // writeln(_solver.describe());
-      // writeln("We are here");
-      if (_solver !is null) _solver.solve(this);
-    }
-
-    foreach (rnd; _rnds) {
-      // import std.stdio;
-      // writeln("Randomizing: ", rnd.name());
-      rnd.randomizeWithoutConstraints(_proxy);
-    }
-
-    foreach (pred; _distPreds) {
-      // import std.stdio;
-      // writeln("Marking Solved: ", pred.name());
-      // import std.stdio;
-      // writeln(pred.name(), " guard enabled: ", pred.isGuardEnabled());
-      if (pred.isGuardEnabled()) {
-	CstDistSolverBase dist = pred._expr.getDist();
-	CstDomBase distDomain = pred.distDomain();
-	dist.reset();
-	foreach (wp; _withDistPreds) {
-	  if (wp.isGuardEnabled()) {
-	    bool compat = wp._expr.isCompatWithDist(distDomain);
-	    if (compat is false) assert (false, "can only use != operator on distributed domains");
-	    wp._expr.visit(dist);
-	    wp.markPredSolved();
-	  }
-	  else {
-	    wp.markPredSolved();
-	  }
+      assert (_distPred.isGuardEnabled());
+      CstDistSolverBase dist = _distPred._expr.getDist();
+      CstDomBase distDomain = _distPred.distDomain();
+      dist.reset();
+      foreach (wp; _preds) {
+	if (wp.isGuardEnabled()) {
+	  // import std.stdio;
+	  // writeln(wp.describe());
+	  bool compat = wp._expr.isCompatWithDist(distDomain);
+	  if (compat is false) assert (false, "can only use != operator on distributed domains");
+	  wp._expr.visit(dist);
+	  wp.markPredSolved();
 	}
-	dist.uniform(distDomain, _proxy._esdl__getRandGen());
-	_proxy.addSolvedDomain(distDomain);
-	pred.markPredSolved();
+	else {
+	  wp.markPredSolved();
+	}
       }
-      else {
-	pred.markPredSolved();
-      }
+      dist.uniform(distDomain, _proxy._esdl__getRandGen());
+      _proxy.addSolvedDomain(distDomain);
+      _distPred.markPredSolved();
     }
-    // import std.stdio;
-    // writeln(_solver.describe());
-    // _solver.solve(this);
-    foreach (pred; _preds) {
-      // import std.stdio;
-      // writeln("Marking Solved: ", pred.name());
-      pred.markPredSolved();
-    }
+
+
     foreach (guard; _guards) {
       if (! guard.tryResolve(_proxy)) {
 	assert (false, "Unresolved Guard: " ~ guard.name());
@@ -489,27 +396,19 @@ class CstPredGroup			// group of related predicates
 	description ~= "    " ~ pred.name() ~ '\n';
       }
     }
+    if (_distPred !is null) {
+      description ~= "  Dist Predicate:\n";
+      description ~= "    " ~ _distPred.name() ~ '\n';
+    }
     if (_guards.length > 0) {
       description ~= "  Guards:\n";
       foreach (pred; _guards) {
 	description ~= "    " ~ pred.name() ~ '\n';
       }
     }
-    if (_distPreds.length > 0) {
-      description ~= "  Dist Predicates:\n";
-      foreach (pred; _distPreds) {
-	description ~= "    " ~ pred.name() ~ '\n';
-      }
-    }
     if (_dynPreds.length > 0) {
       description ~= "  Dynamic Predicates:\n";
       foreach (pred; _dynPreds) {
-	description ~= "    " ~ pred.name() ~ '\n';
-      }
-    }
-    if (_withDistPreds.length > 0) {
-      description ~= "  With Dist Predicates:\n";
-      foreach (pred; _withDistPreds) {
 	description ~= "    " ~ pred.name() ~ '\n';
       }
     }
@@ -982,11 +881,13 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	  _rnds ~= dists[0];
 	}
 	else {
+	  _vars ~= dists[0];
 	  _deps ~= dists[0];
 	}
       }
       else {
 	foreach (dist; dists) {
+	  _vars ~= dist;
 	  _deps ~= dist;
 	}
       }
@@ -1220,22 +1121,24 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       if (this.withDist()) { assert (false); } // group.addWithDistPredicate(this);
       else                 group.addDynPredicate(this);
     }
-    else {
-      if (this.isDist()) {
-	assert (group.hasDistConstraints());
-	group.addDistPredicate(this);
-      }
-      else if (this.withDist()) {
-	assert (group.hasDistConstraints());
-	group.addWithDistPredicate(this);
-      }
-      else if (this.isGuard()) {
-	group.addGuard(this);
+    else if (this.isDist()) {
+      assert (group.hasDistConstraints());
+      if (this.isGuardEnabled()) {
+	if (group._distPred !is null) {
+	  assert (false,
+		  "It is illegal to have more than one dist predicate active on the same domain");
+	}
+	group._distPred = this;
       }
       else {
-	assert (! group.hasDistConstraints());
 	group.addPredicate(this);
       }
+    }
+    else if (this.isGuard()) {
+      group.addGuard(this);
+    }
+    else {
+      group.addPredicate(this);
     }
     foreach (dom; _rnds) {
       // if (dom.group is null && (! dom.isSolved())) {
@@ -1252,24 +1155,24 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
 
-  void annotate(CstPredGroup group, bool withDist) {
+  void annotate(CstPredGroup group) {
     assert (! this.isGuard());
     foreach (rnd; this._rnds) {
-      rnd.annotate(group, withDist);
+      rnd.annotate(group);
     }
     foreach (rndArr; this._rndArrs) {
       group.addDomainArr(rndArr);
       foreach (rnd; rndArr[]) {
-	rnd.annotate(group, withDist);
+	rnd.annotate(group);
       }
     }
     foreach (var; this._vars) {
-      var.annotate(group, withDist);
+      var.annotate(group);
     }
     foreach (varArr; this._varArrs) {
       group.addVariableArr(varArr);
       foreach (var; varArr[]) {
-	var.annotate(group, withDist);
+	var.annotate(group);
       }
     }
   }
@@ -1300,6 +1203,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
 
   void markPredSolved() {
+    // import std.stdio;
+    // writeln("marking predicate solved: ", describe());
     assert (this.isGuard() || _state == State.GROUPED);
     _state = State.SOLVED;
 

@@ -713,7 +713,7 @@ class CstInsideSetElem
 			ref CstDepIntf[] deps) {
     if (_arr !is null) {
       _arr.setDomainArrContext(pred, rnds, rndArrs, vars, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
-      assert (rndArrs.length > 0 || varArrs.length > 0);
+      // assert (rndArrs.length > 0 || varArrs.length > 0);
     }
     if (_lhs !is null)
       _lhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
@@ -1666,6 +1666,17 @@ class CstInsideArrExpr: CstLogicExpr
     if (_notinside) solver.processEvalStack(CstLogicOp.LOGICNOT);
   }
 
+  void visit(CstDistSolverBase solver) {
+    assert (_term == solver.getDomain());
+    assert (_notinside is true);
+    foreach (elem; _elems) {
+      // import std.stdio;
+      // writeln("visit CstDistSolverBase");
+      elem.visit(solver);
+    }
+  }
+  
+
   this(CstVecTerm term) {
     _term = term;
   }
@@ -1706,6 +1717,7 @@ class CstInsideArrExpr: CstLogicExpr
 	  foreach (rnd; rnds_) {
 	    // tdom.addDep(rnd);	// random has to be solved first
 	    deps ~= rnd;
+	    vars ~= rnd;
 	  }
 	}
 	return;
@@ -1721,12 +1733,6 @@ class CstInsideArrExpr: CstLogicExpr
     CstTerm term = cast(CstTerm) _term;
     if (_notinside && term == dom) return true;
     else return false;
-  }
-  
-  void visit (CstDistSolverBase solver) {
-    assert (_term == solver.getDomain());
-    assert (_notinside is true);
-    foreach (elem; _elems) elem.visit(solver);
   }
   
   bool isSolved() { return false; }
@@ -1933,6 +1939,7 @@ class CstVec2LogicExpr: CstLogicExpr
 	if (rdom !is null && rdom.isDist()) {
 	  // ldom.addDep(rdom);	// RHS needs to be solved first
 	  deps ~= rdom;
+	  vars ~= rdom;
 	  rnds ~= ldom;
 	  return;
 	}
@@ -1942,9 +1949,10 @@ class CstVec2LogicExpr: CstLogicExpr
 	  if (rnds_.length > 0) {
 	    foreach (rnd; rnds_) {
 	      // rnd.addDep(ldom);	// random variables will be solved only after this dist is resolved
-	      deps ~= ldom;
 	      rnds ~= rnd;
 	    }
+	    deps ~= ldom;
+	    vars ~= ldom;
 	    return;
 	  }
 	  else {
@@ -1963,9 +1971,10 @@ class CstVec2LogicExpr: CstLogicExpr
 	if (rnds_.length > 0) {
 	  foreach (rnd; rnds_) {
 	    // rnd.addDep(rdom);	// random variables will be solved only after this dist is resolved
-	    deps ~= rdom;
 	    rnds ~= rnd;
 	  }
+	  deps ~= rdom;
+	  vars ~= rdom;
 	  return;
 	}
 	else {
