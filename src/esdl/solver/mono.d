@@ -177,6 +177,7 @@ class CstMonoSolver (S): CstSolver
   CstDomBase [] _variables;
   bool _hasBeenSolved = false;
   bool _hasRand ;
+  bool isBool = false;
   Term [] _evalStack;
   byte _endFlag = 0;
   Range!S [] _rangeStack;
@@ -216,6 +217,11 @@ class CstMonoSolver (S): CstSolver
 	  import std.stdio;
 	  writeln("same domain used twice in one inequality, mono cant solve this");
 	}
+	return;
+      }
+      if(isBool){
+	S [2] temprange = [1,1];
+	_rangeStack ~= Range!S(temprange);
 	return;
       }
       uint n = domain.bitcount();
@@ -285,6 +291,10 @@ class CstMonoSolver (S): CstSolver
     }
     else {
       uint n = domain.bitcount();
+      if(domain.isBool()){
+	pushToEvalStack(domain.getBool());
+	return;
+      }
       /*if (n>32){
 	if (domain.signed()){
 	  _evalStack ~= Term(cast(long)domain.value()); 
@@ -540,6 +550,9 @@ class CstMonoSolver (S): CstSolver
   override bool solve(CstPredGroup group) {
     CstDomBase [] doms = group.domains();
     assert (doms.length == 1);
+
+    isBool = doms[0].isBool();
+    
     if(!checkDifference()){
       _count = counter();
       auto rand = _proxy._esdl__rGen.gen(0, _count);
@@ -652,14 +665,21 @@ class CstMonoSolver (S): CstSolver
       import std.stdio;
       writeln("all edge elements of the range tested successfully");
       }*/
-    int bitc = doms[0].bitcount();
-    if(bitc != 32 && bitc != 64){
-      trim(bitc, doms[0].signed());
-      debug (MONOSOLVER){
-	import std.stdio;
-	writeln("reducing _finalRange to fit in bitcount ", bitc);
-	writeln("finalRange now: ");
-	display(_finalRange);
+    if (isBool) {
+      S [2] temp = [0,1];
+      _rangeStack ~= Range!S(temp);
+      processEvalStack(CstLogicOp.LOGICAND);
+    }
+    else {
+      int bitc = doms[0].bitcount();
+      if(bitc != 32 && bitc != 64){
+	trim(bitc, doms[0].signed());
+	debug (MONOSOLVER){
+	  import std.stdio;
+	  writeln("reducing _finalRange to fit in bitcount ", bitc);
+	  writeln("finalRange now: ");
+	  display(_finalRange);
+	}
       }
     }
     if (_finalRange.length == 0) {
@@ -1280,9 +1300,129 @@ class CstMonoSolver (S): CstSolver
       }
       break;
     case CstLogicOp.LOGICEQ:
-      assert (false, "TBD");
+      auto tempRangeType1 = _rangeStack[$-1].getType();
+      auto tempRangeType2 = _rangeStack[$-2].getType();
+      if(tempRangeType1 == RangeType.NUL){
+	if(tempRangeType2 == RangeType.NUL){
+	  //false == false
+	  _rangeStack.length -= 2;
+	  S [2] tmp = [S.min, S.max];
+	  _rangeStack ~= Range!S(tmp);
+	}
+	else if(_rangeStack[$-2].getS()[0] == 1){
+	  //domain == false
+	  _rangeStack.length -= 2;
+	  S [2] tmp = [0, 0];
+	  _rangeStack ~= Range!S(tmp);
+	}
+	else{
+	  //true == false
+	  _rangeStack.length -= 2;
+	  _rangeStack ~= Range!S(false);
+	}
+      }
+      else if (_rangeStack[$-1].getS()[0] == 1){
+	if(tempRangeType2 == RangeType.NUL){
+	  //false == domain
+	  _rangeStack.length -= 2;
+	  S [2] tmp = [0, 0];
+	  _rangeStack ~= Range!S(tmp);
+	}
+	else if(_rangeStack[$-2].getS()[0] == 1){
+	  //domain == domain
+	  _rangeStack.length -= 2;
+	  S [2] tmp = [S.min, S.max];
+	  _rangeStack ~= Range!S(tmp);
+	}
+	else{
+	  //true == domain
+	  _rangeStack.length -= 2;
+	  S [2] tmp = [1,1];
+	  _rangeStack ~= Range!S(tmp);
+	}
+      }
+      else{
+	if(tempRangeType2 == RangeType.NUL){
+	  //false == true
+	  _rangeStack.length -= 2;
+	  _rangeStack ~= Range!S(false);
+	}
+	else if(_rangeStack[$-2].getS()[0] == 1){
+	  //domain == true
+	  _rangeStack.length -= 2;
+	  S [2] tmp = [1, 1];
+	  _rangeStack ~= Range!S(tmp);
+	}
+	else{
+	  //true == true
+	  _rangeStack.length -= 2;
+	  S [2] tmp = [S.min, S.max];
+	  _rangeStack ~= Range!S(tmp);
+	}
+      }
+      
+      break;
     case CstLogicOp.LOGICNEQ:
-      assert (false, "TBD");
+      auto tempRangeType1 = _rangeStack[$-1].getType();
+      auto tempRangeType2 = _rangeStack[$-2].getType();
+      if(tempRangeType1 == RangeType.NUL){
+	if(tempRangeType2 == RangeType.NUL){
+	  //false != false
+	  _rangeStack.length -= 2;
+	  _rangeStack ~= Range!S(false);
+	}
+	else if(_rangeStack[$-2].getS()[0] == 1){
+	  //domain != false
+	  _rangeStack.length -= 2;
+	  S [2] tmp = [1, 1];
+	  _rangeStack ~= Range!S(tmp);
+	}
+	else{
+	  //true != false
+	  _rangeStack.length -= 2;
+	  S [2] tmp = [S.min, S.max];
+	  _rangeStack ~= Range!S(tmp);
+	}
+      }
+      else if (_rangeStack[$-1].getS()[0] == 1){
+	if(tempRangeType2 == RangeType.NUL){
+	  //false != domain
+	  _rangeStack.length -= 2;
+	  S [2] tmp = [1, 1];
+	  _rangeStack ~= Range!S(tmp);
+	}
+	else if(_rangeStack[$-2].getS()[0] == 1){
+	  //domain != domain
+	  _rangeStack.length -= 2;
+	  _rangeStack ~= Range!S(false);
+	}
+	else{
+	  //true != domain
+	  _rangeStack.length -= 2;
+	  S [2] tmp = [0, 0];
+	  _rangeStack ~= Range!S(tmp);
+	}
+      }
+      else{
+	if(tempRangeType2 == RangeType.NUL){
+	  //false != true
+	  _rangeStack.length -= 2;
+	  S [2] tmp = [S.min, S.max];
+	  _rangeStack ~= Range!S(tmp);
+	}
+	else if(_rangeStack[$-2].getS()[0] == 1){
+	  //domain != true
+	  _rangeStack.length -= 2;
+	  S [2] tmp = [0, 0];
+	  _rangeStack ~= Range!S(tmp);
+	}
+	else{
+	  //true != true
+	  _rangeStack.length -= 2;
+	  _rangeStack ~= Range!S(false);
+	}
+      }
+      break;
     }
     debug (MONOSOLVER){
       import std.stdio;
