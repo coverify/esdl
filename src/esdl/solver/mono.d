@@ -37,12 +37,70 @@ struct Range (T)
     assert (type == RangeType.STA);
     return _sRange;
   }
-  ref T[] getD(){
+  ref T[] getD() {
     assert (type == RangeType.DYN);
     return _dRange;
   }
   void setType(RangeType x){
     type = x;
+  }
+  void reverseRange(){
+    final switch (getType()){
+    case RangeType.STA:
+      //T[2] temp = range.getS();
+      if(_sRange == [T.min, T.max]){
+        setType(RangeType.NUL);
+	break;
+      }
+      T a = _sRange[0];
+      _sRange[0] = _sRange[1] + 1;
+      _sRange[1] = a - 1;
+      break;
+    case RangeType.NUL:
+      _sRange = [T.min, T.max];
+      //range = Range!T(temp);
+      setType(RangeType.STA);
+      break;
+    case RangeType.DYN:
+      //T[] temp = range.getD();
+      if (_dRange[0] == T.min){
+	_dRange = _dRange[1 .. $];
+      }
+      else{
+	_dRange ~= _dRange[$-1];
+	for(size_t i = _dRange.length - 2; i > 0; --i){
+	  _dRange[i] = _dRange[i-1];
+	}
+	_dRange[0] = T.max;
+      }
+      // import std.stdio;
+      // writeln();
+      // for(size_t i = 0; i < _dRange.length; ++i){
+      // 	write(_dRange[i]);
+      // }
+      // writeln();
+      if (_dRange[$-1] == T.max){
+	// writeln("ERROR");
+	_dRange.length -= 1;
+      }
+      else{
+	// writeln("NO ERROR");
+	_dRange ~= T.min;
+      }
+      
+      for(size_t i = 0; i < _dRange.length; ++i){
+	if(i%2 == 0){
+	  _dRange[i] ++;
+	}
+	else{
+	  _dRange[i] --;
+	}
+      }
+      if(_dRange.length == 0){
+	setType(RangeType.NUL);
+      }
+      // range.getD().length = temp.length;
+    }
   }
 }
 struct Term
@@ -1243,10 +1301,10 @@ class CstMonoSolver (S): CstSolver
       }
       break;
     case CstLogicOp.LOGICNOT:
-      reverseRange(_rangeStack[$-1]);
+      _rangeStack[$-1].reverseRange();
       break;
     case CstLogicOp.LOGICIMP:
-      reverseRange(_rangeStack[$-2]);
+      _rangeStack[$-2].reverseRange();
       final switch(_rangeStack[$-1].getType()){
       case RangeType.DYN:
 	final switch(_rangeStack[$-2].getType()){
@@ -2767,7 +2825,7 @@ class CstMonoSolver (S): CstSolver
     range[0] = range[1];
     range[1] = temp;
   }
-  void reverseRange(ref Range!S range){
+  /*void reverseRange(ref Range!S range){
     final switch (range.getType()){
     case RangeType.STA:
       S[2] temp = range.getS();
@@ -2784,28 +2842,46 @@ class CstMonoSolver (S): CstSolver
       range = Range!S(temp);
       break;
     case RangeType.DYN:
-      S[] temp = range.getD();
-      if (temp[0] == S.min){
-	temp = temp[1 .. $];
+      //S[] temp = range.getD();
+      if (range.getD[0] == S.min){
+	range.getD = range.getD[1 .. $];
       }
       else{
-	temp ~= temp[$-1];
-	for(size_t i = temp.length - 2; i > 0; --i){
-	  temp[i] = temp[i-1];
+	range.getD ~= range.getD[$-1];
+	for(size_t i = range.getD.length - 2; i > 0; --i){
+	  range.getD[i] = range.getD[i-1];
 	}
-	temp[0] = S.min;
+	range.getD[0] = S.max;
       }
-      if (temp[$-1] == S.max){
-	temp.length -= 1;
+      // import std.stdio;
+      // writeln();
+      // for(size_t i = 0; i < range.getD.length; ++i){
+      // 	write(range.getD[i]);
+      // }
+      // writeln();
+      if (range.getD[$-1] == S.max){
+	// writeln("ERROR");
+	range.getD.length -= 1;
       }
       else{
-	temp ~= [S.max];
+	// writeln("NO ERROR");
+	range.getD ~= S.min;
       }
-      if(temp.length == 0){
+      
+      for(size_t i = 0; i < range.getD.length; ++i){
+	if(i%2 == 0){
+	  range.getD[i] ++;
+	}
+	else{
+	  range.getD[i] --;
+	}
+      }
+      if(range.getD.length == 0){
 	range.setType(RangeType.NUL);
       }
+      // range.getD().length = temp.length;
     }
-  }
+    }*/
   void display(Term[] Stack){
     import std.stdio;
     writeln();
