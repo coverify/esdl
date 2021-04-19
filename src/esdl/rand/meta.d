@@ -561,6 +561,7 @@ mixin template Randomization()
 	_esdl__doInitConstraintElems(this);
 	_esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);
 	_esdl__doProcPredicateElems(this, &_esdl__doProcDomainContext);
+	setContextGlobalVisitors();
       }
     }
   }
@@ -589,6 +590,7 @@ mixin template Randomization()
 	_esdl__doInitConstraintElems(this);
 	_esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);
 	_esdl__doProcPredicateElems(this, &_esdl__doProcDomainContext);
+	setContextGlobalVisitors();
       }
     }
   }
@@ -726,6 +728,7 @@ class _esdl__ProxyNoRand(_esdl__T)
 	  _esdl__doInitConstraintElems(this);
 	  _esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);
 	  _esdl__doProcPredicateElems(this, &_esdl__doProcDomainContext);
+	  setContextGlobalVisitors();
 	}
 
       }
@@ -757,6 +760,7 @@ class _esdl__ProxyNoRand(_esdl__T)
 	  _esdl__doInitConstraintElems(this);
 	  _esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);
 	  _esdl__doProcPredicateElems(this, &_esdl__doProcDomainContext);
+	  setContextGlobalVisitors();
 	}
       }
 
@@ -911,6 +915,9 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     assert (this._esdl__outer !is null);
     _esdl__preRandomize(this._esdl__outer);
     _esdl__doConstrainElems(this, proxy);
+    foreach (visitor; getGlobalVisitors()) {
+      foreach (pred; visitor.getConstraints()) proxy.addNewPredicate(pred);
+    }
   }
 
   override void _esdl__doRandomize(_esdl__RandGen randGen) {
@@ -936,6 +943,60 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   override bool _esdl__debugSolver() {
     return _esdl__DEBUGSOVER;
   }
+}
+
+// Visitor Constraint for Global Variables
+class _esdl__Constraint(TOBJ): _esdl__ConstraintBase
+{
+  this(_esdl__Proxy eng, string name, TOBJ obj) {
+    assert(obj !is null);
+    _obj = obj;
+    super(eng, name, "VISITOR CONSTRAINT");
+    this.makeConstraints();
+  }
+
+  CstPredicate _pred;
+  protected bool _initialized;
+
+  TOBJ _obj;
+
+  override void makeConstraints() {
+    static if (is (TOBJ: CstObjectStubBase) ||
+	       is (TOBJ: CstObjArrStubBase)) {
+      assert (_obj !is null, TOBJ.stringof ~ " is null");
+      _pred =
+	new CstVisitorPredicate(this, null, false, 0, this.outer, 0,
+				new CstVarVisitorExpr(_obj._esdl__get()), false);
+    }
+    else {
+      _pred =
+	new CstVisitorPredicate(this, null, false, 0, _proxy, 0,
+				new CstVarVisitorExpr(_obj), false);
+    }
+    _initialized = true;
+  }
+
+  final override CstPredicate[] getConstraintGuards() {
+    return null;
+  }
+
+  final override CstPredicate[] getConstraints() {
+    assert (_initialized);
+    return [_pred];
+  }
+
+  final override void setDomainContext() {
+    // foreach (pred; _guards) pred.setDomainContext(pred);
+    _pred.setDomainContext(_pred);
+    // import std.stdio;
+    // writeln(_pred.describe());
+  }
+
+  final override void procDomainContext() {
+    // foreach (pred; _guards) pred.procDomainContext();
+    _pred.procDomainContext();
+  }
+
 }
 
 auto _esdl__sym(L)(L l, string name,
@@ -1069,6 +1130,9 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
     else {
       CstVecArrType obj = new CstVecArrType(name, parent, &V);
       parent.addGlobalLookup(obj, V.stringof);
+      auto visitor =
+	new _esdl__Constraint!CstVecArrType(parent, name ~ "_CstVisitor", obj);
+      parent.addGlobalVisitor(visitor);
       return obj;
     }
   }
@@ -1082,6 +1146,9 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
     else {
       CstObjArrType obj = new CstObjArrType(name, parent, &V);
       parent.addGlobalLookup(obj, V.stringof);
+      auto visitor =
+	new _esdl__Constraint!CstObjArrType(parent, name ~ "_CstVisitor", obj);
+      parent.addGlobalVisitor(visitor);
       return obj;
     }
   }

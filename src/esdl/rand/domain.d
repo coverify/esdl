@@ -639,20 +639,22 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   }
 
   override bool tryResolve(_esdl__Proxy proxy) {
-    import std.algorithm.iteration: filter;
-    // if (isMarkedSolved()) { return true; }
-    // else {
-    if (isRand() && isSolved()) {
-      execCbs();
-      return true;
-    }
-    if (! isRand()) {
-      markSolved();
-      _parent.buildElements(_parent.getLen());
-      execCbs();
-      return true;
-    }
+    // Let visitor constraints do the needful via forceResolve
     return false;
+
+    // import std.algorithm.iteration: filter;
+    // // if (isMarkedSolved()) { return true; }
+    // // else {
+    // if (isRand() && isSolved()) {
+    //   execCbs();
+    //   return true;
+    // }
+    // if (! isRand()) {
+    //   markSolved();
+    //   _parent.buildElements(_parent.getLen());
+    //   execCbs();
+    //   return true;
+    // }
     // }
   }
 

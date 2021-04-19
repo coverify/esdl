@@ -209,6 +209,23 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     else return null;
   }
 
+  _esdl__ConstraintBase[] _globalVisitors;
+
+  void addGlobalVisitor(_esdl__ConstraintBase visitor) {
+    _globalVisitors ~= visitor;
+  }
+
+  void setContextGlobalVisitors() {
+    foreach (visitor; _globalVisitors) {
+      visitor.setDomainContext();
+      visitor.procDomainContext();
+    }
+  }
+
+  _esdl__ConstraintBase[] getGlobalVisitors() {
+    return _globalVisitors;
+  }
+
   Folder!(CstPredicate, "unrolledNewPreds") _unrolledNewPreds;
 
   void addUnrolledNewPredicate(CstPredicate pred) {
