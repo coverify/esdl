@@ -20,6 +20,9 @@ import esdl.solver.buddy: CstBuddySolver;
 
 class CstPredGroup			// group of related predicates
 {
+  __gshared uint _count;
+  immutable uint _id;
+
   // solve cycle for which this group is getting processed. If this
   // _cycle matches solver _cycle, that would mean this group is
   // already processed
@@ -29,7 +32,6 @@ class CstPredGroup			// group of related predicates
   bool _hasVectorConstraints;
   bool _hasUniqueConstraints;
   bool _hasDistContraints;
-
 
   bool hasSoftConstraints() {
     return _hasSoftConstraints;
@@ -67,8 +69,6 @@ class CstPredGroup			// group of related predicates
   }
 
   _esdl__Proxy _proxy;
-  __gshared uint _count;
-  immutable uint _id;
   
   this(_esdl__Proxy proxy) {
     _proxy = proxy;
@@ -277,7 +277,11 @@ class CstPredGroup			// group of related predicates
 	  }
 	  else {
 	    bool monoFlag = false;
-	    if (_doms.length == 1) {
+	    if (_preds.length == 1 && _preds[0].isVisitor()) {
+	      _preds[0]._dom.forceResolve(_proxy);
+	      monoFlag = true;
+	    }
+	    else if (_doms.length == 1) {
 	      if (_doms[0].bitcount() < 32) {
 		_solver = new CstMonoSolver!int(sig, this);
 	      }
@@ -329,7 +333,7 @@ class CstPredGroup			// group of related predicates
 	      }
 	    }
 	  }
-	  _proxy._solvers[sig] = _solver;
+	  if (_solver !is null) _proxy._solvers[sig] = _solver;
 	}
 	foreach (var; _vars) {
 	  var._domN = uint.max;

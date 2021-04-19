@@ -846,8 +846,9 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   void procNewPredicate(CstPredicate pred) {
     pred.tryResolveDeps(this);
-    if(pred.getExpr().isOrderingExpr()) {
-      
+    if (pred.getExpr().isOrderingExpr()) { }
+    else if (pred.isVisitor()) {
+      procResolved(pred);
     }
     else if (pred._iters.length > 0) {
       _toRolledPreds ~= pred;
@@ -874,7 +875,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   void procUnrolledPredicate(CstPredicate pred) {
     pred.tryResolveDeps(this);
-    if (pred._iters.length == 0) {
+    if (pred.isVisitor()) {
+      procResolved(pred);
+    }
+    else if (pred._iters.length == 0) {
       if (pred.isResolved(true)) {
 	procResolved(pred);
       }

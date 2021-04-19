@@ -624,29 +624,36 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     solver.pushToEvalStack(this);
   }
 
+  override void forceResolve(_esdl__Proxy proxy) {
+    import std.algorithm.iteration: filter;
+    // if (! isMarkedSolved()) {
+    if (isRand() && isSolved()) {
+      execCbs();
+    }
+    else {
+      markSolved();
+      _parent.buildElements(_parent.getLen());
+      execCbs();
+    }
+    // }
+  }
+
   override bool tryResolve(_esdl__Proxy proxy) {
     import std.algorithm.iteration: filter;
-    if (isSolved()) {
+    // if (isMarkedSolved()) { return true; }
+    // else {
+    if (isRand() && isSolved()) {
       execCbs();
       return true;
     }
-    if ((! isSolved()) && isStatic() && (! isRolled())) {
-      if (_rndPreds.length == 0 ||
-	  _rndPreds.filter!(pred => ! pred.isGuard()).empty()) {
-	_esdl__doRandomize(getProxyRoot()._esdl__getRandGen());
-	proxy.solvedSome();
-	markSolved();
-	proxy.addSolvedDomain(this);
-	execCbs();
-	return true;
-      }
-    }
     if (! isRand()) {
+      markSolved();
       _parent.buildElements(_parent.getLen());
       execCbs();
       return true;
     }
     return false;
+    // }
   }
 
   override void _esdl__doRandomize(_esdl__RandGen randGen) {

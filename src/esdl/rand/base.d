@@ -310,6 +310,11 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   
   abstract long value();
   
+  void forceResolve(_esdl__Proxy proxy) {
+    if (! tryResolve(proxy))
+	assert (false, "Unable to resolve domain: " ~ name());
+  }
+
   bool tryResolve(_esdl__Proxy proxy) {
     import std.algorithm.iteration: filter;
     if (isSolved()) {
@@ -339,11 +344,15 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
       stderr.writeln("Marking ", this.name(), " as SOLVED");
     }
     _tempPreds.reset();
-    assert (_state != State.SOLVED, this.name() ~
-	    " already marked as solved");
+    // assert (_state != State.SOLVED, this.name() ~
+    // 	    " already marked as solved");
     _state = State.SOLVED;
   }
 
+  bool isMarkedSolved() {
+    return _state == State.SOLVED;
+  }
+  
   override final bool isSolved() {
     if (isRand()) {
       if (_state == State.SOLVED) return true;
@@ -640,12 +649,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   abstract bool isRand();
 
   bool isResolved() {
-    if (isRand()) {
-      return _esdl__unresolvedArrLen == 0;
-    }
-    else {
-      return true;
-    }
+    return _esdl__unresolvedArrLen == 0;
   }
 
   abstract void markSolved();
@@ -668,6 +672,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     foreach (dom; this[]) {
       // import std.stdio;
       // writeln("Visiting: ", dom.fullName());
+      // writeln("Purging: ", dom.value());
       solver.purge(dom.value());
     }
   }

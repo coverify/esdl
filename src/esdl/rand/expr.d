@@ -1738,7 +1738,8 @@ class CstInsideArrExpr: CstLogicExpr
   bool isSolved() { return false; }
 
   void writeExprString(ref Charbuf str) {
-    str ~= "(INSIDE ";
+    if (_notinside) str ~= "(INSIDE ";
+    else            str ~= "(! INSIDE ";
     _term.writeExprString(str);
     str ~= " [";
     foreach (elem; _elems)
@@ -2191,7 +2192,7 @@ class CstVarVisitorExpr: CstLogicExpr
   }
 
   void visit(CstSolver solver) {
-    assert (false);
+    solver.pushToEvalStack(true);
   }
 
   override CstVarVisitorExpr unroll(CstIterator iter, ulong n) {
@@ -2220,6 +2221,7 @@ class CstVarVisitorExpr: CstLogicExpr
     CstIterator iter = _obj._esdl__iter();
     if (iter !is null) {
       iter.setDomainContext(pred, rnds, rndArrs, vars, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
+      rnds ~= iter.getLenVec();
     }
   }
 
