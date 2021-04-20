@@ -344,8 +344,8 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
       stderr.writeln("Marking ", this.name(), " as SOLVED");
     }
     _tempPreds.reset();
-    // assert (_state != State.SOLVED, this.name() ~
-    // 	    " already marked as solved");
+    assert (_state != State.SOLVED, this.name() ~
+	    " already marked as solved");
     _state = State.SOLVED;
   }
 

@@ -626,7 +626,6 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 
   override void forceResolve(_esdl__Proxy proxy) {
     import std.algorithm.iteration: filter;
-    // if (! isMarkedSolved()) {
     if (isRand() && isSolved()) {
       execCbs();
     }
@@ -635,7 +634,6 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
       _parent.buildElements(_parent.getLen());
       execCbs();
     }
-    // }
   }
 
   override bool tryResolve(_esdl__Proxy proxy) {
@@ -643,8 +641,6 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     return false;
 
     // import std.algorithm.iteration: filter;
-    // // if (isMarkedSolved()) { return true; }
-    // // else {
     // if (isRand() && isSolved()) {
     //   execCbs();
     //   return true;
@@ -654,7 +650,6 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     //   _parent.buildElements(_parent.getLen());
     //   execCbs();
     //   return true;
-    // }
     // }
   }
 

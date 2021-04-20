@@ -388,7 +388,7 @@ template _esdl__ConstraintsDecl(T, int I=0)
     }
     else static if (isRandVectorSet!L || isRandStructSet!L || isRandClassSet!L) {
       enum _esdl__ConstraintsDecl =
-	"  _esdl__Constraint!(\"" ~ NAME ~ "\") _esdl__visitorCst_"
+	"  _esdl__VisitorCst!(\"" ~ NAME ~ "\") _esdl__visitorCst_"
 	~ NAME ~ ";\n"  ~ _esdl__ConstraintsDecl!(T, I+1);
     }
     else {
@@ -796,7 +796,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     mixin(rnd).constraint_mode(mode);
   }
 
-  class _esdl__Constraint(string OBJ): _esdl__ConstraintBase
+  class _esdl__VisitorCst(string OBJ): _esdl__ConstraintBase
   {
     this(_esdl__Proxy eng, string name) {
       super(eng, name, OBJ);
@@ -946,7 +946,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 }
 
 // Visitor Constraint for Global Variables
-class _esdl__Constraint(TOBJ): _esdl__ConstraintBase
+class _esdl__VisitorCst(TOBJ): _esdl__ConstraintBase
 {
   this(_esdl__Proxy eng, string name, TOBJ obj) {
     assert(obj !is null);
@@ -1131,7 +1131,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       CstVecArrType obj = new CstVecArrType(name, parent, &V);
       parent.addGlobalLookup(obj, V.stringof);
       auto visitor =
-	new _esdl__Constraint!CstVecArrType(parent, name ~ "_CstVisitor", obj);
+	new _esdl__VisitorCst!CstVecArrType(parent, name ~ "_CstVisitor", obj);
       parent.addGlobalVisitor(visitor);
       return obj;
     }
@@ -1147,7 +1147,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       CstObjArrType obj = new CstObjArrType(name, parent, &V);
       parent.addGlobalLookup(obj, V.stringof);
       auto visitor =
-	new _esdl__Constraint!CstObjArrType(parent, name ~ "_CstVisitor", obj);
+	new _esdl__VisitorCst!CstObjArrType(parent, name ~ "_CstVisitor", obj);
       parent.addGlobalVisitor(visitor);
       return obj;
     }

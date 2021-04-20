@@ -279,6 +279,7 @@ class CstPredGroup			// group of related predicates
 	    bool monoFlag = false;
 	    if (_preds.length == 1 && _preds[0].isVisitor()) {
 	      _preds[0]._dom.forceResolve(_proxy);
+	      _proxy.addSolvedDomain(_preds[0]._dom);
 	      monoFlag = true;
 	    }
 	    else if (_doms.length == 1) {
