@@ -185,7 +185,21 @@ class CstPredGroup			// group of related predicates
     _dynPredList.reset();
   }
 
+  void setAnnotation() {
+    foreach (i, dom; _doms) {
+      assert (dom !is null);
+      dom.setAnnotation(cast(uint) i);
+    }
+    foreach (i, dom; _vars) {
+      assert (dom !is null);
+      dom.setAnnotation(cast(uint) i);
+    }
+  }
+
   void annotate() {
+    _doms.reset();
+    _vars.reset();
+
     if (_distPred !is null) _distPred.annotate(this);
     foreach (pred; _preds) pred.annotate(this);
   }
@@ -245,8 +259,6 @@ class CstPredGroup			// group of related predicates
 
     if (_distPred is null) {
       if (_state is State.NEEDSYNC) {
-	_doms.reset();
-	_vars.reset();
 	annotate();
 	string sig = signature();
 
@@ -336,14 +348,12 @@ class CstPredGroup			// group of related predicates
 	  }
 	  if (_solver !is null) _proxy._solvers[sig] = _solver;
 	}
-	foreach (var; _vars) {
-	  var._domN = uint.max;
-	}
       }
       else {
 	// import std.stdio;
 	// writeln(_solver.describe());
 	// writeln("We are here");
+	setAnnotation();
 	if (_solver !is null) _solver.solve(this);
       }
       // import std.stdio;
@@ -389,6 +399,10 @@ class CstPredGroup			// group of related predicates
       // }
     }
     this.markSolved();
+
+    foreach (dom; _doms) dom.setAnnotation(uint.max);
+    foreach (dom; _vars) dom.setAnnotation(uint.max);
+    
   }
       
 
@@ -464,7 +478,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
   // alias _expr this;
 
-  enum State: byte { INIT = 0, GROUPED = 1, SOLVED = 2 }
+  enum State: byte { INIT, UNROLLED, GROUPED, SOLVED }
 
 
   void hasDistDomain(bool v) {
@@ -620,10 +634,16 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
 
   void doUnroll() {
+    import std.conv: to;
     bool guardUnrolled = false;
     if (_unrollCycle == _proxy._cycle) { // already executed
       return;
     }
+
+    _proxy.registerUnrolled(this);
+    assert (_state != State.UNROLLED,
+	    "Unexpected State: " ~ _state.to!string());
+    _state = State.UNROLLED;
     // check if all the dependencies are resolved
     // foreach (dep; _deps) {
     //   if (! dep.isSolved()) {
@@ -849,6 +869,17 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
     return false;
   }
+
+  // No longer required -- Taken care of by _state (UNROLLED)
+  // used by setGroupContext to find if the predicate has been unrolled and
+  // therefor it should not be considered for grouping
+  // final bool hasUnrolled() {
+  //   if (this._iters.length == 0 ||
+  // 	_unrollCycle != _proxy._cycle) {
+  //     return false;
+  //   }
+  //   return true;
+  // }
   
   final bool hasDeps() {
     return this._deps.length > 0;
@@ -879,24 +910,22 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 			   pred._idxs, pred._bitIdxs, pred._deps);
 
     if (dists.length > 0) {
-      assert (thisPred);
-      if (dists.length == 1) {
+      if (thisPred is true && dists.length == 1) {
 	if (_rnds.length == 0 && _rndArrs.length == 0) {
 	  assert (dists[0].isDist());
-	  _rnds ~= dists[0];
+	  pred._rnds ~= dists[0];
 	}
 	else {
-	  _vars ~= dists[0];
-	  _deps ~= dists[0];
+	  pred._vars ~= dists[0];
+	  pred._deps ~= dists[0];
 	}
       }
       else {
 	foreach (dist; dists) {
-	  _vars ~= dist;
-	  _deps ~= dist;
+	  pred._vars ~= dist;
+	  pred._deps ~= dist;
 	}
       }
-      dists.length = 0;
     }
       
 
@@ -909,8 +938,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
     
     if (_guard !is null) {
-      if (_distDomain !is null) { // processing a dist predicate
-	assert (thisPred is true);
+      if (_distDomain !is null && thisPred) { // processing a dist predicate
+	// assert (thisPred is true);
 	assert (_dom !is null && _dom == _distDomain);
 	pred._deps ~= _guard;
       }
@@ -1050,6 +1079,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     import std.conv: to;
     string description = "Predicate Name: " ~ name() ~ "\n";
     description ~= "Predicate ID: " ~ _id.to!string() ~ "\n    ";
+    description ~= "State: " ~ _state.to!string() ~ "\n    ";
     description ~= "Is Enabled? " ~ _enabled.to!string ~ "\n    ";
     description ~= "Expr: " ~ _expr.describe() ~ "\n    ";
     description ~= "Context Set? " ~ _domainContextSet.to!string() ~ "\n    ";
@@ -1161,6 +1191,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
 
   void annotate(CstPredGroup group) {
+    // import std.stdio;
+    // writeln("Annotating: ", this.describe());
     assert (! this.isGuard());
     foreach (rnd; this._rnds) {
       rnd.annotate(group);
@@ -1210,7 +1242,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   void markPredSolved() {
     // import std.stdio;
     // writeln("marking predicate solved: ", describe());
-    assert (this.isGuard() || _state == State.GROUPED);
+    assert (this.isGuard() || this.isVisitor() || _state == State.GROUPED);
     _state = State.SOLVED;
 
     this.execDepCbs();

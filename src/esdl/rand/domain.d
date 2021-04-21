@@ -432,15 +432,6 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
   //   _varPreds ~= varPred;
   // }
   
-  override void markSolved() {
-    super.markSolved();
-    static if (HAS_RAND_ATTRIB) {
-      if (this.isRand()) {
-	_domN = uint.max;
-      }
-    }
-  }
-  
   final override string describe() {
     import std.conv: to;
     string desc = "CstDomBase: " ~ name();

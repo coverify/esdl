@@ -237,7 +237,11 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     foreach (pred; _unrolledNewPreds) pred.procDomainContext();
     _unrolledNewPreds.reset();
   }
-  
+
+  Folder!(CstPredicate, "predsThatUnrolled") _predsThatUnrolled;
+  void registerUnrolled(CstPredicate pred) {
+    _predsThatUnrolled ~= pred;
+  }
 
   Folder!(CstPredicate, "newPreds") _newPreds;
   Folder!(CstPredicate, "toNewPreds") _toNewPreds;
@@ -788,6 +792,12 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       _solvedDomainArrs ~= group.domainArrs();
     }
     _solvedGroups.reset();
+
+    foreach (pred; _predsThatUnrolled) {
+      pred.reset();
+    }
+    _predsThatUnrolled.reset();
+    
     _esdl__needSync = false;
   }
 

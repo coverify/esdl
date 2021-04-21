@@ -243,10 +243,6 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
       }
 
   uint         _domN = uint.max;
-  uint annotation() {
-    return _domN;
-  }
-  
   uint         _varN = uint.max;
 
   _esdl__Proxy _root;
@@ -378,14 +374,27 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   //   return _group;
   // }
 
+  uint annotation() {
+    return _domN;
+  }
+
+  void setAnnotation(uint n) {
+    // import std.stdio;
+    // writeln("Domain: ", name(), " setAnnotation: ", n);
+    _domN = n;
+  }
+  
   final void annotate(CstPredGroup group) {
+    import std.conv: to;
     // import std.stdio;
     // writeln("annotate: ", this.name());
     if (_domN == uint.max) {
       if (_varN == uint.max) _varN = _root.indexVar();
-      if (this.isSolved()) _domN = group.addVariable(this);
-      else _domN = group.addDomain(this);
+      if (this.isSolved()) setAnnotation(group.addVariable(this));
+      else setAnnotation(group.addDomain(this));
     }
+    // writeln("annotate: ", _varN.to!string());
+    // writeln("annotate: ", _domN.to!string());
   }
 
   void setGroupContext(CstPredGroup group) {
@@ -397,13 +406,13 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     // _group = group;
     if (this.isRand()) {
       foreach (pred; _rndPreds) {
-	// if (! pred.isGuard()) {
 	if (pred.isEnabled() &&
 	    pred._state is CstPredicate.State.INIT &&
-	    ! pred.getmarkBefore()) {
+	    ! pred.getmarkBefore()//  &&
+	    // ! pred.hasUnrolled() // now taken care of in _state (UNROLLED)
+	    ) {
 	  pred.setGroupContext(group);
 	}
-	// }
       }
       if (_esdl__parentIsConstrained) {
 	CstDomSet parent = getParentDomSet();
