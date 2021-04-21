@@ -351,6 +351,8 @@ class CstMonoSolver (S): CstSolver
       uint n = domain.bitcount();
       if(domain.isBool()){
 	pushToEvalStack(domain.getBool());
+	_prevVariableVals ~= Term(cast(int)(domain.getBool()));
+	_variables ~= domain;
 	return;
       }
       /*if (n>32){
@@ -574,29 +576,35 @@ class CstMonoSolver (S): CstSolver
   }
   bool checkDifference(){
     if(!_hasBeenSolved) return true;
+    
     foreach(i, domain; _variables){
       Term A;
       int n = domain.bitcount();
-      if (n>32 && n<64){
-	A = Term(cast(long)domain.value()); 
+      if(domain.isBool()){
+	A = Term(cast(int)domain.getBool());
       }
-      else if (n < 32){
-        A = Term(cast(int)domain.value()); 
-      }
-      else if(n == 32){
-	if (domain.signed()){
-	  A = Term(cast(int)domain.value()); 
-	}
-	else {
-	  A = Term(cast(uint)domain.value()); 
-	}
-      }
-      else {
-	if (domain.signed()){
+      else{
+	if (n>32 && n<64){
 	  A = Term(cast(long)domain.value()); 
 	}
+	else if (n < 32){
+	  A = Term(cast(int)domain.value()); 
+	}
+	else if(n == 32){
+	  if (domain.signed()){
+	    A = Term(cast(int)domain.value()); 
+	  }
+	  else {
+	    A = Term(cast(uint)domain.value()); 
+	  }
+	}
 	else {
-	  A = Term(cast(ulong)domain.value()); 
+	  if (domain.signed()){
+	    A = Term(cast(long)domain.value()); 
+	  }
+	  else {
+	    A = Term(cast(ulong)domain.value()); 
+	  }
 	}
       }
       if(A != _prevVariableVals[i]){
