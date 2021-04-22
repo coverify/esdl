@@ -910,15 +910,10 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 			   pred._idxs, pred._bitIdxs, pred._deps);
 
     if (dists.length > 0) {
-      if (thisPred is true && dists.length == 1) {
-	if (_rnds.length == 0 && _rndArrs.length == 0) {
-	  assert (dists[0].isDist());
-	  pred._rnds ~= dists[0];
-	}
-	else {
-	  pred._vars ~= dists[0];
-	  pred._deps ~= dists[0];
-	}
+      if (thisPred is true && dists.length == 1 &&
+	  _rnds.length == 0 && _rndArrs.length == 0) {
+	assert (dists[0].isDist());
+	pred._rnds ~= dists[0];
       }
       else {
 	foreach (dist; dists) {
@@ -938,7 +933,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
     
     if (_guard !is null) {
-      if (_distDomain !is null && thisPred) { // processing a dist predicate
+      if (_distDomain !is null && thisPred is true) { // processing a dist predicate
 	// assert (thisPred is true);
 	assert (_dom !is null && _dom == _distDomain);
 	pred._deps ~= _guard;
