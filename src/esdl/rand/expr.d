@@ -1752,7 +1752,7 @@ class CstInsideArrExpr: CstLogicExpr
     assert (false);
   }
 
-  override bool eval() {assert (false, "Enable to evaluate CstInsideArrExpr");}
+  override bool eval() {assert (false, "Unable to evaluate CstInsideArrExpr");}
 
   override void scan() { }
 

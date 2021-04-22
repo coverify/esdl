@@ -12,6 +12,7 @@ import esdl.data.charbuf;
 import std.container: Array;
 import std.array;
 import esdl.rand.cstx: CstParseData, CstParser;
+import std.algorithm: filter;
 
 
 static CstParseData constraintXlate(string PROXY, string CST,
@@ -472,16 +473,16 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   
   private bool _solvedSome = false;
   void solvedSome() { _solvedSome = true; }
-  bool checkContinue(ref CstDomBasePair pred, uint lap){
-    if(pred.getSecond.getmarkBefore() == lap){
+  bool checkContinue(ref CstDomBasePair pred, uint lap) {
+    if (pred.getSecond.getmarkBefore() == lap) {
       return true;
     }
     CstDomBase dom = pred.getFirst;
-    if(dom.isSolved()){
+    if (dom.isSolved()) {
       return true;
     }
-    foreach(predicate; _beforePreds){
-      if(dom == predicate.getSecond && !predicate.getFirst.isSolved){
+    foreach (predicate; _beforePreds) {
+      if (dom == predicate.getSecond && !predicate.getFirst.isSolved) {
 	return true;
       }
     }
@@ -690,9 +691,9 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	//assert(a.length == 2);
 	pred.getFirst.orderBefore(pred.getSecond, _lap);
       }
-      
+
       foreach (pred; _toSolvePreds) {
-	if (pred.getmarkBefore()){
+	if (pred.getmarkBefore() == _lap) {
 	  _dependentPreds ~= pred;
 	  //pred.setmarkBefore(false);
 	}
@@ -737,12 +738,13 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	  }
 	}
       }
-      foreach(pred; _dependentPreds){
-	pred.setmarkBefore(false);
-      }
+      // foreach(pred; _dependentPreds){
+      // 	pred.setmarkBefore(false);
+      // }
       foreach (pred; _beforePreds) {
 	CstDomBase a = pred.getFirst;
-	if(a.getmarkBefore < _lap && !(a.isSolved())){
+	if (a.getmarkBefore < _lap && ! (a.isSolved()) &&
+	    a.getRandPreds().filter!(pred => ! (pred.isGuard() || pred.isMarkedBefore())).empty()) {
 	  a.randomizeWithoutConstraints(this);
 	}
       }
@@ -779,6 +781,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	if (_toRolledPreds.length > 0) {
 	  stderr.writeln("_toRolledPreds: ");
 	  foreach (pred; _toRolledPreds) stderr.writeln(pred.describe());
+	}
+	if (_dependentPreds.length > 0) {
+	  stderr.writeln("_dependentPreds: ");
+	  foreach (pred; _dependentPreds) stderr.writeln(pred.describe());
 	}
 	assert (false, "Infinite loop in constraint solver");
       }

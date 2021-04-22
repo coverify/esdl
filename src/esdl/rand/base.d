@@ -408,7 +408,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
       foreach (pred; _rndPreds) {
 	if (pred.isEnabled() &&
 	    pred._state is CstPredicate.State.INIT &&
-	    ! pred.getmarkBefore()//  &&
+	    ! pred.isMarkedBefore()//  &&
 	    // ! pred.hasUnrolled() // now taken care of in _state (UNROLLED)
 	    ) {
 	  pred.setGroupContext(group);
@@ -479,18 +479,18 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     _depCbs ~= idxCb; // use same callbacks as deps for now
   }
   uint _markBefore = 0;
-  void orderBefore(CstDomBase x, uint lap){
+  void orderBefore(CstDomBase x, uint lap) {
     if(isSolved() || x.isSolved()){
       return;
     }
     x.setmarkBefore(lap);
     CstPredicate [] a = x.getRandPreds();
-    foreach(elem; a){
-      if(!elem.getmarkBefore()){
-	elem.setmarkBefore(true);
+    foreach (elem; a){
+      if (elem.getmarkBefore() != lap) {
+	elem.setmarkBefore(lap);
 	CstDomBase [] b = elem.getDomains();
-	foreach(j, e; b){
-	  if(e != this && e.getmarkBefore() != lap){
+	foreach (j, e; b){
+	  if (e != this && e.getmarkBefore() != lap) {
 	    orderBefore(e, lap);
 	  }
 	}

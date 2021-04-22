@@ -498,7 +498,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   
   _esdl__ConstraintBase _constraint;
   uint _statement;
-  bool _markBefore;
+  uint _markBefore = uint.max;
   bool _hasDistDomain;
   bool _domainContextSet;
 
@@ -546,13 +546,17 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   State _state = State.INIT;
 
-  void setmarkBefore(bool a){
+  void setmarkBefore(uint a){
     _markBefore = a;
   }
-  bool getmarkBefore(){
+  uint getmarkBefore(){
     return _markBefore;
   }
-  
+
+  bool isMarkedBefore() {
+    return _markBefore == _proxy._lap;
+  }
+
   void reset() {
     _state = State.INIT;
   }
