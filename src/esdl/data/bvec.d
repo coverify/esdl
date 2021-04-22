@@ -2836,6 +2836,8 @@ public auto mapToUBits(T)(T t) if(isFloatingPoint!T) {
   return u.b;
  }
 
+alias tobvec = toBit;
+
 public auto toBit(size_t N, T)(T t) if(isIntegral!T) {
   static if(isSigned!T) {
     alias R = BitVec!(8*T.sizeof);
@@ -2848,6 +2850,8 @@ public auto toBit(size_t N, T)(T t) if(isIntegral!T) {
   B res = cast(B) tmp;
   return res;
  }
+
+alias toubvec = toUBit;
 
 public auto toUBit(size_t N, T)(T t) if(isIntegral!T) {
   static if(isSigned!T) {

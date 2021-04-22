@@ -1690,6 +1690,7 @@ class CstInsideArrExpr: CstLogicExpr
     foreach (elem; _elems) {
       unrolled.addElem(elem.unroll(iter, n));
     }
+    unrolled._notinside = _notinside;
     return unrolled;
   }
 
@@ -1738,8 +1739,8 @@ class CstInsideArrExpr: CstLogicExpr
   bool isSolved() { return false; }
 
   void writeExprString(ref Charbuf str) {
-    if (_notinside) str ~= "(INSIDE ";
-    else            str ~= "(! INSIDE ";
+    if (_notinside) str ~= "(! INSIDE ";
+    else            str ~= "(INSIDE ";
     _term.writeExprString(str);
     str ~= " [";
     foreach (elem; _elems)
