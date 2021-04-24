@@ -661,6 +661,10 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     }
   }
 
+  override bool inRange() {
+    return _parent.inRange();
+  }
+
   T to(T)()
     if(is(T == string)) {
       import std.conv;

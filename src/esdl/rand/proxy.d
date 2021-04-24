@@ -12,7 +12,6 @@ import esdl.data.charbuf;
 import std.container: Array;
 import std.array;
 import esdl.rand.cstx: CstParseData, CstParser;
-import std.algorithm: filter;
 
 
 static CstParseData constraintXlate(string PROXY, string CST,
@@ -183,6 +182,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   string fullName() {return "";}
   string name() {return "";}
   bool isRand() {return true;}
+  bool inRange() {return true;}
 
   _esdl__Proxy getProxyRoot() {
     if (_root is null) {return this;}
@@ -742,9 +742,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       // 	pred.setmarkBefore(false);
       // }
       foreach (pred; _beforePreds) {
+	import std.algorithm: any;
 	CstDomBase a = pred.getFirst;
 	if (a.getmarkBefore < _lap && ! (a.isSolved()) &&
-	    a.getRandPreds().filter!(pred => ! (pred.isGuard() || pred.isMarkedBefore())).empty()) {
+	    ! a.getRandPreds().any!(pred => ! (pred.isGuard() || pred.isMarkedBefore()))) {
 	  a.randomizeWithoutConstraints(this);
 	}
       }
@@ -808,7 +809,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   }
 
   void makeBeforePreds(CstPredicate pred ) {
-    if(pred.getExpr().isOrderingExpr()) {
+    assert (pred.getExpr() !is null, pred.name);
+    if (pred.getExpr().isOrderingExpr()) {
       _beforePreds ~= new CstDomBasePair(pred.getDomains[0], pred.getDomains[1]);
     }
   }
@@ -839,8 +841,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   // }
 
   void procResolved(CstPredicate pred) {
-    assert (pred._rnds.length > 0 || pred._rndArrs.length > 0 || pred.isGuard(),
-	    pred.describe());
+    // assert (pred._rnds.length > 0 || pred._rndArrs.length > 0 || pred.isGuard(),
+    // 	    pred.describe());
     // if (pred.isDist()) {
     //   _resolvedDistPreds ~= pred;
     // }

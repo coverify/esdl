@@ -230,6 +230,8 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	return HAS_RAND_ATTRIB && _isRand && _parent.isRand();
       }
 
+      final override bool inRange() { return _parent.inRange(); }
+
       final override string fullName() {
 	if (_parent is _root) return _name;
 	else  
@@ -339,6 +341,11 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 
       final override bool isRand() {
 	return HAS_RAND_ATTRIB && _isRand && _parent.isRand();
+      }
+
+      final override bool inRange() {
+	if (_indexExpr !is null) assert (false, "Unresolved Index");
+	else return _parent.inRange() && _parent.inRangeIndex(_pindex);
       }
 
       override bool opEquals(Object other) {
@@ -585,6 +592,7 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
   CstArrLength!RV _arrLen;
 
   EV[] _elems;
+  EV   _negIndexElem;
 
   abstract EV createElem(CstVecTerm indexExpr);
   abstract EV createElem(uint i);
@@ -600,6 +608,10 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
   // overridded in derived classes
   bool isRand() { assert (false); }
 
+  bool inRangeIndex(ulong index) {
+    return index < getLen();
+  }
+  
   abstract size_t getLen();
   abstract void setLen(size_t len);
     
@@ -647,17 +659,22 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
 
   EV opIndex(ulong index) {
     size_t key = mapIndex(index);
-    if (_arrLen.isSolved()) {
-      auto len = _arrLen.evaluate();
-      if (len <= key) {
-	assert (false, "Index Out of Range");
-      }
-      buildElements(len);
+    if (key > uint.max/2) { // negative index
+      if (_negIndexElem is null) _negIndexElem = createElem(uint.max);
+      return _negIndexElem;
     }
     else {
-      buildElements(key+1);
+      // if (_arrLen.isSolved()) {
+      // 	auto len = _arrLen.evaluate();
+      // 	if (len <= key) {
+      // 	  assert (false, "Index Out of Range");
+      // 	}
+      // 	buildElements(len);
+      // }
+      // else {
+      if (key >= _elems.length) buildElements(key+1);
+      return _elems[key];
     }
-    return _elems[key];
   }
 
   void _esdl__doRandomize(_esdl__RandGen randGen) {
@@ -779,6 +796,10 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 
       final override bool isRand() {
 	return HAS_RAND_ATTRIB && _isRand && _parent.isRand();
+      }
+
+      final override bool inRange() {
+	return _parent.inRange();
       }
 
       final bool isRolled() {
@@ -931,6 +952,11 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 
       final override bool isRand() {
 	return HAS_RAND_ATTRIB && _isRand && _parent.isRand();
+      }
+
+      final override bool inRange() {
+	if (_indexExpr !is null) assert (false, "Unresolved Index");
+	else return _parent.inRange() && _parent.inRangeIndex(_pindex);
       }
 
       override bool opEquals(Object other) {

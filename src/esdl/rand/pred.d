@@ -667,6 +667,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       _unrollCycle = _proxy._cycle;
     }
   }
+
+  uint _currLen;
   
   void unroll(CstIterator iter, bool guardUnrolled) {
     assert (iter is _iters[0]);
@@ -675,84 +677,37 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       assert(false, "CstIterator is not unrollabe yet: "
 	     ~ this.describe());
     }
-    auto currLen = iter.size();
-    // import std.stdio;
-    // writeln("size is ", currLen);
 
-    if (_uwPreds.length < currLen) _uwPreds.length = currLen;
+    auto prevLen = _currLen;
+    _currLen = cast(uint) iter.size();
+    auto builtLen = _uwPreds.length;
+    // import std.stdio;
+    // writeln("size is ", _currLen);
+
+    if (_uwPreds.length < _currLen) _uwPreds.length = _currLen;
     
     for (uint i=0; i != _uwPreds.length; ++i) {
-      CstPredicate _uwPred = _uwPreds[i];
-      if (i < currLen) {
-	if (_uwPred is null) {
-	  // import std.stdio;
-	  // writeln("i: ", i, " mapped: ", iter.mapIter(i));
-	  if (_guard is null) {
-	    _uwPred = new CstPredicate(_constraint, null, false, _statement, _proxy, _soft,
-				       _expr.unroll(iter, iter.mapIter(i)), _isGuard, this, iter, i// ,
-				       // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
-				       );
-	  }
-	  else {
-	    if (guardUnrolled) {
-	      CstPredicate guard = _guard._uwPreds[i];
-	      if (guard !is null && guard.tryResolve(_proxy)) {
-		if (guard._expr.eval() ^ _guardInv) {
-		  _uwPred = new CstPredicate(_constraint, guard,
-					     _guardInv, _statement, _proxy, _soft,
-					     _expr.unroll(iter, iter.mapIter(i)),
-					     _isGuard, this, iter, i// ,
-					     // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
-					     );
-		}
-		else {		// guard disabled -- there is no predicate
-		  _uwPred = cast(CstPredicate) null;
-		}
-	      }
-	      else {
-		_uwPred = new CstPredicate(_constraint, guard,
-					   _guardInv, _statement, _proxy, _soft,
-					   _expr.unroll(iter, iter.mapIter(i)),
-					   _isGuard, this, iter, i// ,
-					   // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
-					   );
-	      }
-	    }
-	    else {
-	      _uwPred = new CstPredicate(_constraint, _guard,
-					 _guardInv, _statement, _proxy, _soft,
-					 _expr.unroll(iter, iter.mapIter(i)),
-					 _isGuard, this, iter, i// ,
-					 // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
-					 );
-	    }
-	  }
-	  if (_uwPred !is null) {
-	    _uwPreds[i] = _uwPred;
-	    _proxy.addUnrolledNewPredicate(_uwPred);
-	  }
+      if (i < _currLen) {
+	if (i >= builtLen) {
+	  CstPredicate _uwPred = _uwPreds[i];
+	  assert (_uwPred is null);
+	  CstPredicate guard = _guard;
+	  if (guardUnrolled) guard = _guard._uwPreds[i];
+	  _uwPred = new CstPredicate(_constraint, guard, _guardInv, _statement,
+				     _proxy, _soft, _expr.unroll(iter, iter.mapIter(i)),
+				     _isGuard, this, iter, i// ,
+				     // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
+				     );
+	  _uwPreds[i] = _uwPred;
+	  _proxy.addUnrolledNewPredicate(_uwPred);
 	}
-	else {
-	  _uwPred._enabled = true;
-	  if (_guard !is null && guardUnrolled) {
-	    CstPredicate guard = _guard._uwPreds[i];
-	    if (guard !is null && guard.tryResolve(_proxy)) {
-	      if (! (guard._expr.eval() ^ _guardInv)) {
-		_uwPred._enabled = false;
-	      }
-	    }
-	  }
+	else if (i >= prevLen) {
+	  _uwPreds[i]._enabled = true;
 	}
-	if (_uwPred !is null && _uwPred.isEnabled())
-	  _proxy.addUnrolledPredicate(_uwPreds[i]);
-	// for (size_t i=prevLen; i!=currLen; ++i) {
-	// 	if (_uwPreds[i] !is null)
-	// 	  _proxy.addUnrolledNewPredicate(_uwPreds[i]);
-	// 	// _uwPreds[i].setDomainContext(_uwPreds[i]);
-	// }
+	_proxy.addUnrolledPredicate(_uwPreds[i]);
       }
       else {
-	if (_uwPred !is null) _uwPred._enabled = false;
+	_uwPreds[i]._enabled = false;
       }
     }
   }
@@ -976,22 +931,23 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       // foreach (var; _vars) var.registerVarPred(this);
 
       if ((! this.isVisitor()) && (! this.isGuard()) && _rndArrs.length == 0) {
-	assert (_rnds.length != 0, this.describe());
+	// assert (_rnds.length != 0, this.describe());
 	if (_rnds.length > 1) {
 	  foreach (rnd; _rnds) {
 	    rnd._type = DomType.MULTI;
 	  }
 	}
 	else if (! this.isDist()) {
-	  assert(_rnds.length == 1);
-	  auto rnd = _rnds[0];
-	  if (rnd._type == DomType.TRUEMONO) {
-	    if (_vars.length > 0) {
-	      rnd._type = DomType.LAZYMONO;
-	    }
-	    if (_idxs.length > 0) {
-	      assert(! rnd.isStatic());
-	      rnd._type = DomType.INDEXEDMONO;
+	  if (_rnds.length == 1) {
+	    auto rnd = _rnds[0];
+	    if (rnd._type == DomType.TRUEMONO) {
+	      if (_vars.length > 0) {
+		rnd._type = DomType.LAZYMONO;
+	      }
+	      if (_idxs.length > 0) {
+		assert(! rnd.isStatic());
+		rnd._type = DomType.INDEXEDMONO;
+	      }
 	    }
 	  }
 	}
@@ -1143,6 +1099,17 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
 
   void setGroupContext(CstPredGroup group) {
+    foreach (dom; _rnds) {
+      if (! dom.inRange()) {
+	// import std.stdio;
+	// writeln(_guard.describe());
+	if (_guard is null || _guard._expr.eval()) {
+	  assert (false, "Predicate " ~ name() ~ " has out of bound domain: " ~ dom.name());
+	}
+	return;
+      }
+    }
+
     _state = State.GROUPED;
     if (_group !is group) {
       assert(_group is null,

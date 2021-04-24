@@ -22,6 +22,7 @@ interface CstVarNodeIntf {
   _esdl__Proxy getProxyRoot();
   string name();
   string fullName();
+  bool inRange();
 
   bool _esdl__isObjArray();
   CstIterator _esdl__iter();
@@ -397,6 +398,10 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     // writeln("annotate: ", _domN.to!string());
   }
 
+  override bool inRange() {
+    assert(false, "inRange is not defined for: " ~ name());
+  }
+  
   void setGroupContext(CstPredGroup group) {
     // import std.stdio;
     // writeln("setGroupContext on: ", this.name());
