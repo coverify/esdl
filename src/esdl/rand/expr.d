@@ -17,6 +17,7 @@ import esdl.data.bvec: isBitVector, toBitVec;
 import esdl.data.charbuf;
 import std.traits: isIntegral, isBoolean, isStaticArray,
   isSomeChar, EnumMembers, isSigned, OriginalType;
+import std.algorithm: canFind;
 
 abstract class CstLogicExpr: CstLogicTerm
 {
@@ -761,6 +762,17 @@ class CstInsideSetElem
       else {
 	dist.purge(_lhs.evaluate());
       }
+    }
+  }
+
+  final bool eval(CstVecTerm vec) {
+    if (_arr !is null) return canFind!((CstDomBase a, CstVecTerm b)
+				       => a.value() == b.evaluate())(_arr[], vec);
+    else if (_rhs is null) return vec.evaluate() == _lhs.evaluate();
+    else {
+      return vec.evaluate() >= _lhs.evaluate()
+	&& (_inclusive ? vec.evaluate() <= _rhs.evaluate() :
+	    vec.evaluate() < _rhs.evaluate());
     }
   }
 }
@@ -1752,7 +1764,12 @@ class CstInsideArrExpr: CstLogicExpr
     assert (false);
   }
 
-  override bool eval() {assert (false, "Unable to evaluate CstInsideArrExpr");}
+  override bool eval() {
+    bool inside = canFind!((CstInsideSetElem a, CstVecTerm b) =>
+			   a.eval(b))(_elems, _term);
+    if (_notinside) return ! inside;
+    else return inside;
+  }
 
   override void scan() { }
 
