@@ -370,6 +370,15 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   }
   Folder!(CstPredicate, "tempPreds") _tempPreds;
 
+
+  void purgeRndPred(CstPredicate pred) {
+    import std.algorithm: countUntil;
+    auto index = countUntil(_rndPreds, pred);
+    assert (index > 0);
+    _rndPreds[index] = _rndPreds[$-1];
+    _rndPreds.length -= 1;
+  }
+
   // CstPredGroup _group;
 
   // CstPredGroup group() {

@@ -987,6 +987,20 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
 
+  void procDependency(CstDepIntf dep) {
+    CstDomBase dom = cast (CstDomBase) dep;
+    if (dom !is null) {
+      auto index = countUntil(_rnds, dep);
+      if (index >= 0) {
+	_rnds[index] = _rnds[$-1];
+	_rnds.length -= 1;
+	_vars ~= dom;
+	dom.purgeRndPred(this);
+      }
+    }
+    if (_guard !is null) _guard.procDependency(dep);
+  }
+  
   void procDomainContext() {
     import std.algorithm.searching: canFind;
     foreach (rnd; _rnds) {
@@ -999,6 +1013,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	if (! _deps.canFind(dep)) _deps ~= dep;
       }
     }
+    if (! isVisitor())
+      foreach (dep; _deps) this.procDependency(dep);
   }
 
   CstLogicTerm getExpr() {
@@ -1094,9 +1110,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
 
   void setGroupContext(CstPredGroup group) {
+    // import std.stdio;
+    // writeln("setGroupContext: ", this.describe());
     foreach (dom; _rnds) {
       if (! dom.inRange()) {
 	// import std.stdio;
+	// writeln(this.describe());
 	// writeln(_guard.describe());
 	if (_guard is null || _guard._expr.eval()) {
 	  assert (false, "Predicate " ~ name() ~ " has out of bound domain: " ~ dom.name());
@@ -1137,12 +1156,16 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       group.addPredicate(this);
     }
     foreach (dom; _rnds) {
+      // import std.stdio;
+      // writeln("setGroupContext: ", dom.name());
       // if (dom.group is null && (! dom.isSolved())) {
       if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
 	dom.setGroupContext(group);
       }
     }
     foreach (arr; _rndArrs) {
+      // import std.stdio;
+      // writeln("setGroupContext: ", arr.name());
       // if (arr.group is null && (! arr.isSolved())) {
       if (arr._state is CstDomSet.State.INIT // && (! arr.isSolved())
 	  ) {
