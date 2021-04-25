@@ -1105,10 +1105,17 @@ private auto getArrElemTmpl(A, N...)(ref A arr, N indx)
     static if (isAssociativeArray!A) {
       if (indx[0] < arr.keys.length) {
 	auto key = arr.keys[cast(size_t) (indx[0])];
+	static if (N.length == 1) {
+	  return &(arr[key]);
+	}
+	else {
+	  return getArrElemTmpl(arr[key], indx[1..$]);
+	}
       }
       else {
 	assert (false, "Range violation");
       }
+      
     }
     else {
       size_t key = cast(size_t) (indx[0]);
