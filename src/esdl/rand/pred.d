@@ -632,9 +632,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       _markResolve = true;
       return;
     }
-    else {
-      doUnroll();
-    }
   }
 
   void doUnroll() {
