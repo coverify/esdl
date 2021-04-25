@@ -630,11 +630,16 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	}
 	else {
 	  _toUnresolvedPreds ~= pred;
-	  pred.markAsUnresolved(_lap);
 	}
       }
 
       _unresolvedPreds.reset();
+      
+      foreach (pred; _toUnresolvedPreds) {
+	  // import std.stdio;
+	  // writeln(pred.name(), " mark unresolved: ", _lap);
+	  pred.markAsUnresolved(_lap);
+      }
       
       // _resolvedMonoPreds.swap(_toSolvePreds);
 
