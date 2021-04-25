@@ -272,7 +272,11 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 
       final override bool inRange() {
 	if (_indexExpr !is null) assert (false, "Unresolved Index");
-	else return _parent.inRange() && _parent.inRangeIndex(_pindex);
+	else {
+	  // import std.stdio;
+	  // writeln("inRange: ", name(), " - ", _pindex);
+	  return _parent.inRange() && _parent.inRangeIndex(_pindex);
+	}
       }
 
       override bool opEquals(Object other) {
@@ -339,6 +343,8 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
       }
       
       override LEAF* getRef() {
+	// import std.stdio;
+	// writeln("getRef: ", name());
 	if (_indexExpr) {
 	  return getRefTmpl(_parent, cast(size_t) _indexExpr.evaluate());
 	}
@@ -681,6 +687,7 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
 
     // Unless the array gets resolved, we can not solve the elements
     if (! canFind(deps, this)) deps ~= this;
+    if (! canFind(deps, _arrLen)) deps ~= _arrLen;
   }
 
   final override void markAsUnresolved(uint lap, bool hier) {
@@ -944,7 +951,11 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 
       final override bool inRange() {
 	if (_indexExpr !is null) assert (false, "Unresolved Index");
-	else return _parent.inRange() && _parent.inRangeIndex(_pindex);
+	else {
+	  // import std.stdio;
+	  // writeln("inRange: ", name(), " - ", _pindex);
+	  return _parent.inRange() && _parent.inRangeIndex(_pindex);
+	}
       }
 
       override bool opEquals(Object other) {
@@ -1091,13 +1102,29 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 private auto getArrElemTmpl(A, N...)(ref A arr, N indx)
   if ((isArray!A || isQueue!A || isAssociativeArray!A) &&
       N.length > 0 && isIntegral!(N[0])) {
-    static if (isAssociativeArray!A) auto key = arr.keys[cast(size_t) (indx[0])];
-    else                             size_t key = cast(size_t) (indx[0]);
-    static if (N.length == 1) {
-      return &(arr[key]);
+    static if (isAssociativeArray!A) {
+      if (indx[0] < arr.keys.length) {
+	auto key = arr.keys[cast(size_t) (indx[0])];
+      }
+      else {
+	assert (false, "Range violation");
+      }
     }
     else {
-      return getArrElemTmpl(arr[key], indx[1..$]);
+      size_t key = cast(size_t) (indx[0]);
+      if (key < arr.length) {
+	static if (N.length == 1) {
+	  return &(arr[key]);
+	}
+	else {
+	  return getArrElemTmpl(arr[key], indx[1..$]);
+	}
+      }
+      else {
+	import std.stdio;
+	writeln ("length: ", arr.length, " index: ", key);
+	assert (false, "Range violation");
+      }
     }
   }
 

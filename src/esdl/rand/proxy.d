@@ -920,6 +920,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     }
     else if (pred._iters.length == 0) {
       if (pred.isResolved(true)) {
+	// import std.stdio;
+	// writeln("Predicate marked as resolved: ", pred.name());
 	procResolved(pred);
       }
       else {
