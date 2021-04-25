@@ -1124,6 +1124,18 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       }
     }
 
+    foreach (dom; _vars) {
+      if (! dom.inRange()) {
+	// import std.stdio;
+	// writeln(this.describe());
+	// writeln(_guard.describe());
+	if (_guard is null || _guard._expr.eval()) {
+	  assert (false, "Predicate " ~ name() ~ " has out of bound domain: " ~ dom.name());
+	}
+	return;
+      }
+    }
+
     _state = State.GROUPED;
     if (_group !is group) {
       assert(_group is null,
