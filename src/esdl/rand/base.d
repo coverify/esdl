@@ -1,6 +1,7 @@
 module esdl.rand.base;
 
 import std.traits: isIntegral;
+import std.algorithm: canFind;
 
 import esdl.solver.base;
 
@@ -256,7 +257,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   // Dependencies
   CstDepIntf[] _deps;
 
-  void addDep(CstDepIntf dep) { _deps ~= dep; }
+  void addDep(CstDepIntf dep) { if (! _deps.canFind(dep)) _deps ~= dep; }
   CstDepIntf[] getDeps() { return _deps; }
   
   abstract string fullName();
@@ -592,7 +593,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   // Dependencies
   CstDepIntf[] _deps;
 
-  void addDep(CstDepIntf dep) { _deps ~= dep; }
+  void addDep(CstDepIntf dep) { if (! _deps.canFind(dep)) _deps ~= dep; }
   CstDepIntf[] getDeps() { return _deps; }
   
   uint _unresolveLap;

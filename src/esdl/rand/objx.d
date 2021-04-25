@@ -453,7 +453,8 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	  // 	if (! canFind(vars, this)) vars ~= this;
 	}
 	if (_parent.isStatic()) {
-	  deps ~= _parent._arrLen;
+	  auto len = _parent._arrLen;
+	  if (! deps.canFind(len)) deps ~= len;
 	}
 	_parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
 
@@ -1037,7 +1038,8 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	// auto iter = arrLen.makeIterVar();
 	// iters ~= iter;
 	if (_parent.isStatic()) {
-	  deps ~= _parent._arrLen;
+	  auto len = _parent._arrLen;
+	  if (! deps.canFind(len)) deps ~= len;
 	}
 	_parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs,
 				 dists, vals, iters, idxs, bitIdxs, deps);
@@ -1045,7 +1047,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	  CstDomBase[] indexes;
 	  _indexExpr.setDomainContext(pred, indexes, rndArrs, indexes, varArrs,
 				      dists, vals, iters, idxs, bitIdxs, deps);
-	  foreach (index; indexes) idxs ~= index;
+	  foreach (index; indexes) if (! idxs.canFind(index)) idxs ~= index;
 	}
       }
 

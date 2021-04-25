@@ -2,6 +2,7 @@ module esdl.rand.domain;
 
 import std.traits: isIntegral, isBoolean, isSigned, Unconst,
   OriginalType, EnumMembers, isSomeChar, isStaticArray;
+import std.algorithm: canFind;
 
 import esdl.data.bvec: isBitVector;
 import esdl.data.charbuf: Charbuf;
@@ -548,8 +549,9 @@ class CstArrIterator(RV): CstIterator
 			ref CstDepIntf[] idxs,
 			ref CstDomBase[] bitIdxs,
 			ref CstDepIntf[] deps) {
-    deps ~= getLenVec();
-    iters ~= this;
+    auto len = getLenVec();
+    if (! deps.canFind(len)) deps ~= len;
+    if (! iters.canFind(this)) iters ~= this;
   }
 
   bool signed() {

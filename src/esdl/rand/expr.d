@@ -1729,8 +1729,8 @@ class CstInsideArrExpr: CstLogicExpr
 	if (rnds_.length > 0) {
 	  foreach (rnd; rnds_) {
 	    // tdom.addDep(rnd);	// random has to be solved first
-	    deps ~= rnd;
-	    vars ~= rnd;
+	    if (! deps.canFind(rnd)) deps ~= rnd;
+	    if (! vars.canFind(rnd)) vars ~= rnd;
 	  }
 	}
 	return;
@@ -1957,9 +1957,9 @@ class CstVec2LogicExpr: CstLogicExpr
 	CstDomBase rdom = _rhs.getDomain();
 	if (rdom !is null && rdom.isDist()) {
 	  // ldom.addDep(rdom);	// RHS needs to be solved first
-	  deps ~= rdom;
-	  vars ~= rdom;
-	  rnds ~= ldom;
+	  if (! deps.canFind(rdom)) deps ~= rdom;
+	  if (! vars.canFind(rdom)) vars ~= rdom;
+	  if (! rnds.canFind(ldom)) rnds ~= ldom;
 	  return;
 	}
 	else {
@@ -1968,14 +1968,14 @@ class CstVec2LogicExpr: CstLogicExpr
 	  if (rnds_.length > 0) {
 	    foreach (rnd; rnds_) {
 	      // rnd.addDep(ldom);	// random variables will be solved only after this dist is resolved
-	      rnds ~= rnd;
+	      if (! rnds.canFind(rnd)) rnds ~= rnd;
 	    }
-	    deps ~= ldom;
-	    vars ~= ldom;
+	    if (! deps.canFind(ldom)) deps ~= ldom;
+	    if (! vars.canFind(ldom)) vars ~= ldom;
 	    return;
 	  }
 	  else {
-	    rnds ~= ldom;
+	    if (! rnds.canFind(ldom)) rnds ~= ldom;
 	    return;
 	  }
 	}
@@ -1992,8 +1992,8 @@ class CstVec2LogicExpr: CstLogicExpr
 	    // rnd.addDep(rdom);	// random variables will be solved only after this dist is resolved
 	    rnds ~= rnd;
 	  }
-	  deps ~= rdom;
-	  vars ~= rdom;
+	  if (! deps.canFind(rdom)) deps ~= rdom;
+	  if (! vars.canFind(rdom)) vars ~= rdom;
 	  return;
 	}
 	else {

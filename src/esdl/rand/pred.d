@@ -876,8 +876,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       }
       else {
 	foreach (dist; dists) {
-	  pred._vars ~= dist;
-	  pred._deps ~= dist;
+	  if (! pred._vars.canFind(dist)) pred._vars ~= dist;
+	  if (! pred._deps.canFind(dist)) pred._deps ~= dist;
 	}
       }
     }
@@ -916,7 +916,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       //   _len = _iters[0].getLenVec();
       // }
     
-      if(! getExpr().isOrderingExpr()){
+      if (! getExpr().isOrderingExpr()) {
 	foreach (rnd; _rnds) {
 	  rnd.registerRndPred(this);
 	  if (! rnd.isStatic()) {
@@ -959,8 +959,10 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       //   _deps = _foundDeps.filter!(dep => (! canFind(_parent._deps, dep))).array;
       // }
 
-      foreach (idx; _idxs) if (! idx.isSolved()) _deps ~= idx;
-      foreach (idx; _bitIdxs) if (! idx.isSolved()) _deps ~= idx;
+      foreach (idx; _idxs) if (! idx.isSolved())
+			     if (! _deps.canFind(idx)) _deps ~= idx;
+      foreach (idx; _bitIdxs) if (! idx.isSolved())
+				if (! _deps.canFind(idx)) _deps ~= idx;
     
       foreach (dep; _deps) dep.registerDepPred(this);
 
@@ -992,16 +994,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     import std.algorithm.searching: canFind;
     foreach (rnd; _rnds) {
       foreach (dep; rnd.getDeps()) {
-	if (! _deps.canFind(dep)) {
-	  _deps ~= dep;
-	}
+	if (! _deps.canFind(dep)) _deps ~= dep;
       }
     }
     foreach (rnd; _rndArrs) {
       foreach (dep; rnd.getDeps()) {
-	if (! _deps.canFind(dep)) {
-	  _deps ~= dep;
-	}
+	if (! _deps.canFind(dep)) _deps ~= dep;
       }
     }
   }
