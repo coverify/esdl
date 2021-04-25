@@ -383,6 +383,12 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	else {
 	  if (! canFind(vars, this)) vars ~= this;
 	}
+
+	if (_parent.isStatic()) {
+	  auto len = _parent._arrLen;
+	  if (! canFind(deps, len)) deps ~= len;
+	}
+
 	_parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
 
 	if (_indexExpr !is null) {
@@ -1021,6 +1027,12 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	  
 	// auto iter = arrLen.makeIterVar();
 	// iters ~= iter;
+
+	if (_parent.isStatic()) {
+	  auto len = _parent._arrLen;
+	  if (! canFind(deps, len)) deps ~= len;
+	}
+
 	_parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
 	if (_indexExpr !is null) {
 	  CstDomBase[] indexes;
