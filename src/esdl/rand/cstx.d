@@ -648,9 +648,64 @@ struct CstParser {
     return true;
   }
 
+  void procChain(ref bool isSym) {
+    while (true) {
+      auto srcTag = srcCursor;
+      parseSpace();
+      fillOut(CST[srcTag..srcCursor]);
+      srcTag = srcCursor;
+      if (CST[srcCursor] == '.' &&
+	  srcCursor + 1 < CST.length &&
+	  CST[srcCursor+1] != '.' // that woucd be range expression
+	  ) {
+	fillOut(CST[srcTag..srcCursor]);
+	srcCursor += 1;
+	srcTag = srcCursor;
+	parseSpace();
+	srcTag = srcCursor;
+	fillOut(CST[srcTag..srcCursor]);
+	srcTag = srcCursor;
+	parseIdentifier();
+	fillOut('.');
+	fillOut(CST[srcTag..srcCursor]);
+	// fillOut("._esdl__dot!(\"");
+	// srcTag = srcCursor;
+	// parseIdentifier();
+	// fillOut(CST[srcTag..srcCursor]);
+	// fillOut("\")");
+	continue;
+      }
+      else if (CST[srcCursor] == '[') {
+	fillOut(CST[srcTag..srcCursor]);
+	fillOut("[");
+	srcCursor += 1;
+	srcTag = srcCursor;
+	isSym &= procIndexExpr(srcCursor);
+	srcTag = srcCursor;
+	parseSpace();
+	fillOut(CST[srcTag..srcCursor]);
+	srcTag = srcCursor;
+	if (CST[srcCursor] == ']') {
+	  fillOut("]");
+	  srcCursor += 1;
+	}
+	else {
+	  assert (false, "Unrecognized token: " ~ "--> " ~
+		  CST[srcCursor..$]);
+	}
+	continue;
+      }
+      else {
+	srcCursor = srcTag;
+	break;
+      }
+    }
+  }
+  
   bool procIdentifier() {
     // parse an identifier and the following '.' heirarcy if any
     bool isSym = true;
+    bool chain = false;
     auto start = srcCursor;
     auto srcTag = srcCursor;
     
@@ -663,6 +718,7 @@ struct CstParser {
     parseIdentifier();
 
     if (srcCursor != srcTag) {	// some identifier
+      chain = true;
       fillOut("_esdl__sym!(");
       string mapped;
       int mappedCursor = 0;
@@ -699,88 +755,52 @@ struct CstParser {
 	// fillOut("\")");
 	mappedPrevCursor = ++mappedCursor;
       }
-
-      while (true) {
-	srcTag = srcCursor;
-	parseSpace();
-	fillOut(CST[srcTag..srcCursor]);
-	srcTag = srcCursor;
-	if (CST[srcCursor] == '.' &&
-	    srcCursor + 1 < CST.length &&
-	    CST[srcCursor+1] != '.' // that woucd be range expression
-	    ) {
-	  fillOut(CST[srcTag..srcCursor]);
-	  srcCursor += 1;
-	  srcTag = srcCursor;
-	  parseSpace();
-	  srcTag = srcCursor;
-	  fillOut(CST[srcTag..srcCursor]);
-	  srcTag = srcCursor;
-	  parseIdentifier();
-	  fillOut('.');
-	  fillOut(CST[srcTag..srcCursor]);
-	  // fillOut("._esdl__dot!(\"");
-	  // srcTag = srcCursor;
-	  // parseIdentifier();
-	  // fillOut(CST[srcTag..srcCursor]);
-	  // fillOut("\")");
-	  continue;
-	}
-	else if (CST[srcCursor] == '[') {
-	  fillOut(CST[srcTag..srcCursor]);
-	  fillOut("[");
-	  srcCursor += 1;
-	  srcTag = srcCursor;
-	  isSym &= procIndexExpr(srcCursor);
-	  srcTag = srcCursor;
-	  parseSpace();
-	  fillOut(CST[srcTag..srcCursor]);
-	  srcTag = srcCursor;
-	  if (CST[srcCursor] == ']') {
-	    fillOut("]");
-	    srcCursor += 1;
-	  }
-	  else {
-	    assert (false, "Unrecognized token: " ~ "--> " ~
-		    CST[srcCursor..$]);
-	  }
-	  continue;
-	}
-	else {
-	  srcCursor = srcTag;
-	  break;
-	}
-      }
-      
+      procChain(isSym);
     }
     else {
-      srcTag = parseLiteral();
+      srcTag = parseWithArg();
       if (srcCursor > srcTag) {
-	fillOut("_esdl__sym!(");
-	fillOut(CST[srcTag..srcCursor]);
-	fillOut(")(\"");
-	// fillOut(", \"");
-	// fillOut(CST[srcTag..srcCursor]);
-	// fillOut("\")(\"");
-	// fillDecl(CST[srcTag..srcCursor]);
+	chain = true;
+	fillOut("_esdl__arg_proxy(\"");
+	// fillOut("_esdl__arg!");
+	// fillOut(CST[srcTag+1..srcCursor]);
+	// fillOut("()");
+	// fillOut(")(\"");
 	fillOut(CST[start..srcCursor]);
-	fillOut("\", this.outer)");
+	fillOut("\", _esdl__arg!");
+	fillOut(CST[srcTag+1..srcCursor]);
+	fillOut("(), this.outer)");
+	procChain(isSym);
       }
       else {
-	srcTag = parseWithArg();
+	srcTag = parseLiteral();
 	if (srcCursor > srcTag) {
-	  fillOut("_esdl__arg_proxy(\"");
-	  // fillOut("_esdl__arg!");
-	  // fillOut(CST[srcTag+1..srcCursor]);
-	  // fillOut("()");
-	  // fillOut(")(\"");
+	  fillOut("_esdl__sym!(");
+	  fillOut(CST[srcTag..srcCursor]);
+	  fillOut(")(\"");
+	  // fillOut(", \"");
+	  // fillOut(CST[srcTag..srcCursor]);
+	  // fillOut("\")(\"");
+	  // fillDecl(CST[srcTag..srcCursor]);
 	  fillOut(CST[start..srcCursor]);
-	  fillOut("\", _esdl__arg!");
-	  fillOut(CST[srcTag+1..srcCursor]);
-	  fillOut("(), this.outer)");
+	  fillOut("\", this.outer)");
 	}
 	else {
-	  errorToken();
+	  srcTag = parseWithArg();
+	  if (srcCursor > srcTag) {
+	    fillOut("_esdl__arg_proxy(\"");
+	    // fillOut("_esdl__arg!");
+	    // fillOut(CST[srcTag+1..srcCursor]);
+	    // fillOut("()");
+	    // fillOut(")(\"");
+	    fillOut(CST[start..srcCursor]);
+	    fillOut("\", _esdl__arg!");
+	    fillOut(CST[srcTag+1..srcCursor]);
+	    fillOut("(), this.outer)");
+	  }
+	  else {
+	    errorToken();
+	  }
 	}
       }
     }
