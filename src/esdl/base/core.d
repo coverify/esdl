@@ -5029,7 +5029,7 @@ interface SimContext: NamedComp { }
 
 // Each process, routine and the root process have their own random
 // generator. This is done to enable random stability.
-private ref Random getRandGen() {
+ref Random getRandGen() {
   Procedure proc;
   proc = Process.self;
   if(proc is null) {
