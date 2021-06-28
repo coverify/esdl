@@ -63,7 +63,7 @@ class CommandLine
 
     uint argc;
 
-    if(vpiUsable) {
+    if (vpiUsable) {
       argc = vlogArgc;
       if (vlogArgv is null) return;
     }
@@ -76,7 +76,7 @@ class CommandLine
   
     for (size_t i=0; i != argc; ++i) {
       string arg;
-      if(vpiUsable) {
+      if (vpiUsable) {
 	char* vlogArg = *(vlogArgv+i);
 	arg = (vlogArg++).to!string;
       }
@@ -101,7 +101,7 @@ class CommandLine
   this(string[] args) {
     string[] argv;
     foreach (arg; args) {
-      if(arg == "-f" || arg == "-F") {
+      if (arg == "-f" || arg == "-F") {
 	_argvs ~= argv;
 	argv.length = 0;
       }
