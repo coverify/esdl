@@ -227,6 +227,23 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     return _globalVisitors;
   }
 
+  _esdl__ConstraintBase[] _argVisitors;
+
+  void addArgVisitor(_esdl__ConstraintBase visitor) {
+    _argVisitors ~= visitor;
+  }
+
+  void setContextArgVisitors() {
+    foreach (visitor; _argVisitors) {
+      visitor.setDomainContext();
+      visitor.procDomainContext();
+    }
+  }
+
+  _esdl__ConstraintBase[] getArgVisitors() {
+    return _argVisitors;
+  }
+
   Folder!(CstPredicate, "unrolledNewPreds") _unrolledNewPreds;
 
   void addUnrolledNewPredicate(CstPredicate pred) {
@@ -725,14 +742,15 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	      group = new CstPredGroup(this);
 	      if (_esdl__debugSolver) {
 		import std.stdio;
-		writeln("Created new group ", group._id, " for predicate: ", pred.name());
+		writeln("Created new group ", group._id, " for predicate: ", pred.describe());
 	      }
 	    }
 	    else if (_esdl__debugSolver) {
 	      import std.stdio;
-	      writeln("Reuse group ", group._id, " for predicate: ", pred.name());
+	      writeln("Reuse group ", group._id, " for predicate: ", pred.describe());
 	    }
 	    if (pred.withDist()) group.markDist();
+	    group.needSync();
 	    assert (! group.isSolved(),
 		    "Group can not be solved when the predicate is still not solved; group: " ~
 		    group.describe() ~ " predicate: " ~ pred.describe());

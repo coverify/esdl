@@ -14,7 +14,7 @@ import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.expr: CstRangeExpr, CstVec2LogicExpr;
 import esdl.rand.domain: CstVecValue, CstArrIterator, CstArrLength, CstDomain;
-import esdl.rand.meta: _esdl__ProxyResolve, _esdl__staticCast;
+import esdl.rand.meta: _esdl__ProxyResolve, _esdl__staticCast, _esdl__ARG;
 
 import std.algorithm.searching: canFind;
 
@@ -449,11 +449,18 @@ class CstVecArrIdx(V, rand RAND_ATTR, int N, int IDX,
     super(name, parent, var);
   }
 
-  override RV unroll(CstIterator iter, ulong n) {
-    P uparent = cast(P)(_parent.unroll(iter, n));
-    assert (uparent !is null);
-    assert (this is uparent.tupleof[PIDX]);
-    return this;
+  static if (is (P: _esdl__ARG)) {
+    override RV unroll(CstIterator iter, ulong n) {
+      return this;
+    }
+  }
+  else {
+    override RV unroll(CstIterator iter, ulong n) {
+      P uparent = cast(P)(_parent.unroll(iter, n));
+      assert (uparent !is null);
+      assert (this is uparent.tupleof[PIDX]);
+      return this;
+    }
   }
 }
 

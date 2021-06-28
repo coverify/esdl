@@ -198,7 +198,7 @@ class CstObjectBase(V, rand RAND_ATTR, int N)
 	  }
 	}
 	bool rand_mode() { return _isRand; }
-	// overridded in derived classes
+	// overridden in derived classes
 	override bool isRand() { assert (false); }
       }
 
