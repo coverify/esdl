@@ -31,6 +31,8 @@ class CstVectorGlob(V, rand RAND_ATTR, int N, alias SYM)
   enum _esdl__ISRAND = RAND_ATTR.isRand();
   enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
 
+  static assert (_esdl__ISRAND == false);
+
   this(string name, _esdl__Proxy parent, V* var) {
     super(name, parent, var);
   }
@@ -43,6 +45,33 @@ class CstVectorGlob(V, rand RAND_ATTR, int N, alias SYM)
   override RV unroll(CstIterator iter, ulong n) {
     return this;
   }
+}
+
+class CstVectorGlobEnum(V, rand RAND_ATTR, int N)
+  : CstVector!(V, RAND_ATTR, N), CstVarGlobIntf
+{
+  alias RV = typeof(this);
+  enum _esdl__ISRAND = RAND_ATTR.isRand();
+  enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
+
+  static assert (_esdl__ISRAND == false);
+  
+  V _var;
+
+  this(string name, _esdl__Proxy parent, V var) {
+    _var = var;
+    super(name, parent, &_var);
+  }
+
+  override void _esdl__fixRef() {
+    _esdl__setValRef(& _var);
+  }
+  
+  // no unrolling is possible without adding rand proxy
+  override RV unroll(CstIterator iter, ulong n) {
+    return this;
+  }
+
 }
 
 class CstVectorIdx(V, rand RAND_ATTR, int N, int IDX,
@@ -71,6 +100,7 @@ class CstVectorIdx(V, rand RAND_ATTR, int N, int IDX,
     }
   }
 }
+
 
 class CstVectorBase(V, rand RAND_ATTR, int N)
   if (_esdl__ArrOrder!(V, N) == 0):
@@ -434,6 +464,34 @@ class CstVecArrGlob(V, rand RAND_ATTR, int N, alias SYM)
   override RV unroll(CstIterator iter, ulong n) {
     return this;
   }
+}
+
+// Arrays (Multidimensional arrays as well)
+class CstVecArrGlobEnum(V, rand RAND_ATTR, int N)
+  : CstVecArr!(V, RAND_ATTR, N), CstVarGlobIntf
+{
+  // static assert (is (typeof(this) == P.tupleof[PIDX]));
+  enum _esdl__ISRAND = RAND_ATTR.isRand();
+  enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
+
+  static assert (_esdl__ISRAND == false);
+
+  V _var;
+
+  this(string name, _esdl__Proxy parent, V var) {
+    _var = var;
+    super(name, parent, &_var);
+  }
+
+  override void _esdl__fixRef() {
+    _esdl__setValRef (& _var);
+  }
+  
+  // no unrolling is possible without adding rand proxy
+  override RV unroll(CstIterator iter, ulong n) {
+    return this;
+  }
+
 }
 
 // Arrays (Multidimensional arrays as well)

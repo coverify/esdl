@@ -24,7 +24,7 @@ import esdl.rand.base: CstVecPrim, CstVarGlobIntf, CstVarNodeIntf,
   CstObjArrStubBase;
 import esdl.rand.pred: CstPredicate, CstVisitorPredicate;
 import esdl.rand.vecx: CstVectorIdx, CstVecArrIdx,
-  CstVectorGlob, CstVecArrGlob;
+  CstVectorGlob, CstVecArrGlob, CstVectorGlobEnum, CstVecArrGlobEnum;
 import esdl.rand.objx: CstObjectIdx, CstObjArrIdx, CstObjectGlob,
   CstObjectStub, CstObjArrStub;
 import esdl.rand.domain: CstVecValue, CstLogicValue;
@@ -1137,17 +1137,33 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
   else static if (isRandVectorSet!L) {
     // import std.stdio;
     // writeln("Creating VarVecArr, ", name);
-    alias CstVecArrType = CstVecArrGlob!(L, rand(true, true), 0, V);
-    CstVarGlobIntf global = parent.getGlobalLookup(V.stringof);
-    if (global !is null)
-      return cast(CstVecArrType) global;
+    static if (isLvalue!V) {
+      alias CstVecArrType = CstVecArrGlob!(L, rand(true, true), 0, V);
+      CstVarGlobIntf global = parent.getGlobalLookup(V.stringof);
+      if (global !is null)
+	return cast(CstVecArrType) global;
+      else {
+	CstVecArrType obj = new CstVecArrType(name, parent, &V);
+	parent.addGlobalLookup(obj, V.stringof);
+	auto visitor =
+	  new _esdl__VisitorCst!CstVecArrType(parent, name ~ "_CstVisitor", obj);
+	parent.addGlobalVisitor(visitor);
+	return obj;
+      }
+    }
     else {
-      CstVecArrType obj = new CstVecArrType(name, parent, &V);
-      parent.addGlobalLookup(obj, V.stringof);
-      auto visitor =
-	new _esdl__VisitorCst!CstVecArrType(parent, name ~ "_CstVisitor", obj);
-      parent.addGlobalVisitor(visitor);
-      return obj;
+      alias CstVecArrType = CstVecArrGlobEnum!(L, rand(true, true), 0);
+      CstVarGlobIntf global = parent.getGlobalLookup(V.stringof);
+      if (global !is null)
+	return cast(CstVecArrType) global;
+      else {
+	CstVecArrType obj = new CstVecArrType(name, parent, V);
+	parent.addGlobalLookup(obj, V.stringof);
+	auto visitor =
+	  new _esdl__VisitorCst!CstVecArrType(parent, name ~ "_CstVisitor", obj);
+	parent.addGlobalVisitor(visitor);
+	return obj;
+      }
     }
   }
   else static if (isRandClassSet!L || isRandStructSet!L) {

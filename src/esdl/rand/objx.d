@@ -57,6 +57,31 @@ class CstObjectGlob(V, rand RAND_ATTR, int N, alias SYM)
   }
 }
 
+class CstObjectGlobEnum(V, rand RAND_ATTR, int N)
+  : CstObject!(V, RAND_ATTR, N), CstVarGlobIntf
+{
+  enum _esdl__ISRAND = RAND_ATTR.isRand();
+  enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
+
+  static assert (_esdl__ISRAND == false);
+
+  V _var;
+
+  this(string name, _esdl__Proxy parent, V var) {
+    _var = var;
+    super(name, parent, & _var);
+  }
+
+  override void _esdl__fixRef() {
+    _esdl__setValRef(& _var);
+  }
+  
+  // no unrolling is possible without adding rand proxy
+  override _esdl__Proxy unroll(CstIterator iter, ulong n) {
+    return this;
+  }
+}
+
 class CstObjectStub(V, rand RAND_ATTR, int N, int IDX,
 		    P, int PIDX): CstObjectStubBase
 {
@@ -486,6 +511,31 @@ class CstObjArrGlob(V, rand RAND_ATTR, int N, alias SYM)
 
   override void _esdl__fixRef() {
     _esdl__setValRef (& SYM);
+  }
+  
+  // no unrolling is possible without adding rand proxy
+  override RV unroll(CstIterator iter, ulong n) {
+    return this;
+  }
+}
+
+class CstObjArrGlobEnum(V, rand RAND_ATTR, int N)
+  : CstObjArr!(V, RAND_ATTR, N), CstVarGlobIntf
+{
+  enum _esdl__ISRAND = RAND_ATTR.isRand();
+  enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
+
+  static assert (_esdl__ISRAND == false);
+
+  V _var;
+  
+  this(string name, _esdl__Proxy parent, V var) {
+    _var = var;
+    super(name, parent, & _var);
+  }
+
+  override void _esdl__fixRef() {
+    _esdl__setValRef (& _var);
   }
   
   // no unrolling is possible without adding rand proxy
