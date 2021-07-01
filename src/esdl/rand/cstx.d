@@ -786,21 +786,7 @@ struct CstParser {
 	  fillOut("\", this.outer)");
 	}
 	else {
-	  srcTag = parseWithArg();
-	  if (srcCursor > srcTag) {
-	    fillOut("_esdl__arg_proxy(\"");
-	    // fillOut("_esdl__arg!");
-	    // fillOut(CST[srcTag+1..srcCursor]);
-	    // fillOut("()");
-	    // fillOut(")(\"");
-	    fillOut(CST[start..srcCursor]);
-	    fillOut("\", _esdl__arg!");
-	    fillOut(CST[srcTag+1..srcCursor]);
-	    fillOut("(), this.outer)");
-	  }
-	  else {
-	    errorToken();
-	  }
+	  errorToken();
 	}
       }
     }
