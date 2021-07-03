@@ -622,25 +622,25 @@ struct CstParser {
     return start;
   }
 
-  size_t parseIdentifierChain() {
-    size_t srcUpto;
-    size_t start = srcCursor;
-    parseIdentifier();
-    srcUpto = srcCursor;
-    if (start < srcCursor) {
-      parseSpace();
-      if (CST.length > srcCursor && CST[srcCursor] == '.') {
-	srcCursor += 1;
-	parseSpace();
-	parseIdentifierChain();
-	srcUpto = srcCursor;
-      }
-      else {
-	srcCursor = srcUpto;
-      }
-    }
-    return start;
-  }
+  // size_t parseIdentifierChain() {
+  //   size_t srcUpto;
+  //   size_t start = srcCursor;
+  //   parseIdentifier();
+  //   srcUpto = srcCursor;
+  //   if (start < srcCursor) {
+  //     parseSpace();
+  //     if (CST.length > srcCursor && CST[srcCursor] == '.') {
+  // 	srcCursor += 1;
+  // 	parseSpace();
+  // 	parseIdentifierChain();
+  // 	srcUpto = srcCursor;
+  //     }
+  //     else {
+  // 	srcCursor = srcUpto;
+  //     }
+  //   }
+  //   return start;
+  // }
 
   bool parseMappedChain(string mapped, ref int cursor) {
     if (cursor >= mapped.length) return false;
@@ -719,12 +719,12 @@ struct CstParser {
 
     if (srcCursor != srcTag) {	// some identifier
       chain = true;
-      fillOut("_esdl__sym!(");
       string mapped;
       int mappedCursor = 0;
       int mappedPrevCursor = 0;
       int indx = idMatch(CST[srcTag..srcCursor]);
       if (indx == -1) {
+	fillOut("_esdl__sym!(");
 	fillOut(CST[srcTag..srcCursor]);
 	fillOut(")(\"");
 	// fillOut(", \"");
@@ -732,21 +732,35 @@ struct CstParser {
 	// fillOut("\")(\"");
 	// fillDecl(CST[srcTag..srcCursor]);
 	fillOut(CST[srcTag..srcCursor]);
+	fillOut("\", this.outer)");
       }
       else {
 	isSym = false;
 	mapped = varMap[indx].xLat;
 	parseMappedChain(mapped, mappedCursor);
-	fillOut(mapped[0..mappedCursor]);
-	fillOut(")(\"");
-	// fillOut(", \"");
-	// fillOut(mapped[0..mappedCursor]);
-	// fillOut("\")(\"");
-	// fillDecl(varMap[indx].xLatBase);
-	fillOut(mapped[0..mappedCursor]);
-	mappedPrevCursor = ++mappedCursor;
+	if (mapped[0] == '$') {
+	  fillOut("_esdl__arg_proxy(");
+	  fillOut(mapped[1..mappedCursor]);
+	  fillOut(", \"");
+	  fillOut(mapped[0..mappedCursor]);
+	  fillOut("\", _esdl__arg!");
+	  fillOut(mapped[1..mappedCursor]);
+	  mappedPrevCursor = ++mappedCursor;
+	  fillOut("(), this, this.outer)");
+	}
+	else {
+	  fillOut("_esdl__sym!(");
+	  fillOut(mapped[0..mappedCursor]);
+	  fillOut(")(\"");
+	  // fillOut(", \"");
+	  // fillOut(mapped[0..mappedCursor]);
+	  // fillOut("\")(\"");
+	  // fillDecl(varMap[indx].xLatBase);
+	  fillOut(mapped[0..mappedCursor]);
+	  mappedPrevCursor = ++mappedCursor;
+	  fillOut("\", this.outer)");
+	}
       }
-      fillOut("\", this.outer)");
       while (parseMappedChain(mapped, mappedCursor)) {
 	fillOut('.');
 	fillOut(mapped[mappedPrevCursor..mappedCursor]);
@@ -761,15 +775,21 @@ struct CstParser {
       srcTag = parseWithArg();
       if (srcCursor > srcTag) {
 	chain = true;
-	fillOut("_esdl__arg_proxy(\"");
-	// fillOut("_esdl__arg!");
-	// fillOut(CST[srcTag+1..srcCursor]);
-	// fillOut("()");
-	// fillOut(")(\"");
+	// fillOut("_esdl__arg_proxy(\"");
+	// fillOut(mapped[0..mappedCursor]);
+	// fillOut(", \"");
+	// fillOut(mapped[0..mappedCursor]);
+	// fillOut("\", _esdl__arg!");
+	// fillOut(mapped[1..mappedCursor]);
+	// mappedPrevCursor = ++mappedCursor;
+	// fillOut("(), this, this.outer)");
+	fillOut("_esdl__arg_proxy(");
+	fillOut(CST[start+1..srcCursor]);
+	fillOut(", \"");
 	fillOut(CST[start..srcCursor]);
 	fillOut("\", _esdl__arg!");
 	fillOut(CST[srcTag+1..srcCursor]);
-	fillOut("(), this.outer)");
+	fillOut("(), this, this.outer)");
 	procChain(isSym);
       }
       else {
@@ -1335,24 +1355,22 @@ struct CstParser {
     }
 
     // Parse array
-    srcTag = parseIdentifierChain();
-    if (srcCursor > srcTag) {
-      // FIXME -- check if the variable names do not shadow earlier
-      // names in the table
-      array = CST[srcTag..srcCursor];
-      arrayBase = CST[srcTag..srcCursor];
-      srcTag = parseSpace();
-      fillOut(CST[srcTag..srcCursor]);
-      if (CST[srcCursor] != ')') {
-	errorToken();
-      }
-      ++srcCursor;
-      srcTag = parseSpace();
-      fillOut(CST[srcTag..srcCursor]);
-    }
-    else {
+    fillOut("    " ~ _proxy ~ ".pushScope(");
+    srcTag = srcCursor;
+    procIdentifier();
+    fillOut("._esdl__iter);\n");
+
+    array = CST[srcTag..srcCursor];
+    arrayBase = CST[srcTag..srcCursor];
+    
+    srcTag = parseSpace();
+    fillOut(CST[srcTag..srcCursor]);
+    if (CST[srcCursor] != ')') {
       errorToken();
     }
+    ++srcCursor;
+    srcTag = parseSpace();
+    fillOut(CST[srcTag..srcCursor]);
 
     int indx = idMatch(array);
     if (indx != -1) {
@@ -1377,33 +1395,6 @@ struct CstParser {
     x.xLatBase = arrayBase;
     varMap ~= x;
 
-    // start of foreach
-    // fillOut("    // Start of Foreach: " ~ array ~ ".iterator() \n");
-    int dotLoc = findFirstDot(array);
-    if (dotLoc == -1) {
-      fillOut(_proxy);
-      fillOut(".pushScope(_esdl__sym!(");
-      fillOut(array);
-      fillOut(")(\"");
-      // fillOut(", \"");
-      // fillOut(array);
-      // fillOut("\")(\"");
-      fillOut(array);
-      fillOut("\", this.outer)._esdl__iter);\n");
-    }
-    else {
-      fillOut(_proxy);
-      fillOut(".pushScope(_esdl__sym!(");
-      fillOut(array[0..dotLoc]);
-      fillOut(")(\"");
-      // fillOut(", \"");
-      // fillOut(array[0..dotLoc]);
-      // fillOut("\")(\"");
-      fillOut(array[0..dotLoc]);
-      fillOut("\", this.outer)");
-      fillOut(array[dotLoc..$]);
-      fillOut("._esdl__iter);\n");
-    }
     if (CST[srcCursor] is '{') {
       ++srcCursor;
       procBlock();

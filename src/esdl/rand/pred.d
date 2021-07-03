@@ -573,7 +573,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
        CstIterator unrollIter=null, uint unrollIterVal=0 // ,
        // CstIterator[] iters ...
        ) {
-    synchronized(typeid(CstPredicate)) {
+    synchronized (typeid(CstPredicate)) {
       _id = _count++;
     }
     assert(proxy !is null);

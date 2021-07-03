@@ -880,6 +880,8 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 
     Tuple!(ARGS) _withArgs;
 
+    CstVarNodeIntf[ARGS.length] _proxyWithArgs;
+
     void withArgs(ARGS...)(ARGS values) // if(allIntengral!ARGS)
       {
       // static assert(ARGS.length == N);
@@ -1205,19 +1207,39 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
 // }
 
 
-auto _esdl__arg_proxy(L, S)(string name, ref L arg, S parent) {
+auto _esdl__arg_proxy(L, X, P)(size_t idx, string name, ref L arg, X proxy, P parent) {
   static if (isRandomizable!L) {
     // import std.stdio;
     // writeln("Creating VarVec, ", name);
-    return new CstVectorIdx!(L, rand(true, true), 0, -1, _esdl__ARG, -1)(name, parent, &arg);
+    alias CstVectorType = CstVectorIdx!(L, rand(true, true), 0, -1, _esdl__ARG, -1);
+    CstVarNodeIntf var = proxy._proxyWithArgs[idx];
+    if (var is null) {
+      CstVectorType vvar = new CstVectorType(name, parent, &arg);
+      proxy._proxyWithArgs[idx] = vvar;
+      return vvar;
+    }
+    else {
+      CstVectorType vvar = cast (CstVectorType) var;
+      assert (vvar !is null);
+      return vvar;
+    }
   }
   else static if (isRandVectorSet!L) {
     alias CstVecArrType = CstVecArrIdx!(L, rand(true, true), 0, -1, _esdl__ARG, -1);
-    auto obj = new CstVecArrType(name, parent, &arg);
-    auto visitor =
-      new _esdl__VisitorCst!CstVecArrType(parent, name ~ "_CstVisitor", obj);
-    parent.addArgVisitor(visitor);
-    return obj;
+    CstVarNodeIntf var = proxy._proxyWithArgs[idx];
+    if (var is null) {
+      CstVecArrType vvar = new CstVecArrType(name, parent, &arg);
+      auto visitor =
+	new _esdl__VisitorCst!CstVecArrType(parent, name ~ "_CstVisitor", vvar);
+      parent.addArgVisitor(visitor);
+      proxy._proxyWithArgs[idx] = vvar;
+      return vvar;
+    }
+    else {
+      CstVecArrType vvar = cast (CstVecArrType) var;
+      assert (vvar !is null);
+      return vvar;
+    }
   }
   else {
     static assert(false);
