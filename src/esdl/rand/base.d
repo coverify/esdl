@@ -337,7 +337,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   }
 
   void markSolved() {
-    debug(CSTDOMAINS) {
+    if (_root._esdl__debugSolver) {
       import std.stdio;
       stderr.writeln("Marking ", this.name(), " as SOLVED");
     }
