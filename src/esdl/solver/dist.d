@@ -5,6 +5,8 @@ import esdl.solver.base: CstDistSolverBase;
 import esdl.rand.base: CstDomBase;
 import esdl.rand.misc: _esdl__RandGen;
 
+import esdl.data.bvec: isBitVector, to;
+
 struct CstVecDistRange(T)
 {
   T _min;
@@ -220,7 +222,12 @@ class CstVecDistSolver(T): CstDistSolverBase
   }
 
   override void purge(long elem) {
-    T e = cast(T) elem;
+    static if (isBitVector!T) {
+      T e = to!T(elem);
+    }
+    else {
+      T e = cast(T) elem;
+    }
     foreach (ref dist; _set) {
       if (dist.purge(e)) break;
     }
@@ -234,6 +241,11 @@ class CstVecDistSolver(T): CstDistSolverBase
     foreach (ref dist; _set) {
       dist.reset();
     }
+  }
+
+  T urandom() {
+    import esdl.rand: getRandGen;
+    return uniform(getRandGen());
   }
 
   T uniform(ref Random gen = rndGen()) {
