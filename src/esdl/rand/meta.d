@@ -48,7 +48,7 @@ T _esdl__staticCast(T, F)(const F from)
       // assert statement will not be compiled for production release
       assert((from is null) || cast(T)from !is null);
     }
-body {
+do {
   return cast(T) cast(void*) from;
  }
 
@@ -885,7 +885,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     void withArgs(ARGS...)(ARGS values) // if(allIntengral!ARGS)
       {
       // static assert(ARGS.length == N);
-      foreach(i, ref v; values) {
+	foreach(i, /*ref*/ v; values) {
     	_withArgs[i] = v;
       }
     }

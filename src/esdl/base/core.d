@@ -54,9 +54,9 @@ T staticCast(T, F)(const F from)
       // assert statement will not be compiled for production release
       assert((from is null) || cast(T)from !is null);
     }
-body {
+do {
   return cast(T) cast(void*) from;
- }
+}
 
 // Base class for ESDL -- all ESDL classes will have this common parent
 private interface EsdlObj {}
@@ -5027,51 +5027,6 @@ void unlockStage() {
 // EsdlSimulator via the 'getSimulator'.
 interface SimContext: NamedComp { }
 
-// Each process, routine and the root process have their own random
-// generator. This is done to enable random stability.
-ref Random getRandGen() {
-  Procedure proc;
-  proc = Process.self;
-  if(proc is null) {
-    proc = RootThread.self;
-  }
-  if(proc !is null) {
-    return proc.getRandGen();
-  }
-  else {
-    assert(false, "getRandGen can be accessed only from a Process," ~
-	   " or RootThread");
-  }
-}
-
-T urandom(T=uint)() {
-  static if(isBitVector!T) {
-    T v;
-    v.randomize(getRandGen());
-    return v;
-  }
-  else {
-    auto v = uniform!T(getRandGen());
-    // debug(SEED) {
-    //   import std.stdio;
-    //   stderr.writeln("URANDOM returns: ", v);
-    // }
-    return v;
-  }
-}
-
-T urandom(string BOUNDARY="[]", T=uint)(T min, T max) {
-  return uniform!(BOUNDARY, T)(min, max, getRandGen());
-}
-
-T urandom_range(string BOUNDARY="[]", T=uint)(T min, T max) {
-  return uniform!(BOUNDARY, T)(min, max, getRandGen());
-}
-
-void srandom(uint _seed) {
-  getRandGen().seed(_seed);
-}
-
 @_esdl__component struct Inst(M, string S="")
   if(is(M: EntityIntf))
     {
@@ -5929,8 +5884,8 @@ class BaseWorker: Process
       }
       // freeLock();
       exit(22);
-      this.caughtException();
-      throw(e);
+      // this.caughtException();
+      // throw(e);
     }
     this.cleanup();
   }
@@ -5972,8 +5927,8 @@ class BaseWorker: Process
       }
       // freeLock();
       exit(22);
-      this.caughtException();
-      throw (e);
+      // this.caughtException();
+      // throw (e);
     }
     this.cleanup();
   }
@@ -6210,7 +6165,7 @@ class BaseRoutine: Process
 
 abstract class Process: Procedure, HierComp, EventClient
 {
-
+  import esdl.rand: urandom;
   mixin HierMixin;
 
   __gshared size_t _procCount;
@@ -6546,7 +6501,7 @@ abstract class Process: Procedure, HierComp, EventClient
 
   private final void setRandSeed() {
     synchronized(this) {
-      _randSeed = urandom();
+      _randSeed = urandom!uint();
       this._randGen.seed(_randSeed);
     }
   }
@@ -6682,8 +6637,8 @@ abstract class Process: Procedure, HierComp, EventClient
       }
       // freeLock();
       exit(22);
-      this.caughtException();
-      throw(e);
+      // this.caughtException();
+      // throw(e);
     }
     this.cleanup();
   }
@@ -6731,15 +6686,15 @@ abstract class Process: Procedure, HierComp, EventClient
       debug(PROC) {
 	stderr.writefln("Thread threw exception %s", e);
       }
-      exit(22);
       // stderr.writeln(e);
       debug(PROC) {
 	import std.stdio;
 	stderr.writeln("Process ending with exception   : ", Process.procID);
       }
+      exit(22);
       // freeLock();
-      this.caughtException();
-      throw(e);
+      // this.caughtException();
+      // throw(e);
     }
     this.cleanup();
   }

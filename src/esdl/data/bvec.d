@@ -1672,7 +1672,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       in {
 	assert(i < SIZE);
       }
-    body {
+    do {
       _bvec!(false, L, cast(size_t) 1) retval;
       static if(STORESIZE == 1) {
 	retval._aval[0] = cast(ubyte)((this._aval[0] >>> i) & 1LU);
@@ -1709,7 +1709,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       in {
 	assert(i < SIZE);
       }
-    body {
+    do {
       static if(STORESIZE == 1) {
 	if(b) this._aval[0] |= (1LU << i);
 	else   this._aval[0] &= ~(1LU << i);
@@ -1739,7 +1739,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	in {
 	  assert(i < SIZE);
 	}
-    body {
+    do {
       static if(STORESIZE == 1) {
 	static if(other.IS4STATE) {
 	  static if(L) {
@@ -2244,7 +2244,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
         assert(i < SIZE && i >= 0 && j <= SIZE && j >= 0);
         assert(i < j);
       }
-    body {
+    do {
       T result = this >>> i;
       result &= ones(j - i);
       return result;
@@ -2982,6 +2982,18 @@ public auto mapToUBits(T)(T t) if(isFloatingPoint!T) {
  }
 
 alias tobvec = toBit;
+
+public auto to(B, T)(T t) if(isIntegral!T && isBitVector!B) {
+  static if (isSigned!T) {
+    alias R = BitVec!(8*T.sizeof);
+  }
+  else {
+    alias R = UBitVec!(8*T.sizeof);
+  }
+  R tmp = t;
+  B res = cast(B) tmp;
+  return res;
+ }
 
 public auto toBit(size_t N, T)(T t) if(isIntegral!T) {
   static if(isSigned!T) {

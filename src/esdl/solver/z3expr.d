@@ -20,7 +20,7 @@ T StaticCast(T, F)(const F from)
       // assert statement will not be compiled for production release
       assert((from is null) || cast(T)from !is null);
     }
-body {
+do {
   return cast(T) cast(void*) from;
  }
 

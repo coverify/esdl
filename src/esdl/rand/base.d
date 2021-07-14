@@ -1,7 +1,9 @@
 module esdl.rand.base;
 
-import std.traits: isIntegral;
+import std.traits: isIntegral, isBoolean;
 import std.algorithm: canFind;
+import std.random: Random;
+import std.range: isRandomAccessRange;
 
 import esdl.solver.base;
 
@@ -1106,3 +1108,66 @@ interface CstLogicTerm: CstTerm
   }
 
 }
+
+// Each process, routine and the root process have their own random
+// generator. This is done to enable random stability.
+ref Random getRandGen() {
+  import esdl.base.core: Procedure, Process, RootThread;
+  Procedure proc;
+  proc = Process.self;
+  if(proc is null) {
+    proc = RootThread.self;
+  }
+  if(proc !is null) {
+    return proc.getRandGen();
+  }
+  else {
+    assert(false, "getRandGen can be accessed only from a Process," ~
+	   " or RootThread");
+  }
+}
+
+T urandom(T=uint)() if (isIntegral!T || isBitVector!T) {
+  static if(isBitVector!T) {
+    T v;
+    v.randomize(getRandGen());
+    return v;
+  }
+  else {
+    import std.random: uniform;
+    auto v = uniform!T(getRandGen());
+    // debug(SEED) {
+    //   import std.stdio;
+    //   stderr.writeln("URANDOM returns: ", v);
+    // }
+    return v;
+  }
+}
+
+bool urandom(T=bool)() if (isBoolean!T) {
+  import std.random: uniform;
+  uint v = uniform!("[]", uint)(0, 1, getRandGen());
+  if (v == 0) return false;
+  else return true;
+ }
+
+R shuffle(R)(ref R range) {
+  import std.random: randomShuffle;
+  return randomShuffle(range, getRandGen());
+ }
+
+T urandom(string BOUNDARY="[)", T=uint)(T min, T max)
+  if (isIntegral!T || isBitVector!T) {
+    import std.random: uniform;
+    return uniform!(BOUNDARY, T)(min, max, getRandGen());
+  }
+
+T urandom_range(string BOUNDARY="[)", T=uint)(T min, T max) {
+  import std.random: uniform;
+  return uniform!(BOUNDARY, T)(min, max, getRandGen());
+}
+
+void srandom(uint _seed) {
+  getRandGen().seed(_seed);
+}
+
