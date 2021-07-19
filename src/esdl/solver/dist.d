@@ -190,21 +190,21 @@ class CstVecDistSolver(T): CstDistSolverBase
     import std.algorithm.searching: countUntil;
     ptrdiff_t pos = countUntil!((a, b) {return a._min >= b._min;})(_set, dist);
     if (pos == -1) {
-      if (_set.length > 0 && _set[$-1]._max >= dist._min) {
-	assert(false, "Overlapping 'dist' constraint");
-      }
-      else {
-	_set ~= dist;
-      }
+      // if (_set.length > 0 && _set[$-1]._max >= dist._min) {
+      // 	assert(false, "Overlapping 'dist' constraint");
+      // }
+      // else {
+      _set ~= dist;
+      // }
     }
     else {
       // if (_purgeList[pos] != elem) {
-      if (_set[pos]._min <= dist._max) {
-	assert(false, "Overlapping 'dist' constraint");
-      }
-      if (pos != 0 && _set[pos-1]._max >= dist._min) {
-	assert(false, "Overlapping 'dist' constraint");
-      }
+      // if (_set[pos]._min <= dist._max) {
+      // 	assert(false, "Overlapping 'dist' constraint");
+      // }
+      // if (pos != 0 && _set[pos-1]._max >= dist._min) {
+      // 	assert(false, "Overlapping 'dist' constraint");
+      // }
       _set.length += 1;
       for (size_t i=_set.length-1; i!=pos; --i) {
 	_set[i] = _set[i-1];
