@@ -866,6 +866,9 @@ abstract class CstIterator: CstVecTerm
   }
 
   void scan() { }
+
+  override CstDomBase getDomain() { return null; }
+  
 }
 
 interface CstVecTerm: CstTerm
