@@ -156,6 +156,7 @@ class CstPredGroup			// group of related predicates
       foreach (pred; _preds) pred._group = null;
       _preds.reset();
       foreach (pred; sort!((x, y) => x.name() < y.name())(_predList[])) {
+	if (pred.withDist()) this.markDist();
 	pred._group = this;
 	if (pred._soft != 0) _hasSoftConstraints = true;
 	if (pred._vectorOp != CstVectorOp.NONE) _hasVectorConstraints = true;
@@ -294,7 +295,7 @@ class CstPredGroup			// group of related predicates
 	      _proxy.addSolvedDomain(_preds[0]._dom);
 	      monoFlag = true;
 	    }
-	    else if (_doms.length == 1) {
+	    else if (_doms.length == 1 && (! _doms[0].isBool())) {
 	      if (_doms[0].bitcount() < 32) {
 		_solver = new CstMonoSolver!int(sig, this);
 	      }
@@ -988,6 +989,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
 
   void procDependency(CstDepIntf dep) {
+    // import std.stdio;
+    // writeln("Removing dep from rnds: ", dep.name());
     CstDomBase dom = cast (CstDomBase) dep;
     if (dom !is null) {
       auto index = countUntil(_rnds, dep);
@@ -1186,10 +1189,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
 
-  void annotate(CstPredGroup group) {
+  void annotate(CstPredGroup group, bool recurse=false) {
     // import std.stdio;
     // writeln("Annotating: ", this.describe());
-    assert (! this.isGuard());
+    assert ((! this.isGuard()) || recurse);
+    if (_guard !is null) _guard.annotate(group, true);
+
     foreach (rnd; this._rnds) {
       rnd.annotate(group);
     }
@@ -1218,9 +1223,9 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       str ~= ':';
     }
     if (_guard !is null) {
-      if (_guardInv) str ~= " ! ";
       _guard.writeSignature(str);
-      str ~= " >> ";
+      if (_guardInv) str ~= " !>> ";
+      else str ~= " >> ";
     }
     _expr.writeExprString(str);
   }
