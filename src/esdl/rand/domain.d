@@ -631,7 +631,8 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 
   override bool tryResolve(_esdl__Proxy proxy) {
     // Let visitor constraints do the needful via forceResolve
-    return false;
+    if (isRand() && isSolved()) return true;
+    else return false;
 
     // import std.algorithm.iteration: filter;
     // if (isRand() && isSolved()) {
