@@ -794,7 +794,7 @@ class CstLogicWeightedDistSetElem
   }
 
   CstLogicWeightedDistSetElem unroll(CstIterator iter, ulong n) {
-    return this;
+    return new CstLogicWeightedDistSetElem(_term.unroll(iter, n), _weight.unroll(iter, n), _perItem);
   }
 
   this(CstLogicTerm term, CstVecTerm weight, bool perItem=false) {
@@ -821,7 +821,10 @@ class CstLogicWeightedDistSetElem
 			ref CstIterator[] iters,
 			ref CstDepIntf[] idxs,
 			ref CstDomBase[] bitIdxs,
-			ref CstDepIntf[] deps) { }
+			ref CstDepIntf[] deps) {
+    _term.setDomainContext(pred, rnds, rndArrs, vars, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
+    _weight.setDomainContext(pred, rnds, rndArrs, vars, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
+  }
 
   bool isSolved() {
     return _term.isSolved() && _weight.isSolved();
@@ -853,7 +856,7 @@ class CstVecWeightedDistSetElem
   }
 
   CstVecWeightedDistSetElem unroll(CstIterator iter, ulong n) {
-    return this;
+    return new CstVecWeightedDistSetElem(_range.unroll(iter, n), _weight.unroll(iter, n), _perItem);
   }
 
   this(CstVecDistSetElem range, CstVecTerm weight, bool perItem=false) {
@@ -880,7 +883,10 @@ class CstVecWeightedDistSetElem
 			ref CstIterator[] iters,
 			ref CstDepIntf[] idxs,
 			ref CstDomBase[] bitIdxs,
-			ref CstDepIntf[] deps) { }
+			ref CstDepIntf[] deps) {
+    _range.setDomainContext(pred, rnds, rndArrs, vars, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
+    _weight.setDomainContext(pred, rnds, rndArrs, vars, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
+  }
 
   bool isSolved() {
     return _range.isSolved() && _weight.isSolved();
@@ -908,7 +914,10 @@ class CstLogicDistExpr(T): CstLogicExpr
   this(CstDomBase vec, CstLogicWeightedDistSetElem[] dists) {
     _vec = vec;
     _dists = dists;
-    _rs = new CstLogicDistSolver!T(vec);
+  }
+
+  private final void initDistSolver() {
+    _rs = new CstLogicDistSolver!T(_vec);
     foreach (dist; _dists) {
       T term = cast(T) dist._term.eval();
       T rhs;
@@ -919,6 +928,7 @@ class CstLogicDistExpr(T): CstLogicExpr
   }
 
   CstDistSolverBase getDist() {
+    if (_rs is null) initDistSolver();
     return _rs;
   }
 
@@ -945,11 +955,11 @@ class CstLogicDistExpr(T): CstLogicExpr
   }
   
   override CstLogicDistExpr!T unroll(CstIterator iter, ulong n) {
-    // import std.stdio;
-    // writeln(_lhs.describe() ~ " " ~ _op.to!string ~ " " ~ _rhs.describe() ~ " Getting unwound!");
-    // writeln("RHS: ", _rhs.unroll(iter, n).describe());
-    // writeln("LHS: ", _lhs.unroll(iter, n).describe());
-    return new CstLogicDistExpr!T(cast (CstDomBase) (_vec.unroll(iter, n)), _dists);
+    CstLogicWeightedDistSetElem[] dists;
+    foreach (dist; _dists) {
+      dists ~= dist.unroll(iter, n);
+    }
+    return new CstLogicDistExpr!T(cast (CstDomBase) (_vec.unroll(iter, n)), dists);
   }
 
   override void setPredContext(CstPredicate pred) {
@@ -969,6 +979,12 @@ class CstLogicDistExpr(T): CstLogicExpr
 			ref CstDomBase[] bitIdxs,
 			ref CstDepIntf[] deps) {
     rnds ~= _vec;
+    CstDomBase[] rnds_;
+    CstDomBase[] dists_;
+    CstDomSet[] rndArrs_;
+    foreach (dist; _dists)
+      dist.setDomainContext(pred, rnds_, rndArrs_, vars, varArrs, dists_, vals, iters, idxs, bitIdxs, deps);
+    assert (rnds_.length == 0 && dists_.length == 0 && rndArrs_.length == 0);
   }
 
   bool isSolved() {
@@ -1006,7 +1022,10 @@ class CstVecDistExpr(T): CstLogicExpr
   this(CstDomBase vec, CstVecWeightedDistSetElem[] dists) {
     _vec = vec;
     _dists = dists;
-    _rs = new CstVecDistSolver!T(vec);
+  }
+
+  private final void initDistSolver() {
+    _rs = new CstVecDistSolver!T(_vec);
     foreach (dist; _dists) {
       T lhs = cast(T) dist._range._lhs.evaluate();
       T rhs;
@@ -1023,6 +1042,7 @@ class CstVecDistExpr(T): CstLogicExpr
   }
 
   CstDistSolverBase getDist() {
+    if (_rs is null) initDistSolver();
     return _rs;
   }
 
@@ -1057,11 +1077,11 @@ class CstVecDistExpr(T): CstLogicExpr
   }
   
   override CstVecDistExpr!T unroll(CstIterator iter, ulong n) {
-    // import std.stdio;
-    // writeln(_lhs.describe() ~ " " ~ _op.to!string ~ " " ~ _rhs.describe() ~ " Getting unwound!");
-    // writeln("RHS: ", _rhs.unroll(iter, n).describe());
-    // writeln("LHS: ", _lhs.unroll(iter, n).describe());
-    return new CstVecDistExpr!T(cast (CstDomBase) (_vec.unroll(iter, n)), _dists);
+    CstVecWeightedDistSetElem[] dists;
+    foreach (dist; _dists) {
+      dists ~= dist.unroll(iter, n);
+    }
+    return new CstVecDistExpr!T(cast (CstDomBase) (_vec.unroll(iter, n)), dists);
   }
 
   override void setPredContext(CstPredicate pred) {
@@ -1081,6 +1101,12 @@ class CstVecDistExpr(T): CstLogicExpr
 			ref CstDomBase[] bitIdxs,
 			ref CstDepIntf[] deps) {
     rnds ~= _vec;
+    CstDomBase[] rnds_;
+    CstDomBase[] dists_;
+    CstDomSet[] rndArrs_;
+    foreach (dist; _dists)
+      dist.setDomainContext(pred, rnds_, rndArrs_, vars, varArrs, dists_, vals, iters, idxs, bitIdxs, deps);
+    assert (rnds_.length == 0 && dists_.length == 0 && rndArrs_.length == 0);
   }
 
   bool isSolved() {
