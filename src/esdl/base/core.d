@@ -3093,10 +3093,10 @@ class EventObj: EventAgent, NamedComp
     if (_simEvent !is null) {
       _simEvent.disableWait();
     }
-    else {
-      import std.stdio;
-      stderr.writeln("disableWait called on uninitialized Event ", getFullName);
-    }
+    // else {
+    //   import std.stdio;
+    //   stderr.writeln("disableWait called on uninitialized Event ", getFullName);
+    // }
   }
 }
 
