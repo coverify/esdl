@@ -374,11 +374,14 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
 
 
   void purgeRndPred(CstPredicate pred) {
+    // import std.stdio;
+    // writeln("Removing pred: ", pred.describe());
     import std.algorithm: countUntil;
     auto index = countUntil(_rndPreds, pred);
-    assert (index > 0);
-    _rndPreds[index] = _rndPreds[$-1];
-    _rndPreds.length -= 1;
+    if (index >= 0) {
+      _rndPreds[index] = _rndPreds[$-1];
+      _rndPreds.length -= 1;
+    }
   }
 
   // CstPredGroup _group;
