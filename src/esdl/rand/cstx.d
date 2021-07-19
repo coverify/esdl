@@ -1492,10 +1492,20 @@ struct CstParser {
       // fillGuardDecl(";\n");
     }
 
+    fillOut("  _guards ~= new CstPredicate(this, ");
+    if (ifConds.length !is 0) {
+      auto ifCond = ifConds[$-1];
+      fillOut("_guards[");
+      fillOut(ifCond._condIndex.to!string());
+      fillOut("], ");
+      if (ifCond.isInverse()) fillOut("true, ");
+      else                    fillOut("false, ");
+    }
+    else fillOut("null, false, ");
+
     Condition ifCond = Condition(condCount++);
     ifConds ~= ifCond;
 
-    fillOut("  _guards ~= new CstPredicate(this, null, false, ");
     fillOut((ifCond._condIndex).to!string());
     fillOut(", ");
     fillOut(_proxy);
