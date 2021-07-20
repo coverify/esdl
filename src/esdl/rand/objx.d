@@ -112,8 +112,10 @@ class CstObjectStub(V, rand RAND_ATTR, int N, int IDX,
     }
   }
 
-  CstObjectVoid _esdl__obj() {
-    return _obj;
+  auto _esdl__obj()() {
+    alias TYPE = CstObjectIdx!(V, RAND_ATTR, N, IDX, P, PIDX);
+    if (_obj is null) return null;
+    else return _esdl__staticCast!TYPE(_obj);
   }
 
   auto _esdl__get()() {
@@ -563,8 +565,10 @@ class CstObjArrStub(V, rand RAND_ATTR, int N, int IDX,
     _var = var;
   }
 
-  CstObjArrVoid _esdl__obj() {
-    return _obj;
+  auto _esdl__obj()() {
+    alias TYPE = CstObjArrIdx!(V, RAND_ATTR, N, IDX, P, PIDX);
+    if (_obj is null) return null;
+    else return _esdl__staticCast!TYPE(_obj);
   }
 
   auto _esdl__get()() {

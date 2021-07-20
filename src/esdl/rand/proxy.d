@@ -44,13 +44,13 @@ abstract class _esdl__ConstraintBase: rand.disable
     _enabled = false;
   }
 
-  void constraint_mode(bool mode) {
+  void constraintMode(bool mode) {
     if (mode != _enabled) {
       _enabled = mode;
       _proxy.getProxyRoot().setNeedSync();
     }
   }
-  bool constraint_mode() { return _enabled; }
+  bool constraintMode() { return _enabled; }
 
   string name() {
     return _name;
@@ -76,8 +76,46 @@ abstract class _esdl__ConstraintBase: rand.disable
   abstract CstPredicate[] getConstraints();
 }
 
-abstract class Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=__LINE__)
-  : _esdl__ConstraintBase
+
+// struct wrapper for the main user interface
+// it has to be a struct, because the user may not wait for a class object to
+// constructed before he can call API methods like constraint_mode
+alias constraint = Constraint;
+
+struct Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=__LINE__)
+{
+  enum bool _esdl__TypeHasRandBarrier = true;
+  alias CstType = _esdl__Constraint!(CONSTRAINT, FILE, LINE);
+
+  CstType _cst;
+  bool _cstMode = true;
+  bool _initialized = false;
+
+  alias _cst this;
+
+  alias constraint_mode = constraintMode;
+
+  void constraintMode(bool mode) {
+    _cstMode = mode;
+    if (_initialized) {
+      assert (_cst !is null);
+      _cst.constraintMode(_cstMode);
+    }
+  }
+
+  bool constraintMode() {
+    return _cstMode;
+  }
+
+  void initialize(CstType cst) {
+    _cst = cst;
+    if (_cstMode is false) _cst.constraintMode(_cstMode);
+    _initialized = true;
+  }
+}
+
+abstract class _esdl__Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=__LINE__)
+  : _esdl__ConstraintBase, rand.barrier
 {
   import esdl.rand.vecx: CstVector;
   
@@ -134,7 +172,7 @@ abstract class Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=_
     foreach (pred; _preds)  pred.procDomainContext();
   }
 
-};
+}
 
 
 // template _esdl__baseHasRandomization(T) {
@@ -454,7 +492,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   // overridden by Randomization mixin -- see meta.d
   abstract void _esdl__doRandomize(_esdl__RandGen randGen);
-  abstract void _esdl__doConstrain(_esdl__Proxy proxy);
+  abstract void _esdl__doConstrain(_esdl__Proxy proxy, bool visitorOnly=false);
 
 
   void reset() {
