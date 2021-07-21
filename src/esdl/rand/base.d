@@ -758,7 +758,8 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     assert (_state is State.INIT);
     foreach (pred; _rndPreds) {
       if (! pred.isGuard()) {
-	if (pred._state is CstPredicate.State.INIT) {
+	if (pred.isEnabled() &&
+	    pred._state is CstPredicate.State.INIT) {
 	  pred.setGroupContext(group);
 	}
       }

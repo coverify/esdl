@@ -530,8 +530,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   bool isEnabled() {
     if (_parent is null)
-      return _constraint.isEnabled() && _proxy.isRand();
-    else return _enabled && _parent.isEnabled();
+      return _constraint.isEnabled() && _enabled && _proxy.isRand();
+    else return _constraint.isEnabled() && _enabled && _proxy.isRand() && _parent.isEnabled();
   }
   
   uint _level;
