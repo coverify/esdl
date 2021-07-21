@@ -30,10 +30,15 @@ abstract class _esdl__ConstraintBase: rand.disable
   immutable string _constraint;
   immutable string _name;
   protected bool _enabled = true;
+  protected bool _overridden = false;
   protected _esdl__Proxy _proxy;
 
+  void markOverridden() {
+    _overridden = true;
+  }
+  
   bool isEnabled() {
-    return _enabled;
+    return _enabled && ! _overridden;
   }
 
   void enable() {
@@ -74,6 +79,7 @@ abstract class _esdl__ConstraintBase: rand.disable
 
   abstract CstPredicate[] getConstraintGuards();
   abstract CstPredicate[] getConstraints();
+  abstract string getCode();
 }
 
 
@@ -172,6 +178,10 @@ abstract class _esdl__Constraint(string CONSTRAINT, string FILE=__FILE__, size_t
     foreach (pred; _preds)  pred.procDomainContext();
   }
 
+  override string getCode() {
+    return CONSTRAINT;
+  }
+
 }
 
 
@@ -215,6 +225,20 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   // compositional parent -- not inheritance based
   _esdl__Proxy _parent;
   _esdl__Proxy _root;
+
+  private _esdl__ConstraintBase[string] _cstNames;
+
+  void addConstraintName(_esdl__ConstraintBase cst) {
+    auto cstName = cst.name();
+    _esdl__ConstraintBase* prevCst = cstName in _cstNames;
+    if (prevCst !is null) {
+      prevCst.markOverridden();
+      _cstNames[cstName] = cst;
+    }
+    else {
+      _cstNames[cstName] = cst;
+    }
+  }
 
   // only the root proxy gets a null name, other component proxies override
   string fullName() {return "";}

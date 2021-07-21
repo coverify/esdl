@@ -111,8 +111,6 @@ void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy, bool visitorOn
       }
       else {
 	static if (p.tupleof[I].stringof != "p._esdl__cstWith") {
-	  // import std.stdio;
-	  // writeln("Adding constraint: ", p.tupleof[I].stringof);
 	  if (p.tupleof[I].isEnabled()) {
 	    // Update constraint guards if any
 	    p.tupleof[I]._esdl__updateCst();
@@ -248,6 +246,8 @@ void _esdl__doInitConstraintElems(P, Q, int I=0)(P p, Q q) {
       p.tupleof[I] = cst;
       static if (IS_USER_DEFINED) {
 	if (q !is null) __traits(getMember, q, EN).initialize(cst);
+	// Add constraint to a hash table to enable constraint overriding
+	p.addConstraintName(cst);
       }
     }
     _esdl__doInitConstraintElems!(P, Q, I+1)(p, q);
@@ -869,6 +869,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       _pred.procDomainContext();
     }
 
+    override string getCode() {return "";}
   }
 
   class _esdl__ConstraintImpl(string _esdl__CstString, string FILE, size_t LINE):
@@ -1031,6 +1032,8 @@ class _esdl__VisitorCst(TOBJ): _esdl__ConstraintBase, _esdl__VisitorCstIntf
     // foreach (pred; _guards) pred.procDomainContext();
     _pred.procDomainContext();
   }
+
+  override string getCode() {return "";}
 
 }
 
@@ -1339,6 +1342,10 @@ void randomize_with(string C, string FILE=__FILE__, size_t LINE=__LINE__, T, ARG
 void randomizeWith(string C, string FILE=__FILE__, size_t LINE=__LINE__, T, ARGS...)(ref T t, ARGS values)
   if (is (T == class) || is (T == struct) // && allIntengral!ARGS
       ) {
+    debug (CSTSOLVER) {
+      import std.stdio;
+      writeln("randomizeWith() called from ", FILE, ":", LINE);
+    }
     t._esdl__initProxy();
     // The idea is that if the end-user has used the randomization
     // mixin then _esdl__RandType would be already available as an
@@ -1364,10 +1371,14 @@ void randomizeWith(string C, string FILE=__FILE__, size_t LINE=__LINE__, T, ARGS
     t._esdl__virtualRandomize(t._esdl__proxyInst._esdl__cstWith);
   }
 
-void randomize(T)(T t) {
+void randomize(T, string FILE=__FILE__, size_t LINE=__LINE__)(T t) {
   // FIXME
   // first check if the there are @rand or Constraint definitions but
   // missing mixin Randomization for some of the hierarchies
+  debug (CSTSOLVER) {
+    import std.stdio;
+    writeln("randomize() called from ", FILE, ":", LINE);
+  }
   t._esdl__virtualRandomize();
 }
 
