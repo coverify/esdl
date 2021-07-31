@@ -620,6 +620,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   override void forceResolve(_esdl__Proxy proxy) {
     import std.algorithm.iteration: filter;
     if (isRand() && isSolved()) {
+      _parent.buildElements(_parent.getLen());
       execCbs();
     }
     else {
@@ -630,9 +631,39 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   }
 
   override bool tryResolve(_esdl__Proxy proxy) {
-    // Let visitor constraints do the needful via forceResolve
-    if (isRand() && isSolved()) return true;
-    else return false;
+    debug (CSTSOLVER) {
+      import std.stdio;
+      writeln("tryResolve: ", fullName());
+    }
+    import std.algorithm.iteration: filter;
+    // if (isRand() && isSolved()) {
+    //   forceResolve(proxy);
+    // }
+    if (isMarkedSolved()) {
+      debug (CSTSOLVER) {
+	import std.stdio;
+	writeln("tryResolve: Already marked solved: ", fullName());
+      }
+      execCbs();
+      return false;
+    }
+    else {
+      // foreach (pred; _rndPreds) {
+      // 	import std.stdio;
+      // 	writeln (pred.name());
+      // }
+      if ((! this.isRand()) ||
+	  _rndPreds.length == 0 ||
+	  _rndPreds.filter!(pred => ! (pred.isGuard() || pred.isVisitor())).empty()) {
+	debug (CSTSOLVER) {
+	  import std.stdio;
+	  writeln("tryResolve: Resoling: ", fullName());
+	}
+	randomizeWithoutConstraints(proxy);
+	return true;
+      }
+    }
+    return false;
 
     // import std.algorithm.iteration: filter;
     // if (isRand() && isSolved()) {
