@@ -258,7 +258,7 @@ class CstPredGroup			// group of related predicates
       writeln(describe());
     }
 
-    if (_distPred is null) {
+    if (_distPred is null || (! _distPred.distDomain().isRand())) {
       if (_state is State.NEEDSYNC) {
 	annotate();
 	string sig = signature();
@@ -291,7 +291,7 @@ class CstPredGroup			// group of related predicates
 	  else {
 	    bool monoFlag = false;
 	    if (_preds.length == 1 && _preds[0].isVisitor()) {
-	      _preds[0]._dom.forceResolve(_proxy);
+	      // _preds[0]._dom.forceResolve(_proxy);
 	      _proxy.addSolvedDomain(_preds[0]._dom);
 	      monoFlag = true;
 	    }
@@ -465,14 +465,16 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return false;
   }
 
-  void visit(CstSolver solver) {
+  void visit(CstSolver solver, bool inv=false) {
     if (_guard is null) {
       _expr.visit(solver);
+      if (inv) solver.processEvalStack(CstLogicOp.LOGICNOT);
     }
     else {
-      _guard.visit(solver);
-      if (_guardInv) solver.processEvalStack(CstLogicOp.LOGICNOT);
+      assert (this.isGuard() || inv is false);
+      _guard.visit(solver, _guardInv);
       _expr.visit(solver);
+      if (inv) solver.processEvalStack(CstLogicOp.LOGICNOT);
       if (this.isGuard()) solver.processEvalStack(CstLogicOp.LOGICAND);
       else                solver.processEvalStack(CstLogicOp.LOGICIMP);
     }
@@ -619,7 +621,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
     debug(CSTPREDS) {
       import std.stdio;
-      stderr.writeln(this.describe());
+      stdout.writeln(this.describe());
     }
   }
 
@@ -896,7 +898,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	pred._deps ~= _guard;
       }
       else if (_dom !is null && _dom.isDist()) {
-	assert (thisPred is true);
+	// assert (thisPred is true);
 	pred._deps ~= _guard;
       }
       else {
@@ -908,7 +910,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     
       // foreach (varIter; varIters) {
       //   import std.stdio;
-      //   stderr.writeln("Found Iterator: ", varIter.name());
+      //   stdout.writeln("Found Iterator: ", varIter.name());
       // }
       // if (_iters.length > 0) {
       //   _len = _iters[0].getLenVec();
