@@ -341,7 +341,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   void markSolved() {
     if (_root._esdl__debugSolver) {
       import std.stdio;
-      stderr.writeln("Marking ", this.name(), " as SOLVED");
+      writeln("Marking ", this.name(), " as SOLVED");
     }
     _tempPreds.reset();
     assert (_state != State.SOLVED, this.name() ~
@@ -1145,7 +1145,7 @@ T urandom(T=uint)() if (isIntegral!T || isBitVector!T) {
     auto v = uniform!T(getRandGen());
     // debug(SEED) {
     //   import std.stdio;
-    //   stderr.writeln("URANDOM returns: ", v);
+    //   stdout.writeln("URANDOM returns: ", v);
     // }
     return v;
   }
