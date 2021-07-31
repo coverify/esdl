@@ -622,6 +622,8 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
   }
 
   EV opIndex(ulong index) {
+    // import std.stdio;
+    // writeln(this.fullName());
     size_t key = mapIndex(index);
     if (key > uint.max/2) { // negative index
       if (_negIndexElem is null) _negIndexElem = createElem(uint.max);
@@ -943,9 +945,9 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
       override void markSolved() {
 	// top level array -- no need to do anything
 	// import std.stdio;
-	// stderr.writeln("Array elements count: ", _esdl__leafElemsCount);
+	// stdout.writeln("Array elements count: ", _esdl__leafElemsCount);
 	// foreach (elem; this[]) {
-	//   stderr.writeln(elem.name());
+	//   stdout.writeln(elem.name());
 	// }
       }
 
