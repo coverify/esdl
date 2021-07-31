@@ -86,14 +86,14 @@ template _esdl__RandProxyType(T, int I, P, int PI)
   }
 }
 
-void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy, bool visitorOnly=false) {
+void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy) {
   static if (I == 0 &&
 	     is (P B == super) &&
 	     is (B[0]: _esdl__Proxy) &&
 	     is (B[0] == class)) {
     static if (! is (B[0] == _esdl__Proxy)) {
       B[0] b = p;			// super object
-      _esdl__doConstrainElems(b, proxy, visitorOnly);
+      _esdl__doConstrainElems(b, proxy);
     }
   }
   static if (I == P.tupleof.length) {
@@ -102,26 +102,17 @@ void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy, bool visitorOn
   else {
     alias Q = typeof (P.tupleof[I]);
     static if (is (Q: _esdl__ConstraintBase)) {
-      if (visitorOnly is true) {
-	static if (is (Q: _esdl__VisitorCstIntf)) {
-	  foreach (pred; p.tupleof[I].getConstraints()) {
+      static if (p.tupleof[I].stringof != "p._esdl__cstWith") {
+	if (p.tupleof[I].isEnabled()) {
+	  // Update constraint guards if any
+	  p.tupleof[I]._esdl__updateCst();
+	  foreach (pred; p.tupleof[I].getConstraintGuards()) {
+	    // writeln("Adding predicate: ", pred.name());
 	    proxy.addNewPredicate(pred);
 	  }
-	}
-      }
-      else {
-	static if (p.tupleof[I].stringof != "p._esdl__cstWith") {
-	  if (p.tupleof[I].isEnabled()) {
-	    // Update constraint guards if any
-	    p.tupleof[I]._esdl__updateCst();
-	    foreach (pred; p.tupleof[I].getConstraintGuards()) {
-	      // writeln("Adding predicate: ", pred.name());
-	      proxy.addNewPredicate(pred);
-	    }
-	    foreach (pred; p.tupleof[I].getConstraints()) {
-	      // writeln("Adding predicate: ", pred.name());
-	      proxy.addNewPredicate(pred);
-	    }
+	  foreach (pred; p.tupleof[I].getConstraints()) {
+	    // writeln("Adding predicate: ", pred.name());
+	    proxy.addNewPredicate(pred);
 	  }
 	}
       }
@@ -129,26 +120,26 @@ void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy, bool visitorOn
     static if (is (Q: CstObjectIntf)//  ||
 	       // is (Q: CstObjArrIntf)  // handled by the visitor on unroll
 	       ) {
-      // static if (P.tupleof[I]._esdl__ISRAND) {
-      if (p.tupleof[I].isRand()) {
-	p.tupleof[I]._esdl__doConstrain(proxy, visitorOnly);
-      }
-      else {
-	p.tupleof[I]._esdl__doConstrain(proxy, true);
-      }
+      static if (P.tupleof[I]._esdl__ISRAND) {
+	if (p.tupleof[I].isRand()) {
+	  p.tupleof[I]._esdl__doConstrain(proxy);
+	}
+      // else {
+      // 	p.tupleof[I]._esdl__doConstrain(proxy);
       // }
-    }
-    static if (is (Q: CstObjectStubBase)//  ||
-	       // is (Q: CstObjArrIntf)  // handled by the visitor on unroll
-	       ) {
-      // static if (P.tupleof[I]._esdl__ISRAND) {
-      auto q = p.tupleof[I]._esdl__obj();
-      if (q !is null) {
-	q._esdl__doConstrain(proxy, true);
       }
-      // }
     }
-    _esdl__doConstrainElems!(P, I+1)(p, proxy, visitorOnly);
+    // static if (is (Q: CstObjectStubBase)//  ||
+    // 	       // is (Q: CstObjArrIntf)  // handled by the visitor on unroll
+    // 	       ) {
+    //   // static if (P.tupleof[I]._esdl__ISRAND) {
+    //   auto q = p.tupleof[I]._esdl__obj();
+    //   if (q !is null) {
+    // 	q._esdl__doConstrain(proxy);
+    //   }
+    //   // }
+    // }
+    _esdl__doConstrainElems!(P, I+1)(p, proxy);
   }
 }
 
@@ -217,6 +208,10 @@ void _esdl__doInitRandObjectElems(P, int I=0)(P p) {
 	}
       }
       else {
+	debug (CSTSOLVER) {
+	  import std.stdio;
+	  writeln("Outer not set for: ", p.fullName(), " of type: ", P.stringof);
+	}
 	p.tupleof[I] = new Q(NAME, p, null);
       }
       // }
@@ -940,10 +935,10 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   }
 
 
-  override void _esdl__doConstrain(_esdl__Proxy proxy, bool visitorOnly=false) {
+  override void _esdl__doConstrain(_esdl__Proxy proxy) {
     assert (this._esdl__outer !is null);
     _esdl__preRandomize(this._esdl__outer);
-    _esdl__doConstrainElems(this, proxy, visitorOnly);
+    _esdl__doConstrainElems(this, proxy);
     foreach (visitor; getGlobalVisitors()) {
       foreach (pred; visitor.getConstraints()) proxy.addNewPredicate(pred);
     }
@@ -1067,11 +1062,19 @@ struct _esdl__rand_type_proxy(T, P)
 
 // V is a type
 auto _esdl__sym(V, S)(string name, S parent) {
+  debug (CSTSOLVER) {
+    import std.stdio;
+    writeln("_esdl__sym: ", name, " parent type: ", S.stringof);
+  }
   return _esdl__rand_type_proxy!(V, S)(name, parent);
 }
 
 // or else
 auto _esdl__sym(alias V, S)(string name, S parent) {
+  debug (CSTSOLVER) {
+    import std.stdio;
+    writeln("_esdl__sym: ", name, " parent type: ", S.stringof);
+  }
   alias L = typeof(V);
   import std.traits: isArray, isAssociativeArray;
   import esdl.data.queue: Queue, isQueue;
@@ -1311,40 +1314,18 @@ template _esdl__ProxyBase(T) {
   }
 }
 
-void randomize_with(string C, string FILE=__FILE__, size_t LINE=__LINE__, T, ARGS...)(ref T t, ARGS values)
-  if (is (T == class) || is (T == struct) // && allIntengral!ARGS
-      ) {
-    t._esdl__initProxy();
-    // The idea is that if the end-user has used the randomization
-    // mixin then _esdl__RandType would be already available as an
-    // alias and we can use virtual randomize method in such an
-    // eventuality.
-    // static if(is(typeof(t._esdl__RandType) == T)) {
-    if (t._esdl__proxyInst._esdl__cstWith is null ||
-	t._esdl__proxyInst._esdl__cstWith._constraint != C) {
-      t._esdl__getProxy()._esdl__with!(C, FILE, LINE)(values);
-      t._esdl__proxyInst._esdl__cstWithChanged = true;
-      // auto withCst =
-      //	new _esdl__Constraint!(C, "_esdl__withCst",
-      //			T, ARGS.length)(t, "_esdl__withCst");
-      // withCst.withArgs(values);
-      // t._esdl__proxyInst._esdl__cstWith = withCst;
-    }
-    else {
-      alias CONSTRAINT = _esdl__ProxyResolve!T._esdl__ConstraintWithImpl!(C, FILE, LINE, ARGS);
-      auto cstWith = _esdl__staticCast!CONSTRAINT(t._esdl__proxyInst._esdl__cstWith);
-      cstWith.withArgs(values);
-      t._esdl__proxyInst._esdl__cstWithChanged = false;
-    }
-    t._esdl__virtualRandomize(t._esdl__proxyInst._esdl__cstWith);
-  }
+alias randomize_with = randomizeWith;
 
 void randomizeWith(string C, string FILE=__FILE__, size_t LINE=__LINE__, T, ARGS...)(ref T t, ARGS values)
   if (is (T == class) || is (T == struct) // && allIntengral!ARGS
       ) {
     debug (CSTSOLVER) {
       import std.stdio;
-      writeln("randomizeWith() called from ", FILE, ":", LINE);
+      writeln("randomize_with() called from ", FILE, ":", LINE);
+
+      scope (success) {
+	writeln("randomize_with() finished at ", FILE, ":", LINE);
+      }
     }
     t._esdl__initProxy();
     // The idea is that if the end-user has used the randomization
@@ -1378,6 +1359,9 @@ void randomize(T, string FILE=__FILE__, size_t LINE=__LINE__)(T t) {
   debug (CSTSOLVER) {
     import std.stdio;
     writeln("randomize() called from ", FILE, ":", LINE);
+    scope (success) {
+      writeln("randomize() finished at ", FILE, ":", LINE);
+    }
   }
   t._esdl__virtualRandomize();
 }
