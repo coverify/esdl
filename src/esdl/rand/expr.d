@@ -1100,13 +1100,13 @@ class CstVecDistExpr(T): CstLogicExpr
 			ref CstDepIntf[] idxs,
 			ref CstDomBase[] bitIdxs,
 			ref CstDepIntf[] deps) {
-    rnds ~= _vec;
     CstDomBase[] rnds_;
     CstDomBase[] dists_;
     CstDomSet[] rndArrs_;
     foreach (dist; _dists)
       dist.setDomainContext(pred, rnds_, rndArrs_, vars, varArrs, dists_, vals, iters, idxs, bitIdxs, deps);
     assert (rnds_.length == 0 && dists_.length == 0 && rndArrs_.length == 0);
+    _vec.setDomainContext(pred, rnds, rndArrs, vars, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
   }
 
   bool isSolved() {
@@ -1780,9 +1780,11 @@ class CstInsideArrExpr: CstLogicExpr
     if (_notinside) str ~= "(! INSIDE ";
     else            str ~= "(INSIDE ";
     _term.writeExprString(str);
-    str ~= " [";
-    foreach (elem; _elems)
+    str ~= " [ ";
+    foreach (elem; _elems) {
       elem.writeExprString(str);
+      str ~= ' ';
+    }
     str ~= "])\n";
   }
 
