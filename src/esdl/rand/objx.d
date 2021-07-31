@@ -458,8 +458,9 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	// writeln("Visiting: ", this.fullName());
 	assert (this.getRef() !is null);
 	_esdl__setValRef(this.getRef());
-	if (this.isRand())
+	if (this.isRand()) {
 	  _esdl__doConstrain(getProxyRoot());
+	}
       }
 
       void setDomainContext(CstPredicate pred,
@@ -950,9 +951,9 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
       override void markSolved() {
 	// top level array -- no need to do anything
 	// import std.stdio;
-	// stderr.writeln("Array elements count: ", _esdl__leafElemsCount);
+	// stdout.writeln("Array elements count: ", _esdl__leafElemsCount);
 	// foreach (elem; this[]) {
-	//   stderr.writeln(elem.name());
+	//   stdout.writeln(elem.name());
 	// }
       }
 

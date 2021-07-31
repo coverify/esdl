@@ -257,7 +257,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   final CstVarNodeIntf _esdl__getChild(ulong n) {assert (false);}
   void scan() {}		// when an object is unrolled
 
-  CstSolver[string] _solvers;
+  static CstSolver[string] _solvers;
 
   CstVarGlobIntf[string] _globalLookups;
 
@@ -516,7 +516,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   // overridden by Randomization mixin -- see meta.d
   abstract void _esdl__doRandomize(_esdl__RandGen randGen);
-  abstract void _esdl__doConstrain(_esdl__Proxy proxy, bool visitorOnly=false);
+  abstract void _esdl__doConstrain(_esdl__Proxy proxy);
 
 
   void reset() {
@@ -837,40 +837,40 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       if (_solvedSome is false) {
 	import std.stdio;
 	// if (_resolvedDistPreds.length > 0) {
-	//   stderr.writeln("_resolvedDistPreds: ");
-	//   foreach (pred; _resolvedDistPreds) stderr.writeln(pred.describe());
+	//   stdout.writeln("_resolvedDistPreds: ");
+	//   foreach (pred; _resolvedDistPreds) stdout.writeln(pred.describe());
 	// }
 	// if (_resolvedMonoPreds.length > 0) {
-	//   stderr.writeln("_resolvedMonoPreds: ");
-	//   foreach (pred; _resolvedMonoPreds) stderr.writeln(pred.describe());
+	//   stdout.writeln("_resolvedMonoPreds: ");
+	//   foreach (pred; _resolvedMonoPreds) stdout.writeln(pred.describe());
 	// }
 	if (_resolvedDynPreds.length > 0) {
-	  stderr.writeln("_resolvedDynPreds: ");
-	  foreach (pred; _resolvedDynPreds) stderr.writeln(pred.describe());
+	  stdout.writeln("_resolvedDynPreds: ");
+	  foreach (pred; _resolvedDynPreds) stdout.writeln(pred.describe());
 	}
 	if (_toResolvedDynPreds.length > 0) {
-	  stderr.writeln("_toResolvedDynPreds: ");
-	  foreach (pred; _toResolvedDynPreds) stderr.writeln(pred.describe());
+	  stdout.writeln("_toResolvedDynPreds: ");
+	  foreach (pred; _toResolvedDynPreds) stdout.writeln(pred.describe());
 	}
 	if (_toResolvedPreds.length > 0) {
-	  stderr.writeln("_toResolvedPreds: ");
-	  foreach (pred; _toResolvedPreds) stderr.writeln(pred.describe());
+	  stdout.writeln("_toResolvedPreds: ");
+	  foreach (pred; _toResolvedPreds) stdout.writeln(pred.describe());
 	}
 	if (_resolvedPreds.length > 0) {
-	  stderr.writeln("_resolvedPreds: ");
-	  foreach (pred; _resolvedPreds) stderr.writeln(pred.describe());
+	  stdout.writeln("_resolvedPreds: ");
+	  foreach (pred; _resolvedPreds) stdout.writeln(pred.describe());
 	}
 	if (_toUnresolvedPreds.length > 0) {
-	  stderr.writeln("_toUresolvedPreds: ");
-	  foreach (pred; _toUnresolvedPreds) stderr.writeln(pred.describe());
+	  stdout.writeln("_toUresolvedPreds: ");
+	  foreach (pred; _toUnresolvedPreds) stdout.writeln(pred.describe());
 	}
 	if (_toRolledPreds.length > 0) {
-	  stderr.writeln("_toRolledPreds: ");
-	  foreach (pred; _toRolledPreds) stderr.writeln(pred.describe());
+	  stdout.writeln("_toRolledPreds: ");
+	  foreach (pred; _toRolledPreds) stdout.writeln(pred.describe());
 	}
 	if (_dependentPreds.length > 0) {
-	  stderr.writeln("_dependentPreds: ");
-	  foreach (pred; _dependentPreds) stderr.writeln(pred.describe());
+	  stdout.writeln("_dependentPreds: ");
+	  foreach (pred; _dependentPreds) stdout.writeln(pred.describe());
 	}
 	assert (false, "Infinite loop in constraint solver");
       }
