@@ -235,7 +235,6 @@ class CstMonoSolver (S): CstSolver
   CstDomBase [] _variables;
   bool _hasBeenSolved = false;
   bool _hasRand ;
-  bool isBool = false;
   Term [] _evalStack;
   byte _endFlag = 0;
   Range!S [] _rangeStack;
@@ -249,9 +248,6 @@ class CstMonoSolver (S): CstSolver
     uint _currentRangePos = 0;
     bool _inRangeFlag = false;
     S[] _testfinalRange;
-  }
-  this(){
-    super("");
   }
   this(string signature, CstPredGroup group) {
     super(signature);
@@ -275,11 +271,6 @@ class CstMonoSolver (S): CstSolver
 	  import std.stdio;
 	  writeln("same domain used twice in one inequality, mono cant solve this");
 	}
-	return;
-      }
-      if(isBool){
-	S [2] temprange = [1,1];
-	_rangeStack ~= Range!S(temprange);
 	return;
       }
       uint n = domain.bitcount();
@@ -617,7 +608,6 @@ class CstMonoSolver (S): CstSolver
     CstDomBase [] doms = group.domains();
     assert (doms.length == 1);
 
-    isBool = doms[0].isBool();
     
     if(!checkDifference()){
       _count = counter();
@@ -731,11 +721,6 @@ class CstMonoSolver (S): CstSolver
       import std.stdio;
       writeln("all edge elements of the range tested successfully");
       }*/
-    if (isBool) {
-      S [2] temp = [0,1];
-      _rangeStack ~= Range!S(temp);
-      processEvalStack(CstLogicOp.LOGICAND);
-    }
     else {
       int bitc = doms[0].bitcount();
       if(bitc != 32 && bitc != 64){
