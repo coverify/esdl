@@ -7,7 +7,7 @@ import esdl.rand.misc;
 import esdl.rand.base: CstLogicTerm, CstVecTerm, CstDomSet, CstDomBase;
 import esdl.rand.expr: CstVec2LogicExpr, CstRangeExpr, CstVecDistSetElem,
   CstInsideSetElem, CstUniqueSetElem, CstUniqueArrExpr,
-  CstOrderingExpr, CstVecWeightedDistSetElem, CstLogicWeightedDistSetElem,
+  CstVecWeightedDistSetElem, CstLogicWeightedDistSetElem,
   CstInsideArrExpr, CstVecDistExpr, CstLogicDistExpr, CstLogic2LogicExpr;
 import esdl.rand.domain: CstVecDomain, CstDomain;
 
@@ -411,8 +411,17 @@ auto _esdl__dist(T, rand RAND)(CstDomain!(T, RAND) vec,
   return new CstVecDistExpr!T(vec, ranges);
 }
 
-auto _esdl__order(CstDomBase a, CstDomBase b){
-  return new CstOrderingExpr(a, b);
+void _esdl__order(CstDomBase a, CstDomBase b){
+  a.orderBefore(b);
+}
+void _esdl__order(CstDomBase a, CstDomSet b){
+  a.orderBefore(b);
+}
+void _esdl__order(CstDomSet a, CstDomBase b){
+  a.orderBefore(b);
+}
+void _esdl__order(CstDomSet a, CstDomSet b){
+  a.orderBefore(b);
 }
 
 CstLogicTerm _esdl__bool(CstVecTerm term) {

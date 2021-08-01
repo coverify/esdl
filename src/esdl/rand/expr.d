@@ -10,7 +10,7 @@ import esdl.rand.misc: CstBinaryOp, CstCompareOp, CstLogicOp,
 import esdl.rand.base: DomDistEnum, CstTerm, CstDomBase, CstDomSet,
   CstIterator, CstVecNodeIntf, CstVarNodeIntf, CstVecArrIntf,
   CstVecPrim, DomType,  CstValue, CstVecTerm, CstLogicTerm, CstDepIntf;
-import esdl.rand.pred: CstPredicate, CstPredGroup;
+import esdl.rand.pred: CstPredicate, CstPredGroup, Hash;
 import esdl.rand.func;
 
 import esdl.data.bvec: isBitVector, toBitVec;
@@ -30,54 +30,54 @@ abstract class CstVecExpr: CstVecTerm
   CstDomBase getDomain() { return null; }
 }
 
-class CstOrderingExpr: CstLogicExpr
-{
-  CstDomBase _first;
-  CstDomBase _second;
-  bool _isSolved;
-  this (CstDomBase a, CstDomBase b) {
-    _first = a;
-    _second = b;
-  }
-  override bool isOrderingExpr() { return true; }
-  override CstDistSolverBase getDist() { assert(false); }
-  override bool isCompatWithDist(CstDomBase A) { assert(false); }
-  override void visit(CstDistSolverBase solver) { assert(false); }
+// class CstOrderingExpr: CstLogicExpr
+// {
+//   CstDomBase _first;
+//   CstDomBase _second;
+//   bool _isSolved;
+//   this (CstDomBase a, CstDomBase b) {
+//     _first = a;
+//     _second = b;
+//   }
+//   override bool isOrderingExpr() { return true; }
+//   override CstDistSolverBase getDist() { assert(false); }
+//   override bool isCompatWithDist(CstDomBase A) { assert(false); }
+//   override void visit(CstDistSolverBase solver) { assert(false); }
   
-  override CstLogicTerm unroll(CstIterator iter, ulong n) { assert(false); }
+//   override CstLogicTerm unroll(CstIterator iter, ulong n) { assert(false); }
 
-  void setDomainContext(CstPredicate pred,
-			ref CstDomBase[] rnds,
-			ref CstDomSet[] rndArrs,
-			ref CstDomBase[] vars,
-			ref CstDomSet[] varArrs,
-			ref CstDomBase[] dists,
-			ref CstValue[] vals,
-			ref CstIterator[] iters,
-			ref CstDepIntf[] idxs,
-			ref CstDomBase[] bitIdxs,
-			ref CstDepIntf[] deps) {
-    rnds ~= _first;
-    rnds ~= _second;
-  }
-  bool isSolved() {
-    return _isSolved;
-  }
-  void visit(CstSolver solver) {
-    assert(false, "cannot visit an ordering expression");
-  }
-  void writeExprString(ref Charbuf str) {
-    assert(false);
-  }
-  string describe() {
-    string str = "( " ~ _first.describe() ~ " is solved before " ~ _second.describe() ~ " )";
-    return str;
-  }
-  void scan() { }
-  bool eval() {
-    assert (false);
-  }
-}
+//   void setDomainContext(CstPredicate pred,
+// 			ref CstDomBase[] rnds,
+// 			ref CstDomSet[] rndArrs,
+// 			ref CstDomBase[] vars,
+// 			ref CstDomSet[] varArrs,
+// 			ref CstDomBase[] dists,
+// 			ref CstValue[] vals,
+// 			ref CstIterator[] iters,
+// 			ref CstDepIntf[] idxs,
+// 			ref CstDomBase[] bitIdxs,
+// 			ref CstDepIntf[] deps) {
+//     rnds ~= _first;
+//     rnds ~= _second;
+//   }
+//   bool isSolved() {
+//     return _isSolved;
+//   }
+//   void visit(CstSolver solver) {
+//     assert(false, "cannot visit an ordering expression");
+//   }
+//   void writeExprString(ref Charbuf str) {
+//     assert(false);
+//   }
+//   string describe() {
+//     string str = "( " ~ _first.describe() ~ " is solved before " ~ _second.describe() ~ " )";
+//     return str;
+//   }
+//   void scan() { }
+//   bool eval() {
+//     assert (false);
+//   }
+// }
 
 class CstVecArrExpr: CstVecExpr
 {
@@ -185,6 +185,14 @@ class CstVecArrExpr: CstVecExpr
     str ~= ' ';
     _arr.writeExprString(str);
     str ~= ')';
+  }
+  
+  void calcHash(ref Hash hash){
+    hash.modify(40);
+    hash.modify(_op);
+    hash.modify(32);
+    _arr.calcHash(hash);
+    hash.modify(41);
   }
 
   void scan() { }
@@ -377,7 +385,17 @@ class CstVec2VecExpr: CstVecExpr
     _rhs.writeExprString(str);
     str ~= ')';
   }
-
+  
+  void calcHash(ref Hash hash){
+    hash.modify(40);
+    hash.modify(_op);
+    hash.modify(32);
+    _lhs.calcHash(hash);
+    hash.modify(32);
+    _rhs.calcHash(hash);
+    hash.modify(41);
+  }
+  
   void scan() { }
 
   final void visit(CstDistSolverBase dist) { assert(false); }
@@ -457,6 +475,16 @@ class CstRangeExpr
       _rhs.writeExprString(str);
     }
   }
+  
+  void calcHash(ref Hash hash){
+    _lhs.calcHash(hash);
+    if (_rhs !is null) {
+      if (_inclusive) hash.modify(58);
+      else hash.modify(46);
+      _rhs.calcHash(hash);
+    }
+  }
+
 }
 
 class CstVecDistSetElem
@@ -532,6 +560,16 @@ class CstVecDistSetElem
       _rhs.writeExprString(str);
     }
   }
+  
+  void calcHash(ref Hash hash){
+    _lhs.calcHash(hash);
+    if (_rhs !is null) {
+      if (_inclusive) hash.modify(58);
+      else hash.modify(46);
+      _rhs.calcHash(hash);
+    }
+  }
+
 }
 
 class CstUniqueSetElem
@@ -638,6 +676,18 @@ class CstUniqueSetElem
       _vec.writeExprString(str);
     }
   }
+  
+  void calcHash(ref Hash hash){
+    if (_arr !is null) {
+      hash.modify(91);
+      _arr.calcHash(hash);
+      hash.modify(93);
+    }
+    else {
+      _vec.calcHash(hash);
+    }
+  }
+  
 }
 
 
@@ -741,7 +791,23 @@ class CstInsideSetElem
       }
     }
   }
-
+  
+  void calcHash(ref Hash hash){
+    if (_arr !is null) {
+      hash.modify(91);
+      _arr.calcHash(hash);
+      hash.modify(93);
+    }
+    else {
+      _lhs.calcHash(hash);
+      if (_rhs !is null) {
+	if (_inclusive) hash.modify(58);
+	else hash.modify(46);
+	_rhs.calcHash(hash);
+      }
+    }
+  }
+  
   final void visit(CstDistSolverBase dist) {
     if (_arr !is null) _arr.visit(dist);
     else if (_lhs !is null) {
@@ -837,6 +903,14 @@ class CstLogicWeightedDistSetElem
     else str ~= " :/ ";
     str ~= _weight.evaluate().to!string;
   }
+  
+  void calcHash(ref Hash hash){
+    _term.calcHash(hash);
+    if (_perItem) hash.modify(64);
+    else hash.modify(42);
+    hash.modify(cast(uint)_weight.evaluate());
+  }
+
 }
 
 class CstVecWeightedDistSetElem
@@ -899,6 +973,13 @@ class CstVecWeightedDistSetElem
     else str ~= " :/ ";
     str ~= _weight.evaluate().to!string;
   }
+  void calcHash(ref Hash hash){
+    _range.calcHash(hash);
+    if (_perItem) hash.modify(64);
+    else hash.modify(42);
+    hash.modify(cast(uint)_weight.evaluate());
+  }
+  
 }
 
 class CstLogicDistExpr(T): CstLogicExpr
@@ -999,6 +1080,14 @@ class CstLogicDistExpr(T): CstLogicExpr
     }
   }
   
+  void calcHash(ref Hash hash){
+    hash.modify(100);
+    _vec.calcHash(hash);
+    foreach (dist; _dists) {
+      dist.calcHash(hash);
+    }
+  }
+
   bool isCompatWithDist(CstDomBase dom) { return false; }
 
   void visit (CstDistSolverBase solver) { assert (false); }
@@ -1121,6 +1210,14 @@ class CstVecDistExpr(T): CstLogicExpr
     }
   }
   
+  void calcHash(ref Hash hash){
+    hash.modify(100);
+    _vec.calcHash(hash);
+    foreach (dist; _dists) {
+      dist.calcHash(hash);
+    }
+  }
+
   bool isCompatWithDist(CstDomBase dom) { return false; }
 
   void visit (CstDistSolverBase solver) { assert (false); }
@@ -1310,6 +1407,13 @@ class CstVecSliceExpr: CstVecExpr
     str ~= ']';
   }
 
+  void calcHash(ref Hash hash){
+    _vec.calcHash(hash);
+    hash.modify(91);
+    _range.calcHash(hash);
+    hash.modify(93);
+  }
+
   void scan() { }
 
   final void visit(CstDistSolverBase dist) { assert(false); }
@@ -1466,6 +1570,13 @@ class CstNotVecExpr: CstVecExpr
     _expr.writeExprString(str);
     str ~= ')';
   }
+  
+  void calcHash(ref Hash hash){
+    hash.modify(40);
+    hash.modify(78);
+    _expr.calcHash(hash);
+    hash.modify(41);
+  }
 
   void scan() { }
 
@@ -1553,6 +1664,13 @@ class CstNegVecExpr: CstVecExpr
     _expr.writeExprString(str);
     str ~= ')';
   }
+  
+  void calcHash(ref Hash hash){
+    hash.modify(40);
+    hash.modify(126);
+    _expr.calcHash(hash);
+    hash.modify(41);
+  }
 
   void scan() { }
 
@@ -1618,6 +1736,16 @@ class CstLogic2LogicExpr: CstLogicExpr
     str ~= ' ';
     _rhs.writeExprString(str);
     str ~= ")\n";
+  }
+
+  void calcHash(ref Hash hash){
+    hash.modify(40);
+    hash.modify(_op);
+    hash.modify(32);
+    _lhs.calcHash(hash);
+    hash.modify(32);
+    _rhs.calcHash(hash);
+    hash.modify(41);
   }
 
   CstDistSolverBase getDist() {
@@ -1787,7 +1915,19 @@ class CstInsideArrExpr: CstLogicExpr
     }
     str ~= "])\n";
   }
-
+  
+  void calcHash(ref Hash hash){
+    hash.modify(40);
+    if (_notinside) hash.modify(92);
+    else            hash.modify(47);
+    _term.calcHash(hash);
+    hash.modify(91);
+    foreach (elem; _elems)
+      elem.calcHash(hash);
+    hash.modify(93);
+    hash.modify(41);
+  }
+  
   CstDistSolverBase getDist() {
     assert (false);
   }
@@ -1879,6 +2019,16 @@ class CstUniqueArrExpr: CstLogicExpr
       elem.writeExprString(str);
     str ~= "])\n";
   }
+  
+  void calcHash(ref Hash hash){
+    hash.modify(40);
+    hash.modify(117);
+    hash.modify(91);
+    foreach (elem; _elems)
+      elem.calcHash(hash);
+    hash.modify(93);
+    hash.modify(41);
+  }
 
   CstDistSolverBase getDist() { assert (false); }
 
@@ -1925,6 +2075,10 @@ class CstIteLogicExpr: CstLogicExpr
   CstDistSolverBase getDist() { assert (false); }
 
   void writeExprString(ref Charbuf str) {
+    assert (false, "TBD");
+  }
+
+  void calcHash(ref Hash hash){
     assert (false, "TBD");
   }
 
@@ -2067,6 +2221,16 @@ class CstVec2LogicExpr: CstLogicExpr
     str ~= ' ';
     _rhs.writeExprString(str);
     str ~= ")\n";
+  }
+
+  void calcHash(ref Hash hash){
+    hash.modify(40);
+    hash.modify(_op);
+    hash.modify(32);
+    _lhs.calcHash(hash);
+    hash.modify(32);
+    _rhs.calcHash(hash);
+    hash.modify(41);
   }
 
   CstDistSolverBase getDist() {
@@ -2212,6 +2376,13 @@ class CstNotLogicExpr: CstLogicExpr
     _expr.writeExprString(str);
     str ~= ")\n";
   }
+
+  void calcHash(ref Hash hash){
+    hash.modify(40);
+    hash.modify(78);
+    _expr.calcHash(hash);
+    hash.modify(41);
+  }
   
   CstDistSolverBase getDist() {
     assert (false);
@@ -2277,6 +2448,12 @@ class CstVarVisitorExpr: CstLogicExpr
 
   void writeExprString(ref Charbuf str) {
     str ~= this.describe();
+  }
+
+  
+  void calcHash(ref Hash hash){
+    hash.modify(118);
+    hash.modify(_obj.fullName());
   }
 
   bool isCompatWithDist(CstDomBase dom) { return false; }

@@ -11,7 +11,7 @@ import esdl.rand.domain: CstVecValue;
 import esdl.rand.expr: CstVecArrExpr, CstVecSliceExpr, CstRangeExpr,
   CstInsideSetElem, CstVec2LogicExpr, CstLogic2LogicExpr, CstVec2VecExpr,
   CstNotLogicExpr, CstNegVecExpr, CstInsideArrExpr;
-import esdl.rand.pred: CstPredGroup, CstPredicate;
+import esdl.rand.pred: CstPredGroup, CstPredicate, Hash;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.misc: _esdl__RandGen, CstVectorOp, CstLogicOp, CstCompareOp,
   CstBinaryOp;
@@ -26,6 +26,7 @@ interface CstVarNodeIntf {
   string name();
   string fullName();
   bool inRange();
+  CstVarNodeIntf [] getDependents();
 
   bool _esdl__isObjArray();
   CstIterator _esdl__iter();
@@ -55,6 +56,7 @@ interface CstVecNodeIntf: CstVarNodeIntf, CstDepIntf {
   abstract void registerRndPred(CstPredicate rndPred);  
 
   abstract void setGroupContext(CstPredGroup group);
+  abstract void setProxyContext(_esdl__Proxy proxy);
   abstract void reset();
 }
 
@@ -285,6 +287,34 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   abstract bool isRolled();
   abstract void registerRndPred(CstPredicate rndPred);
   abstract CstDomSet getParentDomSet();
+  abstract bool isDependent(CstVarNodeIntf [] depArr);
+  abstract void markOrderedAfter(CstDomBase befElem, uint level);
+  
+      
+  uint _orderLevel = 0;
+      
+  uint getOrderLevel(){
+    return _orderLevel;
+  }
+
+  void setOrderLevel(uint lev){
+    _orderLevel = lev;
+  }
+
+  CstDomBase [] _solvedAfter;
+  CstDomBase [] getSolvedAfter() {
+    return _solvedAfter;
+  }
+  void addSolvedAfter(CstDomBase dependent){
+    _solvedAfter ~= dependent;
+  }
+  CstDomBase [] _solvedBefore;
+  CstDomBase [] getSolvedBefore() {
+    return _solvedBefore;
+  }
+  void addSolvedBefore(CstDomBase dependent){
+    _solvedBefore ~= dependent;
+  }
   // abstract void registerVarPred(CstPredicate varPred);  
   // abstract void registerDepPred(CstDepCallback depCb);
   // abstract void registerIdxPred(CstDepCallback idxCb);
@@ -361,6 +391,15 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     else return true;
   }
 
+  CstVarNodeIntf[] _orderedBefore;
+
+  void orderBefore(CstVarNodeIntf a){
+    _orderedBefore ~= a;
+  }
+
+  auto getOrdered(){
+    return _orderedBefore;
+  }
   // Callbacks
   CstDepCallback[] _depCbs;
 
@@ -416,10 +455,10 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   override bool inRange() {
     assert(false, "inRange is not defined for: " ~ name());
   }
-  
-  void setGroupContext(CstPredGroup group) {
+
+  void setProxyContext(_esdl__Proxy proxy){
     // import std.stdio;
-    // writeln("setGroupContext on: ", this.name());
+    // writeln("setProxyContext on: ", this.name());
     assert (_state is State.INIT && (! this.isSolved()));
     _state = State.GROUPED;
     // assert (_group is null && (! this.isSolved()));
@@ -427,19 +466,39 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     if (this.isRand()) {
       foreach (pred; _rndPreds) {
 	if (pred.isEnabled() &&
-	    pred._state is CstPredicate.State.INIT &&
-	    ! pred.isMarkedBefore()//  &&
+	    pred._state is CstPredicate.State.INIT//  &&
 	    // ! pred.hasUnrolled() // now taken care of in _state (UNROLLED)
 	    ) {
-	  pred.setGroupContext(group);
+	  pred.setProxyContext(proxy);
 	}
       }
       if (_esdl__parentIsConstrained) {
 	CstDomSet parent = getParentDomSet();
 	assert (parent !is null);
 	if (parent._state is CstDomSet.State.INIT) {
-	  parent.setGroupContext(group);
+	  parent.setProxyContext(proxy);
 	}
+      }
+    }
+  }
+  
+  void setGroupContext(CstPredGroup group, uint level) {
+    assert (_state is State.INIT && (! this.isSolved()) && getOrderLevel() == level - 1);
+    _state = State.GROUPED;
+    if (this.isRand()) {
+      foreach (pred; _rndPreds) {
+  	if (pred.isEnabled() &&
+  	    pred._state is CstPredicate.State.INIT &&
+	    pred.getOrderLevel == level - 1) {
+  	  pred.setGroupContext(group, level);
+  	}
+      }
+      if (_esdl__parentIsConstrained) {
+  	CstDomSet parent = getParentDomSet();
+  	assert (parent !is null);
+  	if (parent._state is CstDomSet.State.INIT) {
+  	  parent.setGroupContext(group, level);
+  	}
       }
     }
   }
@@ -497,31 +556,6 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
       }
     }
     _depCbs ~= idxCb; // use same callbacks as deps for now
-  }
-  uint _markBefore = 0;
-  void orderBefore(CstDomBase x, uint lap) {
-    if(isSolved() || x.isSolved()){
-      return;
-    }
-    x.setmarkBefore(lap);
-    CstPredicate [] a = x.getRandPreds();
-    foreach (elem; a){
-      if (elem.getmarkBefore() != lap) {
-	elem.setmarkBefore(lap);
-	CstDomBase [] b = elem.getDomains();
-	foreach (j, e; b){
-	  if (e != this && e.getmarkBefore() != lap) {
-	    orderBefore(e, lap);
-	  }
-	}
-      }
-    }
-  }
-  void setmarkBefore(uint lap){
-    _markBefore = lap;
-  }
-  uint getmarkBefore(){
-    return _markBefore;
   }
 
   bool _esdl__parentIsConstrained;
@@ -606,6 +640,16 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
 
   // Dependencies
   CstDepIntf[] _deps;
+  
+  CstVarNodeIntf [] _orderedBefore;
+
+  void orderBefore(CstVarNodeIntf a){
+    _orderedBefore ~= a;
+  }
+
+  auto getOrdered(){
+    return _orderedBefore;
+  }
 
   void addDep(CstDepIntf dep) { if (! _deps.canFind(dep)) _deps ~= dep; }
   CstDepIntf[] getDeps() { return _deps; }
@@ -615,7 +659,8 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   abstract void markAsUnresolved(uint lap, bool hier);
   abstract uint elemBitcount();
   abstract bool elemSigned();
-
+  abstract bool isDependent(CstVarNodeIntf [] depArr);
+  
   
   void execCbs() {
     execIterCbs();
@@ -726,6 +771,14 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     }
   }
 
+  void calcHash(ref Hash hash){
+    assert (isResolved());
+    foreach (dom; this[]) {
+      dom.calcHash(hash);
+      hash.modify(' ');
+    }
+  }
+
   CstPredicate[] _rndPreds;
   bool _esdl__parentIsConstrained;
   override void registerRndPred(CstPredicate rndPred) {
@@ -751,16 +804,16 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     _esdl__leafElemsCount = 0;
   }
   
-  void setGroupContext(CstPredGroup group) {
+  void setProxyContext(_esdl__Proxy proxy){
     // import std.stdio;
-    // writeln("setGroupContext on: ", this.name());
+    // writeln("setProxyContext on: ", this.name());
     assert (this.isResolved(), this.name() ~ " is unresolved");
     assert (_state is State.INIT);
     foreach (pred; _rndPreds) {
       if (! pred.isGuard()) {
 	if (pred.isEnabled() &&
 	    pred._state is CstPredicate.State.INIT) {
-	  pred.setGroupContext(group);
+	  pred.setProxyContext(proxy);
 	}
       }
     }
@@ -768,15 +821,44 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
       CstDomSet parent = getParentDomSet();
       assert (parent !is null);
       if (parent._state is State.INIT) {
-	parent.setGroupContext(group);
+	parent.setProxyContext(proxy);
       }
     }
     else {			// only for the top arr
       _state = State.GROUPED;
       foreach (dom; this[]) {
 	if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
-	  dom.setGroupContext(group);
+	  dom.setProxyContext(proxy);
 	}
+      }
+    }
+  }
+  
+  void setGroupContext(CstPredGroup group, uint level) {
+    assert (_state is State.INIT);
+    assert (this.isResolved(), this.name() ~ " is unresolved");
+    foreach (pred; _rndPreds) {
+      if (! pred.isGuard()) {
+  	if (pred.isEnabled() &&
+	    pred._state is CstPredicate.State.INIT &&
+	    pred.getOrderLevel() == level - 1) {
+  	  pred.setGroupContext(group, level);
+  	}
+      }
+    }
+    if (_esdl__parentIsConstrained) {
+      CstDomSet parent = getParentDomSet();
+      assert (parent !is null);
+      if (parent._state is State.INIT) {
+  	parent.setGroupContext(group, level);
+      }
+    }
+    else {			// only for the top arr
+      _state = State.GROUPED;
+      foreach (dom; this[]) {
+  	if (dom._state is CstDomBase.State.INIT && (! dom.isSolved()) && dom.getOrderLevel() == level - 1) {
+  	  dom.setGroupContext(group, level);
+  	}
       }
     }
   }
@@ -826,6 +908,7 @@ interface CstTerm
   void visit(CstDistSolverBase dist);
 
   void writeExprString(ref Charbuf str);
+  void calcHash(ref Hash hash);
 
   CstTerm unroll(CstIterator iter, ulong n);
   

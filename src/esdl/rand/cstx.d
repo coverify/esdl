@@ -1571,45 +1571,6 @@ struct CstParser {
   }
 
   void procBeforeStmt() {
-    /*size_t srcTag = parseSpace();
-    fillOut(CST[srcTag..srcCursor]);
-
-    srcTag = parseIdentifier();
-    if (CST[srcTag..srcCursor] != "solve") {
-      import std.conv: to;
-      assert (false, "Not a solve statement at: " ~ srcTag.to!string);
-    }
-
-    srcTag = parseSpace();
-    fillOut(CST[srcTag..srcCursor]);
-
-    procIdentifier();
-
-    fillOut(".solveBefore(");
-    srcTag = parseSpace();
-    fillOut(CST[srcTag..srcCursor]);
-
-    srcTag = parseIdentifier();
-    if (CST[srcTag..srcCursor] != "before") {
-      import std.conv: to;
-      assert (false, "Expected keyword \"before\" at: " ~ srcTag.to!string);
-    }
-
-    srcTag = parseSpace();
-    fillOut(CST[srcTag..srcCursor]);
-
-    procIdentifier();
-
-    srcTag = parseSpace();
-    fillOut(CST[srcTag..srcCursor]);
-
-    if (CST[srcCursor++] !is ';') {
-      assert (false, "Error: -- ';' missing at end of statement; at " ~
-	      srcCursor.to!string);
-    }
-
-    fillOut(");\n");*/
-    fillOut("_preds ~= new CstPredicate(this, null, false, 0, this.outer, 0,");
     size_t srcTag = parseSpace();
     fillOut(CST[srcTag..srcCursor]);
 
@@ -1647,7 +1608,8 @@ struct CstParser {
 	      srcCursor.to!string);
     }
 
-    fillOut("), false);\n");
+    fillOut(");");
+    //fillOut("), false);\n");
   }
 
   enum StmtToken: byte

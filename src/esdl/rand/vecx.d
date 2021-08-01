@@ -247,7 +247,34 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
       override CstDomSet getParentDomSet() {
 	return null;
       }
+      
+      override CstVarNodeIntf [] getDependents(){
+	return getOrdered();
+      }
 
+      override void markOrderedAfter(CstDomBase befElem, uint level){
+	if (_orderLevel != level - 1) return;
+	_orderLevel = level;
+	CstPredicate [] preds = getRandPreds();
+	foreach (pred; preds){
+	  if(pred.getOrderLevel() < level){
+	    assert(pred.getOrderLevel() == level - 1, "unexpected error in ordering");
+	    pred.setOrderLevel(level);
+	    CstDomBase [] doms = pred.getDomains();
+	    foreach (dom; doms){
+	      if (dom != this && dom != befElem){
+		assert(!dom.isSolved(), "unexpected error in ordering");
+		dom.markOrderedAfter(befElem, level);
+	      }
+	    }
+	  }
+	}
+      }
+
+      override bool isDependent(CstVarNodeIntf [] depArr){
+	import std.algorithm.searching : canFind;
+	return depArr.canFind(this);
+      }
     }
 
 // Array Element
@@ -443,6 +470,37 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 
       override CstDomSet getParentDomSet() {
 	return _parent;
+      }
+      
+      override CstVarNodeIntf [] getDependents(){
+	CstVarNodeIntf [] deps = getOrdered();
+	deps ~= _parent.getDependents();
+	return deps;
+	// return null;
+      }
+
+      override void markOrderedAfter(CstDomBase befElem, uint level){
+	if (_orderLevel != level - 1) return;
+	_orderLevel = level;
+	CstPredicate [] preds = getRandPreds();
+	foreach (pred; preds){
+	  if(pred.getOrderLevel() < level){
+	    assert(pred.getOrderLevel() == level - 1, "unexpected error in ordering");
+	    pred.setOrderLevel(level);
+	    CstDomBase [] doms = pred.getDomains();
+	    foreach (dom; doms){
+	      if (dom != this && dom != befElem){
+		assert(!dom.isSolved(), "unexpected error in ordering");
+		dom.markOrderedAfter(befElem, level);
+	      }
+	    }
+	  }
+	}
+      }
+
+      override bool isDependent(CstVarNodeIntf [] depArr){
+	import std.algorithm.searching : canFind;
+	return (depArr.canFind(this) || _parent.isDependent(depArr));
       }
     }
 
@@ -965,6 +1023,15 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
       override CstDomSet getParentDomSet() {
 	return null;
       }
+      
+      override CstVarNodeIntf [] getDependents(){
+	return getOrdered();
+      }
+
+      override bool isDependent(CstVarNodeIntf [] depArr){
+	import std.algorithm.searching : canFind;
+	return depArr.canFind(this);
+      }
     }
 
 // Array that is elelment of another array
@@ -1164,6 +1231,19 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
       override CstDomSet getParentDomSet() {
 	return _parent;
       }
+      
+      override CstVarNodeIntf [] getDependents(){
+	CstVarNodeIntf [] deps = getOrdered();
+	deps ~= _parent.getDependents();
+	return deps;
+      }
+
+
+      override bool isDependent(CstVarNodeIntf [] depArr){
+	import std.algorithm.searching : canFind;
+	return (depArr.canFind(this) || _parent.isDependent(depArr));
+      }
+      
     }
 
 private auto getArrElemTmpl(A, N...)(ref A arr, N indx)

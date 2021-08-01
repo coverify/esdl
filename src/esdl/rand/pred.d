@@ -11,12 +11,102 @@ import esdl.rand.misc;
 import esdl.rand.base: CstDomBase, CstDomSet, CstIterCallback, DomType,
   CstDepCallback, CstScope, CstIterator, CstVecNodeIntf,
   CstVecTerm, CstLogicTerm, CstDepIntf;
-import esdl.rand.base: CstValue;
+import esdl.rand.base: CstValue, CstVarNodeIntf;
 
 import esdl.solver.base;
 import esdl.solver.mono: CstMonoSolver;
 import esdl.solver.z3: CstZ3Solver;
 import esdl.solver.buddy: CstBuddySolver;
+import esdl.rand.vecx: CstVector, CstVecArr;
+import esdl.rand.domain: CstArrLength;
+
+struct Hash
+{
+  size_t hash;
+  
+  this (size_t h) nothrow {
+    hash = h;
+  }
+  
+  enum uint m = 0x5bd1e995;
+  enum uint r = 24;
+  void modify (uint c){
+    uint k = c * m;
+    k ^= k >> r;
+    hash = (hash * m) ^ (k * m);
+  }
+  void modify (string s){
+    modify(calcHash(s));
+  }
+
+  uint calcHash(scope const(char)[] data) @nogc nothrow pure @safe
+  {
+    return calcHash(cast(const(ubyte)[])data);
+  }
+  
+  uint calcHash(scope const(ubyte)[] data) @nogc nothrow pure @safe
+  {
+    uint h = cast(uint) data.length;
+    while (data.length >= 4)
+      {
+        uint k = data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
+        k *= m;
+        k ^= k >> r;
+        h = (h * m) ^ (k * m);
+        data = data[4..$];
+      }
+    switch (data.length & 3)
+      {
+      case 3:
+        h ^= data[2] << 16;
+        goto case;
+      case 2:
+        h ^= data[1] << 8;
+        goto case;
+      case 1:
+        h ^= data[0];
+        h *= m;
+        goto default;
+      default:
+        break;
+      }
+    h ^= h >> 13;
+    h *= m;
+    h ^= h >> 15;
+    return h;
+  }
+}
+
+// hash map number keys
+
+// tried to use ascii where possible
+
+// ! -> 33
+// : -> 58
+// >> -> > -> 62
+// ( -> 40
+// ) -> 41
+//   -> 32
+// .. -> . -> 46
+// DIST -> d -> 100
+// [ -> 91
+// ] -> 93
+// NOT -> N -> 78
+// NEG -> ~ -> 126
+// ! INSIDE -> \ -> 92
+// INSIDE -> / -> 47
+// UNIQUE -> u -> 117
+// Visitor: -> v -> 118
+// := -> @ -> 64
+// :/ -> * -> 42
+// V -> 86
+// R -> 82
+// # -> 35
+// U -> 85
+// S -> 83
+// bool -> 0
+
+
 
 class CstPredGroup			// group of related predicates
 {
@@ -138,52 +228,54 @@ class CstPredGroup			// group of related predicates
   // the _hasDynamicBinding flag is true
   Folder!(CstPredGroup, "boundGroups") _boundGroups;
 
-  void setGroupContext(CstPredicate solvablePred) {
-    import std.algorithm.sorting: sort;
-    solvablePred.setGroupContext(this);
+  void setGroupContext(CstPredicate solvablePred, uint level) {
+    import std.algorithm.sorting: sort; 
     
-    if (_state is State.NEEDSYNC ||
-	_proxy.needSync() is true ||
-	_predList.length != _preds.length ||
-	_dynPredList.length != _dynPreds.length) {
+    solvablePred.setGroupContext(this, level);
 
-      _hasSoftConstraints = false;
-      _hasVectorConstraints = false;
-      _hasUniqueConstraints = false;
+    setOrderAndBools();
+  }
 
-      _state = State.NEEDSYNC;	// mark that we need to reassign a solver
+  void setOrderAndBools(){
+    
+    _hasSoftConstraints = false;
+    _hasVectorConstraints = false;
+    _hasUniqueConstraints = false;
 
-      foreach (pred; _preds) pred._group = null;
-      _preds.reset();
-      foreach (pred; sort!((x, y) => x.name() < y.name())(_predList[])) {
-	if (pred.withDist()) this.markDist();
-	pred._group = this;
-	if (pred._soft != 0) _hasSoftConstraints = true;
-	if (pred._vectorOp != CstVectorOp.NONE) _hasVectorConstraints = true;
-	if (pred._uniqueFlag is true) _hasUniqueConstraints = true;
-	_preds ~= pred;
-      }
-      foreach (pred; _guards) pred._group = null;
-      _guards.reset();
-      foreach (pred; sort!((x, y) => x.name() < y.name())(_guardList[])) {
-	pred._group = this;
-	_guards ~= pred;
-      }
-      foreach (pred; _dynPreds) pred._group = null;
-      _dynPreds.reset();
-      foreach (pred; sort!((x, y) => x.name() < y.name())(_dynPredList[])) {
-	pred._group = this;
-	if (pred._soft != 0) _hasSoftConstraints = true;
-	if (pred._vectorOp != CstVectorOp.NONE) _hasVectorConstraints = true;
-	if (pred._uniqueFlag is true) _hasUniqueConstraints = true;
-	_dynPreds ~= pred;
-      }
-      if (_distPred !is null) _distPred._group = this;
+    _state = State.NEEDSYNC;	// mark that we need to reassign a solver
+
+    foreach (pred; _preds) pred._group = null;
+    _preds.reset();
+    foreach (pred; sort!((x, y) => x.name() < y.name())(_predList[])) {
+      if (pred.withDist()) this.markDist();
+      pred._group = this;
+      if (pred._soft != 0) _hasSoftConstraints = true;
+      if (pred._vectorOp != CstVectorOp.NONE) _hasVectorConstraints = true;
+      if (pred._uniqueFlag is true) _hasUniqueConstraints = true;
+      _preds ~= pred;
     }
+    foreach (pred; _guards) pred._group = null;
+    _guards.reset();
+    foreach (pred; sort!((x, y) => x.name() < y.name())(_guardList[])) {
+      pred._group = this;
+      _guards ~= pred;
+    }
+    foreach (pred; _dynPreds) pred._group = null;
+    _dynPreds.reset();
+    foreach (pred; sort!((x, y) => x.name() < y.name())(_dynPredList[])) {
+      pred._group = this;
+      if (pred._soft != 0) _hasSoftConstraints = true;
+      if (pred._vectorOp != CstVectorOp.NONE) _hasVectorConstraints = true;
+      if (pred._uniqueFlag is true) _hasUniqueConstraints = true;
+      _dynPreds ~= pred;
+    }
+    if (_distPred !is null) _distPred._group = this;
+    
     // for the next cycle
     _predList.reset();
     _guardList.reset();
     _dynPredList.reset();
+    
   }
 
   void setAnnotation() {
@@ -216,7 +308,28 @@ class CstPredGroup			// group of related predicates
     }
     return _sig.toString();
   }
+
+  override size_t toHash() @trusted nothrow {
+    import std.exception:assumeWontThrow;
+    return assumeWontThrow(getHash());
+  }
   
+  bool _hasHashBeenCalculated = false;
+  
+  Hash _hash;
+  
+  size_t getHash(){
+    if (_hasHashBeenCalculated){
+      return _hash.hash;
+    }
+    _hash = Hash(cast(uint) _preds.length);
+    foreach (pred; _preds){
+      if (! hasDistConstraints || pred.isGuardEnabled())
+	pred.calcHash(_hash);
+    }
+    return _hash.hash;
+  }
+
   public enum State: ubyte
   {   INIT,
       NEEDSYNC,
@@ -269,6 +382,8 @@ class CstPredGroup			// group of related predicates
 	}
 
 	CstSolver* solverp = sig in _proxy._solvers;
+	// _hasHashBeenCalculated = false;
+	// CstSolver* solverp = this in _proxy._solvers;
 
 	if (solverp !is null) {
 	  _solver = *solverp;
@@ -347,6 +462,8 @@ class CstPredGroup			// group of related predicates
 	      }
 	    }
 	  }
+	  // _hasHashBeenCalculated = true;
+	  // if (_solver !is null) _proxy._solvers[this] = _solver;
 	  if (_solver !is null) _proxy._solvers[sig] = _solver;
 	}
       }
@@ -501,7 +618,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   
   _esdl__ConstraintBase _constraint;
   uint _statement;
-  uint _markBefore = uint.max;
   bool _hasDistDomain;
   bool _domainContextSet;
 
@@ -548,17 +664,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   uint getSoftWeight() { return _soft; }
 
   State _state = State.INIT;
-
-  void setmarkBefore(uint a){
-    _markBefore = a;
-  }
-  uint getmarkBefore(){
-    return _markBefore;
-  }
-
-  bool isMarkedBefore() {
-    return _markBefore == _proxy._lap;
-  }
 
   void reset() {
     _state = State.INIT;
@@ -777,6 +882,10 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   final CstDomBase[] getDomains() {
     return _rnds;
+  }
+
+  final CstDomSet[] getDomArrs(){
+    return _rndArrs;
   }
 
   // final void tryResolveDepsRolled() {
@@ -1114,9 +1223,9 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return _group;
   }
 
-  void setGroupContext(CstPredGroup group) {
+  void setProxyContext(_esdl__Proxy proxy){
     // import std.stdio;
-    // writeln("setGroupContext: ", this.describe());
+    // writeln("setProxyContext: ", this.describe());
     foreach (dom; _rnds) {
       if (! dom.inRange()) {
 	// import std.stdio;
@@ -1142,13 +1251,55 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
 
     _state = State.GROUPED;
+    proxy.addGroupPredicate(this);
+    foreach (dom; _rnds) {
+      if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
+	dom.setProxyContext(proxy);
+      }
+    }
+    foreach (arr; _rndArrs) {
+      if (arr._state is CstDomSet.State.INIT) {
+	arr.setProxyContext(proxy);
+      }
+    }
+  }
+
+  void setGroupContext(CstPredGroup group, uint level) {
+    
+    
+    assert(getOrderLevel() == level - 1, "unexpected error in solving before constraints");
+      
+    foreach (dom; _rnds) {
+      assert(dom.getOrderLevel() != level, "unexpected error in solving before constraints");
+      if (dom.getOrderLevel < level - 1){
+	assert(dom.isSolved(), "unexpected error in solving before constraints");
+      }
+    } 
+    
+    addPredicateToGroup(group);
+    
+    foreach (dom; _rnds) {
+      if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
+  	dom.setGroupContext(group, level);
+      }
+    }
+    foreach (arr; _rndArrs) {
+      if (arr._state is CstDomSet.State.INIT // && (! arr.isSolved())
+  	  ) {
+  	arr.setGroupContext(group, level);
+      }
+    }
+  }
+
+  void addPredicateToGroup(CstPredGroup group){
+    
+    _state = State.GROUPED;
+    
     if (_group !is group) {
       assert(_group is null,
-	     "A predicate may be added to a group, but group should not change");
-      group.needSync();
+  	     "A predicate may be added to a group, but group should not change");
     }
-    if (_rndArrs.length != 0) group.needSync();
-    if (_bitIdxs.length != 0) group.needSync();
+    
     if (this.isDynamic()) {
       if (this.withDist()) { assert (false); } // group.addWithDistPredicate(this);
       else                 group.addDynPredicate(this);
@@ -1156,14 +1307,14 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     else if (this.isDist()) {
       assert (group.hasDistConstraints());
       if (this.isGuardEnabled()) {
-	if (group._distPred !is null) {
-	  assert (false,
-		  "It is illegal to have more than one dist predicate active on the same domain");
-	}
-	group._distPred = this;
+  	if (group._distPred !is null) {
+  	  assert (false,
+  		  "It is illegal to have more than one dist predicate active on the same domain");
+  	}
+  	group._distPred = this;
       }
       else {
-	group.addPredicate(this);
+  	group.addPredicate(this);
       }
     }
     else if (this.isGuard()) {
@@ -1172,24 +1323,84 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     else {
       group.addPredicate(this);
     }
-    foreach (dom; _rnds) {
-      // import std.stdio;
-      // writeln("setGroupContext: ", dom.name());
-      // if (dom.group is null && (! dom.isSolved())) {
-      if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
-	dom.setGroupContext(group);
-      }
-    }
-    foreach (arr; _rndArrs) {
-      // import std.stdio;
-      // writeln("setGroupContext: ", arr.name());
-      // if (arr.group is null && (! arr.isSolved())) {
-      if (arr._state is CstDomSet.State.INIT // && (! arr.isSolved())
-	  ) {
-	arr.setGroupContext(group);
-      }
-    }
+    
   }
+  // void setGroupContext(CstPredGroup group) {
+  //   // import std.stdio;
+  //   // writeln("setGroupContext: ", this.describe());
+  //   foreach (dom; _rnds) {
+  //     if (! dom.inRange()) {
+  // 	// import std.stdio;
+  // 	// writeln(this.describe());
+  // 	// writeln(_guard.describe());
+  // 	if (_guard is null || _guard._expr.eval()) {
+  // 	  assert (false, "Predicate " ~ name() ~ " has out of bound domain: " ~ dom.name());
+  // 	}
+  // 	return;
+  //     }
+  //   }
+
+  //   foreach (dom; _vars) {
+  //     if (! dom.inRange()) {
+  // 	// import std.stdio;
+  // 	// writeln(this.describe());
+  // 	// writeln(_guard.describe());
+  // 	if (_guard is null || _guard._expr.eval()) {
+  // 	  assert (false, "Predicate " ~ name() ~ " has out of bound domain: " ~ dom.name());
+  // 	}
+  // 	return;
+  //     }
+  //   }
+
+  //   _state = State.GROUPED;
+  //   if (_group !is group) {
+  //     assert(_group is null,
+  // 	     "A predicate may be added to a group, but group should not change");
+  //     group.needSync();
+  //   }
+  //   if (_rndArrs.length != 0) group.needSync();
+  //   if (_bitIdxs.length != 0) group.needSync();
+  //   if (this.isDynamic()) {
+  //     if (this.withDist()) { assert (false); } // group.addWithDistPredicate(this);
+  //     else                 group.addDynPredicate(this);
+  //   }
+  //   else if (this.isDist()) {
+  //     assert (group.hasDistConstraints());
+  //     if (this.isGuardEnabled()) {
+  // 	if (group._distPred !is null) {
+  // 	  assert (false,
+  // 		  "It is illegal to have more than one dist predicate active on the same domain");
+  // 	}
+  // 	group._distPred = this;
+  //     }
+  //     else {
+  // 	group.addPredicate(this);
+  //     }
+  //   }
+  //   else if (this.isGuard()) {
+  //     group.addGuard(this);
+  //   }
+  //   else {
+  //     group.addPredicate(this);
+  //   }
+  //   foreach (dom; _rnds) {
+  //     // import std.stdio;
+  //     // writeln("setGroupContext: ", dom.name());
+  //     // if (dom.group is null && (! dom.isSolved())) {
+  //     if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
+  // 	dom.setGroupContext(group);
+  //     }
+  //   }
+  //   foreach (arr; _rndArrs) {
+  //     // import std.stdio;
+  //     // writeln("setGroupContext: ", arr.name());
+  //     // if (arr.group is null && (! arr.isSolved())) {
+  //     if (arr._state is CstDomSet.State.INIT // && (! arr.isSolved())
+  // 	  ) {
+  // 	arr.setGroupContext(group);
+  //     }
+  //   }
+  // }
 
   void annotate(CstPredGroup group, bool recurse=false) {
     // import std.stdio;
@@ -1225,11 +1436,23 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       str ~= ':';
     }
     if (_guard !is null) {
+      if (_guardInv) str ~= " ! ";
       _guard.writeSignature(str);
-      if (_guardInv) str ~= " !>> ";
-      else str ~= " >> ";
+      str ~= " >> ";
     }
     _expr.writeExprString(str);
+  }
+
+  void calcHash(ref Hash hash){
+    hash.modify(33);
+    hash.modify(_soft);
+    hash.modify(58);
+    if (_guard !is null) {
+      _guard.calcHash(hash);
+      if (_guardInv) hash.modify(33);
+      hash.modify(62);
+    }
+    _expr.calcHash(hash);
   }
 
   bool isDist() { return _distDomain !is null; }
@@ -1304,6 +1527,17 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
 
   CstDomBase getDomain() { return null; }
+
+  uint _orderLevel = 0;
+
+  uint getOrderLevel(){
+    return _orderLevel;
+  }
+  
+  void setOrderLevel(uint level){
+    _orderLevel = level;
+  }
+  
 }
 
 class CstVisitorPredicate: CstPredicate

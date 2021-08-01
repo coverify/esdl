@@ -8,13 +8,12 @@ import esdl.data.bvec: isBitVector;
 import esdl.data.charbuf: Charbuf;
 
 import esdl.rand.base: CstValue, CstDomBase, CstDomSet, CstIterator,
-  CstVecNodeIntf, CstVecPrim, DomType, CstLogicTerm, CstVecTerm,
-  CstVecValueBase, CstDepIntf;
+  CstVecNodeIntf, CstVarNodeIntf, CstVecPrim, DomType, CstLogicTerm, CstVecTerm, CstVecValueBase, CstDepIntf;
 // import esdl.rand.misc: rand, writeHexString, _esdl__RandGen;
 import esdl.rand.misc: rand, _esdl__RandGen, writeHexString, isVecSigned,
   CstVectorOp, CstInsideOp, CstCompareOp, CstLogicOp;
 import esdl.rand.proxy: _esdl__Proxy;
-import esdl.rand.pred: CstPredicate;
+import esdl.rand.pred: CstPredicate, Hash;
 import esdl.rand.expr: CstNotLogicExpr, CstLogic2LogicExpr;
 
 import esdl.solver.base: CstSolver, CstDistSolverBase;
@@ -268,6 +267,20 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
       // 	str ~= 'U';
       // 	(cast(ubyte) 1).writeHexString(str);
       // }
+    }
+  }
+
+  void calcHash(ref Hash hash){
+    if (this.isSolved()) {
+      hash.modify(86);
+      hash.modify(_domN);
+      hash.modify(35);
+      hash.modify(_varN);
+    }
+    else {
+      hash.modify(82);
+      hash.modify(_domN);
+      hash.modify(T.stringof);
     }
   }
 
@@ -570,6 +583,7 @@ class CstArrIterator(RV): CstIterator
   void writeExprString(ref Charbuf str) {
     // assert(false);
   }
+  void calcHash(ref Hash hash) { }
 }
 
 class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
@@ -864,6 +878,39 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     else return null;
   }
 
+  
+  override CstVarNodeIntf [] getDependents(){
+    CstVarNodeIntf [] deps = getOrdered();
+    static if (is (RV: CstDomSet))
+      deps ~= _parent.getDependents();
+    return deps;
+  }
+
+  override void markOrderedAfter(CstDomBase befElem, uint level){
+    if (_orderLevel != level - 1) return;
+    _orderLevel = level;
+    CstPredicate [] preds = getRandPreds();
+    foreach (pred; preds){
+      if(pred.getOrderLevel() < level){
+    	assert(pred.getOrderLevel() == level - 1, "unexpected error in ordering");
+    	pred.setOrderLevel(level);
+    	CstDomBase [] doms = pred.getDomains();
+    	foreach (dom; doms){
+    	  if (dom != this && dom != befElem){
+    	    assert(!dom.isSolved(), "unexpected error in ordering");
+    	    dom.markOrderedAfter(befElem, level);
+    	  }
+    	}
+      }
+    }
+  }
+
+  override bool isDependent(CstVarNodeIntf [] depArr){
+    import std.algorithm.searching : canFind;
+    static if (is (RV: CstDomSet)) return (depArr.canFind(this) || _parent.isDependent(depArr));
+    else return depArr.canFind(this);
+  }
+
   final override bool isBool() {return false;}
 
   final override bool getBool() {assert (false);}
@@ -949,6 +996,11 @@ class CstLogicValue: CstValue, CstLogicTerm
     // VSxxxxx or VUxxxxx
     str ~= 'V';
     _val.writeHexString(str);
+  }
+
+  void calcHash(ref Hash hash){
+    hash.modify(86);
+    hash.modify(0);
   }
 
   override bool isOrderingExpr() { return false; }
@@ -1099,5 +1151,32 @@ class CstVecValue(T): CstVecValueBase
     }
     _val.writeHexString(str);
   }
-  
+
+  void calcHash(ref Hash hash){
+    hash.modify(86);
+    static if (isBoolean!T) {
+      hash.modify(85);
+    }
+    else static if (isIntegral!T) {
+      static if (isSigned!T) {
+	hash.modify(83);
+      }
+      else {
+	hash.modify(85);
+      }
+    }
+    else static if (isBitVector!T) {
+      static if (T.ISSIGNED) {
+	hash.modify(83);
+      }
+      else {
+	hash.modify(85);
+      }
+    }
+    else {
+      static assert (false);
+    }
+    hash.modify(cast(uint)_val);
+  }
+
 }
