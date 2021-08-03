@@ -353,7 +353,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   Folder!(CstPredGroup, "solvedGroups") _solvedGroups;
 
   
-  Folder!(CstPredicate, "groupPredicates") _groupPredicates;
+  Folder!(CstPredicate, "collectedPredicates") _collectedPredicates;
   Folder!(CstDomBase, "groupDomains") _groupDomains;
   
   Folder!(CstDomBase, "beforeSolve") _beforeSolve;
@@ -361,7 +361,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
 
   void addGroupPredicate (CstPredicate pred){
-    _groupPredicates ~= pred;
+    _collectedPredicates ~= pred;
   }
 
   // void addGroupDomain (CstDomBase dom){
@@ -373,8 +373,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   // }
 
   void makeGroupDomains(){
-    foreach (pred; _groupPredicates){
-      pred.reset();
+    foreach (pred; _collectedPredicates){
       foreach (dom; pred.getDomains()){
   	if ((! dom.isSolved()) &&
 	    (! _groupDomains[].canFind!((CstDomBase a, CstDomBase b) => a is b)(dom))){
@@ -386,12 +385,12 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   }
 
   // void addGroupGuard ((CstPredicate pred){
-  //   _groupPredicates ~= pred;
+  //   _collectedPredicates ~= pred;
   // }
 
   void printGroup (){
     import std.stdio;
-    foreach (pred; _groupPredicates){
+    foreach (pred; _collectedPredicates){
       writeln(pred.name(), ", ", pred.getOrderLevel);
     }
     foreach (dom; _groupDomains){
@@ -403,10 +402,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
     _beforeSolve.reset();
     _afterSolve.reset();
-    
-    foreach (dom; _groupDomains){
 
-      if (dom.getOrderLevel() < level-1){ //isSolved
+    foreach (dom; _groupDomains) {
+
+      if (dom.getOrderLevel() < level-1 || dom.isSolved()) { //isSolved
 	continue;
       }
       
@@ -426,10 +425,9 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       }
     }
 
-
     CstDomBase base = null;
 
-    for(int i = 0; i < _beforeSolve.length; i ++){
+    for (int i = 0; i < _beforeSolve.length; i ++) {
       assert (_beforeSolve[i].getOrderLevel() >= level - 1, "unexpected error in solve before constraints");
       assert (_afterSolve[i].getOrderLevel() >= level - 1, "unexpected error in solve before constraints");
       if (_beforeSolve[i].getOrderLevel() == level){
@@ -446,6 +444,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	  markBase(base, base, level);
 	}
       }
+    }
+    for (int i = 0; i < _beforeSolve.length; i ++) {
+      _beforeSolve[i]._solvedBefore.length = 0;
+      _afterSolve[i]._solvedAfter.length = 0;
     }
 
     return _beforeSolve.length > 0;
@@ -688,6 +690,38 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       assert (_resolvedPreds.length == 0);
       assert (_resolvedDynPreds.length == 0);
 
+      if (_esdl__debugSolver) {
+	import std.stdio;
+	if (_toNewPreds.length > 0) {
+	  stdout.writeln("_toNewPreds: ");
+	  foreach (predicate; _toNewPreds) stdout.writeln(predicate.describe());
+	}
+	if (_toUnrolledPreds.length > 0) {
+	  stdout.writeln("_toUnrolledPreds: ");
+	  foreach (predicate; _toUnrolledPreds) stdout.writeln(predicate.describe());
+	}
+	if (_toResolvedDynPreds.length > 0) {
+	  stdout.writeln("_toResolvedDynPreds: ");
+	  foreach (predicate; _toResolvedDynPreds) stdout.writeln(predicate.describe());
+	}
+	if (_toResolvedPreds.length > 0) {
+	  stdout.writeln("_toResolvedPreds: ");
+	  foreach (predicate; _toResolvedPreds) stdout.writeln(predicate.describe());
+	}
+	if (_toUnresolvedPreds.length > 0) {
+	  stdout.writeln("_toUresolvedPreds: ");
+	  foreach (predicate; _toUnresolvedPreds) stdout.writeln(predicate.describe());
+	}
+	if (_toRolledPreds.length > 0) {
+	  stdout.writeln("_toRolledPreds: ");
+	  foreach (predicate; _toRolledPreds) stdout.writeln(predicate.describe());
+	}
+	if (_dependentPreds.length > 0) {
+	  stdout.writeln("_dependentPreds: ");
+	  foreach (predicate; _dependentPreds) stdout.writeln(predicate.describe());
+	}
+      }
+
       _solvedSome = false;
       // import std.stdio;
 
@@ -741,6 +775,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	foreach (pred; _unrolledPreds) {
 	  // import std.stdio;
 	  // writeln("Processing Unrolled Predicate: ", pred.name());
+	  _solvedSome = true;
 	  procUnrolledPredicate(pred);
 	}
 	_unrolledPreds.reset();
@@ -853,7 +888,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
        // Work on _solvePreds
       foreach (pred; _solvePreds) {
 	if (! pred.isGuard()) {
-	  if (pred.isSolved()) {
+	  if (pred.isSolved() || pred.isDisabled()) {
 	    _solvedSome = true;
 	    continue;
 	  }
@@ -876,7 +911,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	  else {
 	    solveMarkedPreds(level);
 	  }
-	  _groupPredicates.reset();
+
+	  _collectedPredicates.reset();
 	  _groupDomains.reset();
 	  // else {
 	  //   import std.conv: to;
@@ -905,6 +941,14 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	  
 	}
       }
+
+      foreach (pred; _solvePreds) {
+	import std.conv: to;
+	assert (pred.isSolved() || pred.isDisabled() || pred.isGuard(),
+		"Pred: " ~ pred.name() ~ "\nState: " ~ pred._state.to!string());
+	pred.reset();
+      }
+      
       if (_solvedSome is false) {
 	import std.stdio;
 	// if (_resolvedDistPreds.length > 0) {
@@ -1076,9 +1120,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       _toRolledPreds ~= pred;
     }
   }
+
   void solveMarkedPreds(uint level) {
-    foreach (pred; _groupPredicates) {
-      if (! pred.isGuard()) {
+    foreach (pred; _collectedPredicates) {
+      if (! pred.isGuard() && pred.isCollated()) {
 	if (pred.getOrderLevel() == level - 1 && ! (pred.isSolved)) {
 	  CstPredGroup group = pred.group();
 	  if (group is null) {
@@ -1121,11 +1166,15 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       }
     }
   }
-  void solveAll(){
-    if (_groupPredicates.length == 0){
+
+  void solveAll() {
+    scope (success) {
+      _solvedSome = true;
+    }
+    if (_collectedPredicates.length == 0) {
       return;
     }
-    auto pred1 = _groupPredicates[0];
+    auto pred1 = _collectedPredicates[0];
     CstPredGroup group = pred1.group();
     if (group is null) {
       group = new CstPredGroup(this);
@@ -1144,13 +1193,13 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	    "Group can not be solved when the predicate is still not solved; group: " ~
 	    group.describe() ~ " predicate: " ~ pred1.describe());
      
-    foreach (pred; _groupPredicates){
-      pred.addPredicateToGroup(group);
+    foreach (pred; _collectedPredicates) {
+      if (pred.isCollated()) {
+	pred.addPredicateToGroup(group);
+      }
     }
     group.setOrderAndBools();
     group.solve();
     _solvedGroups ~= group;
-    _solvedSome = true;
-   
   }
 }

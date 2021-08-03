@@ -488,7 +488,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     if (this.isRand()) {
       foreach (pred; _rndPreds) {
   	if (pred.isEnabled() &&
-  	    pred._state is CstPredicate.State.INIT &&
+	    pred.isCollated() &&
 	    pred.getOrderLevel == level - 1) {
   	  pred.setGroupContext(group, level);
   	}
@@ -840,7 +840,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     foreach (pred; _rndPreds) {
       if (! pred.isGuard()) {
   	if (pred.isEnabled() &&
-	    pred._state is CstPredicate.State.INIT &&
+	    pred.isCollated() &&
 	    pred.getOrderLevel() == level - 1) {
   	  pred.setGroupContext(group, level);
   	}
@@ -856,7 +856,9 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     else {			// only for the top arr
       _state = State.GROUPED;
       foreach (dom; this[]) {
-  	if (dom._state is CstDomBase.State.INIT && (! dom.isSolved()) && dom.getOrderLevel() == level - 1) {
+  	if (dom._state is CstDomBase.State.INIT &&
+	    (! dom.isSolved()) &&
+	    dom.getOrderLevel() == level - 1) {
   	  dom.setGroupContext(group, level);
   	}
       }

@@ -241,6 +241,7 @@ class CstPredGroup			// group of related predicates
     _hasSoftConstraints = false;
     _hasVectorConstraints = false;
     _hasUniqueConstraints = false;
+    _hasDistContraints = false;
 
     _state = State.NEEDSYNC;	// mark that we need to reassign a solver
 
@@ -342,11 +343,12 @@ class CstPredGroup			// group of related predicates
     _state = State.INIT;
 
     if (_distPred !is null) {
-      _distPred.reset;
+      // _distPred.reset;
       _distPred = null;
     }
-    
-    foreach (pred; _preds) pred.reset();
+
+    // Now handled in proxy
+    // foreach (pred; _preds) pred.reset();
   }
 
   void needSync() {
@@ -598,7 +600,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
   // alias _expr this;
 
-  enum State: byte { INIT, UNROLLED, GROUPED, SOLVED }
+  enum State: byte { INIT, UNROLLED, COLLATED, DISABLED, GROUPED, SOLVED }
 
 
   void hasDistDomain(bool v) {
@@ -650,6 +652,14 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     if (_parent is null)
       return _constraint.isEnabled() && _enabled && _proxy.isRand();
     else return _constraint.isEnabled() && _enabled && _proxy.isRand() && _parent.isEnabled();
+  }
+
+  bool isCollated() {
+    return _state == State.COLLATED;
+  }
+  
+  bool isDisabled() {
+    return _state == State.DISABLED;
   }
   
   uint _level;
@@ -1226,6 +1236,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   void setProxyContext(_esdl__Proxy proxy){
     // import std.stdio;
     // writeln("setProxyContext: ", this.describe());
+    proxy.addGroupPredicate(this);
+
     foreach (dom; _rnds) {
       if (! dom.inRange()) {
 	// import std.stdio;
@@ -1234,6 +1246,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	if (_guard is null || _guard._expr.eval()) {
 	  assert (false, "Predicate " ~ name() ~ " has out of bound domain: " ~ dom.name());
 	}
+	_state = State.DISABLED;
 	return;
       }
     }
@@ -1246,12 +1259,13 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	if (_guard is null || _guard._expr.eval()) {
 	  assert (false, "Predicate " ~ name() ~ " has out of bound domain: " ~ dom.name());
 	}
+	_state = State.DISABLED;
 	return;
       }
     }
 
-    _state = State.GROUPED;
-    proxy.addGroupPredicate(this);
+    _state = State.COLLATED;
+
     foreach (dom; _rnds) {
       if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
 	dom.setProxyContext(proxy);
@@ -1264,7 +1278,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
 
-  void setGroupContext(CstPredGroup group, uint level) {
+   void setGroupContext(CstPredGroup group, uint level) {
     
     
     assert(getOrderLevel() == level - 1, "unexpected error in solving before constraints");
@@ -1280,19 +1294,18 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     
     foreach (dom; _rnds) {
       if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
-  	dom.setGroupContext(group, level);
+	dom.setGroupContext(group, level);
       }
     }
     foreach (arr; _rndArrs) {
       if (arr._state is CstDomSet.State.INIT // && (! arr.isSolved())
-  	  ) {
-  	arr.setGroupContext(group, level);
+	  ) {
+	arr.setGroupContext(group, level);
       }
     }
   }
 
   void addPredicateToGroup(CstPredGroup group){
-    
     _state = State.GROUPED;
     
     if (_group !is group) {
@@ -1466,9 +1479,11 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
 
   void markPredSolved() {
+    import std.conv: to;
     // import std.stdio;
     // writeln("marking predicate solved: ", describe());
-    assert (this.isGuard() || this.isVisitor() || _state == State.GROUPED);
+    assert (this.isGuard() || this.isVisitor() || _state == State.GROUPED,
+	    "State is: " ~ _state.to!string());
     _state = State.SOLVED;
 
     this.execDepCbs();
