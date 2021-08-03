@@ -262,8 +262,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 	    pred.setOrderLevel(level);
 	    CstDomBase [] doms = pred.getDomains();
 	    foreach (dom; doms){
-	      if (dom != this && dom != befElem){
-		assert(!dom.isSolved(), "unexpected error in ordering");
+	      if (dom != this && dom != befElem && !dom.isSolved()) {
 		dom.markOrderedAfter(befElem, level);
 	      }
 	    }
@@ -489,8 +488,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	    pred.setOrderLevel(level);
 	    CstDomBase [] doms = pred.getDomains();
 	    foreach (dom; doms){
-	      if (dom != this && dom != befElem){
-		assert(!dom.isSolved(), "unexpected error in ordering");
+	      if (dom != this && dom != befElem && !dom.isSolved()) {
 		dom.markOrderedAfter(befElem, level);
 	      }
 	    }
