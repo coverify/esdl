@@ -559,7 +559,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   }
 
   bool _esdl__parentIsConstrained;
-  abstract string describe();
+  abstract string describe(bool descExpr=false);
 
   void scan() { }
   CstDomBase getDomain() { return this; }
@@ -891,7 +891,7 @@ interface CstVecPrim
 
 interface CstTerm
 {
-  string describe();
+  string describe(bool descExpr=false);
 
   void setDomainContext(CstPredicate pred,
 			ref CstDomBase[] rnds,

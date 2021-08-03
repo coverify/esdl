@@ -69,8 +69,8 @@ abstract class CstVecExpr: CstVecTerm
 //   void writeExprString(ref Charbuf str) {
 //     assert(false);
 //   }
-//   string describe() {
-//     string str = "( " ~ _first.describe() ~ " is solved before " ~ _second.describe() ~ " )";
+//   string describe(bool descExpr=false) {
+//     string str = "( " ~ _first.describe(true) ~ " is solved before " ~ _second.describe(true) ~ " )";
 //     return str;
 //   }
 //   void scan() { }
@@ -86,7 +86,7 @@ class CstVecArrExpr: CstVecExpr
   CstDomSet _arr;
   CstVectorOp _op;
 
-  string describe() {
+  string describe(bool descExpr=false) {
     return "( " ~ _arr.fullName ~ " " ~ _op.to!string() ~ " )";
   }
 
@@ -211,8 +211,8 @@ class CstVec2VecExpr: CstVecExpr
   CstVecTerm _rhs;
   CstBinaryOp _op;
 
-  string describe() {
-    return "( " ~ _lhs.describe ~ " " ~ _op.to!string() ~ " " ~ _rhs.describe ~ " )";
+  string describe(bool descExpr=false) {
+    return "( " ~ _lhs.describe(true) ~ " " ~ _op.to!string() ~ " " ~ _rhs.describe(true) ~ " )";
   }
 
   void visit(CstSolver solver) {
@@ -411,13 +411,13 @@ class CstRangeExpr
 
   bool _inclusive = false;
 
-  string describe() {
+  string describe(bool descExpr=false) {
     if (_rhs is null)
-      return "( " ~ _lhs.describe ~ " )";
+      return "( " ~ _lhs.describe(true) ~ " )";
     else if (_inclusive)
-      return "( " ~ _lhs.describe ~ " : " ~ _rhs.describe ~ " )";
+      return "( " ~ _lhs.describe(true) ~ " : " ~ _rhs.describe(true) ~ " )";
     else
-      return "( " ~ _lhs.describe ~ " .. " ~ _rhs.describe ~ " )";
+      return "( " ~ _lhs.describe(true) ~ " .. " ~ _rhs.describe(true) ~ " )";
   }
 
   long evaluate() {
@@ -496,13 +496,13 @@ class CstVecDistSetElem
 
   bool _inclusive = false;
 
-  string describe() {
+  string describe(bool descExpr=false) {
     if (_rhs is null)
-      return "( " ~ _lhs.describe ~ " )";
+      return "( " ~ _lhs.describe(true) ~ " )";
     else if (_inclusive)
-      return "( " ~ _lhs.describe ~ " : " ~ _rhs.describe ~ " )";
+      return "( " ~ _lhs.describe(true) ~ " : " ~ _rhs.describe(true) ~ " )";
     else
-      return "( " ~ _lhs.describe ~ " .. " ~ _rhs.describe ~ " )";
+      return "( " ~ _lhs.describe(true) ~ " .. " ~ _rhs.describe(true) ~ " )";
   }
 
   long evaluate() {
@@ -581,14 +581,14 @@ class CstUniqueSetElem
 
   bool _inclusive = false;
 
-  string describe() {
+  string describe(bool descExpr=false) {
     if (_arr !is null) {
       assert (_vec is null);
       return "( " ~ _arr.fullName ~ "[] )";
     }
     else {
       assert (_arr is null);
-      return "( " ~ _vec.describe ~ " )";
+      return "( " ~ _vec.describe(true) ~ " )";
     }
   }
 
@@ -702,17 +702,17 @@ class CstInsideSetElem
 
   bool _inclusive = false;
 
-  string describe() {
+  string describe(bool descExpr=false) {
     if (_arr !is null)
       return "( " ~ _arr.fullName ~ "[] )";
     else {
       assert (_arr is null);
       if (_rhs is null)
-	return "( " ~ _lhs.describe ~ " )";
+	return "( " ~ _lhs.describe(true) ~ " )";
       else if (_inclusive)
-	return "( " ~ _lhs.describe ~ " : " ~ _rhs.describe ~ " )";
+	return "( " ~ _lhs.describe(true) ~ " : " ~ _rhs.describe(true) ~ " )";
       else
-	return "( " ~ _lhs.describe ~ " .. " ~ _rhs.describe ~ " )";
+	return "( " ~ _lhs.describe(true) ~ " .. " ~ _rhs.describe(true) ~ " )";
     }
   }
 
@@ -851,11 +851,11 @@ class CstLogicWeightedDistSetElem
   CstVecTerm   _weight;
   bool         _perItem = false;
 
-  string describe() {
-    string str = "( " ~ _term.describe;
+  string describe(bool descExpr=false) {
+    string str = "( " ~ _term.describe(true);
     if (_perItem) str ~= " := ";
     else str ~= " :/ ";
-    str ~= _weight.describe() ~ " )";
+    str ~= _weight.describe(true) ~ " )";
     return str;
   }
 
@@ -921,11 +921,11 @@ class CstVecWeightedDistSetElem
   CstVecTerm   _weight;
   bool         _perItem = false;
 
-  string describe() {
-    string str = "( " ~ _range.describe;
+  string describe(bool descExpr=false) {
+    string str = "( " ~ _range.describe(true);
     if (_perItem) str ~= " := ";
     else str ~= " :/ ";
-    str ~= _weight.describe() ~ " )";
+    str ~= _weight.describe(true) ~ " )";
     return str;
   }
 
@@ -1013,11 +1013,11 @@ class CstLogicDistExpr(T): CstLogicExpr
     return _rs;
   }
 
-  string describe() {
-    string str = "( " ~ _vec.describe() ~ " dist ";
+  string describe(bool descExpr=false) {
+    string str = "( " ~ _vec.describe(true) ~ " dist ";
     foreach (dist; _dists) {
       assert (dist !is null);
-      str ~= dist.describe() ~ ", ";
+      str ~= dist.describe(true) ~ ", ";
     }
     str ~= " )";
     return str;
@@ -1135,11 +1135,11 @@ class CstVecDistExpr(T): CstLogicExpr
     return _rs;
   }
 
-  string describe() {
-    string str = "( " ~ _vec.describe() ~ " dist ";
+  string describe(bool descExpr=false) {
+    string str = "( " ~ _vec.describe(true) ~ " dist ";
     foreach (dist; _dists) {
       assert (dist !is null);
-      str ~= dist.describe() ~ ", ";
+      str ~= dist.describe(true) ~ ", ";
     }
     str ~= " )";
     return str;
@@ -1234,11 +1234,11 @@ class CstVecDistExpr(T): CstLogicExpr
 //   CstVecTerm _lhs;
 //   CstVecTerm _rhs;
   
-//   string describe() {
+//   string describe(bool descExpr=false) {
 //     if (_rhs is null)
-//       return _vec.describe() ~ "[ " ~ _lhs.describe() ~ " ]";
+//       return _vec.describe(true) ~ "[ " ~ _lhs.describe(true) ~ " ]";
 //     else
-//       return _vec.describe() ~ "[ " ~ _lhs.describe() ~ " .. " ~ _rhs.describe() ~ " ]";
+//       return _vec.describe(true) ~ "[ " ~ _lhs.describe(true) ~ " .. " ~ _rhs.describe(true) ~ " ]";
 //   }
 
 //   void visit(CstSolver solver) {
@@ -1325,8 +1325,8 @@ class CstVecSliceExpr: CstVecExpr
   CstVecTerm _vec;
   CstRangeExpr _range;
   
-  string describe() {
-    return _vec.describe() ~ "[ " ~ _range.describe() ~ " ]";
+  string describe(bool descExpr=false) {
+    return _vec.describe(true) ~ "[ " ~ _range.describe(true) ~ " ]";
   }
 
   void visit(CstSolver solver) {
@@ -1425,8 +1425,8 @@ class CstVecSliceExpr: CstVecExpr
 //   CstVecTerm _vec;
 //   CstVecTerm _index;
   
-//   string describe() {
-//     return _vec.describe() ~ "[ " ~ _index.describe() ~ " ]";
+//   string describe(bool descExpr=false) {
+//     return _vec.describe(true) ~ "[ " ~ _index.describe(true) ~ " ]";
 //   }
 
 //   void visit(CstSolver solver) {
@@ -1496,8 +1496,8 @@ class CstNotVecExpr: CstVecExpr
 
   CstVecTerm _expr;
 
-  string describe() {
-    return "( ~ " ~ _expr.describe ~ " )";
+  string describe(bool descExpr=false) {
+    return "( ~ " ~ _expr.describe(true) ~ " )";
   }
 
   void visit(CstSolver solver) {
@@ -1590,8 +1590,8 @@ class CstNegVecExpr: CstVecExpr
 
   CstVecTerm _expr;
 
-  string describe() {
-    return "( - " ~ _expr.describe ~ " )";
+  string describe(bool descExpr=false) {
+    return "( - " ~ _expr.describe(true) ~ " )";
   }
 
   void visit(CstSolver solver) {
@@ -1693,8 +1693,8 @@ class CstLogic2LogicExpr: CstLogicExpr
     _op = op;
   }
 
-  string describe() {
-    return "( " ~ _lhs.describe ~ " " ~ _op.to!string ~ " " ~ _rhs.describe ~ " )";
+  string describe(bool descExpr=false) {
+    return "( " ~ _lhs.describe(true) ~ " " ~ _op.to!string ~ " " ~ _rhs.describe(true) ~ " )";
   }
 
   void visit(CstSolver solver) {
@@ -1791,10 +1791,10 @@ class CstInsideArrExpr: CstLogicExpr
     return expr;
   }
 
-  string describe() {
-    string description = "( " ~ _term.describe() ~ " inside [";
+  string describe(bool descExpr=false) {
+    string description = "( " ~ _term.describe(true) ~ " inside [";
     foreach (elem; _elems) {
-      description ~= elem.describe();
+      description ~= elem.describe(true);
     }
     description ~= "]";
     return description;
@@ -1949,10 +1949,10 @@ class CstUniqueArrExpr: CstLogicExpr
 {
   CstUniqueSetElem[] _elems;
 
-  string describe() {
+  string describe(bool descExpr=false) {
     string description = "( unique [";
     foreach (elem; _elems) {
-      description ~= elem.describe();
+      description ~= elem.describe(true);
     }
     description ~= "]";
     return description;
@@ -2042,7 +2042,7 @@ class CstUniqueArrExpr: CstLogicExpr
 // TBD
 class CstIteLogicExpr: CstLogicExpr
 {
-  string describe() {
+  string describe(bool descExpr=false) {
     return "CstIteLogicExpr";
   }
 
@@ -2102,8 +2102,8 @@ class CstVec2LogicExpr: CstLogicExpr
     _op = op;
   }
 
-  string describe() {
-    return "( " ~ _lhs.describe ~ " " ~ _op.to!string ~ " " ~ _rhs.describe ~ " )";
+  string describe(bool descExpr=false) {
+    return "( " ~ _lhs.describe(true) ~ " " ~ _op.to!string ~ " " ~ _rhs.describe(true) ~ " )";
   }
 
   void visit(CstSolver solver) {
@@ -2114,9 +2114,9 @@ class CstVec2LogicExpr: CstLogicExpr
 
   override CstVec2LogicExpr unroll(CstIterator iter, ulong n) {
     // import std.stdio;
-    // writeln(_lhs.describe() ~ " " ~ _op.to!string ~ " " ~ _rhs.describe() ~ " Getting unwound!");
-    // writeln("RHS: ", _rhs.unroll(iter, n).describe());
-    // writeln("LHS: ", _lhs.unroll(iter, n).describe());
+    // writeln(_lhs.describe(true) ~ " " ~ _op.to!string ~ " " ~ _rhs.describe(true) ~ " Getting unwound!");
+    // writeln("RHS: ", _rhs.unroll(iter, n).describe(true));
+    // writeln("LHS: ", _lhs.unroll(iter, n).describe(true));
     return new CstVec2LogicExpr(_lhs.unroll(iter, n), _rhs.unroll(iter, n), _op);
   }
 
@@ -2337,8 +2337,8 @@ class CstNotLogicExpr: CstLogicExpr
     _expr = expr;
   }
 
-  string describe() {
-    return "( " ~ "!" ~ " " ~ _expr.describe ~ " )";
+  string describe(bool descExpr=false) {
+    return "( " ~ "!" ~ " " ~ _expr.describe(true) ~ " )";
   }
 
   void visit(CstSolver solver) {
@@ -2404,7 +2404,7 @@ class CstVarVisitorExpr: CstLogicExpr
     _obj = obj;
   }
 
-  string describe() {
+  string describe(bool descExpr=false) {
     return "Visitor: " ~ _obj.fullName();
   }
 
@@ -2447,7 +2447,7 @@ class CstVarVisitorExpr: CstLogicExpr
   }
 
   void writeExprString(ref Charbuf str) {
-    str ~= this.describe();
+    str ~= this.describe(true);
   }
 
   

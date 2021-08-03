@@ -446,28 +446,33 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
   //   _varPreds ~= varPred;
   // }
   
-  final override string describe() {
+  final override string describe(bool descExpr=false) {
     import std.conv: to;
-    string desc = "CstDomBase: " ~ name();
-    // desc ~= "\n	DomType: " ~ _type.to!string();
-    // if (_type !is DomType.MULTI) {
-    //   desc ~= "\nIntRS: " ~ _rs.toString();
-    // }
-    if (_rndPreds.length > 0) {
-      desc ~= "\n	Preds:";
-      foreach (pred; _rndPreds) {
-	desc ~= "\n		" ~ pred.name();
-      }
-      desc ~= "\n";
+    if (descExpr is true) {
+      return name();
     }
-    if (_tempPreds.length > 0) {
-      desc ~= "\n	Temporary Preds:";
-      foreach (pred; _tempPreds) {
-	desc ~= "\n		" ~ pred.name();
+    else {
+      string desc = "CstDomBase: " ~ name();
+      // desc ~= "\n	DomType: " ~ _type.to!string();
+      // if (_type !is DomType.MULTI) {
+      //   desc ~= "\nIntRS: " ~ _rs.toString();
+      // }
+      if (_rndPreds.length > 0) {
+	desc ~= "\n	Preds:";
+	foreach (pred; _rndPreds) {
+	  desc ~= "\n		" ~ pred.name();
+	}
+	desc ~= "\n";
       }
-      desc ~= "\n";
+      if (_tempPreds.length > 0) {
+	desc ~= "\n	Temporary Preds:";
+	foreach (pred; _tempPreds) {
+	  desc ~= "\n		" ~ pred.name();
+	}
+	desc ~= "\n";
+      }
+      return desc;
     }
-    return desc;
   }
 }
 
@@ -516,7 +521,7 @@ class CstArrIterator(RV): CstIterator
     return n ~ "->iterator";
   }
 
-  string describe() {
+  string describe(bool descExpr=false) {
     return name();
   }
 
@@ -961,7 +966,7 @@ class CstLogicValue: CstValue, CstLogicTerm
     return _val;
   }
 
-  string describe() {
+  string describe(bool descExpr=false) {
     import std.conv: to;
     return _val.to!string();
   }
@@ -1068,7 +1073,7 @@ class CstVecValue(T): CstVecValueBase
   }
 
 
-  string describe() {
+  string describe(bool descExpr=false) {
     import std.conv;
     return _val.to!string();
   }
