@@ -376,13 +376,13 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   void makeGroupDomains(){
     foreach (pred; _collectedPredicates){
       foreach (dom; pred.getDomains()){
-  	if ((! dom.isSolved()) && ! dom.isCollated()){
+  	if (dom._state == CstDomBase.State.INIT){
   	  _groupDomains ~= dom;
   	  dom._state = CstDomBase.State.COLLATED;
   	}
       }
       foreach (domArr; pred.getDomArrs()){
-	if (! domArr.isCollated()){
+	if (domArr._state == CstDomSet.State.INIT){
   	  _groupDomArrs ~= domArr;
   	  domArr._state = CstDomSet.State.COLLATED;
   	} 
@@ -390,10 +390,12 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     }
     foreach (pred; _collectedPredicates){
       foreach (dom; pred.getDomains()){
-	dom._state = CstDomBase.State.INIT;
+	if (dom._state == CstDomBase.State.COLLATED)
+	  dom._state = CstDomBase.State.INIT;
       }
       foreach (domArr; pred.getDomArrs()){
-	domArr._state = CstDomSet.State.INIT;
+	if (domArr._state == CstDomSet.State.COLLATED)
+	  domArr._state = CstDomSet.State.INIT;
       }
     }
   }

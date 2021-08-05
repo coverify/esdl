@@ -317,10 +317,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
       }
     }
   }
-  
-  bool isCollated(){
-    return _state == State.COLLATED;
-  }
+
   uint _orderLevel = 0;
       
   override uint getOrderLevel(){
@@ -863,10 +860,6 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
       COLLATED,
       SOLVED
       }
-    
-  bool isCollated(){
-    return _state == State.COLLATED;
-  }
 
   uint _orderLevel = 0;
       
