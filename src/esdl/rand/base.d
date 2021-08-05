@@ -27,7 +27,11 @@ interface CstVarNodeIntf {
   string fullName();
   bool inRange();
   CstVarNodeIntf [] getDependents();
-
+  void setOrder(bool canBeSolved);
+  bool isSolvable();
+  uint getOrderLevel();
+  void markOrderedAfter(CstVarNodeIntf [] beforeElems, uint level);
+  
   bool _esdl__isObjArray();
   CstIterator _esdl__iter();
   CstVarNodeIntf _esdl__getChild(ulong n);
@@ -245,6 +249,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   public enum State: ubyte
   {   INIT,
       GROUPED,
+      COLLATED,
       SOLVED
       }
 
@@ -288,12 +293,37 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   abstract void registerRndPred(CstPredicate rndPred);
   abstract CstDomSet getParentDomSet();
   abstract bool isDependent(CstVarNodeIntf [] depArr);
-  abstract void markOrderedAfter(CstDomBase befElem, uint level);
+
+  override void markOrderedAfter(CstVarNodeIntf [] beforeElems, uint level){
+    if (_orderLevel != level - 1) return;
+    _orderLevel = level;
+    CstPredicate [] preds = getRandPreds();
+    foreach (pred; preds){
+      if(pred.getOrderLevel() < level){
+	assert(pred.getOrderLevel() == level - 1, "unexpected error in ordering");
+	pred.setOrderLevel(level);
+	CstDomBase [] doms = pred.getDomains();
+	foreach (dom; doms){
+	  if (! beforeElems.canFind(dom) && !dom.isSolved()) {
+	    dom.markOrderedAfter(beforeElems, level);
+	  }
+	}
+	CstDomSet [] domArrs = pred.getDomArrs();
+	foreach (domArr; domArrs){
+	  if (! beforeElems.canFind(domArr)) {
+	    domArr.markOrderedAfter(beforeElems, level);
+	  }
+	}
+      }
+    }
+  }
   
-      
+  bool isCollated(){
+    return _state == State.COLLATED;
+  }
   uint _orderLevel = 0;
       
-  uint getOrderLevel(){
+  override uint getOrderLevel(){
     return _orderLevel;
   }
 
@@ -301,19 +331,27 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     _orderLevel = lev;
   }
 
-  CstDomBase [] _solvedAfter;
-  CstDomBase [] getSolvedAfter() {
-    return _solvedAfter;
+  // CstVarNodeIntf [] _solvedAfter;
+  // CstVarNodeIntf [] getSolvedAfter() {
+  //   return _solvedAfter;
+  // }
+  // void addSolvedAfter(CstVarNodeIntf dependent){
+  //   _solvedAfter ~= dependent;
+  // }
+  // CstVarNodeIntf [] _solvedBefore;
+  // CstVarNodeIntf [] getSolvedBefore() {
+  //   return _solvedBefore;
+  // }
+  // void addSolvedBefore(CstVarNodeIntf dependent){
+  //   _solvedBefore ~= dependent;
+  // }
+  
+  bool _isSolvable = true; //used in ordering
+  override void setOrder(bool canBeSolved){
+    _isSolvable = canBeSolved;
   }
-  void addSolvedAfter(CstDomBase dependent){
-    _solvedAfter ~= dependent;
-  }
-  CstDomBase [] _solvedBefore;
-  CstDomBase [] getSolvedBefore() {
-    return _solvedBefore;
-  }
-  void addSolvedBefore(CstDomBase dependent){
-    _solvedBefore ~= dependent;
+  override bool isSolvable(){
+    return isSolvable;
   }
   // abstract void registerVarPred(CstPredicate varPred);  
   // abstract void registerDepPred(CstDepCallback depCb);
@@ -660,7 +698,30 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   abstract uint elemBitcount();
   abstract bool elemSigned();
   abstract bool isDependent(CstVarNodeIntf [] depArr);
-  
+
+  override void markOrderedAfter(CstVarNodeIntf [] beforeElems, uint level){
+    if (_orderLevel != level - 1) return;
+    _orderLevel = level;
+    CstPredicate [] preds = getRandPreds();
+    foreach (pred; preds){
+      if(pred.getOrderLevel() < level){
+	assert(pred.getOrderLevel() == level - 1, "unexpected error in ordering");
+	pred.setOrderLevel(level);
+	CstDomBase [] doms = pred.getDomains();
+	foreach (dom; doms){
+	  if (! beforeElems.canFind(dom) && !dom.isSolved()) {
+	    dom.markOrderedAfter(beforeElems, level);
+	  }
+	}
+	CstDomSet [] domArrs = pred.getDomArrs();
+	foreach (domArr; domArrs){
+	  if (! beforeElems.canFind(domArr)) {
+	    domArr.markOrderedAfter(beforeElems, level);
+	  }
+	}
+      }
+    }
+  }
   
   void execCbs() {
     execIterCbs();
@@ -780,6 +841,10 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   }
 
   CstPredicate[] _rndPreds;
+
+  CstPredicate [] getRandPreds(){
+    return _rndPreds;
+  }
   bool _esdl__parentIsConstrained;
   override void registerRndPred(CstPredicate rndPred) {
     foreach (pred; _rndPreds)
@@ -795,9 +860,46 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   public enum State: ubyte
   {   INIT,
       GROUPED,
+      COLLATED,
       SOLVED
       }
+    
+  bool isCollated(){
+    return _state == State.COLLATED;
+  }
 
+  uint _orderLevel = 0;
+      
+  override uint getOrderLevel(){
+    return _orderLevel;
+  }
+
+  void setOrderLevel(uint lev){
+    _orderLevel = lev;
+  }
+
+  // CstVarNodeIntf [] _solvedAfter;
+  // CstVarNodeIntf [] getSolvedAfter() {
+  //   return _solvedAfter;
+  // }
+  // void addSolvedAfter(CstVarNodeIntf dependent){
+  //   _solvedAfter ~= dependent;
+  // }
+  // CstVarNodeIntf [] _solvedBefore;
+  // CstVarNodeIntf [] getSolvedBefore() {
+  //   return _solvedBefore;
+  // }
+  // void addSolvedBefore(CstVarNodeIntf dependent){
+  //   _solvedBefore ~= dependent;
+  // }
+  bool _isSolvable = true; //used in ordering
+  override void setOrder(bool canBeSolved){
+    _isSolvable = canBeSolved;
+  }
+  override bool isSolvable(){
+    return isSolvable;
+  }
+  
   override void reset() {
     _state = State.INIT;
     _esdl__unresolvedArrLen = uint.max;

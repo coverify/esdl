@@ -355,9 +355,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   
   Folder!(CstPredicate, "collectedPredicates") _collectedPredicates;
   Folder!(CstDomBase, "groupDomains") _groupDomains;
+  Folder!(CstDomSet, "groupDomArrs") _groupDomArrs;
   
-  Folder!(CstDomBase, "beforeSolve") _beforeSolve;
-  Folder!(CstDomBase, "afterSolve") _afterSolve;
+  Folder!(CstVarNodeIntf, "beforeSolve") _beforeSolve;
+  Folder!(CstVarNodeIntf, "afterSolve") _afterSolve;
 
 
   void addGroupPredicate (CstPredicate pred){
@@ -375,11 +376,24 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   void makeGroupDomains(){
     foreach (pred; _collectedPredicates){
       foreach (dom; pred.getDomains()){
-  	if ((! dom.isSolved()) &&
-	    (! _groupDomains[].canFind!((CstDomBase a, CstDomBase b) => a is b)(dom))){
+  	if ((! dom.isSolved()) && ! dom.isCollated()){
   	  _groupDomains ~= dom;
-  	  dom.reset();
+  	  dom._state = CstDomBase.State.COLLATED;
   	}
+      }
+      foreach (domArr; pred.getDomArrs()){
+	if (! domArr.isCollated()){
+  	  _groupDomArrs ~= domArr;
+  	  domArr._state = CstDomSet.State.COLLATED;
+  	} 
+      }
+    }
+    foreach (pred; _collectedPredicates){
+      foreach (dom; pred.getDomains()){
+	dom._state = CstDomBase.State.INIT;
+      }
+      foreach (domArr; pred.getDomArrs()){
+	domArr._state = CstDomSet.State.INIT;
       }
     }
   }
@@ -419,56 +433,77 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	if (domSec.isDependent(dependents)){
 	  _beforeSolve ~= dom;
 	  _afterSolve ~= domSec;
-	  domSec.addSolvedAfter(dom);
-	  dom.addSolvedBefore(domSec);
+	  domSec.setOrder(false);
+	}
+      }
+      foreach (domArrSec; _groupDomArrs){
+	if (domArrSec.isDependent(dependents)){
+	  _beforeSolve ~= dom;
+	  _afterSolve ~= domArrSec;
+	  domArrSec.setOrder(false);
+	}
+      }
+    }
+    foreach (domArr; _groupDomArrs) {
+
+      if (domArr.getOrderLevel() < level-1) { //isSolved
+	continue;
+      }
+      
+      CstVarNodeIntf [] dependents = domArr.getDependents();
+      
+      if (dependents.length == 0){
+	continue;
+      }
+      
+      foreach (domSec; _groupDomains){
+	if (domSec.isDependent(dependents)){
+	  _beforeSolve ~= domArr;
+	  _afterSolve ~= domSec;
+	  domSec.setOrder(false);
+	}
+      }
+      foreach (domArrSec; _groupDomArrs){
+	if (domArrSec.isDependent(dependents)){
+	  _beforeSolve ~= domArr;
+	  _afterSolve ~= domArrSec;
+	  domArrSec.setOrder(false);
 	}
       }
     }
 
-    CstDomBase base = null;
-
-    for (int i = 0; i < _beforeSolve.length; i ++) {
-      assert (_beforeSolve[i].getOrderLevel() >= level - 1, "unexpected error in solve before constraints");
+    CstVarNodeIntf [] beforeElems;
+    
+    foreach (i, elem; _beforeSolve[]) {
+      assert (elem.getOrderLevel() >= level - 1, "unexpected error in solve before constraints");
       assert (_afterSolve[i].getOrderLevel() >= level - 1, "unexpected error in solve before constraints");
-      if (_beforeSolve[i].getOrderLevel() == level){
-	if (_afterSolve[i].getOrderLevel() == level - 1){
-	  markBase(base, _afterSolve[i], level);
-	}
-      }
-      else if (_beforeSolve[i].getOrderLevel() == level - 1){
-	if (_afterSolve[i].getOrderLevel() == level - 1){
-	  base = getBase(_beforeSolve[i], _beforeSolve.length + 1);
-	  if (base is null){
-	    assert(false, "dependency loop in solve before constraints");
-	  }
-	  markBase(base, base, level);
-	}
-      }
+      if (elem.isSolvable()) beforeElems ~= elem;
     }
-    for (int i = 0; i < _beforeSolve.length; i ++) {
-      _beforeSolve[i]._solvedBefore.length = 0;
-      _afterSolve[i]._solvedAfter.length = 0;
+    foreach (elem; _afterSolve[]) {
+      elem.markOrderedAfter(beforeElems, level);
     }
-
+    foreach (elem; _afterSolve[]) {
+      elem.setOrder(true);
+    }
     return _beforeSolve.length > 0;
   }
 
-  void markBase(CstDomBase base, CstDomBase dom, uint level){
-    foreach (child; dom.getSolvedBefore()){
-      child.markOrderedAfter(base, level);
-      markBase(base, child, level);
-    }
-  }
+  // void markBase(CstDomBase base, CstDomBase dom, uint level){
+  //   foreach (child; dom.getSolvedBefore()){
+  //     child.markOrderedAfter(base, level);
+  //     markBase(base, child, level);
+  //   }
+  // }
 
-  CstDomBase getBase(CstDomBase dom, ulong maxIter){
-    for (int i = 0; i < maxIter; i ++){
-      if (dom.getSolvedAfter().length == 0){
-	return dom;
-      }
-      dom = dom.getSolvedAfter()[0];
-    }
-    return null;
-  }
+  // CstVarNodeIntf getBase(CstVarNodeIntf dom, ulong maxIter){
+  //   for (int i = 0; i < maxIter; i ++){
+  //     if (dom.getSolvedAfter().length == 0){
+  // 	return dom;
+  //     }
+  //     dom = dom.getSolvedAfter()[0];
+  //   }
+  //   return null;
+  // }
 
   void addSolvedDomain(CstDomBase domain) {
     _solvedDomains ~= domain;

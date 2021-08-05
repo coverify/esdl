@@ -891,24 +891,6 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     return deps;
   }
 
-  override void markOrderedAfter(CstDomBase befElem, uint level){
-    if (_orderLevel != level - 1) return;
-    _orderLevel = level;
-    CstPredicate [] preds = getRandPreds();
-    foreach (pred; preds){
-      if(pred.getOrderLevel() < level){
-    	assert(pred.getOrderLevel() == level - 1, "unexpected error in ordering");
-    	pred.setOrderLevel(level);
-    	CstDomBase [] doms = pred.getDomains();
-    	foreach (dom; doms){
-	  if (dom != this && dom != befElem && !dom.isSolved()) {
-    	    dom.markOrderedAfter(befElem, level);
-    	  }
-    	}
-      }
-    }
-  }
-
   override bool isDependent(CstVarNodeIntf [] depArr){
     import std.algorithm.searching : canFind;
     static if (is (RV: CstDomSet)) return (depArr.canFind(this) || _parent.isDependent(depArr));
