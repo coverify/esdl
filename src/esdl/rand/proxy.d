@@ -888,7 +888,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
        // Work on _solvePreds
       foreach (pred; _solvePreds) {
 	if (! pred.isGuard()) {
-	  if (pred.isSolved() || pred.isDisabled()) {
+	  if (pred.isSolved() || pred.isDisabled() || (! pred.isInRange())) {
 	    _solvedSome = true;
 	    continue;
 	  }
@@ -944,7 +944,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
       foreach (pred; _solvePreds) {
 	import std.conv: to;
-	assert (pred.isSolved() || pred.isDisabled() || pred.isGuard(),
+	assert (pred.isSolved() || pred.isDisabled() ||
+		(! pred.isInRange()) ||	pred.isGuard(),
 		"Pred: " ~ pred.name() ~ "\nState: " ~ pred._state.to!string());
 	pred.reset();
       }

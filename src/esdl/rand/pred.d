@@ -646,12 +646,17 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   
   // When urolling, disable the previously unrolled constraints
   // if not required -- if the length is less now
-  bool _enabled = true;
+  bool _isInRange = true;
 
   bool isEnabled() {
     if (_parent is null)
-      return _constraint.isEnabled() && _enabled && _proxy.isRand();
-    else return _constraint.isEnabled() && _enabled && _proxy.isRand() && _parent.isEnabled();
+      return _constraint.isEnabled() && isInRange() && _proxy.isRand();
+    else return _constraint.isEnabled() && isInRange() && _proxy.isRand() && _parent.isEnabled();
+  }
+
+  bool isInRange() {
+    if (_parent is null) return _isInRange;
+    else return _isInRange && _parent.isInRange();
   }
 
   bool isCollated() {
@@ -702,7 +707,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     _statement = stmt;
     _proxy = proxy;
     _unrollIterVal = unrollIterVal;
-    _enabled = true;
+    _isInRange = true;
     if (parent is null) {
       _scope = _proxy.currentScope();
       _level = 0;
@@ -817,12 +822,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	  _proxy.addUnrolledNewPredicate(_uwPred);
 	}
 	else if (i >= prevLen) {
-	  _uwPreds[i]._enabled = true;
+	  _uwPreds[i]._isInRange = true;
 	}
 	_proxy.addUnrolledPredicate(_uwPreds[i]);
       }
       else {
-	_uwPreds[i]._enabled = false;
+	_uwPreds[i]._isInRange = false;
       }
     }
   }
@@ -1170,7 +1175,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     string description = "Predicate Name: " ~ name() ~ "\n";
     description ~= "Predicate ID: " ~ _id.to!string() ~ "\n    ";
     description ~= "State: " ~ _state.to!string() ~ "\n    ";
-    description ~= "Is Enabled? " ~ _enabled.to!string ~ "\n    ";
+    description ~= "Is In Range? " ~ _isInRange.to!string ~ "\n    ";
     description ~= "Expr: " ~ _expr.describe() ~ "\n    ";
     description ~= "Context Set? " ~ _domainContextSet.to!string() ~ "\n    ";
     description ~= _scope.describe();
