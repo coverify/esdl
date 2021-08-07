@@ -884,19 +884,6 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   }
 
   
-  override CstVarNodeIntf [] getDependents(){
-    CstVarNodeIntf [] deps = getOrdered();
-    static if (is (RV: CstDomSet))
-      deps ~= _parent.getDependents();
-    return deps;
-  }
-
-  override bool isDependent(CstVarNodeIntf [] depArr){
-    import std.algorithm.searching : canFind;
-    static if (is (RV: CstDomSet)) return (depArr.canFind(this) || _parent.isDependent(depArr));
-    else return depArr.canFind(this);
-  }
-
   final override bool isBool() {return false;}
 
   final override bool getBool() {assert (false);}

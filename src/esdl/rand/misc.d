@@ -8,7 +8,7 @@ import std.traits: isIntegral, isBoolean, isArray, EnumMembers,
 import std.range: ElementType;
 import std.meta: AliasSeq;
 
-
+public enum SolveOrder: ubyte { UNDECIDED, NOW, LATER }
 
 // write in Hex form for all the bytes of data
 size_t writeHexString(T)(T val, ref Charbuf str) {

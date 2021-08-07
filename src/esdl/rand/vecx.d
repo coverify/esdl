@@ -248,14 +248,6 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 	return null;
       }
       
-      override CstVarNodeIntf [] getDependents(){
-	return getOrdered();
-      }
-
-      override bool isDependent(CstVarNodeIntf [] depArr){
-	import std.algorithm.searching : canFind;
-	return depArr.canFind(this);
-      }
     }
 
 // Array Element
@@ -453,17 +445,6 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	return _parent;
       }
       
-      override CstVarNodeIntf [] getDependents(){
-	CstVarNodeIntf [] deps = getOrdered();
-	deps ~= _parent.getDependents();
-	return deps;
-	// return null;
-      }
-
-      override bool isDependent(CstVarNodeIntf [] depArr){
-	import std.algorithm.searching : canFind;
-	return (depArr.canFind(this) || _parent.isDependent(depArr));
-      }
     }
 
 class CstVecArrGlob(V, rand RAND_ATTR, int N, alias SYM)
@@ -986,14 +967,6 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	return null;
       }
       
-      override CstVarNodeIntf [] getDependents(){
-	return getOrdered();
-      }
-
-      override bool isDependent(CstVarNodeIntf [] depArr){
-	import std.algorithm.searching : canFind;
-	return depArr.canFind(this);
-      }
     }
 
 // Array that is elelment of another array
@@ -1192,17 +1165,6 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 
       override CstDomSet getParentDomSet() {
 	return _parent;
-      }
-      
-      override CstVarNodeIntf [] getDependents(){
-	CstVarNodeIntf [] deps = getOrdered();
-	deps ~= _parent.getDependents();
-	return deps;
-      }
-
-      override bool isDependent(CstVarNodeIntf [] depArr){
-	import std.algorithm.searching : canFind;
-	return (depArr.canFind(this) || _parent.isDependent(depArr));
       }
       
     }

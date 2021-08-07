@@ -836,7 +836,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     if (_markResolve || force) {
       _markResolve = false;
       foreach (dep; _deps) {
-	if (! dep.isSolved()) {
+	if (! dep.isResolvedDep()) {
 	  return false;
 	}
       }
@@ -1083,7 +1083,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       //   _deps = _foundDeps.filter!(dep => (! canFind(_parent._deps, dep))).array;
       // }
 
-      foreach (idx; _idxs) if (! idx.isSolved())
+      foreach (idx; _idxs) if (! idx.isResolvedDep())
 			     if (! _deps.canFind(idx)) _deps ~= idx;
       foreach (idx; _bitIdxs) if (! idx.isSolved())
 				if (! _deps.canFind(idx)) _deps ~= idx;
@@ -1241,7 +1241,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   void setProxyContext(_esdl__Proxy proxy){
     // import std.stdio;
     // writeln("setProxyContext: ", this.describe());
-    proxy.addGroupPredicate(this);
 
     foreach (dom; _rnds) {
       if (! dom.inRange()) {
@@ -1268,8 +1267,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	return;
       }
     }
-
-    _state = State.COLLATED;
+    proxy.addGroupPredicate(this);
 
     foreach (dom; _rnds) {
       if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
@@ -1518,6 +1516,10 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
   
+  bool isResolvedDep() {
+    return isSolved();
+  }
+
   bool isSolved() {
     return (_state == State.SOLVED);
   }
