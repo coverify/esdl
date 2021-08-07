@@ -208,7 +208,7 @@ void _esdl__doInitRandObjectElems(P, int I=0)(P p) {
 	}
       }
       else {
-	debug (CSTSOLVER) {
+	debug (CSTSOLVERTRACE) {
 	  import std.stdio;
 	  writeln("Outer not set for: ", p.fullName(), " of type: ", P.stringof);
 	}
@@ -1062,7 +1062,7 @@ struct _esdl__rand_type_proxy(T, P)
 
 // V is a type
 auto _esdl__sym(V, S)(string name, S parent) {
-  debug (CSTSOLVER) {
+  debug (CSTSOLVERTRACE) {
     import std.stdio;
     writeln("_esdl__sym: ", name, " parent type: ", S.stringof);
   }
