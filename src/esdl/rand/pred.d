@@ -409,6 +409,7 @@ class CstPredGroup			// group of related predicates
 	    bool monoFlag = false;
 	    if (_preds.length == 1 && _preds[0].isVisitor()) {
 	      // _preds[0]._dom.forceResolve(_proxy);
+	      _preds[0]._state = CstPredicate.State.SOLVED;
 	      _proxy.addSolvedDomain(_preds[0]._dom);
 	      monoFlag = true;
 	    }
@@ -601,6 +602,10 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   // alias _expr this;
 
   enum State: byte { INIT, UNROLLED, COLLATED, DISABLED, GROUPED, SOLVED }
+
+  bool isUnrolled() {
+    return _state == State.UNROLLED;
+  }
 
 
   void hasDistDomain(bool v) {
@@ -1296,12 +1301,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     addPredicateToGroup(group);
     
     foreach (dom; _rnds) {
-      if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
+      if (dom._state is CstDomBase.State.COLLATED && (! dom.isSolved())) {
 	dom.setGroupContext(group, level);
       }
     }
     foreach (arr; _rndArrs) {
-      if (arr._state is CstDomSet.State.INIT // && (! arr.isSolved())
+      if (arr._state is CstDomSet.State.COLLATED // && (! arr.isSolved())
 	  ) {
 	arr.setGroupContext(group, level);
       }

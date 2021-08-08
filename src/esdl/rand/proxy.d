@@ -912,7 +912,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
       foreach (pred; _solvePreds) {
 	import std.conv: to;
-	assert (pred.isSolved() || pred.isDisabled() ||
+	assert (pred.isSolved() || pred.isDisabled() || pred.isUnrolled() ||
 		(! pred.isInRange()) ||	pred.isGuard(),
 		"Pred: " ~ pred.name() ~ "\nState: " ~ pred._state.to!string());
 	pred.reset();
