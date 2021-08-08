@@ -229,6 +229,8 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
 
   void writeExprString(ref Charbuf str) {
     if (this.isSolved()) {
+      // import std.stdio;
+      // writeln(fullName(), " has a value of: ", value());
       str ~= 'V';
       if (_domN < 256) (cast(ubyte) _domN).writeHexString(str);
       else (cast(ushort) _domN).writeHexString(str);
@@ -318,6 +320,10 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
       else {
 	_valueChanged = false;
       }
+      debug (CSTSOLVER) {
+	import std.stdio;
+	writeln("Setting value of ", fullName(), " to: ", newVal);
+      }
       *(getRef()) = newVal;
       markSolved();
       execCbs();
@@ -346,6 +352,10 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
       }
       else {
 	_valueChanged = false;
+      }
+      debug (CSTSOLVER) {
+	import std.stdio;
+	writeln("Setting value of ", fullName(), " to: ", newVal);
       }
       *(getRef()) = newVal;
       markSolved();
@@ -768,12 +778,20 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   }
 
   override void setVal(ulong value) {
+    debug (CSTSOLVER) {
+      import std.stdio;
+      writeln("Setting value of ", fullName(), " to: ", value);
+    }
     _parent.setLen(cast(size_t) value);
     markSolved();
     execCbs();
   }
 
   override void setVal(ulong[] v) {
+    debug (CSTSOLVER) {
+      import std.stdio;
+      writeln("Setting value of ", fullName(), " to: ", v[0]);
+    }
     assert(v.length == 1);
     _parent.setLen(cast(size_t) v[0]);
     markSolved();
