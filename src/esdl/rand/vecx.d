@@ -967,6 +967,14 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	return null;
       }
       
+      override void markOrderedAfter(uint level) {
+	super.markOrderedAfter(level);
+	for (size_t i=0; i != getLen(); ++i) {
+	  if (_elems[i].getOrder() != SolveOrder.NOW) {
+	    _elems[i].markOrderedAfter(level);
+	  }
+	}
+      }
     }
 
 // Array that is elelment of another array
@@ -1167,6 +1175,14 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	return _parent;
       }
       
+      override void markOrderedAfter(uint level) {
+	super.markOrderedAfter(level);
+	for (size_t i=0; i != getLen(); ++i) {
+	  if (_elems[i].getOrder() != SolveOrder.NOW) {
+	    _elems[i].markOrderedAfter(level);
+	  }
+	}
+      }
     }
 
 private auto getArrElemTmpl(A, N...)(ref A arr, N indx)
