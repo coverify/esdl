@@ -1071,7 +1071,7 @@ auto _esdl__sym(V, S)(string name, S parent) {
 
 // or else
 auto _esdl__sym(alias V, S)(string name, S parent) {
-  debug (CSTSOLVER) {
+  debug (CSTSOLVERTRACE) {
     import std.stdio;
     writeln("_esdl__sym: ", name, " parent type: ", S.stringof);
   }
