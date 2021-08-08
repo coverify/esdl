@@ -609,21 +609,21 @@ class CstMonoSolver (S): CstSolver
     assert (doms.length == 1);
 
     
-    if(!checkDifference()){
-      _count = counter();
-      auto rand = _proxy._esdl__rGen.gen(0, _count);
-      ulong num = choose(rand);
-      doms[0].setVal(num);
-      debug (MONOSOLVER){
-	import std.stdio;
-	writeln("no difference found, reusing same solver");
-	writeln("count for the range is: " ,_count);
-	writeln("random number generated is (between 0 and count): " ,rand);
-	writeln("random number chosen from range: " ,num);
-	assert (isInRange(cast(S)num, _finalRange), "chosen number doesnt fall in range");
-      }
-      return true;
-    }
+    // if(!checkDifference()){
+    //   _count = counter();
+    //   auto rand = _proxy._esdl__rGen.gen(0, _count);
+    //   ulong num = choose(rand);
+    //   doms[0].setVal(num);
+    //   debug (MONOSOLVER){
+    // 	import std.stdio;
+    // 	writeln("no difference found, reusing same solver");
+    // 	writeln("count for the range is: " ,_count);
+    // 	writeln("random number generated is (between 0 and count): " ,rand);
+    // 	writeln("random number chosen from range: " ,num);
+    // 	assert (isInRange(cast(S)num, _finalRange), "chosen number doesnt fall in range");
+    //   }
+    //   return true;
+    // }
     _prevVariableVals.length = 0;
     _variables.length = 0;
     _finalRange = [S.min, S.max];
