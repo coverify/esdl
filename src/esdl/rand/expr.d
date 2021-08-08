@@ -2405,7 +2405,7 @@ class CstVarVisitorExpr: CstLogicExpr
   }
 
   string describe(bool descExpr=false) {
-    return "Visitor: " ~ _obj.fullName();
+    return "Visitor: " ~ _obj.fullName() ~ '\n';
   }
 
   void visit(CstSolver solver) {
