@@ -604,6 +604,18 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _esdl__needSync = true;
   }
 
+  _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
+				      void* outer) {
+    assert (false,
+	    "Override _esdl__createProxyInst in the derived proxy class");
+  }
+
+  _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
+				      Object outer) {
+    assert (false,
+	    "Override _esdl__createProxyInst in the derived proxy class");
+  }
+
   this(_esdl__Proxy parent, Object outer) {
     this(parent);
   }

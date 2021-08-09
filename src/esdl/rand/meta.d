@@ -188,13 +188,14 @@ void _esdl__doInitRandObjectElems(P, int I=0)(P p) {
       // 		 ) {
       // pragma(msg, "#" ~ Q.stringof);
       alias T = typeof(p._esdl__outer);
-      static if (is (T == class)) { // class
-	enum NAME = __traits(identifier, T.tupleof[Q._esdl__INDEX]);
-      }
-      else { // struct
-	alias U = PointerTarget!T;
-	enum NAME = __traits(identifier, U.tupleof[Q._esdl__INDEX]);
-      }
+      enum string NAME = __traits(identifier, P.tupleof[I]);
+      // static if (is (T == class)) { // class
+      // 	enum NAME = __traits(identifier, T.tupleof[Q._esdl__INDEX]);
+      // }
+      // else { // struct
+      // 	alias U = PointerTarget!T;
+      // 	enum NAME = __traits(identifier, U.tupleof[Q._esdl__INDEX]);
+      // }
       T t = p._esdl__outer;
       // pragma(msg, p.tupleof[I].stringof);
       if (t !is null) {
@@ -558,6 +559,12 @@ mixin template Randomization()
       _esdl__T _esdl__outer;
       _esdl__T _esdl__getRef()() {return _esdl__outer;}
       
+      override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
+						   Object outer) {
+	_esdl__T outer_ = _esdl__staticCast!_esdl__T(outer);
+	return new _esdl__ProxyRand!(_esdl__T)(parent, outer_);
+      }
+  
       void _esdl__setValRef()(_esdl__T outer) {
 	if (_esdl__outer !is outer) {
 	  _esdl__outer = outer;
@@ -592,6 +599,11 @@ mixin template Randomization()
 	  _esdl__outer = outer;
 	  this._esdl__doSetOuter(true);
 	}
+      }
+      override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
+						   void* outer) {
+	_esdl__T* outer_ = cast(_esdl__T*)(outer);
+	return new _esdl__ProxyRand!(_esdl__T)(parent, outer_);
       }
       this(_esdl__Proxy parent, _esdl__T* outer) {
 	_esdl__outer = outer;
@@ -731,6 +743,20 @@ class _esdl__ProxyNoRand(_esdl__T)
 	    this._esdl__doSetOuter(true);
 	  }
 	}
+	static if (is (_esdl__T == class)) {
+	  override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
+						       Object outer) {
+	    _esdl__T outer_ = _esdl__staticCast!_esdl__T(outer);
+	    return new _esdl__ProxyNoRand!(_esdl__T)(parent, outer_);
+	  }
+	}
+	else {
+	  override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
+						       void* outer) {
+	    _esdl__T outer_ = cast(_esdl__T)(outer);
+	    return new _esdl__ProxyNoRand!(_esdl__T)(parent, outer_);
+	  }
+	}
 	this(_esdl__Proxy parent, _esdl__T outer) {
 	  _esdl__outer = outer;
 	  super(parent, outer);
@@ -762,6 +788,11 @@ class _esdl__ProxyNoRand(_esdl__T)
 	    _esdl__outer = outer;
 	    this._esdl__doSetOuter(true);
 	  }
+	}
+	override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
+						     void* outer) {
+	  _esdl__T* outer_ = cast(_esdl__T*)(outer);
+	  return new _esdl__ProxyNoRand!(_esdl__T)(parent, outer_);
 	}
 	this(_esdl__Proxy parent, _esdl__T* outer) {
 	  _esdl__outer = outer;
