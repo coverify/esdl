@@ -30,7 +30,6 @@ abstract class _esdl__ConstraintBase: rand.disable
   }
   immutable string _constraint;
   immutable string _name;
-  protected bool _enabled = true;
   protected bool _overridden = false;
   protected _esdl__Proxy _proxy;
 
@@ -39,24 +38,24 @@ abstract class _esdl__ConstraintBase: rand.disable
   }
   
   bool isEnabled() {
-    return _enabled && ! _overridden;
+    return constraintMode() && ! _overridden;
   }
 
   void enable() {
-    _enabled = true;
+    constraintMode(true);
   }
 
   void disable() {
-    _enabled = false;
+    constraintMode(false);
   }
 
-  void constraintMode(bool mode) {
-    if (mode != _enabled) {
-      _enabled = mode;
-      _proxy.getProxyRoot().setNeedSync();
-    }
+  void constraintMode(bool mode) { // overridden in derived class
+    assert(false);
   }
-  bool constraintMode() { return _enabled; }
+
+  bool constraintMode() { // overridden in derived class
+    return true;
+  }
 
   string name() {
     return _name;
@@ -94,31 +93,18 @@ struct Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=__LINE__)
   enum bool _esdl__TypeHasRandBarrier = true;
   alias CstType = _esdl__Constraint!(CONSTRAINT, FILE, LINE);
 
-  CstType _cst;
-  bool _cstMode = true;
-  bool _initialized = false;
-
-  alias _cst this;
+  bool _mode = true;
 
   alias constraint_mode = constraintMode;
 
   void constraintMode(bool mode) {
-    _cstMode = mode;
-    if (_initialized) {
-      assert (_cst !is null);
-      _cst.constraintMode(_cstMode);
-    }
+    _mode = mode;
   }
 
   bool constraintMode() {
-    return _cstMode;
+    return _mode;
   }
 
-  void initialize(CstType cst) {
-    _cst = cst;
-    if (_cstMode is false) _cst.constraintMode(_cstMode);
-    _initialized = true;
-  }
 }
 
 abstract class _esdl__Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=__LINE__)

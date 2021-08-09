@@ -241,8 +241,6 @@ void _esdl__doInitConstraintElems(P, Q, int I=0)(P p, Q q) {
       auto cst = p.new E(p, EN);
       p.tupleof[I] = cst;
       static if (IS_USER_DEFINED) {
-	if (q !is null) __traits(getMember, q, EN).initialize(cst);
-	// Add constraint to a hash table to enable constraint overriding
 	p.addConstraintName(cst);
       }
     }
@@ -395,7 +393,7 @@ template _esdl__ConstraintsDecl(T, int I=0)
 	"  enum size_t _esdl__LINE_" ~ NAME ~
 	" = _esdl__constraintParams!(_esdl__T, " ~ I.stringof ~ ").LINE;\n" ~
 	"  _esdl__ConstraintImpl!(_esdl__CONSTRAINT_" ~ NAME ~
-	", _esdl__FILE_" ~ NAME ~ ", _esdl__LINE_" ~ NAME ~ ") " ~
+	", _esdl__FILE_" ~ NAME ~ ", _esdl__LINE_" ~ NAME ~ ", " ~ I.stringof ~ ") " ~
 	NAME ~ ";\n" ~ _esdl__ConstraintsDecl!(T, I+1);
     }
     else static if (isRandVectorSet!L || isRandObjectSet!L) {
@@ -425,7 +423,7 @@ template _esdl__constraintParams(T, int I)
 template _esdl__ConstraintsDefDecl(T)
 {
   enum _esdl__ConstraintsDefDecl =
-    "  _esdl__ConstraintImpl!(_esdl__ConstraintDefaults!(_esdl__T, 0), \"#DEFAULT#\", 0) _esdl__defaultConstraint;\n";
+    "  _esdl__ConstraintImpl!(_esdl__ConstraintDefaults!(_esdl__T, 0), \"#DEFAULT#\", 0, -1) _esdl__defaultConstraint;\n";
 }
 
 template _esdl__ConstraintDefaults(T, int I=0)
@@ -898,7 +896,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     override string getCode() {return "";}
   }
 
-  class _esdl__ConstraintImpl(string _esdl__CstString, string FILE, size_t LINE):
+  class _esdl__ConstraintImpl(string _esdl__CstString, string FILE, size_t LINE, int INDX):
     _esdl__Constraint!(_esdl__CstString, FILE, LINE)
   {
     this(_esdl__Proxy eng, string name) {
@@ -913,6 +911,16 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     mixin (CST_PARSE_DATA.guardInits);
     mixin (CST_PARSE_DATA.guardUpdts);
   
+    static if (INDX >= 0) {	// only for user defined constraints
+      final override void constraintMode(bool mode) {
+	this.outer._esdl__outer.tupleof[INDX].constraintMode(mode);
+      }
+
+      final override bool constraintMode() {
+	return this.outer._esdl__outer.tupleof[INDX].constraintMode();
+      }
+    }
+
   }
 
   class _esdl__ConstraintWithImpl(string _esdl__CstString, string FILE, size_t LINE, ARGS...): // size_t N):
