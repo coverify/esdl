@@ -122,7 +122,7 @@ void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy) {
 	       ) {
       static if (P.tupleof[I]._esdl__ISRAND) {
 	if (p.tupleof[I].isRand()) {
-	  p.tupleof[I]._esdl__doConstrain(proxy);
+	  p.tupleof[I]._esdl__doConstrain(proxy, true);
 	}
       // else {
       // 	p.tupleof[I]._esdl__doConstrain(proxy);
@@ -496,6 +496,8 @@ void _esdl__postRandomize(T)(T t) {
 
 void _esdl__randomize(T) (T t, _esdl__ConstraintBase withCst = null) {
 
+  _esdl__preRandomize(t);
+
   t._esdl__initProxy();
   
   if (withCst is null && t._esdl__proxyInst._esdl__cstWith !is null) {
@@ -506,11 +508,10 @@ void _esdl__randomize(T) (T t, _esdl__ConstraintBase withCst = null) {
   //   t._esdl__proxyInst._esdl__cstWithChanged = false;
   // }
 
-  // _esdl__preRandomize(t);
 
   t._esdl__proxyInst.reset();
 
-  t._esdl__proxyInst._esdl__doConstrain(t._esdl__proxyInst);
+  t._esdl__proxyInst._esdl__doConstrain(t._esdl__proxyInst, false);
 
   if (withCst !is null) {
     foreach (pred; withCst.getConstraintGuards()) {
@@ -974,9 +975,9 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   }
 
 
-  override void _esdl__doConstrain(_esdl__Proxy proxy) {
+  override void _esdl__doConstrain(_esdl__Proxy proxy, bool callPreRandomize) {
     assert (this._esdl__outer !is null);
-    _esdl__preRandomize(this._esdl__outer);
+    if (callPreRandomize) _esdl__preRandomize(this._esdl__outer);
     _esdl__doConstrainElems(this, proxy);
     foreach (visitor; getGlobalVisitors()) {
       foreach (pred; visitor.getConstraints()) proxy.addNewPredicate(pred);

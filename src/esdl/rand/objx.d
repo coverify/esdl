@@ -459,7 +459,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	assert (this.getRef() !is null);
 	_esdl__setValRef(this.getRef());
 	if (this.isRand()) {
-	  _esdl__doConstrain(getProxyRoot());
+	  _esdl__doConstrain(getProxyRoot(), true);
 	}
       }
 

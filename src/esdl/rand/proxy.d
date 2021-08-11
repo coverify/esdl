@@ -648,7 +648,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   // overridden by Randomization mixin -- see meta.d
   abstract void _esdl__doRandomize(_esdl__RandGen randGen);
-  abstract void _esdl__doConstrain(_esdl__Proxy proxy);
+  abstract void _esdl__doConstrain(_esdl__Proxy proxy, bool callPreRandomize);
 
 
   void reset() {
