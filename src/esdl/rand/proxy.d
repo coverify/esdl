@@ -210,7 +210,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   CstDomBase[] _cstValDomains;
 
   // compositional parent -- not inheritance based
-  _esdl__Proxy _parent;
+  // _esdl__Proxy _parent;
   _esdl__Proxy _root;
 
   private _esdl__ConstraintBase[string] _cstNames;
@@ -630,15 +630,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _esdl__rGen = new _esdl__RandGen(_esdl__seed);
 
     if (parent is null) {
-      // if (_esdl__buddy is null) {
-      // 	_esdl__buddy = new Buddy(400, 400);
-      // }
       _root = this;
     }
     else {
-      _parent = parent;
-      _root = _parent.getProxyRoot();
-      // _esdl__buddy = _root._esdl__buddy;
+      _root = parent.getProxyRoot();
     }
     // scopes for constraint parsing
     _rootScope = new CstScope(null, null);
