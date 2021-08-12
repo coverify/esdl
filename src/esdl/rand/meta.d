@@ -25,8 +25,7 @@ import esdl.rand.base: CstVecPrim, CstVarGlobIntf, CstVarNodeIntf,
 import esdl.rand.pred: CstPredicate, CstVisitorPredicate;
 import esdl.rand.vecx: CstVectorIdx, CstVecArrIdx,
   CstVectorGlob, CstVecArrGlob, CstVectorGlobEnum, CstVecArrGlobEnum;
-import esdl.rand.objx: CstObjectIdx, CstObjArrIdx, CstObjectGlob,
-  CstObjectStub, CstObjArrStub;
+import esdl.rand.objx: CstObjectIdx, CstObjArrIdx, CstObjectGlob;
 import esdl.rand.domain: CstVecValue, CstLogicValue;
 import esdl.rand.proxy;
 import esdl.rand.func;
@@ -60,8 +59,11 @@ template _esdl__RandProxyType(T, int I, P, int PI)
   import std.traits;
   alias L = typeof(T.tupleof[I]);
   enum rand RAND = getRandAttr!(T, I);
-  // pragma(msg, "Looking at: ", L.stringof);
-  static if (isRandomizable!L) {
+  // pragma(msg, "Looking at: ", T.tupleof[I].stringof);
+  static if (is (L: rand.disable)) {
+    alias _esdl__RandProxyType = _esdl__NotMappedForRandomization;
+  }
+  else static if (isRandomizable!L) {
     alias _esdl__RandProxyType = CstVectorIdx!(L, RAND, 0, I, P, PI);
   }  
   else static if (isRandVectorSet!L) {
@@ -70,16 +72,10 @@ template _esdl__RandProxyType(T, int I, P, int PI)
   // Exclude class/struct* elements that have not been rand tagged
   // or are excluded  because of rand.disable or rand.barrier
   else static if (isRandObject!L) {
-    static if (RAND.hasProxy())
-      alias _esdl__RandProxyType = CstObjectIdx!(L, RAND, 0, I, P, PI);
-    else
-      alias _esdl__RandProxyType = CstObjectStub!(L, RAND, 0, I, P, PI);
+    alias _esdl__RandProxyType = CstObjectIdx!(L, RAND, 0, I, P, PI);
   }
   else static if (isRandObjectSet!L) {
-    static if (RAND.hasProxy())
-      alias _esdl__RandProxyType = CstObjArrIdx!(L, RAND, 0, I, P, PI);
-    else
-      alias _esdl__RandProxyType = CstObjArrStub!(L, RAND, 0, I, P, PI);
+    alias _esdl__RandProxyType = CstObjArrIdx!(L, RAND, 0, I, P, PI);
   }
   else {
     alias _esdl__RandProxyType = _esdl__NotMappedForRandomization;
@@ -182,8 +178,7 @@ void _esdl__doInitRandObjectElems(P, int I=0)(P p) {
   else {
     alias Q = typeof (P.tupleof[I]);
     // pragma(msg, "#" ~ Q.stringof);
-    static if (is (Q: CstVarNodeIntf) ||
-	       is (Q: CstObjectStubBase) || is (Q: CstObjArrStubBase)) {
+    static if (is (Q: CstVarNodeIntf)) {
       // static if (Q._esdl__HASPROXY // && Q._esdl__ISRAND // not just @rand
       // 		 ) {
       // pragma(msg, "#" ~ Q.stringof);
@@ -304,19 +299,6 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 	}
       }
     }
-    static if (is (Q == CstObjectStub!(L, RAND, N, IDX, P, PIDX),
-		   L, rand RAND, int N, int IDX, P, int PIDX)) {
-      if (p.tupleof[I] !is null && p.tupleof[I]._esdl__obj !is null) {
-	static if (is (L == struct) && !isQueue!L) {
-	  p.tupleof[I]._esdl__get().
-	    _esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
-	}
-	else {
-	  p.tupleof[I]._esdl__get().
-	    _esdl__setValRef(p._esdl__outer.tupleof[IDX]);
-	}
-      }
-    }    
     static if (is (Q == CstVecArrIdx!(L, RAND, N, IDX, P, PIDX),
 		   L, rand RAND, int N, int IDX, P, int PIDX)) {
       if (p.tupleof[I] !is null) {
@@ -327,13 +309,6 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 		   L, rand RAND, int N, int IDX, P, int PIDX)) {
       if (p.tupleof[I] !is null) {
 	p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
-      }
-    }
-    static if (is (Q == CstObjArrStub!(L, RAND, N, IDX, P, PIDX),
-		   L, rand RAND, int N, int IDX, P, int PIDX)) {
-      if (p.tupleof[I] !is null && p.tupleof[I]._esdl__obj !is null) {
-	p.tupleof[I]._esdl__get().
-	  _esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
       }
     }
     _esdl__doSetOuterElems!(P, I+1)(p, changed);
@@ -351,6 +326,7 @@ template _esdl__RandDeclVars(T, int I, PT, int PI)
 	       // is (typeof(T.tupleof[I]): rand.disable) ||
 	       is (_esdl__RandProxyType!(T, I, PT, PI) ==
 		   _esdl__NotMappedForRandomization)) {
+      // pragma(msg, "_esdl__NotMappedForRandomization: " ~ T.tupleof[I].stringof);
       enum string _esdl__RandDeclVars = _esdl__RandDeclVars!(T, I+1, PT, PI);
     }
     else {
@@ -858,18 +834,9 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     override void makeConstraints() {
       auto obj = mixin(OBJ);
       alias TOBJ = typeof(obj);
-      static if (is (TOBJ: CstObjectStubBase) ||
-		 is (TOBJ: CstObjArrStubBase)) {
-	assert (obj !is null, OBJ ~ " is null");
-	_pred =
-	  new CstVisitorPredicate(this, null, false, 0, this.outer, 0,
-				  new CstVarVisitorExpr(obj._esdl__get()), false);
-      }
-      else {
-	_pred =
-	  new CstVisitorPredicate(this, null, false, 0, this.outer, 0,
-				  new CstVarVisitorExpr(obj), false);
-      }
+      _pred =
+	new CstVisitorPredicate(this, null, false, 0, this.outer, 0,
+				new CstVarVisitorExpr(obj), false);
       _initialized = true;
     }
 
@@ -1032,18 +999,9 @@ class _esdl__VisitorCst(TOBJ): _esdl__ConstraintBase, _esdl__VisitorCstIntf
   TOBJ _obj;
 
   override void makeConstraints() {
-    static if (is (TOBJ: CstObjectStubBase) ||
-	       is (TOBJ: CstObjArrStubBase)) {
-      assert (_obj !is null, TOBJ.stringof ~ " is null");
-      _pred =
-	new CstVisitorPredicate(this, null, false, 0, this.outer, 0,
-				new CstVarVisitorExpr(_obj._esdl__get()), false);
-    }
-    else {
-      _pred =
-	new CstVisitorPredicate(this, null, false, 0, _proxy, 0,
-				new CstVarVisitorExpr(_obj), false);
-    }
+    _pred =
+      new CstVisitorPredicate(this, null, false, 0, _proxy, 0,
+			      new CstVarVisitorExpr(_obj), false);
     _initialized = true;
   }
 
@@ -1136,25 +1094,6 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       }
     }
     return V;
-  }
-  else static if (is (L: CstObjectStubBase) || is (L: CstObjArrStubBase)) {
-    if (V is null) {
-      L._esdl__PROXYT p = parent;
-      if (p is null) {
-	V = new L(name, parent, null);
-      }
-      else {
-	alias M = typeof(p._esdl__outer.tupleof[L._esdl__INDEX]);
-	static if (is (M == class) ||
-		   (is (M == U*, U) && is (U == struct))) {
-	  V = new L(name, parent, p._esdl__outer.tupleof[L._esdl__INDEX]);
-	}
-	else {
-	  V = new L(name, parent, &(p._esdl__outer.tupleof[L._esdl__INDEX]));
-	}
-      }
-    }
-    return V._esdl__get();
   }
   else static if (isRandomizable!L) {
     static if (isLvalue!V) {

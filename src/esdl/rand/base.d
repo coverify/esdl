@@ -109,7 +109,7 @@ interface CstObjNodeIntf: CstVarNodeIntf {}
 interface CstObjectIntf: CstObjNodeIntf {}
 interface CstObjArrIntf: CstObjNodeIntf {
 
-  _esdl__Proxy _esdl__nthLeaf(uint idx);
+  CstObjectIntf _esdl__nthLeaf(uint idx);
   uint _esdl__leafsCount();
 
   struct Range {

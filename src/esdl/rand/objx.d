@@ -8,9 +8,9 @@ import std.traits: isIntegral, isBoolean, isArray, KeyType,
 
 import esdl.rand.misc;
 import esdl.rand.base: CstValue, CstVecTerm, CstIterator, DomType,
-  CstDomBase, CstDomSet, CstObjectStubBase, CstObjArrStubBase, CstObjSet,
-  CstVarNodeIntf, CstVecNodeIntf, CstObjArrIntf, CstVarGlobIntf,
-  CstObjectVoid, CstObjArrVoid, CstDepIntf;
+  CstDomBase, CstDomSet, CstObjSet, CstVarNodeIntf, CstVecNodeIntf,
+  CstObjArrIntf, CstVarGlobIntf, CstObjectVoid, CstObjArrVoid,
+  CstDepIntf, CstObjectIntf;
 import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.expr: CstRangeExpr;
@@ -52,7 +52,7 @@ class CstObjectGlob(V, rand RAND_ATTR, int N, alias SYM)
   }
   
   // no unrolling is possible without adding rand proxy
-  override _esdl__Proxy unroll(CstIterator iter, ulong n) {
+  auto unroll(CstIterator iter, ulong n) {
     return this;
   }
 }
@@ -77,64 +77,13 @@ class CstObjectGlobEnum(V, rand RAND_ATTR, int N)
   }
   
   // no unrolling is possible without adding rand proxy
-  override _esdl__Proxy unroll(CstIterator iter, ulong n) {
+  auto unroll(CstIterator iter, ulong n) {
     return this;
   }
 }
 
-class CstObjectStub(V, rand RAND_ATTR, int N, int IDX,
-		    P, int PIDX): CstObjectStubBase
-{
-  enum int _esdl__INDEX = IDX;
-  alias _esdl__PROXYT = P;
-  
-  CstObjectVoid _obj;
-  
-  string _name;
-  _esdl__Proxy _parent;
-  
-  static if (is (V == struct)) {
-    V* _var;
-    this(string name, _esdl__Proxy parent, V* var) {
-      assert(parent !is null);
-      _name = name;
-      _parent = parent;
-      _var = var;
-    }
-  }
-  else {
-    V _var;
-    this(string name, _esdl__Proxy parent, V var) {
-      assert(parent !is null);
-      _name = name;
-      _parent = parent;
-      _var = var;
-    }
-  }
-
-  auto _esdl__obj()() {
-    alias TYPE = CstObjectIdx!(V, RAND_ATTR, N, IDX, P, PIDX);
-    if (_obj is null) return null;
-    else return _esdl__staticCast!TYPE(_obj);
-  }
-
-  auto _esdl__get()() {
-    alias TYPE = CstObjectIdx!(V, RAND_ATTR, N, IDX, P, PIDX);
-    if (_obj is null) {
-      assert(_parent !is null);
-      _obj = new TYPE(_name, _parent, _var);
-    }
-    return _esdl__staticCast!TYPE(_obj);
-  }
-
-  auto opDispatch(string WHAT)() {
-    auto obj = this._esdl__get();
-    return __traits(getMember, obj, WHAT);
-  }
-}
-
 class CstObjectIdx(V, rand RAND_ATTR, int N, int IDX,
-		P, int PIDX): CstObject!(V, RAND_ATTR, N)
+		   P, int PIDX): CstObject!(V, RAND_ATTR, N)
 {
   enum _esdl__ISRAND = RAND_ATTR.isRand();
   enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
@@ -155,27 +104,81 @@ class CstObjectIdx(V, rand RAND_ATTR, int N, int IDX,
   }    
 
   static if (PIDX >= 0) {	// exclude randomize_with
-    override _esdl__Proxy unroll(CstIterator iter, ulong n) {
+    override typeof(this) unroll(CstIterator iter, ulong n) {
       if (_parent !is _root) {
 	P uparent = cast(P)(_parent.unroll(iter, n));
 	assert (uparent !is null);
-	static if (is (typeof(uparent.tupleof[PIDX]): CstObjectStubBase)) {
-	  return uparent.tupleof[PIDX]._esdl__get();
-	}
-	else {
-	  return uparent.tupleof[PIDX];
-	}
+	return uparent.tupleof[PIDX];
       }
       else {
 	return this;
       }
     }
   }
+
 }
 
-class CstObjectBase(V, rand RAND_ATTR, int N)
+abstract class _esdl__ProxyStub(T): CstObjectIntf, rand.disable, rand.barrier
+{
+  // import esdl.rand.meta: _esdl__ProxyResolve;
+
+  _esdl__Proxy _root;
+
+  enum _esdl__TypeHasRandBarrier=true;
+  
+  alias PROXYT = _esdl__ProxyResolve!T;
+
+  PROXYT _proxy;
+  _esdl__Proxy _parent;
+
+  static if (is (T == struct)) {
+    T* _esdl__getRef()() {return _outer;}
+    
+    T* _outer;
+    this(_esdl__Proxy parent, void* outer) {
+      super (parent, outer);
+      _parent = parent;
+      _outer = outer;
+    }
+  }
+  else {
+    T _esdl__getRef()() {return _outer;}
+    T _outer;
+    this(_esdl__Proxy parent, T outer) {
+      _parent = parent;
+      _outer = outer;
+    }
+  }
+  
+  auto _esdl__get()() {
+    if (_proxy is null) {
+      assert(_parent !is null);
+      _proxy = new PROXYT(_parent, _outer);
+    }
+    return _proxy;
+  }
+
+  auto opDispatch(string WHAT)() {
+    return __traits(getMember, _esdl__get(), WHAT);
+  }
+
+  void _esdl__doConstrain(_esdl__Proxy proxy, bool callPreRandomize) {
+    this._esdl__get()._esdl__doConstrain(proxy, callPreRandomize);
+  }
+  
+  void _esdl__doRandomize(_esdl__RandGen randGen) {
+    this._esdl__get()._esdl__doRandomize(randGen);
+  }
+
+  void _esdl__setValRef()(T outer) {
+    this._esdl__get()._esdl__setValRef(outer);
+  }
+
+}
+
+abstract class CstObjectBase(V, rand RAND_ATTR, int N)
   if (_esdl__ArrOrder!(V, N) == 0):
-    _esdl__ProxyResolve!(LeafElementType!V)
+    _esdl__ProxyStub!(LeafElementType!V), rand.disable, rand.barrier
       {
 	enum HAS_RAND_ATTRIB = RAND_ATTR.isRand();
 	alias LEAF = LeafElementType!V;
@@ -229,7 +232,7 @@ class CstObjectBase(V, rand RAND_ATTR, int N)
 	override bool isRand() { assert (false); }
       }
 
-class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
+abstract class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
   CstObjectBase!(V, RAND_ATTR, N)
     {
       alias RV = typeof(this);
@@ -270,20 +273,20 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	return _root;
       }
 
-      final override bool isStatic() {
+      final bool isStatic() {
 	return _parent.isStatic();
       }
 
-      final override bool isReal() {
+      final bool isReal() {
 	return _parent.isReal();
       }
 
-      final override bool isRolled() {
+      final bool isRolled() {
 	return _parent.isRolled();		// N == 0
       }
 
       // RV
-      override _esdl__Proxy unroll(CstIterator iter, ulong n) {
+      auto unroll(CstIterator iter, ulong n) {
 	return this;
       }
 
@@ -324,8 +327,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
     }
 
 // Array Element
-class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
-  // _esdl__ProxyResolve!(LeafElementType!V)
+abstract class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
   CstObjectBase!(V, RAND_ATTR, N), CstObjIndexed
     {
       alias RV = typeof(this);
@@ -381,19 +383,19 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	else return (_parent == rhs._parent && _indexExpr == _indexExpr);
       }
       
-      final override bool isStatic() {
+      final bool isStatic() {
 	return ((_indexExpr is null ||
 		 _indexExpr.isIterator ||
 		 _indexExpr.isConst) &&
 		_parent.isStatic());
       }
 
-      final override bool isReal() {
+      final bool isReal() {
 	return (_indexExpr is null &&
 		_parent.isReal());
       }
 
-      final override bool isRolled() {
+      final bool isRolled() {
 	return ((_indexExpr !is null &&
 		 _indexExpr.isIterator) ||
 		_parent.isRolled());
@@ -423,7 +425,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       // RV
-      override _esdl__Proxy unroll(CstIterator iter, ulong n) {
+      auto unroll(CstIterator iter, ulong n) {
 	if (_indexExpr) {
 	  return _parent.unroll(iter,n)[_indexExpr.unroll(iter,n)];
 	}
@@ -548,45 +550,6 @@ class CstObjArrGlobEnum(V, rand RAND_ATTR, int N)
 }
 
 
-class CstObjArrStub(V, rand RAND_ATTR, int N, int IDX,
-		    P, int PIDX): CstObjArrStubBase
-{
-  enum int _esdl__INDEX = IDX;
-  alias _esdl__PROXYT = P;
-  
-  CstObjArrVoid _obj;
-
-  string _name;
-  _esdl__Proxy _parent;
-  V* _var;
-
-  this(string name, _esdl__Proxy parent, V* var) {
-    _name = name;
-    _parent = parent;
-    _var = var;
-  }
-
-  auto _esdl__obj()() {
-    alias TYPE = CstObjArrIdx!(V, RAND_ATTR, N, IDX, P, PIDX);
-    if (_obj is null) return null;
-    else return _esdl__staticCast!TYPE(_obj);
-  }
-
-  auto _esdl__get()() {
-    alias TYPE = CstObjArrIdx!(V, RAND_ATTR, N, IDX, P, PIDX);
-    if (_obj is null) {
-      assert(_parent !is null);
-      _obj = new TYPE(_name, _parent, _var);
-    }
-    return _esdl__staticCast!TYPE(_obj);
-  }
-
-  auto opDispatch(string WHAT)() {
-    auto obj = this._esdl__get();
-    return __traits(getMember, obj, WHAT);
-  }
-}
-
 // Arrays (Multidimensional arrays as well)
 class CstObjArrIdx(V, rand RAND_ATTR, int N, int IDX,
 		   P, int PIDX): CstObjArr!(V, RAND_ATTR, N)
@@ -602,12 +565,7 @@ class CstObjArrIdx(V, rand RAND_ATTR, int N, int IDX,
     if (_parent !is _root) {
       P uparent = cast(P)(_parent.unroll(iter, n));
       assert (uparent !is null);
-      static if (is (typeof(uparent.tupleof[PIDX]): CstObjArrStubBase)) {
-	return uparent.tupleof[PIDX]._esdl__get();
-      }
-      else {
-	return uparent.tupleof[PIDX];
-      }
+      return uparent.tupleof[PIDX];
     }
     else {
       return this;
@@ -775,7 +733,7 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
     buildElements(length);
     // import std.stdio;
     // writeln("buildElements: ", length);
-    static if (is (EV: _esdl__Proxy)) {
+    static if (is (EV: CstObjectIntf)) {
       _esdl__unresolvedArrLen = 0;
       _esdl__leafElemsCount = cast(uint) length;
       markSolved();
@@ -803,8 +761,8 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
   }
 
 
-  final _esdl__Proxy _esdl__nthLeaf(uint idx) {
-    static if (is (EV: _esdl__Proxy)) {
+  final CstObjectIntf _esdl__nthLeaf(uint idx) {
+    static if (is (EV: CstObjectIntf)) {
       return _elems[idx];
     }
     else {
