@@ -171,6 +171,7 @@ abstract class _esdl__ProxyStub(T): CstObjectIntf, rand.disable, rand.barrier
   }
 
   void _esdl__setValRef()(T outer) {
+    _outer = outer;
     this._esdl__get()._esdl__setValRef(outer);
   }
 
