@@ -174,6 +174,10 @@ abstract class _esdl__ProxyStub(T): CstObjectIntf, rand.disable, rand.barrier
     this._esdl__get()._esdl__setValRef(outer);
   }
 
+  final CstIterator _esdl__iter() {
+    return null;
+  }
+
 }
 
 abstract class CstObjectBase(V, rand RAND_ATTR, int N)
@@ -232,7 +236,7 @@ abstract class CstObjectBase(V, rand RAND_ATTR, int N)
 	override bool isRand() { assert (false); }
       }
 
-abstract class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
+class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
   CstObjectBase!(V, RAND_ATTR, N)
     {
       alias RV = typeof(this);
@@ -327,7 +331,7 @@ abstract class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
     }
 
 // Array Element
-abstract class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
+class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
   CstObjectBase!(V, RAND_ATTR, N), CstObjIndexed
     {
       alias RV = typeof(this);
