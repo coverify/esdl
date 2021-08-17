@@ -134,14 +134,22 @@ abstract class _esdl__ProxyStub(T): CstObjectIntf, rand.disable, rand.barrier
   static if (is (T == struct)) {
     T* _outer;
     T* _esdl__getRef()() {return _outer;}
+    void _esdl__setValRef()(T* outer) {
+      _outer = outer;
+      this._esdl__get()._esdl__setValRef(outer);
+    }
     this(_esdl__Proxy parent, void* outer) {
       _parent = parent;
-      _outer = outer;
+      _outer = cast(T*) outer;
     }
   }
   else {
     T _outer;
     T _esdl__getRef()() {return _outer;}
+    void _esdl__setValRef()(T outer) {
+      _outer = outer;
+      this._esdl__get()._esdl__setValRef(outer);
+    }
     this(_esdl__Proxy parent, T outer) {
       _parent = parent;
       _outer = outer;
@@ -174,11 +182,6 @@ abstract class _esdl__ProxyStub(T): CstObjectIntf, rand.disable, rand.barrier
   
   void _esdl__doRandomize(_esdl__RandGen randGen) {
     this._esdl__get()._esdl__doRandomize(randGen);
-  }
-
-  void _esdl__setValRef()(T outer) {
-    _outer = outer;
-    this._esdl__get()._esdl__setValRef(outer);
   }
 
   final CstIterator _esdl__iter() {
