@@ -728,7 +728,7 @@ class _esdl__ProxyNoRand(_esdl__T)
 	else {
 	  override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
 						       CstObjectIntf obj, void* outer) {
-	    _esdl__T outer_ = esdl__staticCast!_esdl__T(outer);
+	    _esdl__T outer_ = cast(_esdl__T)(outer);
 	    return new _esdl__ProxyNoRand!(_esdl__T)(parent, obj, outer_);
 	  }
 	}
