@@ -122,13 +122,11 @@ abstract class _esdl__ProxyStub(T): CstObjectIntf, rand.disable, rand.barrier
 {
   // import esdl.rand.meta: _esdl__ProxyResolve;
 
-  _esdl__Proxy _root;
-
   enum _esdl__TypeHasRandBarrier=true;
   
   alias PROXYT = _esdl__ProxyResolve!T;
 
-  PROXYT _proxy;
+  _esdl__Proxy _proxy;
   _esdl__Proxy _parent;
 
   static if (is (T == struct)) {
@@ -156,20 +154,16 @@ abstract class _esdl__ProxyStub(T): CstObjectIntf, rand.disable, rand.barrier
     }
   }
   
-  auto _esdl__get()() {
+  PROXYT _esdl__get()() {
     if (_proxy is null) {
       assert(_parent !is null);
       _proxy = new PROXYT(_parent, this, _outer);
     }
-    return _proxy;
+    return _esdl__staticCast!PROXYT(_proxy);
   }
 
   _esdl__Proxy _esdl__getProxy() {
-    if (_proxy is null) {
-      assert(_parent !is null);
-      _proxy = new PROXYT(_parent, this, _outer);
-    }
-    return _proxy;
+    return _esdl__get();
   }
 
   auto opDispatch(string WHAT)() {
@@ -212,6 +206,7 @@ abstract class CstObjectBase(V, rand RAND_ATTR, int N)
 	}
 
 	string _name;
+	_esdl__Proxy _root;
 
 	override string name() {
 	  return _name;
@@ -238,6 +233,7 @@ abstract class CstObjectBase(V, rand RAND_ATTR, int N)
 	bool _isRand = true;
 	void rand_mode(bool mode) {
 	  if (mode != _isRand) {
+	    assert (_root !is null);
 	    _isRand = mode;
 	    _root.setNeedSync();
 	  }
@@ -252,7 +248,6 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
     {
       alias RV = typeof(this);
 
-      _esdl__Proxy _root;
       _esdl__Proxy _parent;
       
       // Call super only after the _parent has been set
@@ -354,8 +349,6 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 
       uint _resolvedCycle;	// cycle for which indexExpr has been resolved
       RV _resolvedObj;
-
-      _esdl__Proxy _root;
 
       // Call super only after the _parent has been set
       this(string name, P parent, CstVecTerm indexExpr) {
