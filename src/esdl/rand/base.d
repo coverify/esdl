@@ -106,7 +106,19 @@ interface CstVecArrIntf: CstVecNodeIntf {
 
 interface CstObjNodeIntf: CstVarNodeIntf {}
 
-interface CstObjectIntf: CstObjNodeIntf {}
+interface CstObjectIntf: CstObjNodeIntf
+{
+  string fullName();
+  string name();
+  bool isRand();
+  bool inRange();
+  CstObjectIntf unroll(CstIterator iter, ulong n);
+  _esdl__Proxy _esdl__getProxy();
+  bool isStatic();
+  bool isReal();
+  bool isRolled();
+}
+
 interface CstObjArrIntf: CstObjNodeIntf {
 
   CstObjectIntf _esdl__nthLeaf(uint idx);

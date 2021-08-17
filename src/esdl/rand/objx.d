@@ -52,7 +52,7 @@ class CstObjectGlob(V, rand RAND_ATTR, int N, alias SYM)
   }
   
   // no unrolling is possible without adding rand proxy
-  auto unroll(CstIterator iter, ulong n) {
+  override typeof(this) unroll(CstIterator iter, ulong n) {
     return this;
   }
 }
@@ -77,7 +77,7 @@ class CstObjectGlobEnum(V, rand RAND_ATTR, int N)
   }
   
   // no unrolling is possible without adding rand proxy
-  auto unroll(CstIterator iter, ulong n) {
+  override typeof(this) unroll(CstIterator iter, ulong n) {
     return this;
   }
 }
@@ -132,18 +132,16 @@ abstract class _esdl__ProxyStub(T): CstObjectIntf, rand.disable, rand.barrier
   _esdl__Proxy _parent;
 
   static if (is (T == struct)) {
-    T* _esdl__getRef()() {return _outer;}
-    
     T* _outer;
+    T* _esdl__getRef()() {return _outer;}
     this(_esdl__Proxy parent, void* outer) {
-      super (parent, outer);
       _parent = parent;
       _outer = outer;
     }
   }
   else {
-    T _esdl__getRef()() {return _outer;}
     T _outer;
+    T _esdl__getRef()() {return _outer;}
     this(_esdl__Proxy parent, T outer) {
       _parent = parent;
       _outer = outer;
@@ -153,7 +151,15 @@ abstract class _esdl__ProxyStub(T): CstObjectIntf, rand.disable, rand.barrier
   auto _esdl__get()() {
     if (_proxy is null) {
       assert(_parent !is null);
-      _proxy = new PROXYT(_parent, _outer);
+      _proxy = new PROXYT(_parent, this, _outer);
+    }
+    return _proxy;
+  }
+
+  _esdl__Proxy _esdl__getProxy() {
+    if (_proxy is null) {
+      assert(_parent !is null);
+      _proxy = new PROXYT(_parent, this, _outer);
     }
     return _proxy;
   }
@@ -179,6 +185,7 @@ abstract class _esdl__ProxyStub(T): CstObjectIntf, rand.disable, rand.barrier
     return null;
   }
 
+  abstract typeof(this) unroll(CstIterator iter, ulong n);
 }
 
 abstract class CstObjectBase(V, rand RAND_ATTR, int N)
@@ -291,7 +298,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       // RV
-      auto unroll(CstIterator iter, ulong n) {
+      override typeof(this) unroll(CstIterator iter, ulong n) {
 	return this;
       }
 
@@ -430,7 +437,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       // RV
-      auto unroll(CstIterator iter, ulong n) {
+      override typeof(this) unroll(CstIterator iter, ulong n) {
 	if (_indexExpr) {
 	  return _parent.unroll(iter,n)[_indexExpr.unroll(iter,n)];
 	}

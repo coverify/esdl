@@ -535,9 +535,9 @@ mixin template Randomization()
       _esdl__T _esdl__getRef()() {return _esdl__outer;}
       
       override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-						   Object outer) {
+						   CstObjectIntf obj, Object outer) {
 	_esdl__T outer_ = _esdl__staticCast!_esdl__T(outer);
-	return new _esdl__ProxyRand!(_esdl__T)(parent, outer_);
+	return new _esdl__ProxyRand!(_esdl__T)(parent, obj, outer_);
       }
   
       void _esdl__setValRef()(_esdl__T outer) {
@@ -546,9 +546,9 @@ mixin template Randomization()
 	  this._esdl__doSetOuter(true);
 	}
       }
-      this(_esdl__Proxy parent, _esdl__T outer) {
+      this(_esdl__Proxy parent, CstObjectIntf obj, _esdl__T outer) {
 	_esdl__outer = outer;
-	super(parent, outer);
+	super(parent, obj, outer);
 	_esdl__doInitRandObjectElems(this);
 	_esdl__doInitConstraintElems(this, outer);
 	_esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);
@@ -576,13 +576,13 @@ mixin template Randomization()
 	}
       }
       override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-						   void* outer) {
+						   CstObjectIntf obj, void* outer) {
 	_esdl__T* outer_ = cast(_esdl__T*)(outer);
-	return new _esdl__ProxyRand!(_esdl__T)(parent, outer_);
+	return new _esdl__ProxyRand!(_esdl__T)(parent, obj, outer_);
       }
-      this(_esdl__Proxy parent, _esdl__T* outer) {
+      this(_esdl__Proxy parent, CstObjectIntf obj, _esdl__T* outer) {
 	_esdl__outer = outer;
-	super(parent);
+	super(parent, obj);
 	_esdl__doInitRandObjectElems(this);
 	_esdl__doInitConstraintElems(this, outer);
 	_esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);
@@ -641,7 +641,7 @@ mixin template Randomization()
       assert(this !is null);
       if (_esdl__proxyInst is null) {
 	_esdl__proxyInst =
-	  new _esdl__ProxyType(null, this);
+	  new _esdl__ProxyType(null, null, this);
 	static if(__traits(compiles, _esdl__seedRandom())) {
 	  _esdl__seedRandom();
 	}
@@ -686,11 +686,11 @@ mixin template Randomization()
       if (_esdl__proxyInst is null) {
 	static if (is (typeof(this) == class)) {
 	  _esdl__proxyInst =
-	    new _esdl__ProxyType(null, this);
+	    new _esdl__ProxyType(null, null, this);
 	}
 	else {
 	  _esdl__proxyInst =
-	    new _esdl__ProxyType(null, &this);
+	    new _esdl__ProxyType(null, null, &this);
 	}
 	static if(__traits(compiles, _esdl__seedRandom())) {
 	  _esdl__seedRandom();
@@ -720,21 +720,21 @@ class _esdl__ProxyNoRand(_esdl__T)
 	}
 	static if (is (_esdl__T == class)) {
 	  override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-						       Object outer) {
+						       CstObjectIntf obj, Object outer) {
 	    _esdl__T outer_ = _esdl__staticCast!_esdl__T(outer);
-	    return new _esdl__ProxyNoRand!(_esdl__T)(parent, outer_);
+	    return new _esdl__ProxyNoRand!(_esdl__T)(parent, obj, outer_);
 	  }
 	}
 	else {
 	  override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-						       void* outer) {
-	    _esdl__T outer_ = cast(_esdl__T)(outer);
-	    return new _esdl__ProxyNoRand!(_esdl__T)(parent, outer_);
+						       CstObjectIntf obj, void* outer) {
+	    _esdl__T outer_ = esdl__staticCast!_esdl__T(outer);
+	    return new _esdl__ProxyNoRand!(_esdl__T)(parent, obj, outer_);
 	  }
 	}
-	this(_esdl__Proxy parent, _esdl__T outer) {
+	this(_esdl__Proxy parent, CstObjectIntf obj, _esdl__T outer) {
 	  _esdl__outer = outer;
-	  super(parent, outer);
+	  super(parent, obj, outer);
 	  _esdl__doInitRandObjectElems(this);
 	  _esdl__doInitConstraintElems(this, outer);
 	  _esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);
@@ -765,13 +765,13 @@ class _esdl__ProxyNoRand(_esdl__T)
 	  }
 	}
 	override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-						     void* outer) {
+						     CstObjectIntf obj, void* outer) {
 	  _esdl__T* outer_ = cast(_esdl__T*)(outer);
-	  return new _esdl__ProxyNoRand!(_esdl__T)(parent, outer_);
+	  return new _esdl__ProxyNoRand!(_esdl__T)(parent, obj, outer_);
 	}
-	this(_esdl__Proxy parent, _esdl__T* outer) {
+	this(_esdl__Proxy parent, CstObjectIntf obj, _esdl__T* outer) {
 	  _esdl__outer = outer;
-	  super(parent);
+	  super(parent, obj);
 	  _esdl__doInitRandObjectElems(this);
 	  _esdl__doInitConstraintElems(this, outer);
 	  _esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);

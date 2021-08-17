@@ -228,11 +228,69 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   }
 
   // only the root proxy gets a null name, other component proxies override
-  string fullName() {return "";}
-  string name() {return "";}
-  bool isRand() {return true;}
-  bool inRange() {return true;}
+  CstObjectIntf _esdl__objIntf;
 
+  _esdl__Proxy _esdl__getProxy() {
+    return this;
+  }
+  
+  string fullName() {
+    if (_esdl__objIntf is null) return "";
+    else {
+      return _esdl__objIntf.fullName();
+    }
+  }
+  string name() {
+    if (_esdl__objIntf is null) return "";
+    else {
+      return _esdl__objIntf.name();
+    }
+  }
+  
+  bool isRand() {
+    if (_esdl__objIntf is null) return true;
+    else {
+      return _esdl__objIntf.isRand();
+    }
+  }
+  
+  bool inRange() {
+    if (_esdl__objIntf is null) return true;
+    else {
+      return _esdl__objIntf.inRange();
+    }
+  }
+
+  _esdl__Proxy unroll(CstIterator iter, ulong n) {
+    if (_esdl__objIntf is null) return this;
+    else {
+      return _esdl__objIntf.unroll(iter, n)._esdl__getProxy();
+    }
+  }
+
+  // the root proxy is always static
+  bool isStatic() {
+    if (_esdl__objIntf is null) return true;
+    else {
+      return _esdl__objIntf.isStatic();
+    }
+  }
+
+  bool isReal() {
+    if (_esdl__objIntf is null) return true;
+    else {
+      return _esdl__objIntf.isReal();
+    }
+  }
+
+  bool isRolled() {
+    if (_esdl__objIntf is null) return false;
+    else {
+      return _esdl__objIntf.isRolled();
+    }
+  }
+
+  
   _esdl__Proxy getProxyRoot() {
     if (_root is null) {return this;}
     else return _root;
@@ -559,23 +617,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   abstract bool _esdl__debugSolver();
 
-  _esdl__Proxy unroll(CstIterator iter, ulong n) {
-    return this;
-  }
-
-  // the root proxy is always static
-  bool isStatic() {
-    return true;
-  }
-
-  bool isReal() {
-    return true;
-  }
-
-  bool isRolled() {
-    return false;
-  }
-
   // Keep a list of constraints in the class
   _esdl__ConstraintBase _esdl__cstWith;
 
@@ -591,26 +632,27 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   }
 
   _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-				      void* outer) {
+				      CstObjectIntf obj, void* outer) {
     assert (false,
 	    "Override _esdl__createProxyInst in the derived proxy class");
   }
 
   _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-				      Object outer) {
+				      CstObjectIntf obj, Object outer) {
     assert (false,
 	    "Override _esdl__createProxyInst in the derived proxy class");
   }
 
-  this(_esdl__Proxy parent, Object outer) {
-    this(parent);
+  this(_esdl__Proxy parent, CstObjectIntf obj, Object outer) {
+    this(parent, obj);
   }
 
-  this(_esdl__Proxy parent, void* outer) {
-    this(parent);
+  this(_esdl__Proxy parent, CstObjectIntf obj, void* outer) {
+    this(parent, obj);
   }
 
-  this(_esdl__Proxy parent) {
+  this(_esdl__Proxy parent, CstObjectIntf obj) {
+    _esdl__objIntf = obj;
     import std.random: Random, uniform;
     debug(NOCONSTRAINTS) {
       assert(false, "Constraint engine started");
