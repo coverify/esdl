@@ -180,8 +180,10 @@ class CstVecArrExpr: CstVecExpr
   }
 
   void writeExprString(ref Charbuf str) {
+    import std.format: sformat;
+    char[16] buff;
     str ~= '(';
-    str ~= _op.to!string;
+    str ~= sformat(buff[], "%s", _op);
     str ~= ' ';
     _arr.writeExprString(str);
     str ~= ')';
@@ -377,8 +379,10 @@ class CstVec2VecExpr: CstVecExpr
   }
 
   void writeExprString(ref Charbuf str) {
+    import std.format: sformat;
+    char[16] buff;
     str ~= '(';
-    str ~= _op.to!string;
+    str ~= sformat(buff[], "%s", _op);
     str ~= ' ';
     _lhs.writeExprString(str);
     str ~= ' ';
@@ -1729,8 +1733,10 @@ class CstLogic2LogicExpr: CstLogicExpr
   bool isSolved() { return _lhs.isSolved && _rhs.isSolved(); }
 
   void writeExprString(ref Charbuf str) {
+    import std.format: sformat;
+    char[16] buff;
     str ~= '(';
-    str ~= _op.to!string;
+    str ~= sformat(buff[], "%s", _op);
     str ~= ' ';
     _lhs.writeExprString(str);
     str ~= ' ';
@@ -2214,8 +2220,10 @@ class CstVec2LogicExpr: CstLogicExpr
   }
 
   void writeExprString(ref Charbuf str) {
+    import std.format: sformat;
+    char[16] buff;
     str ~= '(';
-    str ~= _op.to!string;
+    str ~= sformat(buff[], "%s", _op);
     str ~= ' ';
     _lhs.writeExprString(str);
     str ~= ' ';

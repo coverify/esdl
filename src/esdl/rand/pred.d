@@ -298,7 +298,7 @@ class CstPredGroup			// group of related predicates
     foreach (pred; _preds) pred.annotate(this);
   }
 
-  Charbuf _sig;
+  static Charbuf _sig;
   
   string signature() {
     _sig.reset();
@@ -1450,10 +1450,11 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
 
   void writeSignature(ref Charbuf str) {
-    import std.conv: to;
+    import std.format: sformat;
     if (_soft != 0) {
+      char[16] buff;
       str ~= '!';
-      str ~= _soft.to!string();
+      str ~=  sformat(buff[], "%d", _soft); // _soft.to!string();
       str ~= ':';
     }
     if (_guard !is null) {
