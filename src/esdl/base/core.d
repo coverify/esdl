@@ -19,6 +19,8 @@ public import esdl.data.time;
 public import esdl.base.comm;
 import esdl.data.bvec: isBitVector;
 
+import esdl.rand.misc: _esdl__RandGen;
+
 // use atomicStore and atomicLoad
 // This would get redundant later when share construct gets functional
 // in the D compiler.
@@ -1804,8 +1806,6 @@ interface ElabContext: HierComp
 	if(add) this._esdl__exePorts ~= exeport;
       }
     }
-    // _Random_ Generator
-    // Random _r;
 
     alias typeof(this) _esdl__elab_type;
     _esdl__elab_type _esdl__elab_typeID() {
@@ -4511,28 +4511,22 @@ interface Procedure: NamedComp
   }
 
   // Functions for Random Stability
-  ref Random getRandGen();
+  _esdl__RandGen getRandGen();
 
   void setRandSeed(uint seed);
 
   uint getRandSeed();
 
   final void srandom(uint seed) {
-    synchronized(this) {
-      getRandGen().seed(seed);
-    }
+    getRandGen().seed(seed);
   }
 
   final void getRandState(ref Random rstate) {
-    synchronized(this) {
-      rstate = getRandGen.save();
-    }
+    rstate = getRandGen.getGen().save();
   }
 
   final void setRandState(ref Random state) {
-    synchronized(this) {
-      getRandGen = state;
-    }
+    getRandGen().getGen() = state;
   }
 
 }
@@ -6283,6 +6277,7 @@ abstract class Process: Procedure, HierComp, EventClient
       _procID = _procCount++;
     }
     synchronized(this) {
+      _randGen = new _esdl__RandGen(uniform!int());
       _persist = new PersistFlag;
       _ended.initialize("_ended", this);
       _endedTree.initialize("_endedTree", this);
@@ -6306,6 +6301,7 @@ abstract class Process: Procedure, HierComp, EventClient
       _procID = _procCount++;
     }
     synchronized(this) {
+      _randGen = new _esdl__RandGen(uniform!int);
       _persist = new PersistFlag;
       _ended.initialize("_ended", this);
       _endedTree.initialize("_endedTree", this);
@@ -6496,7 +6492,7 @@ abstract class Process: Procedure, HierComp, EventClient
     assert(false, "A task can have only processes as childObjs");
   }
 
-  @_esdl__ignore Random _randGen;
+  @_esdl__ignore _esdl__RandGen _randGen;
   uint _randSeed;
 
   private final void setRandSeed() {
@@ -6519,10 +6515,8 @@ abstract class Process: Procedure, HierComp, EventClient
     }
   }
   
-  final override ref Random getRandGen() {
-    synchronized(this) {
-      return _randGen;
-    }
+  final override _esdl__RandGen getRandGen() {
+    return _randGen;
   }
 
   // For all the timed-waits during the execution of the process, use
@@ -7376,6 +7370,7 @@ class RootThread: Procedure
   this(RootEntity root, void function() fn,
        size_t fcore=0, size_t sz = 0 ) {
     synchronized(this) {
+      _randGen = new _esdl__RandGen(uniform!int());
       if(sz is 0) {
 	_thread = new EsdlThread(root, () {fn_wrap(fn, fcore);});
       }
@@ -7388,6 +7383,7 @@ class RootThread: Procedure
   this(RootEntity root, void delegate() dg,
        size_t fcore=0, size_t sz = 0 ) {
     synchronized(this) {
+      _randGen = new _esdl__RandGen(uniform!int());
       if(sz is 0) {
 	_thread = new EsdlThread(root, () {dg_wrap(dg, fcore);});
       }
@@ -7403,7 +7399,7 @@ class RootThread: Procedure
   }
 
 
-  @_esdl__ignore Random _randGen;
+  @_esdl__ignore _esdl__RandGen _randGen;
   uint _randSeed;
 
   final override void setRandSeed(uint seed) {
@@ -7419,10 +7415,8 @@ class RootThread: Procedure
     }
   }
   
-  final override ref Random getRandGen() {
-    synchronized(this) {
-      return _randGen;
-    }
+  final override _esdl__RandGen getRandGen() {
+    return _randGen;
   }
 
   final override bool isDynamic() {

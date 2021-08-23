@@ -539,11 +539,19 @@ class _esdl__RandGen
 
   private uint _seed;
 
+  ref Random getGen() {
+    return _gen;
+  }
+
   this(uint seed) {
     _seed = seed;
     _gen = Random(seed);
   }
 
+  void setState(ref Random state) {
+    _gen = state;
+  }
+  
   void seed(uint seed) {
     _seed = seed;
     _gen.seed(seed);

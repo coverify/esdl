@@ -2,7 +2,7 @@ module esdl.rand.base;
 
 import std.traits: isIntegral, isBoolean;
 import std.algorithm: canFind;
-import std.random: Random;
+import std.random: Random, uniform;
 import std.range: isRandomAccessRange;
 
 import esdl.solver.base;
@@ -1349,21 +1349,25 @@ interface CstLogicTerm: CstTerm
 
 }
 
+static _esdl__RandGen _randGen;
+
 // Each process, routine and the root process have their own random
 // generator. This is done to enable random stability.
-ref Random getRandGen() {
+_esdl__RandGen getRandGen() {
   import esdl.base.core: Procedure, Process, RootThread;
   Procedure proc;
   proc = Process.self;
-  if(proc is null) {
+  if (proc is null) {
     proc = RootThread.self;
   }
-  if(proc !is null) {
+  if (proc !is null) {
     return proc.getRandGen();
   }
   else {
-    assert(false, "getRandGen can be accessed only from a Process," ~
-	   " or RootThread");
+    if (_randGen is null) {
+      _randGen = new _esdl__RandGen(uniform!int());
+    }
+    return _randGen;
   }
 }
 
@@ -1375,7 +1379,7 @@ T urandom(T=uint)() if (isIntegral!T || isBitVector!T) {
   }
   else {
     import std.random: uniform;
-    auto v = uniform!T(getRandGen());
+    auto v = uniform!T(getRandGen().getGen());
     // debug(SEED) {
     //   import std.stdio;
     //   stdout.writeln("URANDOM returns: ", v);

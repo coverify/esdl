@@ -661,7 +661,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       import esdl.base.core: Procedure;
       auto proc = Procedure.self;
       if (proc !is null) {
-	Random procRgen = proc.getRandGen();
 	_esdl__seed = 0; // uniform!(uint)(procRgen);
       }
       else {
