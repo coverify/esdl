@@ -19,13 +19,11 @@ public import esdl.data.time;
 public import esdl.base.comm;
 import esdl.data.bvec: isBitVector;
 
-import esdl.rand.misc: _esdl__RandGen;
-
 // use atomicStore and atomicLoad
 // This would get redundant later when share construct gets functional
 // in the D compiler.
 
-import std.traits: isArray, isIntegral;
+import std.traits: isArray, isIntegral, isBoolean;
 import std.random: Random, uniform;
 
 import esdl.sys.sched: stickToCpuCore, CPU_COUNT, CPU_COUNT_AFFINITY, CPU_LIST;
@@ -4497,6 +4495,9 @@ class AsyncLock: CoreSemaphore
 
 interface Procedure: NamedComp
 {
+
+  import esdl.base.rand: _esdl__RandGen;
+
   // returns true if the process was spawned at run time
   // on the other hand if the process was created at time of
   // elaboration, return false.
@@ -6159,7 +6160,8 @@ class BaseRoutine: Process
 
 abstract class Process: Procedure, HierComp, EventClient
 {
-  import esdl.rand: urandom;
+  import esdl.base.rand: urandom, _esdl__RandGen;
+
   mixin HierMixin;
 
   __gshared size_t _procCount;
@@ -7345,6 +7347,8 @@ class Channel: ChannelIF, NamedComp // Primitive Channel
 
 class RootThread: Procedure
 {
+  import esdl.base.rand: _esdl__RandGen;
+
   mixin NamedMixin;
 
   EsdlThread _thread;

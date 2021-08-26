@@ -3,7 +3,6 @@ module esdl.solver.dist;
 import esdl.solver.base: CstDistSolverBase;
 
 import esdl.rand.base: CstDomBase;
-import esdl.rand.misc: _esdl__RandGen;
 
 import esdl.data.bvec: isBitVector, to;
 
@@ -177,6 +176,7 @@ struct CstVecDistRange(T)
 
 class CstVecDistSolver(T): CstDistSolverBase
 {
+  import esdl.base.rand: _esdl__RandGen;
   import std.random: uniform, rndGen, Random;
 
   CstVecDistRange!T [] _set;
@@ -244,7 +244,7 @@ class CstVecDistSolver(T): CstDistSolverBase
   }
 
   T urandom() {
-    import esdl.rand: getRandGen;
+    import esdl.base.rand: getRandGen;
     return uniform(getRandGen());
   }
 
@@ -374,6 +374,7 @@ struct CstLogicDistRange(T)
 
 class CstLogicDistSolver(T): CstDistSolverBase
 {
+  import esdl.base.rand: _esdl__RandGen;
   import std.random: uniform, rndGen, Random;
 
   CstLogicDistRange!T [] _set;

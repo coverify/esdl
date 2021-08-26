@@ -13,6 +13,7 @@ import std.container: Array;
 import std.algorithm.searching: canFind;
 import std.array;
 import esdl.rand.cstx: CstParseData, CstParser;
+import esdl.base.rand: _esdl__RandGen, getRandGen;
 
 
 static CstParseData constraintXlate(string PROXY, string CST,

@@ -8,15 +8,17 @@ import esdl.data.bvec: isBitVector;
 import esdl.data.charbuf: Charbuf;
 
 import esdl.rand.base: CstValue, CstDomBase, CstDomSet, CstIterator,
-  CstVecNodeIntf, CstVarNodeIntf, CstVecPrim, DomType, CstLogicTerm, CstVecTerm, CstVecValueBase, CstDepIntf;
-// import esdl.rand.misc: rand, writeHexString, _esdl__RandGen;
-import esdl.rand.misc: rand, _esdl__RandGen, writeHexString, isVecSigned,
+  CstVecNodeIntf, CstVarNodeIntf, CstVecPrim, DomType, CstLogicTerm,
+  CstVecTerm, CstVecValueBase, CstDepIntf;
+import esdl.rand.misc: rand, writeHexString, isVecSigned,
   CstVectorOp, CstInsideOp, CstCompareOp, CstLogicOp;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.pred: CstPredicate, Hash;
 import esdl.rand.expr: CstNotLogicExpr, CstLogic2LogicExpr;
 
 import esdl.solver.base: CstSolver, CstDistSolverBase;
+
+import esdl.base.rand: _esdl__RandGen;
 
 
 abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):

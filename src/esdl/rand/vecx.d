@@ -16,6 +16,8 @@ import esdl.rand.expr: CstRangeExpr, CstVec2LogicExpr;
 import esdl.rand.domain: CstVecValue, CstArrIterator, CstArrLength, CstDomain;
 import esdl.rand.meta: _esdl__ProxyResolve, _esdl__staticCast, _esdl__ARG;
 
+import esdl.base.rand: _esdl__RandGen;
+
 import std.algorithm.searching: canFind;
 
 interface CstVecIndexed { }

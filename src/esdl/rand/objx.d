@@ -19,6 +19,7 @@ import esdl.rand.domain: CstArrIterator, CstArrLength;
 import esdl.rand.meta: _esdl__ProxyResolve, _esdl__staticCast;
 
 import std.algorithm.searching: canFind;
+import esdl.base.rand: _esdl__RandGen, getRandGen;
 
 interface CstObjIndexed { }
 

@@ -1,6 +1,5 @@
 module esdl.rand.misc;
 
-import esdl.data.bvec: isBitVector;
 import esdl.data.queue;
 import esdl.data.charbuf;
 import std.traits: isIntegral, isBoolean, isArray, EnumMembers,
@@ -12,6 +11,7 @@ public enum SolveOrder: ubyte { UNDECIDED, NOW, LATER }
 
 // write in Hex form for all the bytes of data
 size_t writeHexString(T)(T val, ref Charbuf str) {
+  import esdl.data.bvec: isBitVector;
   static if (isBitVector!T) {
     enum size_t NIBBLES = 2 * (T.SIZE + 7)/8;
     enum size_t NIBBLESPERWORD = 2 * T.STORE_T.sizeof;
@@ -105,6 +105,7 @@ struct rand
 // struct _esdl__rand(N...) { }
 
 template isRandomizableInt(T) {
+  import esdl.data.bvec: isBitVector;
   enum bool isRandomizableInt =
     isIntegral!T || isBitVector!T || isBoolean!T; // || isSomeChar!T
 }
@@ -290,6 +291,7 @@ template isRandObjectArray(T) {
 }
 
 template isVecSigned(L) {
+  import esdl.data.bvec: isBitVector;
   import std.traits: isIntegral, isSigned;
   static if (is(L: bool))
     enum bool isVecSigned = false;
@@ -530,117 +532,6 @@ template scanRandAttr(A...) {
   }
 }
 
-
-class _esdl__RandGen
-{
-  import std.random;
-
-  private Random _gen;
-
-  private uint _seed;
-
-  ref Random getGen() {
-    return _gen;
-  }
-
-  this(uint seed) {
-    _seed = seed;
-    _gen = Random(seed);
-  }
-
-  void setState(ref Random state) {
-    _gen = state;
-  }
-  
-  void seed(uint seed) {
-    _seed = seed;
-    _gen.seed(seed);
-  }
-
-  bool flip() {
-    auto x = dice(_gen, 50, 50);
-    if (x == 0) return false;
-    else return true;
-  }
-
-  double get() {
-    return uniform(0.0, 1.0, _gen);
-  }
-
-  @property T gen(T)() {
-    static if (isBoolean!T) {
-      return flip();
-    }
-    else static if (is (T == enum)) {
-      static immutable T[EnumMembers!T.length] vals = [EnumMembers!T];
-      return vals[uniform(0, cast(uint) vals.length, _gen)];
-    }
-    else static if (isIntegral!T) {
-      return uniform!(T)(_gen);
-    }
-    else static if (isBitVector!T) {
-      T val;
-      val.randomize(_gen);
-      return val;
-    }
-    else {
-      static assert(false);
-    }
-  }
-
-  @property void gen(T)(T* t) {
-    static if (isBoolean!T) {
-      *t = cast(T) flip();
-    }
-    else static if (is (T == enum)) {
-      static immutable T[EnumMembers!T.length] vals = [EnumMembers!T];
-      *t = vals[uniform(0, cast(uint) vals.length, _gen)];
-    }
-    else static if(isIntegral!T) {
-      *t = uniform!(T)(_gen);
-    }
-    else static if(isBitVector!T) {
-      t.randomize(_gen);
-    }
-    else {
-      static assert(false);
-    }
-  }
-
-  @property void gen(T)(ref T t) {
-    static if (isBoolean!T) {
-      t = cast(T) flip();
-    }
-    else static if (is (T == enum)) {
-      static immutable T[EnumMembers!T.length] vals = [EnumMembers!T];
-      t = vals[uniform(0, cast(uint) vals.length, _gen)];
-    }
-    else static if(isIntegral!T) {
-      t = uniform!(T)(_gen);
-    }
-    else static if(isBitVector!T) {
-      t.randomize(_gen);
-    }
-    else {
-      static assert(false);
-    }
-  }
-
-  @property auto gen(T1, T2)(T1 a, T2 b)
-    if(isIntegral!T1 && isIntegral!T2) {
-      return uniform(a, b, _gen);
-    }
-
-  @property void gen(T, T1, T2)(ref T t, T1 a, T2 b)
-    if(isIntegral!T1 && isIntegral!T2) {
-      t = uniform(a, b, _gen);
-    }
-
-  @property void gen(T, T1, T2)(T* t, T1 a, T2 b)
-    if(isIntegral!T1 && isIntegral!T2) {
-      *t = uniform(a, b, _gen);
-    }
-}
 
 enum CstUnaryOp: byte
 {   NOT,

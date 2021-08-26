@@ -2,7 +2,7 @@ module esdl.rand.expr;
 
 import esdl.solver.base: CstSolver, CstDistSolverBase;
 
-import esdl.rand.misc: rand, _esdl__RandGen, isVecSigned, Unconst,
+import esdl.rand.misc: rand, isVecSigned, Unconst,
   CstVectorOp, CstInsideOp;
 import esdl.rand.misc: CstBinaryOp, CstCompareOp, CstLogicOp,
   CstUnaryOp, CstSliceOp, writeHexString, CstUniqueOp;

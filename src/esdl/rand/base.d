@@ -13,8 +13,10 @@ import esdl.rand.expr: CstVecArrExpr, CstVecSliceExpr, CstRangeExpr,
   CstNotLogicExpr, CstNegVecExpr, CstInsideArrExpr;
 import esdl.rand.pred: CstPredGroup, CstPredicate, Hash;
 import esdl.rand.proxy: _esdl__Proxy;
-import esdl.rand.misc: _esdl__RandGen, CstVectorOp, CstLogicOp, CstCompareOp,
+import esdl.rand.misc: CstVectorOp, CstLogicOp, CstCompareOp,
   CstBinaryOp, SolveOrder;
+
+import esdl.base.rand: _esdl__RandGen, getRandGen;
 
 import esdl.data.bvec: isBitVector;
 import esdl.data.folder;
@@ -1347,71 +1349,5 @@ interface CstLogicTerm: CstTerm
     return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICAND);
   }
 
-}
-
-static _esdl__RandGen _randGen;
-
-// Each process, routine and the root process have their own random
-// generator. This is done to enable random stability.
-_esdl__RandGen getRandGen() {
-  import esdl.base.core: Procedure, Process, RootThread;
-  Procedure proc;
-  proc = Process.self;
-  if (proc is null) {
-    proc = RootThread.self;
-  }
-  if (proc !is null) {
-    return proc.getRandGen();
-  }
-  else {
-    if (_randGen is null) {
-      _randGen = new _esdl__RandGen(uniform!int());
-    }
-    return _randGen;
-  }
-}
-
-T urandom(T=uint)() if (isIntegral!T || isBitVector!T) {
-  static if(isBitVector!T) {
-    T v;
-    v.randomize(getRandGen());
-    return v;
-  }
-  else {
-    import std.random: uniform;
-    auto v = uniform!T(getRandGen().getGen());
-    // debug(SEED) {
-    //   import std.stdio;
-    //   stdout.writeln("URANDOM returns: ", v);
-    // }
-    return v;
-  }
-}
-
-bool urandom(T=bool)() if (isBoolean!T) {
-  import std.random: uniform;
-  uint v = uniform!("[]", uint)(0, 1, getRandGen());
-  if (v == 0) return false;
-  else return true;
- }
-
-R shuffle(R)(ref R range) {
-  import std.random: randomShuffle;
-  return randomShuffle(range, getRandGen());
- }
-
-T urandom(string BOUNDARY="[)", T=uint)(T min, T max)
-  if (isIntegral!T || isBitVector!T) {
-    import std.random: uniform;
-    return uniform!(BOUNDARY, T)(min, max, getRandGen());
-  }
-
-T urandom_range(string BOUNDARY="[)", T=uint)(T min, T max) {
-  import std.random: uniform;
-  return uniform!(BOUNDARY, T)(min, max, getRandGen());
-}
-
-void srandom(uint _seed) {
-  getRandGen().seed(_seed);
 }
 

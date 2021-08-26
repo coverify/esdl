@@ -30,6 +30,9 @@ import esdl.rand.domain: CstVecValue, CstLogicValue;
 import esdl.rand.proxy;
 import esdl.rand.func;
 
+import esdl.base.rand: _esdl__RandGen, getRandGen;
+
+
 /// C++ type static_cast for down-casting when you are sure
 private import std.typetuple: staticIndexOf, TypeTuple;
 private import std.traits: BaseClassesTuple; // required for staticIndexOf
@@ -782,6 +785,7 @@ class _esdl__ProxyNoRand(_esdl__T)
 
 mixin template _esdl__ProxyMixin(_esdl__T)
 {
+  import esdl.base.rand: _esdl__RandGen, getRandGen;
   alias _esdl__PROXYT = typeof(this);
 
   debug(CSTPARSER) {

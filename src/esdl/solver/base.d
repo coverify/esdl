@@ -3,6 +3,7 @@ module esdl.solver.base;
 // import esdl.rand.base;
 
 import esdl.rand.misc;
+import esdl.base.rand: _esdl__RandGen;
 import esdl.rand.pred: CstPredGroup;
 import esdl.rand.base: CstDomBase, CstVecValueBase;
 
