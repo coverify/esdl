@@ -372,6 +372,7 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
     static if (HAS_RAND_ATTRIB) {
       if (! isSolved()) {
 	Unconst!T newVal;
+	assert (randGen !is null);
 	randGen.gen(newVal);
 	if (newVal != *(getRef())) {
 	  _valueChanged = true;
