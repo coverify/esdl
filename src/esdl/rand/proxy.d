@@ -378,8 +378,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   Folder!(CstPredicate, "toRolledPreds") _toRolledPreds;
   Folder!(CstPredicate, "resolvedPreds") _resolvedPreds;
   Folder!(CstPredicate, "toResolvedPreds") _toResolvedPreds;
-  Folder!(CstPredicate, "resolvedDynPreds") _resolvedDynPreds;
-  Folder!(CstPredicate, "toResolvedDynPreds") _toResolvedDynPreds;
 
   Folder!(CstPredicate, "toSolvePreds") _toSolvePreds;
 
@@ -705,8 +703,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _toRolledPreds.reset();
     _resolvedPreds.reset();
     _toResolvedPreds.reset();
-    _resolvedDynPreds.reset();
-    _toResolvedDynPreds.reset();
     _toSolvePreds.reset();
     _unresolvedPreds.reset();
     _toUnresolvedPreds.reset();
@@ -729,16 +725,13 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	   // _unrolledPreds.length > 0 ||
 	   _toUnrolledPreds.length > 0 ||
 	   // _resolvedMonoPreds.length > 0 ||
-	   // _resolvedDynPreds.length > 0 ||
 	   // _resolvedPreds.length > 0 ||
-	   _toResolvedDynPreds.length > 0 ||
 	   _toResolvedPreds.length > 0 ||
 	   _toUnresolvedPreds.length > 0 ||
 	   _toRolledPreds.length > 0) {
       assert (_newPreds.length == 0);
       assert (_unrolledPreds.length == 0);
       assert (_resolvedPreds.length == 0);
-      assert (_resolvedDynPreds.length == 0);
 
       if (_esdl__debugSolver) {
 	import std.stdio;
@@ -749,10 +742,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	if (_toUnrolledPreds.length > 0) {
 	  stdout.writeln("_toUnrolledPreds: ");
 	  foreach (predicate; _toUnrolledPreds) stdout.writeln(predicate.describe());
-	}
-	if (_toResolvedDynPreds.length > 0) {
-	  stdout.writeln("_toResolvedDynPreds: ");
-	  foreach (predicate; _toResolvedDynPreds) stdout.writeln(predicate.describe());
 	}
 	if (_toResolvedPreds.length > 0) {
 	  stdout.writeln("_toResolvedPreds: ");
@@ -777,9 +766,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       // if (_unrolledPreds.length > 0) {
       // 	writeln("Here for _unrolledPreds: ", _unrolledPreds.length);
       // }
-      // if (_resolvedDynPreds.length > 0) {
-      // 	writeln("Here for _resolvedDynPreds: ", _resolvedDynPreds.length);
-      // }
       // if (_resolvedPreds.length > 0) {
       // 	writeln("Here for _resolvedPreds: ", _resolvedPreds.length);
       // }
@@ -796,7 +782,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       // with new predicates
 
       _resolvedPreds.swap(_toResolvedPreds);
-      _resolvedDynPreds.swap(_toResolvedDynPreds);
       _unresolvedPreds.swap(_toUnresolvedPreds);
 
       if (_toUnrolledPreds.length > 0 || _toNewPreds.length > 0) {
@@ -874,28 +859,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       }
       
       
-      // first handle _resolvedDynPreds
-      _resolvedDynPreds.swap(_toSolvePreds);
-
-      foreach (pred; _toSolvePreds) {
-	// if (_esdl__debugSolver) {
-	//   import std.stdio;
-	//   writeln("Solving Maybe Mono Predicate: ", pred.describe());
-	// }
-	if (pred.isMarkedUnresolved(_lap)) {
-	  _resolvedDynPreds ~= pred;
-	}
-	else {
-	  // if (! procMaybeMonoDomain(pred)) {
-	  _solvePreds ~= pred;
-	  // }
-	  //   else {
-	  //     _solvedSome = true;
-	  //   }
-	}
-      }
-      _toSolvePreds.reset();
-
       // now the normal _resolvedPreds
       _resolvedPreds.swap(_toSolvePreds);
       
@@ -963,14 +926,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	//   stdout.writeln("_resolvedMonoPreds: ");
 	//   foreach (predicate; _resolvedMonoPreds) stdout.writeln(predicate.describe());
 	// }
-	if (_resolvedDynPreds.length > 0) {
-	  stdout.writeln("_resolvedDynPreds: ");
-	  foreach (predicate; _resolvedDynPreds) stdout.writeln(predicate.describe());
-	}
-	if (_toResolvedDynPreds.length > 0) {
-	  stdout.writeln("_toResolvedDynPreds: ");
-	  foreach (predicate; _toResolvedDynPreds) stdout.writeln(predicate.describe());
-	}
 	if (_toResolvedPreds.length > 0) {
 	  stdout.writeln("_toResolvedPreds: ");
 	  foreach (predicate; _toResolvedPreds) stdout.writeln(predicate.describe());
@@ -1048,16 +1003,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     // //   // procMonoDomain(pred._rnds[0], pred);
     // // }
     // else
-    if (pred._dynRnds.length > 0) {
-      foreach (rnd; pred._dynRnds) {
-	auto dom = rnd.getResolved();
-	dom._tempPreds ~= pred;
-      }
-      _toResolvedDynPreds ~= pred;
-    }
-    else {
-      _toResolvedPreds ~= pred;
-    }
+    _toResolvedPreds ~= pred;
   }
 
   void addNewPredicate(CstPredicate pred) {

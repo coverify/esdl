@@ -146,13 +146,11 @@ class CstPredGroup			// group of related predicates
   // List of predicates permanently in this group
   Folder!(CstPredicate, "preds") _preds;
   Folder!(CstPredicate, "guards") _guards;
-  Folder!(CstPredicate, "dynPreds") _dynPreds;
 
   CstPredicate _distPred;
 
   Folder!(CstPredicate, "predList") _predList;
   Folder!(CstPredicate, "guardList") _guardList;
-  Folder!(CstPredicate, "dynPredList") _dynPredList;
 
   CstPredicate[] predicates() {
     return _preds[];
@@ -178,15 +176,6 @@ class CstPredGroup			// group of related predicates
   void addGuard(CstPredicate pred) {
     _guardList ~= pred;
   }
-
-  void addDynPredicate(CstPredicate pred) {
-    _dynPredList ~= pred;
-  }
-
-  // The flag _hasDynamicBinding gets set if there is at least one
-  // predicate that has a dynamically resolvable constraint --
-  // typically that would mean a random variable dependancy as part of index 
-  bool _hasDynamicBinding;
 
   Folder!(CstDomBase, "doms") _doms;
   uint addDomain(CstDomBase dom) {
@@ -224,10 +213,6 @@ class CstPredGroup			// group of related predicates
     _varArrs ~= varArr;
   }
 
-  // If there are groups that are related. This will only be true if
-  // the _hasDynamicBinding flag is true
-  Folder!(CstPredGroup, "boundGroups") _boundGroups;
-
   void setGroupContext(CstPredicate solvablePred, uint level) {
     import std.algorithm.sorting: sort; 
     
@@ -261,21 +246,11 @@ class CstPredGroup			// group of related predicates
       pred._group = this;
       _guards ~= pred;
     }
-    foreach (pred; _dynPreds) pred._group = null;
-    _dynPreds.reset();
-    foreach (pred; sort!((x, y) => x.name() < y.name())(_dynPredList[])) {
-      pred._group = this;
-      if (pred._soft != 0) _hasSoftConstraints = true;
-      if (pred._vectorOp != CstVectorOp.NONE) _hasVectorConstraints = true;
-      if (pred._uniqueFlag is true) _hasUniqueConstraints = true;
-      _dynPreds ~= pred;
-    }
     if (_distPred !is null) _distPred._group = this;
     
     // for the next cycle
     _predList.reset();
     _guardList.reset();
-    _dynPredList.reset();
     
   }
 
@@ -543,12 +518,6 @@ class CstPredGroup			// group of related predicates
     if (_guards.length > 0) {
       description ~= "  Guards:\n";
       foreach (pred; _guards) {
-	description ~= "    " ~ pred.name() ~ '\n';
-      }
-    }
-    if (_dynPreds.length > 0) {
-      description ~= "  Dynamic Predicates:\n";
-      foreach (pred; _dynPreds) {
 	description ~= "    " ~ pred.name() ~ '\n';
       }
     }
@@ -867,7 +836,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   
   CstDomBase[] _rnds;
   CstDomSet[] _rndArrs;
-  CstDomBase[] _dynRnds;
   CstDomBase[] _vars;
   CstDomSet[] _varArrs;
   CstValue[]  _vals;
@@ -882,11 +850,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   uint _unrollIterVal;
 
   uint _unresolveLap;
-
-  bool isDynamic() {
-    if (_dynRnds.length > 0) return true;
-    else return false;
-  }
 
   final CstDomBase[] getRnds() {
     return _rnds;
@@ -977,10 +940,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return _deps.length == 0 && _iters.length == 0;
   }
   
-  bool hasDynamicBinding() {
-    return _dynRnds.length > 0;
-  }
-
   final void setPredContext() {
     _expr.setPredContext(this);
   }
@@ -1048,9 +1007,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       if (! getExpr().isOrderingExpr()) {
 	foreach (rnd; _rnds) {
 	  rnd.registerRndPred(this);
-	  if (! rnd.isStatic()) {
-	    _dynRnds ~= rnd;
-	  }
 	}
 	foreach (rnd; _rndArrs) {
 	  rnd.registerRndPred(this);
@@ -1197,12 +1153,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	description ~= "\t" ~ rnd.fullName() ~ "\n";
       }
     }
-    if (_dynRnds.length > 0) {
-      description ~= "    Dyn Domains: \n";
-      foreach (rnd; _dynRnds) {
-	description ~= "\t" ~ rnd.fullName() ~ "\n";
-      }
-    }
     if (_vars.length > 0) {
       description ~= "    Variables: \n";
       foreach (var; _vars) {
@@ -1321,11 +1271,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   	     "A predicate may be added to a group, but group should not change");
     }
     
-    if (this.isDynamic()) {
-      if (this.withDist()) { assert (false); } // group.addWithDistPredicate(this);
-      else                 group.addDynPredicate(this);
-    }
-    else if (this.isDist()) {
+    if (this.isDist()) {
       assert (group.hasDistConstraints());
       if (this.isGuardEnabled()) {
   	if (group._distPred !is null) {
@@ -1381,11 +1327,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   //   }
   //   if (_rndArrs.length != 0) group.needSync();
   //   if (_bitIdxs.length != 0) group.needSync();
-  //   if (this.isDynamic()) {
-  //     if (this.withDist()) { assert (false); } // group.addWithDistPredicate(this);
-  //     else                 group.addDynPredicate(this);
-  //   }
-  //   else if (this.isDist()) {
+  //   if (this.isDist()) {
   //     assert (group.hasDistConstraints());
   //     if (this.isGuardEnabled()) {
   // 	if (group._distPred !is null) {
