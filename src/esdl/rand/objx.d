@@ -321,17 +321,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	// _esdl__doConstrain(getProxyRoot());
       }
 
-      void setDomainContext(CstPredicate pred,
-			    ref CstDomBase[] rnds,
-			    ref CstDomSet[] rndArrs,
-			    ref CstDomBase[] vars,
-			    ref CstDomSet[] varArrs,
-			    ref CstDomBase[] dists,
-			    ref CstValue[] vals,
-			    ref CstIterator[] iters,
-			    ref CstDepIntf[] idxs,
-			    ref CstDomBase[] bitIdxs,
-			    ref CstDepIntf[] deps) {
+      void setDomainContext(CstPredicate pred, DomainContextEnum context) {
 	// no parent
       }
 
@@ -474,28 +464,12 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	}
       }
 
-      void setDomainContext(CstPredicate pred,
-			    ref CstDomBase[] rnds,
-			    ref CstDomSet[] rndArrs,
-			    ref CstDomBase[] vars,
-			    ref CstDomSet[] varArrs,
-			    ref CstDomBase[] dists,
-			    ref CstValue[] vals,
-			    ref CstIterator[] iters,
-			    ref CstDepIntf[] idxs,
-			    ref CstDomBase[] bitIdxs,
-			    ref CstDepIntf[] deps) {
-	static if (RAND_ATTR.isRand()) {
-	  // 	if (! canFind(rnds, this)) rnds ~= this;
-	  // }
-	  // else {
-	  // 	if (! canFind(vars, this)) vars ~= this;
-	}
+      void setDomainContext(CstPredicate pred, DomainContextEnum context) {
 	if (_parent.isStatic()) {
 	  auto len = _parent._arrLen;
-	  if (! deps.canFind(len)) deps ~= len;
+	  pred.addDep(len, context);
 	}
-	_parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
+	_parent.setDomainContext(pred, context);
 
 	if (_indexExpr !is null) {
 	  // Here we need to put the parent as a dep for the pred
@@ -505,9 +479,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	  // not. When the indexExpr gets resolved, it should inform
 	  // the parent about resolution which in turn should inform
 	  // the pred that it can go ahead
-	  CstDomBase[] indexes;
-	  _indexExpr.setDomainContext(pred, indexes, rndArrs, indexes, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
-	  foreach (index; indexes) idxs ~= index;
+	  _indexExpr.setDomainContext(pred, DomainContextEnum.INDEX);
 	}
       }
     }
@@ -859,17 +831,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	return getLenTmpl(this);
       }
 
-      void setDomainContext(CstPredicate pred,
-			    ref CstDomBase[] rnds,
-			    ref CstDomSet[] rndArrs,
-			    ref CstDomBase[] vars,
-			    ref CstDomSet[] varArrs,
-			    ref CstDomBase[] dists,
-			    ref CstValue[] vals,
-			    ref CstIterator[] iters,
-			    ref CstDepIntf[] idxs,
-			    ref CstDomBase[] bitIdxs,
-			    ref CstDepIntf[] deps) {
+      void setDomainContext(CstPredicate pred, DomainContextEnum context) {
 	// arrlen should not be handled here. It is handled as part
 	// of the indexExpr in the elements when required (that is
 	// when indexExpr is not contant, but an expression)
@@ -1042,17 +1004,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	return getLenTmpl(this);
       }
 
-      void setDomainContext(CstPredicate pred,
-			    ref CstDomBase[] rnds,
-			    ref CstDomSet[] rndArrs,
-			    ref CstDomBase[] vars,
-			    ref CstDomSet[] varArrs,
-			    ref CstDomBase[] dists,
-			    ref CstValue[] vals,
-			    ref CstIterator[] iters,
-			    ref CstDepIntf[] idxs,
-			    ref CstDomBase[] bitIdxs,
-			    ref CstDepIntf[] deps) {
+      void setDomainContext(CstPredicate pred, DomainContextEnum context) {
 	// arrlen should not be handled here. It is handled as part
 	// of the indexExpr in the elements when required (that is
 	// when indexExpr is not contant, but an expression)
@@ -1061,15 +1013,11 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	// iters ~= iter;
 	if (_parent.isStatic()) {
 	  auto len = _parent._arrLen;
-	  if (! deps.canFind(len)) deps ~= len;
+	  pred.addDep(len, context);
 	}
-	_parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs,
-				 dists, vals, iters, idxs, bitIdxs, deps);
+	_parent.setDomainContext(pred, context);
 	if (_indexExpr !is null) {
-	  CstDomBase[] indexes;
-	  _indexExpr.setDomainContext(pred, indexes, rndArrs, indexes, varArrs,
-				      dists, vals, iters, idxs, bitIdxs, deps);
-	  foreach (index; indexes) if (! idxs.canFind(index)) idxs ~= index;
+	  _indexExpr.setDomainContext(pred, DomainContextEnum.INDEX);
 	}
       }
 

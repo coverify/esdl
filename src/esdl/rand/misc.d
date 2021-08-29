@@ -9,6 +9,8 @@ import std.meta: AliasSeq;
 
 public enum SolveOrder: ubyte { UNDECIDED, NOW, LATER }
 
+public enum DomainContextEnum: ubyte { DEFAULT, INDEX, BITINDEX, DIST }
+
 // write in Hex form for all the bytes of data
 size_t writeHexString(T)(T val, ref Charbuf str) {
   import esdl.data.bvec: isBitVector;

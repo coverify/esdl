@@ -11,7 +11,7 @@ import esdl.rand.base: CstValue, CstDomBase, CstDomSet, CstIterator,
   CstVecNodeIntf, CstVarNodeIntf, CstVecPrim, DomType, CstLogicTerm,
   CstVecTerm, CstVecValueBase, CstDepIntf;
 import esdl.rand.misc: rand, writeHexString, isVecSigned,
-  CstVectorOp, CstInsideOp, CstCompareOp, CstLogicOp;
+  CstVectorOp, CstInsideOp, CstCompareOp, CstLogicOp, DomainContextEnum;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.pred: CstPredicate, Hash;
 import esdl.rand.expr: CstNotLogicExpr, CstLogic2LogicExpr;
@@ -569,20 +569,10 @@ class CstArrIterator(RV): CstIterator
   //   return false;
   // }
 
-  void setDomainContext(CstPredicate pred,
-			ref CstDomBase[] rnds,
-			ref CstDomSet[] rndArrs,
-			ref CstDomBase[] vars,
-			ref CstDomSet[] varArrs,
-			ref CstDomBase[] dists,
-			ref CstValue[] vals,
-			ref CstIterator[] iters,
-			ref CstDepIntf[] idxs,
-			ref CstDomBase[] bitIdxs,
-			ref CstDepIntf[] deps) {
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
     auto len = getLenVec();
-    if (! deps.canFind(len)) deps ~= len;
-    if (! iters.canFind(this)) iters ~= this;
+    pred.addDep(len, context);
+    pred.addVarIter(this, context);
   }
 
   bool signed() {
@@ -827,37 +817,17 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   
   bool isIterator() { return false; }
   
-  void setDomainContext(CstPredicate pred,
-			ref CstDomBase[] rnds,
-			ref CstDomSet[] rndArrs,
-			ref CstDomBase[] vars,
-			ref CstDomSet[] varArrs,
-			ref CstDomBase[] dists,
-			ref CstValue[] vals,
-			ref CstIterator[] iters,
-			ref CstDepIntf[] idxs,
-			ref CstDomBase[] bitIdxs,
-			ref CstDepIntf[] deps) {
-    bool listed;
-    foreach (rnd; rnds) {
-      if (rnd is this) {
-	listed = true;
-	break;
-      }
-    }
-    if (listed is false) {
-      if (pred._scope is null || ! pred._scope.isRelated(this))
-	rnds ~= this;
-      else
-	vars ~= this;
-    }
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+    if (pred._scope is null || ! pred._scope.isRelated(this))
+      pred.addRnd(this, context);
+    else
+      pred.addVar(this, context);
     static if (HAS_RAND_ATTRIB) {
       if (! this.isStatic()) {
 	if (_type <= DomType.LAZYMONO) _type = DomType.MAYBEMONO;
       }
     }
-    _parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs, dists,
-			     vals, iters, idxs, bitIdxs, deps);
+    _parent.setDomainContext(pred, context);
   }
 
   override void execIterCbs() {
@@ -972,18 +942,8 @@ class CstLogicValue: CstValue, CstLogicTerm
     return true;
   }
 
-  void setDomainContext(CstPredicate pred,
-			ref CstDomBase[] rnds,
-			ref CstDomSet[] rndArrs,
-			ref CstDomBase[] vars,
-			ref CstDomSet[] varArrs,
-			ref CstDomBase[] dists,
-			ref CstValue[] vals,
-			ref CstIterator[] iters,
-			ref CstDepIntf[] idxs,
-			ref CstDomBase[] bitIdxs,
-			ref CstDepIntf[] deps) {
-    vals ~= this;
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+    pred.addVal(this, context);
   }
 
   void writeExprString(ref Charbuf str) {
@@ -1104,18 +1064,8 @@ class CstVecValue(T): CstVecValueBase
     return true;
   }
 
-  void setDomainContext(CstPredicate pred,
-			ref CstDomBase[] rnds,
-			ref CstDomSet[] rndArrs,
-			ref CstDomBase[] vars,
-			ref CstDomSet[] varArrs,
-			ref CstDomBase[] dists,
-			ref CstValue[] vals,
-			ref CstIterator[] iters,
-			ref CstDepIntf[] idxs,
-			ref CstDomBase[] bitIdxs,
-			ref CstDepIntf[] deps) {
-    vals ~= this;
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+    pred.addVal(this, context);
   }
 
   void writeExprString(ref Charbuf str) {

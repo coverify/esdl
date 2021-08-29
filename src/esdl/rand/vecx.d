@@ -219,30 +219,20 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 	return false;
       }
 
-      void setDomainContext(CstPredicate pred,
-			    ref CstDomBase[] rnds,
-			    ref CstDomSet[] rndArrs,
-			    ref CstDomBase[] vars,
-			    ref CstDomSet[] varArrs,
-			    ref CstDomBase[] dists,
-			    ref CstValue[] vals,
-			    ref CstIterator[] iters,
-			    ref CstDepIntf[] idxs,
-			    ref CstDomBase[] bitIdxs,
-			    ref CstDepIntf[] deps) {
+      void setDomainContext(CstPredicate pred, DomainContextEnum context) {
 	// setDomainContext is executed right in the start
 	// dynamic rand_mode information is handled later
 	// do not use isRand here
 	static if (HAS_RAND_ATTRIB) {
 	  if (this.isDist()) {
-	    if (! canFind(dists, this)) dists ~= this;
+	    pred.addDist(this, context);
 	  }
 	  else {
-	    if (! canFind(rnds, this)) rnds ~= this;
+	    pred.addRnd(this, context);
 	  }
 	}
 	else {
-	  if (! canFind(vars, this)) vars ~= this;
+	  pred.addVar(this, context);
 	}
       }
 
@@ -393,17 +383,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	return false;
       }
 
-      void setDomainContext(CstPredicate pred,
-			    ref CstDomBase[] rnds,
-			    ref CstDomSet[] rndArrs,
-			    ref CstDomBase[] vars,
-			    ref CstDomSet[] varArrs,
-			    ref CstDomBase[] dists,
-			    ref CstValue[] vals,
-			    ref CstIterator[] iters,
-			    ref CstDepIntf[] idxs,
-			    ref CstDomBase[] bitIdxs,
-			    ref CstDepIntf[] deps) {
+      void setDomainContext(CstPredicate pred, DomainContextEnum context) {
 	// setDomainContext is executed right in the start
 	// dynamic rand_mode information is handled later
 	// do not use isRand here
@@ -412,22 +392,22 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	    if (_type <= DomType.LAZYMONO) _type = DomType.MAYBEMONO;
 	  }
 	  if (this.isDist()) {
-	    if (! canFind(dists, this)) dists ~= this;
+	    pred.addDist(this, context);
 	  }
 	  else {
-	    if (! canFind(rnds, this)) rnds ~= this;
+	    pred.addRnd(this, context);
 	  }
 	}
 	else {
-	  if (! canFind(vars, this)) vars ~= this;
+	  pred.addVar(this, context);
 	}
 
 	if (_parent.isStatic()) {
 	  auto len = _parent._arrLen;
-	  if (! canFind(deps, len)) deps ~= len;
+	  pred.addDep(len, context);
 	}
 
-	_parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
+	_parent.setDomainContext(pred, context);
 
 	if (_indexExpr !is null) {
 	  // Here we need to put the parent as a dep for the pred
@@ -437,9 +417,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	  // not. When the indexExpr gets resolved, it should inform
 	  // the parent about resolution which in turn should inform
 	  // the pred that it can go ahead
-	  CstDomBase[] indexes;
-	  _indexExpr.setDomainContext(pred, indexes, rndArrs, indexes, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
-	  foreach (index; indexes) idxs ~= index;
+	  _indexExpr.setDomainContext(pred, DomainContextEnum.INDEX);
 	}
       }
 
@@ -737,27 +715,18 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
     }
   }
 
-  override void setDomainArrContext(CstPredicate pred,
-				    ref CstDomBase[] rnds,
-				    ref CstDomSet[] rndArrs,
-				    ref CstDomBase[] vars,
-				    ref CstDomSet[] varArrs,
-				    ref CstDomBase[] dists,
-				    ref CstValue[] vals,
-				    ref CstIterator[] iters,
-				    ref CstDepIntf[] idxs,
-				    ref CstDomBase[] bitIdxs,
-				    ref CstDepIntf[] deps) {
+  override void setDomainArrContext(CstPredicate pred, DomainContextEnum context) {
+    // assert (context == DomainContextEnum.DEFAULT);
     static if (RAND_ATTR.isRand()) {
-      if (! canFind(rndArrs, this)) rndArrs ~= this;
+      pred.addRndArr(this, context);
     }
     else {
-      if (! canFind(varArrs, this)) varArrs ~= this;
+      pred.addVarArr(this, context);
     }
 
     // Unless the array gets resolved, we can not solve the elements
-    if (! canFind(deps, this)) deps ~= this;
-    if (! canFind(deps, _arrLen)) deps ~= _arrLen;
+    pred.addDep(this, context);
+    pred.addDep(_arrLen, context);
   }
 
   final override void markAsUnresolved(uint lap, bool hier) {
@@ -888,17 +857,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	return getLenTmpl(this);
       }
 
-      void setDomainContext(CstPredicate pred,
-			    ref CstDomBase[] rnds,
-			    ref CstDomSet[] rndArrs,
-			    ref CstDomBase[] vars,
-			    ref CstDomSet[] varArrs,
-			    ref CstDomBase[] dists,
-			    ref CstValue[] vals,
-			    ref CstIterator[] iters,
-			    ref CstDepIntf[] idxs,
-			    ref CstDomBase[] bitIdxs,
-			    ref CstDepIntf[] deps) {
+      void setDomainContext(CstPredicate pred, DomainContextEnum context) {
 	// arrlen should not be handled here. It is handled as part
 	// of the indexExpr in the elements when required (that is
 	// when indexExpr is not contant, but an expression)
@@ -1100,17 +1059,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	return getLenTmpl(this);
       }
 
-      void setDomainContext(CstPredicate pred,
-			    ref CstDomBase[] rnds,
-			    ref CstDomSet[] rndArrs,
-			    ref CstDomBase[] vars,
-			    ref CstDomSet[] varArrs,
-			    ref CstDomBase[] dists,
-			    ref CstValue[] vals,
-			    ref CstIterator[] iters,
-			    ref CstDepIntf[] idxs,
-			    ref CstDomBase[] bitIdxs,
-			    ref CstDepIntf[] deps) {
+      void setDomainContext(CstPredicate pred, DomainContextEnum context) {
 	// arrlen should not be handled here. It is handled as part
 	// of the indexExpr in the elements when required (that is
 	// when indexExpr is not contant, but an expression)
@@ -1120,14 +1069,12 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 
 	if (_parent.isStatic()) {
 	  auto len = _parent._arrLen;
-	  if (! canFind(deps, len)) deps ~= len;
+	  pred.addDep(len, context);
 	}
 
-	_parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
+	_parent.setDomainContext(pred, context);
 	if (_indexExpr !is null) {
-	  CstDomBase[] indexes;
-	  _indexExpr.setDomainContext(pred, indexes, rndArrs, indexes, varArrs, dists, vals, iters, idxs, bitIdxs, deps);
-	  foreach (index; indexes) idxs ~= index;
+	  _indexExpr.setDomainContext(pred, DomainContextEnum.INDEX);
 	}
       }
 

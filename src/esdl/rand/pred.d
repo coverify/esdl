@@ -1,6 +1,8 @@
 module esdl.rand.pred;
 
-import std.algorithm;
+import std.algorithm.sorting: sort;
+import std.algorithm.searching: canFind, countUntil;
+import std.algorithm: map, filter;
 import std.array;
 import std.container.array;
 
@@ -701,10 +703,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       _scope.getIterators(_parsedIters, _level);
     }
     else {
-      _parsedIters =
-	_parent._iters[1..$].
-	map!(tr => tr.unrollIterator(unrollIter,
-				     unrollIterVal)).array;
+      _parsedIters.reset();
+      foreach (iter; _parent._iters[1..$].map!(tr =>
+					       tr.unrollIterator(unrollIter,
+								 unrollIterVal))) {
+	_parsedIters ~= iter;
+      }
     }
       
     this.setPredContext();
@@ -834,17 +838,89 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return _dom;
   }
   
-  CstDomBase[] _rnds;
-  CstDomSet[] _rndArrs;
-  CstDomBase[] _vars;
-  CstDomSet[] _varArrs;
-  CstValue[]  _vals;
-  CstDepIntf[] _deps;
-  CstDepIntf[] _idxs;
-  CstDomBase[] _bitIdxs;
-  CstIterator[] _iters;
-  CstIterator[] _parsedIters;
-  CstIterator[] _varIters;
+  Folder!(CstDomBase, "rnds") _rnds;
+  Folder!(CstDomBase, "distRnds") _distRnds;	// temporary folder used in expr.d
+  void addRnd(CstDomBase rnd,
+	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
+    final switch (context) {
+    case DomainContextEnum.DEFAULT: if (! _rnds[].canFind(rnd)) _rnds ~= rnd;
+      break;
+    case DomainContextEnum.DIST: if (! _distRnds[].canFind(rnd)) _distRnds ~= rnd;
+      break;
+    case DomainContextEnum.INDEX: if (! _idxs[].canFind(rnd)) _idxs ~= rnd;
+      break;
+    case DomainContextEnum.BITINDEX: if (! _bitIdxs[].canFind(rnd)) _bitIdxs ~= rnd;
+      break;
+    }
+  }
+  Folder!(CstDomSet, "rndArrs") _rndArrs;
+  void addRndArr(CstDomSet rndArr,
+		 DomainContextEnum context=DomainContextEnum.DEFAULT) {
+    assert (context == DomainContextEnum.DEFAULT);
+    if (! _rndArrs[].canFind(rndArr)) _rndArrs ~= rndArr;
+  }
+  Folder!(CstDomBase, "vars") _vars;
+  void addVar(CstDomBase var,
+	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
+    final switch (context) {
+    case DomainContextEnum.DEFAULT, DomainContextEnum.DIST:
+      if (! _vars[].canFind(var)) _vars ~= var;
+      break;
+    case DomainContextEnum.INDEX: if (! _idxs[].canFind(var)) _idxs ~= var;
+      break;
+    case DomainContextEnum.BITINDEX: if (! _bitIdxs[].canFind(var)) _bitIdxs ~= var;
+      break;
+    }
+  }
+  Folder!(CstDomSet, "varArrs") _varArrs;
+  void addVarArr(CstDomSet varArr,
+		 DomainContextEnum context=DomainContextEnum.DEFAULT) {
+    // assert (context == DomainContextEnum.DEFAULT);
+    if (! _varArrs[].canFind(varArr)) _varArrs ~= varArr;
+  }
+  Folder!(CstDomBase, "dists") _dists;
+  void addDist(CstDomBase dist,
+	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
+    if (! _dists[].canFind(dist)) _dists ~= dist;
+  }
+  Folder!(CstValue, "vals")  _vals;
+  void addVal(CstValue val,
+	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
+    if (! _vals[].canFind(val)) _vals ~= val;
+  }
+  Folder!(CstDepIntf, "deps") _deps;
+  void addDep(CstDepIntf dep,
+	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
+    if (! _deps[].canFind(dep)) _deps ~= dep;
+  }
+  Folder!(CstDepIntf, "idxs") _idxs;
+  void addIdx(CstDepIntf idx,
+	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
+    if (! _idxs[].canFind(idx)) _idxs ~= idx;
+  }
+  Folder!(CstDomBase, "bitIdxs") _bitIdxs;
+  void addBitIdx(CstDomBase bitIdx,
+		 DomainContextEnum context=DomainContextEnum.DEFAULT) {
+    if (! _bitIdxs[].canFind(bitIdx)) _bitIdxs ~= bitIdx;
+  }
+  Folder!(CstIterator, "iters") _iters;
+  void addIter(CstIterator iter,
+	       DomainContextEnum context=DomainContextEnum.DEFAULT) {
+    // if (! _iters[].canFind(iter))
+    _iters ~= iter;
+  }
+  Folder!(CstIterator, "parsedIters") _parsedIters;
+  void addParsedIter(CstIterator parsedIter,
+		     DomainContextEnum context=DomainContextEnum.DEFAULT) {
+    // if (! _parsedIters[].canFind(parsedIter))
+    _parsedIters ~= parsedIter;
+  }
+  Folder!(CstIterator, "varIters") _varIters;
+  void addVarIter(CstIterator varIter,
+		  DomainContextEnum context=DomainContextEnum.DEFAULT) {
+    // if (! _varIters[].canFind(varIter))
+    _varIters ~= varIter;
+  }
 
   CstIterator _unrollIter;
   uint _unrollIterVal;
@@ -852,23 +928,23 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   uint _unresolveLap;
 
   final CstDomBase[] getRnds() {
-    return _rnds;
+    return _rnds[];
   }
 
   final CstDomBase[] getVars() {
-    return _vars;
+    return _vars[];
   }
 
   final CstValue[] getVals() {
-    return _vals;
+    return _vals[];
   }
 
   final CstDomBase[] getDomains() {
-    return _rnds;
+    return _rnds[];
   }
 
   final CstDomSet[] getDomArrs(){
-    return _rndArrs;
+    return _rndArrs[];
   }
 
   // final void tryResolveDepsRolled() {
@@ -950,24 +1026,21 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       else _domainContextSet = true;
     }
 
-    CstDomBase[] dists;
-      
-    _expr.setDomainContext(pred, pred._rnds, pred._rndArrs, pred._vars,
-			   pred._varArrs, dists, pred._vals, pred._varIters,
-			   pred._idxs, pred._bitIdxs, pred._deps);
+    _expr.setDomainContext(pred, DomainContextEnum.DEFAULT);
 
-    if (dists.length > 0) {
-      if (thisPred is true && dists.length == 1 &&
+    if (pred._dists.length > 0) {
+      if (thisPred is true && pred._dists.length == 1 &&
 	  _rnds.length == 0 && _rndArrs.length == 0) {
-	assert (dists[0].isDist());
-	pred._rnds ~= dists[0];
+	assert (pred._dists[0].isDist());
+	pred._rnds ~= pred._dists[0];
       }
       else {
-	foreach (dist; dists) {
-	  if (! pred._vars.canFind(dist)) pred._vars ~= dist;
-	  if (! pred._deps.canFind(dist)) pred._deps ~= dist;
+	foreach (dist; pred._dists) {
+	  pred.addVar(dist);
+	  pred.addDep(dist);
 	}
       }
+      pred._dists.reset();
     }
       
 
@@ -1044,10 +1117,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       //   _deps = _foundDeps.filter!(dep => (! canFind(_parent._deps, dep))).array;
       // }
 
-      foreach (idx; _idxs) if (! idx.isResolvedDep())
-			     if (! _deps.canFind(idx)) _deps ~= idx;
-      foreach (idx; _bitIdxs) if (! idx.isSolved())
-				if (! _deps.canFind(idx)) _deps ~= idx;
+      foreach (idx; _idxs) if (! idx.isResolvedDep()) addDep(idx);
+      foreach (idx; _bitIdxs) if (! idx.isSolved()) addDep(idx);
     
       foreach (dep; _deps) dep.registerDepPred(this);
 
@@ -1062,13 +1133,16 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       // as well
       // _iters = pasredIters.filter!(itr =>
       // 				 canFind(varIters, itr)).array;
+      _iters.reset();
       if (isVisitor()) {
-	_iters = _varIters;
+	_iters.swap(_varIters);
       }
       else {
-	_iters = _parsedIters.filter!(itr =>
-				      canFind!((CstIterator a, CstIterator b) => a == b)
-				      (_varIters, itr)).array;
+	foreach (iter; _parsedIters[].filter!(itr =>
+					      canFind!((CstIterator a, CstIterator b) => a == b)
+					      (_varIters[], itr))) {
+	  _iters ~= iter;
+	}
       }
     
       if (_iters.length != 0) _iters[0].registerRolled(this);
@@ -1080,10 +1154,10 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     // writeln("Removing dep from rnds: ", dep.name());
     CstDomBase dom = cast (CstDomBase) dep;
     if (dom !is null) {
-      auto index = countUntil(_rnds, dep);
+      auto index = countUntil(_rnds[], dep);
       if (index >= 0) {
 	_rnds[index] = _rnds[$-1];
-	_rnds.length -= 1;
+	_rnds.length = _rnds.length - 1;
 	_vars ~= dom;
 	dom.purgeRndPred(this);
       }
@@ -1095,12 +1169,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     import std.algorithm.searching: canFind;
     foreach (rnd; _rnds) {
       foreach (dep; rnd.getDeps()) {
-	if (! _deps.canFind(dep)) _deps ~= dep;
+	if (! _deps[].canFind(dep)) _deps ~= dep;
       }
     }
     foreach (rnd; _rndArrs) {
       foreach (dep; rnd.getDeps()) {
-	if (! _deps.canFind(dep)) _deps ~= dep;
+	if (! _deps[].canFind(dep)) _deps ~= dep;
       }
     }
     if (! isVisitor())

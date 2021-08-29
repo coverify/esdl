@@ -14,7 +14,7 @@ import esdl.rand.expr: CstVecArrExpr, CstVecSliceExpr, CstRangeExpr,
 import esdl.rand.pred: CstPredGroup, CstPredicate, Hash;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.misc: CstVectorOp, CstLogicOp, CstCompareOp,
-  CstBinaryOp, SolveOrder;
+  CstBinaryOp, SolveOrder, DomainContextEnum;
 
 import esdl.base.rand: _esdl__RandGen, getRandGen;
 
@@ -226,7 +226,7 @@ class CstScope {
     return _level;
   }
 
-  void getIterators(ref CstIterator[] iters, uint level) {
+  void getIterators(T)(ref T iters, uint level) {
     if (_level == level) return;
     else {
       assert (_iter !is null);
@@ -861,17 +861,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     }
   }
 
-  abstract void setDomainArrContext(CstPredicate pred,
-				    ref CstDomBase[] rnds,
-				    ref CstDomSet[] rndArrs,
-				    ref CstDomBase[] vars,
-				    ref CstDomSet[] varArrs,
-				    ref CstDomBase[] dists,
-				    ref CstValue[] vals,
-				    ref CstIterator[] iters,
-				    ref CstDepIntf[] idxs,
-				    ref CstDomBase[] bitIdxs,
-				    ref CstDepIntf[] deps);
+  abstract void setDomainArrContext(CstPredicate pred, DomainContextEnum context);
 
   void writeExprString(ref Charbuf str) {
     assert (isResolvedDep());
@@ -1043,18 +1033,7 @@ interface CstTerm
 {
   string describe(bool descExpr=false);
 
-  void setDomainContext(CstPredicate pred,
-			ref CstDomBase[] rnds,
-			ref CstDomSet[] rndArrs,
-			ref CstDomBase[] vars,
-			ref CstDomSet[] varArrs,
-			ref CstDomBase[] dists,
-			ref CstValue[] vals,
-			ref CstIterator[] iters,
-			ref CstDepIntf[] idxs,
-			ref CstDomBase[] bitIdxs,
-			ref CstDepIntf[] deps);
-
+  void setDomainContext(CstPredicate pred, DomainContextEnum context);
   bool isSolved();
   void visit(CstSolver solver);
   void visit(CstDistSolverBase dist);
