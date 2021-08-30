@@ -9,7 +9,7 @@ import esdl.data.bvec: isBitVector;
 T urandom(T=uint)() if (isIntegral!T || isBitVector!T) {
   static if(isBitVector!T) {
     T v;
-    v.randomize(getRandGen());
+    v.randomize(getRandGen().getGen());
     return v;
   }
   else {
@@ -25,25 +25,25 @@ T urandom(T=uint)() if (isIntegral!T || isBitVector!T) {
 
 bool urandom(T=bool)() if (isBoolean!T) {
   import std.random: uniform;
-  uint v = uniform!("[]", uint)(0, 1, getRandGen());
+  uint v = uniform!("[]", uint)(0, 1, getRandGen().getGen());
   if (v == 0) return false;
   else return true;
  }
 
 R shuffle(R)(ref R range) {
   import std.random: randomShuffle;
-  return randomShuffle(range, getRandGen());
+  return randomShuffle(range, getRandGen().getGen());
  }
 
 T urandom(string BOUNDARY="[)", T=uint)(T min, T max)
   if (isIntegral!T || isBitVector!T) {
     import std.random: uniform;
-    return uniform!(BOUNDARY, T)(min, max, getRandGen());
+    return uniform!(BOUNDARY, T)(min, max, getRandGen().getGen());
   }
 
 T urandom_range(string BOUNDARY="[)", T=uint)(T min, T max) {
   import std.random: uniform;
-  return uniform!(BOUNDARY, T)(min, max, getRandGen());
+  return uniform!(BOUNDARY, T)(min, max, getRandGen().getGen());
 }
 
 void srandom(uint _seed) {
