@@ -249,7 +249,7 @@ class CstMonoSolver (S): CstSolver
     bool _inRangeFlag = false;
     S[] _testfinalRange;
   }
-  this(string signature, CstPredGroup group) {
+  this(string signature) {
     super(signature);
   }
   override string describe() {

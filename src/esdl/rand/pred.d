@@ -115,6 +115,11 @@ class CstPredGroup			// group of related predicates
   __gshared uint _count;
   immutable uint _id;
 
+  static CstMonoSolver!int intMono;
+  static CstMonoSolver!uint uintMono;
+  static CstMonoSolver!long longMono;
+  static CstMonoSolver!ulong ulongMono;
+
   // solve cycle for which this group is getting processed. If this
   // _cycle matches solver _cycle, that would mean this group is
   // already processed
@@ -159,7 +164,14 @@ class CstPredGroup			// group of related predicates
   }
 
   _esdl__Proxy _proxy;
-  
+
+  static this (){
+    intMono = new CstMonoSolver!int("");
+    uintMono = new CstMonoSolver!uint("");
+    longMono = new CstMonoSolver!long("");
+    ulongMono = new CstMonoSolver!ulong("");
+  }
+
   this(_esdl__Proxy proxy) {
     _proxy = proxy;
     synchronized (typeid(CstPredGroup)) {
@@ -353,93 +365,93 @@ class CstPredGroup			// group of related predicates
     if (_distPred is null || (! _distPred.distDomain().isRand())) {
       if (_state is State.NEEDSYNC) {
 	annotate();
-	string sig = signature();
-
-	if (_proxy._esdl__debugSolver()) {
-	  import std.stdio;
-	  writeln(sig);
-	}
-
-	CstSolver* solverp = sig in _proxy._solvers;
-	// _hasHashBeenCalculated = false;
-	// CstSolver* solverp = this in _proxy._solvers;
-
-	if (solverp !is null) {
-	  _solver = *solverp;
-	  _solver.solve(this);
-	}
-	else {
-	  if (_hasSoftConstraints || _hasVectorConstraints) {
-	    if (_proxy._esdl__debugSolver()) {
-	      import std.stdio;
-	      writeln("Invoking Z3 because of Soft/Vector Constraints");
-	      writeln("_preds: ", _preds[]);
-	      foreach (pred; _preds) {
-		writeln(pred.describe());
-	      }
-	      writeln(describe());
+	bool monoFlag = false;
+	if (!(_hasSoftConstraints || _hasVectorConstraints)){
+	  if (_preds.length == 1 && _preds[0].isVisitor()) {
+	    // _preds[0]._dom.forceResolve(_proxy);
+	    _preds[0]._state = CstPredicate.State.SOLVED;
+	    _proxy.addSolvedDomain(_preds[0]._dom);
+	    monoFlag = true;
+	  }
+	  else if (_doms.length == 1 && (! _doms[0].isBool())) {
+	    if (_doms[0].bitcount() < 32) {
+	      _solver = intMono;
 	    }
-	    _solver = new CstZ3Solver(sig, this);
+	    else if (_doms[0].bitcount == 32) {
+	      if(_doms[0].signed()) {
+		_solver = intMono;
+	      }
+	      else{
+		_solver = uintMono;
+	      }
+	    }
+	    else if (_doms[0].bitcount < 64) {
+	      _solver = longMono;
+	    }
+	    else if (_doms[0].bitcount == 64) {
+	      if(_doms[0].signed()) {
+		_solver = longMono;
+	      }
+	      else {
+		_solver = ulongMono;
+	      }
+	    }
+	    if ( _solver !is null ) {
+	      monoFlag = _solver.solve(this);
+	    }
+	  }
+	}
+	if (!monoFlag){
+	  string sig = signature();
+
+	  if (_proxy._esdl__debugSolver()) {
+	    import std.stdio;
+	    writeln(sig);
+	  }
+
+	  CstSolver* solverp = sig in _proxy._solvers;
+	  // _hasHashBeenCalculated = false;
+	  // CstSolver* solverp = this in _proxy._solvers;
+
+	  if (solverp !is null) {
+	    _solver = *solverp;
 	    _solver.solve(this);
 	  }
 	  else {
-	    bool monoFlag = false;
-	    if (_preds.length == 1 && _preds[0].isVisitor()) {
-	      // _preds[0]._dom.forceResolve(_proxy);
-	      _preds[0]._state = CstPredicate.State.SOLVED;
-	      _proxy.addSolvedDomain(_preds[0]._dom);
-	      monoFlag = true;
+	    if (_hasSoftConstraints || _hasVectorConstraints) {
+	      if (_proxy._esdl__debugSolver()) {
+		import std.stdio;
+		writeln("Invoking Z3 because of Soft/Vector Constraints");
+		writeln("_preds: ", _preds[]);
+		foreach (pred; _preds) {
+		  writeln(pred.describe());
+		}
+		writeln(describe());
+	      }
+	      _solver = new CstZ3Solver(sig, this);
+	      _solver.solve(this);
 	    }
-	    else if (_doms.length == 1 && (! _doms[0].isBool())) {
-	      if (_doms[0].bitcount() < 32) {
-		_solver = new CstMonoSolver!int(sig, this);
-	      }
-	      else if (_doms[0].bitcount == 32) {
-		if(_doms[0].signed()) {
-		  _solver = new CstMonoSolver!int(sig, this);
-		}
-		else{
-		  _solver = new CstMonoSolver!uint(sig, this);
-		}
-	      }
-	      else if (_doms[0].bitcount < 64) {
-		_solver = new CstMonoSolver!long(sig, this);
-	      }
-	      else if (_doms[0].bitcount == 64) {
-		if(_doms[0].signed()) {
-		  _solver = new CstMonoSolver!long(sig, this);
-		}
-		else {
-		  _solver = new CstMonoSolver!ulong(sig, this);
-		}
-	      }
-	      if ( _solver !is null ) {
-		monoFlag = _solver.solve(this);
-	      }
+	    uint totalBits;
+	    uint domBits;
+	    foreach (dom; _doms) {
+	      // assert (! dom.isProperDist());
+	      uint domBC = dom.bitcount();
+	      totalBits += domBC;
+	      domBits += domBC;
 	    }
-	    if (! monoFlag) {
-	      uint totalBits;
-	      uint domBits;
-	      foreach (dom; _doms) {
-		// assert (! dom.isProperDist());
-		uint domBC = dom.bitcount();
-		totalBits += domBC;
-		domBits += domBC;
+	    foreach (var; _vars) totalBits += var.bitcount();
+	    if (totalBits > 32 || _hasUniqueConstraints) {
+	      if (_proxy._esdl__debugSolver()) {
+		import std.stdio;
+		writeln("Invoking Z3 because of > 32 bits");
+		writeln(describe());
 	      }
-	      foreach (var; _vars) totalBits += var.bitcount();
-	      if (totalBits > 32 || _hasUniqueConstraints) {
-		if (_proxy._esdl__debugSolver()) {
-		  import std.stdio;
-		  writeln("Invoking Z3 because of > 32 bits");
-		  writeln(describe());
-		}
-		_solver = new CstZ3Solver(sig, this);
-		_solver.solve(this);
-	      }
-	      else {
-		_solver = new CstBuddySolver(sig, this);
-		_solver.solve(this);
-	      }
+	      _solver = new CstZ3Solver(sig, this);
+	      _solver.solve(this);
+	    }
+	    else {
+	      _solver = new CstBuddySolver(sig, this);
+	      _solver.solve(this);
 	    }
 	  }
 	  // _hasHashBeenCalculated = true;
@@ -500,7 +512,7 @@ class CstPredGroup			// group of related predicates
 
     foreach (dom; _doms) dom.setAnnotation(uint.max);
     foreach (dom; _vars) dom.setAnnotation(uint.max);
-    
+        
   }
       
 
