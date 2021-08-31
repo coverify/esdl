@@ -188,20 +188,20 @@ abstract class _esdl__Constraint(string CONSTRAINT, string FILE=__FILE__, size_t
 //     enum bool _esdl__baseHasRandomization = false;
 //   }
 // }
-class CstDomBasePair {
-  CstDomBase dom1;
-  CstDomBase dom2;
-  CstDomBase getFirst(){
-    return dom1;
-  }
-  CstDomBase getSecond(){
-    return dom2;
-  }
-  this( CstDomBase d1,  CstDomBase d2){
-    dom1 = d1;
-    dom2 = d2;
-  }
-}
+// class CstDomBasePair {
+//   CstDomBase dom1;
+//   CstDomBase dom2;
+//   CstDomBase getFirst(){
+//     return dom1;
+//   }
+//   CstDomBase getSecond(){
+//     return dom2;
+//   }
+//   this( CstDomBase d1,  CstDomBase d2){
+//     dom1 = d1;
+//     dom2 = d2;
+//   }
+// }
 
 abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 {
