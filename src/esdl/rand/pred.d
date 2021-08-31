@@ -1304,7 +1304,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       }
     }
     foreach (arr; _rndArrs) {
-      if (arr._state is CstDomSet.State.INIT) {
+      if (arr._state is CstDomSet.State.INIT && arr.isRand()) {
 	arr.setProxyContext(proxy);
       }
     }
