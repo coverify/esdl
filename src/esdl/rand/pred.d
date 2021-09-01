@@ -363,74 +363,77 @@ class CstPredGroup			// group of related predicates
     }
 
     if (_distPred is null || (! _distPred.distDomain().isRand())) {
-      if (_state is State.NEEDSYNC) {
-	annotate();
-	bool monoFlag = false;
-	if (!(_hasSoftConstraints || _hasVectorConstraints)){
-	  if (_preds.length == 1 && _preds[0].isVisitor()) {
-	    // _preds[0]._dom.forceResolve(_proxy);
-	    _preds[0]._state = CstPredicate.State.SOLVED;
-	    _proxy.addSolvedDomain(_preds[0]._dom);
-	    monoFlag = true;
+      annotate();
+      // string sig1 = signature();
+      bool monoFlag = false;
+      if (!(_hasSoftConstraints || _hasVectorConstraints)) {
+	if (_preds.length == 1 && _preds[0].isVisitor()) {
+	  // _preds[0]._dom.forceResolve(_proxy);
+	  _preds[0]._state = CstPredicate.State.SOLVED;
+	  _proxy.addSolvedDomain(_preds[0]._dom);
+	  monoFlag = true;
+	}
+	else if (_doms.length == 1 && (! _doms[0].isBool())) {
+	  if (_doms[0].bitcount() < 32) {
+	    _solver = intMono;
 	  }
-	  else if (_doms.length == 1 && (! _doms[0].isBool())) {
-	    if (_doms[0].bitcount() < 32) {
+	  else if (_doms[0].bitcount == 32) {
+	    if(_doms[0].signed()) {
 	      _solver = intMono;
 	    }
-	    else if (_doms[0].bitcount == 32) {
-	      if(_doms[0].signed()) {
-		_solver = intMono;
-	      }
-	      else{
-		_solver = uintMono;
-	      }
+	    else{
+	      _solver = uintMono;
 	    }
-	    else if (_doms[0].bitcount < 64) {
+	  }
+	  else if (_doms[0].bitcount < 64) {
+	    _solver = longMono;
+	  }
+	  else if (_doms[0].bitcount == 64) {
+	    if(_doms[0].signed()) {
 	      _solver = longMono;
 	    }
-	    else if (_doms[0].bitcount == 64) {
-	      if(_doms[0].signed()) {
-		_solver = longMono;
-	      }
-	      else {
-		_solver = ulongMono;
-	      }
+	    else {
+	      _solver = ulongMono;
 	    }
-	    if ( _solver !is null ) {
-	      monoFlag = _solver.solve(this);
-	    }
+	  }
+	  if ( _solver !is null ) {
+	    monoFlag = _solver.solve(this);
 	  }
 	}
-	if (!monoFlag){
-	  string sig = signature();
+      }
+      if (!monoFlag){
+      
+	string sig = signature();
+	// assert(sig1 == sig);
 
-	  if (_proxy._esdl__debugSolver()) {
-	    import std.stdio;
-	    writeln(sig);
-	  }
+	if (_proxy._esdl__debugSolver()) {
+	  import std.stdio;
+	  writeln(sig);
+	}
 
-	  CstSolver* solverp = sig in _proxy._solvers;
-	  // _hasHashBeenCalculated = false;
-	  // CstSolver* solverp = this in _proxy._solvers;
+	CstSolver* solverp = sig in _proxy._solvers;
+	// _hasHashBeenCalculated = false;
+	// CstSolver* solverp = this in _proxy._solvers;
 
-	  if (solverp !is null) {
-	    _solver = *solverp;
+	if (solverp !is null) {
+	  _solver = *solverp;
+	  _solver.solve(this);
+	}
+	else {
+	  if (_hasSoftConstraints || _hasVectorConstraints) {
+	    if (_proxy._esdl__debugSolver()) {
+	      import std.stdio;
+	      writeln("Invoking Z3 because of Soft/Vector Constraints");
+	      writeln("_preds: ", _preds[]);
+	      foreach (pred; _preds) {
+		writeln(pred.describe());
+	      }
+	      writeln(describe());
+	    }
+	    _solver = new CstZ3Solver(sig, this);
 	    _solver.solve(this);
 	  }
 	  else {
-	    if (_hasSoftConstraints || _hasVectorConstraints) {
-	      if (_proxy._esdl__debugSolver()) {
-		import std.stdio;
-		writeln("Invoking Z3 because of Soft/Vector Constraints");
-		writeln("_preds: ", _preds[]);
-		foreach (pred; _preds) {
-		  writeln(pred.describe());
-		}
-		writeln(describe());
-	      }
-	      _solver = new CstZ3Solver(sig, this);
-	      _solver.solve(this);
-	    }
 	    uint totalBits;
 	    uint domBits;
 	    foreach (dom; _doms) {
@@ -458,13 +461,6 @@ class CstPredGroup			// group of related predicates
 	  // if (_solver !is null) _proxy._solvers[this] = _solver;
 	  if (_solver !is null) _proxy._solvers[sig] = _solver;
 	}
-      }
-      else {
-	// import std.stdio;
-	// writeln(_solver.describe());
-	// writeln("We are here");
-	setAnnotation();
-	if (_solver !is null) _solver.solve(this);
       }
       // import std.stdio;
       // writeln(_solver.describe());
@@ -512,7 +508,7 @@ class CstPredGroup			// group of related predicates
 
     foreach (dom; _doms) dom.setAnnotation(uint.max);
     foreach (dom; _vars) dom.setAnnotation(uint.max);
-        
+    
   }
       
 

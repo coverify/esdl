@@ -4,103 +4,350 @@ import esdl.solver.base;
 import esdl.rand.base: CstDomBase, CstVecValueBase;
 import esdl.rand.pred: CstPredGroup, CstPredicate;
 import esdl.rand.misc;
+import esdl.data.folder;
 import esdl.rand.proxy: _esdl__Proxy;
 enum NumType: ubyte {INT, UINT, LONG, ULONG};
 enum Type: ubyte { NUM, ADD, SUB, RAND};
-enum RangeType: ubyte {STA, DYN, NUL};
 
-//debug = MONOSOLVER;
+debug = MONOSOLVER;
 debug (MONOSOLVER){
   debug = CHECKMONO;
 }
-
+struct RangeStack (T){
+  Range!T [] _load;
+  size_t length;
+  alias size = length;
+  size_t capacity;
+  size_t opDollar() const @safe nothrow {
+    return this.size;
+  }
+  ref Range!T opIndex(size_t index) {
+    return _load[index];
+  }
+  void opOpAssign(string op)(T[2] elem) if (op == "~"){
+    if (length + 1 >= capacity){
+      length ++;
+      capacity ++;
+      _load ~= Range!T();
+      _load[length-1].copyVal(elem);
+    }
+    else {
+      _load[length].copyVal(elem);
+      length ++;
+    }
+  }
+  void opOpAssign(string op)(ref T[] elem) if (op == "~"){
+    if (length + 1 >= capacity){
+      _load ~= Range(elem);
+      length ++;
+      capacity ++;
+    }
+    else {
+      _load[length].copyVal(elem);
+      length ++;
+    }
+  }
+  void opOpAssign(string op)(bool elem) if (op == "~"){
+    if (length + 1 >= capacity){
+      _load ~= Range!T();
+      length ++;
+      capacity ++;
+    }
+    else {
+      _load[length].clear();
+      length ++;
+    }
+  }
+  void procOr(){
+    assert(length > 1);
+    this[$-2].or(this[$-1]);
+    length --;
+  }
+  void procAnd(){
+    assert(length > 1);
+    this[$-2].and(this[$-1]);
+    length --;
+  }
+  void procNeg(){
+    assert(length > 0);
+    this[$-1].negateRange();
+  }
+  void display(){
+    import std.stdio;
+    
+    writeln();
+    write("[");   
+    for (int i = 0; i < length; i ++){
+      _load[i].display();
+      write(", ");      
+    }
+    write("]");
+    writeln();
+  }
+}
 struct Range (T)
 {
-  T[2] _sRange;
-  T[] _dRange;
-  RangeType type;
-  this(ref T[] r){
-    type = RangeType.DYN;
-    _dRange = r;
+  T [] _load;
+  size_t _first = 0;
+  size_t _last = 0;
+  size_t opDollar() const @safe nothrow {
+    return this._last - this._first;
   }
-  this(ref T[2] r){
-    type = RangeType.STA;
-    _sRange = r;
+  ref T opIndex(size_t index){
+    assert(index + _first < _last);
+    return _load[index + _first];
   }
-  this(bool a){
-    type = RangeType.NUL;
-  }
-  RangeType getType(){
-    return type;
-  }
-  ref T[2] getS(){
-    assert (type == RangeType.STA);
-    return _sRange;
-  }
-  ref T[] getD() {
-    assert (type == RangeType.DYN);
-    return _dRange;
-  }
-  void setType(RangeType x){
-    type = x;
-  }
-  void reverseRange(){
-    final switch (getType()){
-    case RangeType.STA:
-      //T[2] temp = range.getS();
-      if(_sRange == [T.min, T.max]){
-        setType(RangeType.NUL);
-	break;
-      }
-      T a = _sRange[0];
-      _sRange[0] = _sRange[1] + 1;
-      _sRange[1] = a - 1;
-      break;
-    case RangeType.NUL:
-      _sRange = [T.min, T.max];
-      //range = Range!T(temp);
-      setType(RangeType.STA);
-      break;
-    case RangeType.DYN:
-      //T[] temp = range.getD();
-      if (_dRange[0] == T.min){
-	_dRange = _dRange[1 .. $];
-      }
-      else{
-	_dRange ~= _dRange[$-1];
-	for(size_t i = _dRange.length - 2; i > 0; --i){
-	  _dRange[i] = _dRange[i-1];
-	}
-	_dRange[0] = T.max;
-      }
-      // import std.stdio;
-      // writeln();
-      // for(size_t i = 0; i < _dRange.length; ++i){
-      // 	write(_dRange[i]);
-      // }
-      // writeln();
-      if (_dRange[$-1] == T.max){
-	// writeln("ERROR");
-	_dRange.length -= 1;
-      }
-      else{
-	// writeln("NO ERROR");
-	_dRange ~= T.min;
-      }
-      
-      for(size_t i = 0; i < _dRange.length; ++i){
-	if(i%2 == 0){
-	  _dRange[i] ++;
-	}
-	else{
-	  _dRange[i] --;
-	}
-      }
-      if(_dRange.length == 0){
-	setType(RangeType.NUL);
-      }
-      // range.getD().length = temp.length;
+  void opOpAssign(string op)(T[] r) if (op == "~"){
+    size_t i = 0;
+    for (; i < r.length && i + _last < _load.length; i ++){
+      _load[i + _last] = r[i];
     }
+    for (; i < r.length; i ++){
+      _load ~= r[i];
+    }
+    _last += r.length;
+  }
+  void opOpAssign(string op)(T[2] r) if (op == "~"){
+    size_t i = 0;
+    for (; i < 2 && i + _last < _load.length; i ++){
+      _load[i + _last] = r[i];
+    }
+    for (; i < 2; i ++){
+      _load ~= r[i];
+    }
+    _last += 2;
+  }
+  void opOpAssign(string op)(T r) if (op == "~"){
+    if (_last < _load.length){
+      _load[_last] = r;
+    }
+    else{
+      _load ~= r;
+    }
+    _last += 1;
+  }
+  void del (size_t n){
+    _last -= n;
+    if (_last == _first){
+      _last = 0;
+      _first = 0;
+    }
+    assert(_last >= _first);
+  }
+  size_t size(){
+    return this._last - this._first;
+  }
+  size_t length(){
+    return this._last - this._first;    
+  }
+  this(ref T[] r){
+    this ~= r;
+  }
+  this(T[2] r){
+    this ~= r;
+  }
+  void copyVal(ref T[] r){
+    _first = 0;
+    _last = 0;
+    this ~= r;
+  }
+  void copyVal(T[2] r){
+    _first = 0;
+    _last = 0;
+    this ~= r;
+  }
+  void clear(){
+    _first = 0;
+    _last = 0;
+  }
+  bool isEmpty(){
+    return _last == 0;
+  }
+  void slice(size_t start, size_t end){
+    assert(start <= end);
+    _last = _first + end;
+    _first += start;
+    assert(this._last <= _load.length);
+  }
+  T [] opSlice(){
+    return _load[_first .. _last];
+  }
+  void negateRange(){
+    if (isEmpty()){
+      T[2] temp = [T.min, T.max];
+      this ~= temp;
+      return;   
+    }
+    if (_load[_first] == T.min){
+      _first ++;
+    }
+    else if (_first == 0){
+      this ~= _load[_last-1];
+      for (size_t i = _last-2; i > _first; --i){
+	_load[i] = _load[i-1];
+      }
+      _load[_first] = T.max;
+    }
+    else {
+      _first --;
+      _load[_first] = T.max;
+    }
+    if (_load[_last-1] == T.max){
+      _last --;
+    }
+    else{
+      this ~= T.min;
+    }
+    for (size_t i = _first; i < _last; ++i){
+      if ((i - _first) % 2 == 0){
+	_load[i] ++;
+      }
+      else {
+	_load[i] --;
+      }
+    }
+    if (_first == _last){
+      clear();
+    }
+  }
+  bool fallsIn(T x, T [] a, size_t pos){
+    for (size_t i = pos; i < a.length; i++){
+      T elem = a[i];
+      if (x < elem){
+	if (i % 2==0){
+	  return false;
+	}
+	return true;
+      }
+      if (x == elem){
+	return true;
+      }
+    }
+    return false;
+  }
+  void or(ref Range!T b){
+    or(b[]);
+  }
+  void or(T [] b){
+    size_t a1 = 0;
+    size_t b1 = 0;
+    size_t len = size();
+    while (a1 < len || b1 < b.length){
+      if (a1 >= len){
+	size_t temp = this.length() - len;
+	if ((temp != 0) && (temp % 2 == 0) && ((this[$-1] == b[b1]-1)||(this[$-1] == b[b1]))){
+	  this.del(1);
+	  b1 ++;
+	}
+	while (b1 < b.length){
+	  this ~= b[b1];
+	  b1++;
+	}
+	continue;
+      }
+      else if (b1 >= b.length){
+	size_t temp = this.length - len;
+	if ((temp != 0) && (temp % 2 == 0) && ((this[$-1] == this[a1]-1)||(this[$-1] == this[a1]))){
+	  this.del(1);
+	  a1 ++;
+	}
+	while (a1 < len){
+	  this ~= this[a1];
+	  a1++;
+	}
+	continue;
+      }
+      if (this[a1] < b[b1]){
+	if (!fallsIn(this[a1], b, b1)){
+	  size_t temp = this.length - len;
+	  if ((temp != 0) && (temp % 2 == 0) && ((this[$-1] == this[a1]-1)||(this[$-1] == this[a1]-1))){
+	    this.del(1);
+	  }
+	  else {
+	    this ~= this[a1];
+	  }
+	}
+	a1++;
+      }
+      else if (this[a1] > b[b1]){
+	if (!fallsIn(b[b1], this[], a1)){
+	  size_t temp = this.length - len;
+	  if ((temp != 0) && (temp % 2 == 0) && ((this[$-1] == b[b1] -1)||(this[$-1] == b[b1]))){
+	    this.del(1);
+	  }
+	  else {
+	    this ~= b[b1];
+	  }
+	}
+	b1++;
+      }
+      else {
+	if ((a1+b1)%2==0){
+	  this ~= this[a1];
+	  a1++;
+	  b1++;
+	}
+	else {
+	  a1++;
+	  b1++;
+	}
+      }
+    }
+    if (len == this.length){
+      this.clear();
+    }
+    else {
+      this.slice(len, this.length);
+    }
+  }
+  void and(ref Range!T b){
+    and(b[]);
+  }
+  void and(T [] b){
+    int a1 = 0;
+    int b1 = 0;
+    size_t len = this.length;
+    while (a1 != len && b1 != b.length){
+      if (this[a1] < b[b1]){
+	if (fallsIn(this[a1], b, b1)){
+	  this ~= this[a1];
+	}
+	a1++;
+      }
+      else if (this[a1] > b[b1]){
+	if (fallsIn(b[b1], this[], a1)){
+	  this ~= b[b1];
+	}
+	b1++;
+      }
+      else {
+	if ((a1+b1)%2==0){
+	  this ~= this[a1];
+	  a1++;
+	  b1++;
+	}
+	else {
+	  this ~= this[a1];
+	  this ~= this[a1];
+	  a1++;
+	  b1++;
+	}
+      }
+    }
+    if (len == this.length){
+      this.clear();
+    }
+    else {
+      this.slice(len, this.length);
+    }
+  }
+  void display(){
+    import std.stdio;
+    writeln("[");
+    for(ulong i = _first; i < _last; i ++){
+      write(_load[i], ",");
+    }
+    writeln("]");
   }
 }
 struct Term
@@ -231,14 +478,14 @@ struct Term
 
 class CstMonoSolver (S): CstSolver
 {
-  Term [] _prevVariableVals;
-  CstDomBase [] _variables;
+  // Term [] _prevVariableVals;
+  // CstDomBase [] _variables;
   bool _hasBeenSolved = false;
   bool _hasRand ;
   Term [] _evalStack;
   byte _endFlag = 0;
-  Range!S [] _rangeStack;
-  S[] _finalRange;
+  RangeStack!S _rangeStack;
+  Range!S  _finalRange;
   ulong _count;
   _esdl__Proxy _proxy;
   Term [] _insideEqual;
@@ -257,14 +504,14 @@ class CstMonoSolver (S): CstSolver
   }
   override void pushToEvalStack(CstDomBase domain) {
     if (domain.isRand() && !domain.isSolved()) {
-      debug (MONOSOLVER){
-	if(_debugFlag){
-	  import std.stdio;
-	  _evalStack ~= Term(nextRangeVal());
-	  writeln("value from domain ",nextRangeVal() , " of type ", numTypeToStr(_evalStack[$-1].getNumType()), " pushed to _evalStack");
-	  return;
-	}
-      } 
+      // debug (MONOSOLVER){
+      // 	if(_debugFlag){
+      // 	  import std.stdio;
+      // 	  _evalStack ~= Term(nextRangeVal());
+      // 	  writeln("value from domain ",nextRangeVal() , " of type ", numTypeToStr(_evalStack[$-1].getNumType()), " pushed to _evalStack");
+      // 	  return;
+      // 	}
+      // } 
       if (_hasRand){
 	_endFlag = 3;
 	debug (MONOSOLVER){
@@ -276,26 +523,26 @@ class CstMonoSolver (S): CstSolver
       uint n = domain.bitcount();
       /*if (n>32){
 	if (domain.signed()){
-	  Term a = Term('R');
-	  a.setNumType(NumType.LONG);
-	  _evalStack ~= a;
+	Term a = Term('R');
+	a.setNumType(NumType.LONG);
+	_evalStack ~= a;
 	}
 	else {
-	  Term a = Term('R');
-	  a.setNumType(NumType.ULONG);
-	  _evalStack ~= a;
+	Term a = Term('R');
+	a.setNumType(NumType.ULONG);
+	_evalStack ~= a;
 	}
-      }
-      else {
+	}
+	else {
 	if (domain.signed()){
-	  Term a = Term('R');
-	  a.setNumType(NumType.INT);
-	  _evalStack ~= a;
+	Term a = Term('R');
+	a.setNumType(NumType.INT);
+	_evalStack ~= a;
 	}
 	else {
-	  Term a = Term('R');
-	  a.setNumType(NumType.UINT);
-	  _evalStack ~= a;
+	Term a = Term('R');
+	a.setNumType(NumType.UINT);
+	_evalStack ~= a;
 	}
 	}*/
       if (n>32 && n<64){
@@ -342,24 +589,24 @@ class CstMonoSolver (S): CstSolver
       uint n = domain.bitcount();
       if(domain.isBool()){
 	pushToEvalStack(domain.getBool());
-	_prevVariableVals ~= Term(cast(int)(domain.getBool()));
-	_variables ~= domain;
+	// _prevVariableVals ~= Term(cast(int)(domain.getBool()));
+	// _variables ~= domain;
 	return;
       }
       /*if (n>32){
 	if (domain.signed()){
-	  _evalStack ~= Term(cast(long)domain.value()); 
+	_evalStack ~= Term(cast(long)domain.value()); 
 	}
 	else {
-	  _evalStack ~= Term(cast(ulong)domain.value());
+	_evalStack ~= Term(cast(ulong)domain.value());
 	}
-      }
-      else {
+	}
+	else {
 	if (domain.signed()){
-	  _evalStack ~= Term(cast(int)domain.value()); 
+	_evalStack ~= Term(cast(int)domain.value()); 
 	}
 	else {
-	  _evalStack ~= Term(cast(uint)domain.value());
+	_evalStack ~= Term(cast(uint)domain.value());
 	}
 	}*/
       if (n>32 && n<64){
@@ -384,8 +631,8 @@ class CstMonoSolver (S): CstSolver
 	  _evalStack ~= Term(cast(ulong)domain.value()); 
 	}
       }
-      _prevVariableVals ~= _evalStack[$-1];
-      _variables ~= domain;
+      // _prevVariableVals ~= _evalStack[$-1];
+      // _variables ~= domain;
       debug (MONOSOLVER){
 	import std.stdio;
 	writeln("variable ",domain.value()," of type ", numTypeToStr(_evalStack[$-1].getNumType()), " pushed to _evalStack");
@@ -396,20 +643,20 @@ class CstMonoSolver (S): CstSolver
     uint n = value.bitcount();
     /*if (n>32){
       if (value.signed()){
-	_evalStack ~= Term(cast(long)value.evaluate()); 
+      _evalStack ~= Term(cast(long)value.evaluate()); 
       }
       else {
-	_evalStack ~= Term(cast(ulong)value.evaluate());
+      _evalStack ~= Term(cast(ulong)value.evaluate());
       }
-    }
-    else {
+      }
+      else {
       if (value.signed()){
-	_evalStack ~= Term(cast(int)value.evaluate()); 
+      _evalStack ~= Term(cast(int)value.evaluate()); 
       }
       else {
-	_evalStack ~= Term(cast(uint)value.evaluate());
+      _evalStack ~= Term(cast(uint)value.evaluate());
       }
-    }*/
+      }*/
     
     if (n>32 && n<64){
       _evalStack ~= Term(cast(long)value.evaluate()); 
@@ -442,18 +689,18 @@ class CstMonoSolver (S): CstSolver
     
     /*if (bitcount>32){
       if (signed){
-	_evalStack ~= Term(cast(long)value); 
+      _evalStack ~= Term(cast(long)value); 
       }
       else {
-	_evalStack ~= Term(cast(ulong)value);
+      _evalStack ~= Term(cast(ulong)value);
       }
-    }
-    else {
+      }
+      else {
       if (signed){
-	_evalStack ~= Term(cast(int)value); 
+      _evalStack ~= Term(cast(int)value); 
       }
       else {
-	_evalStack ~= Term(cast(uint)value);
+      _evalStack ~= Term(cast(uint)value);
       }
       }*/
     
@@ -491,10 +738,10 @@ class CstMonoSolver (S): CstSolver
     }
     if(value){
       S[2] temp = [S.min,S.max];
-      _rangeStack ~= Range!S(temp);
+      _rangeStack ~= temp;
     }
     else{
-      _rangeStack ~= Range!S(false);
+      _rangeStack ~= false;
     }
   }
   override void pushIndexToEvalStack(ulong value){
@@ -523,26 +770,26 @@ class CstMonoSolver (S): CstSolver
     }
   }
   debug (CHECKMONO){
-    S nextRangeVal(){
-      if(_inRangeFlag){
-	return _finalRange[_currentRangePos];
-      }
-      else {
-	if (_currentRangePos %2 == 0){
-	  return _finalRange[_currentRangePos] - 1;
-	}
-	else {
-	  return _finalRange[_currentRangePos] + 1;
-	}
-      }
-    }
+    // S nextRangeVal(){
+    //   if(_inRangeFlag){
+    // 	return _finalRange[_currentRangePos];
+    //   }
+    //   else {
+    // 	if (_currentRangePos %2 == 0){
+    // 	  return _finalRange[_currentRangePos] - 1;
+    // 	}
+    // 	else {
+    // 	  return _finalRange[_currentRangePos] + 1;
+    // 	}
+    //   }
+    // }
   }
   void resetSolver () {
     _hasRand = false;
     _evalStack.length = 0;
     _endFlag = 0;
     _rangeStack.length = 0;
-    _finalRange.length = 0;
+    _finalRange.clear();
     _count = 0;
     _proxy = null;
   
@@ -557,53 +804,53 @@ class CstMonoSolver (S): CstSolver
     if(signed){
       S a = 1<<(bitcount-1);
       S[2] x = [-a, a-1];
-      ANDRANGE(_finalRange, x);
+      _finalRange.and(x);
     }
     else {
       S a = 1<<(bitcount);
       S[2] x = [0, a-1];
-      ANDRANGE(_finalRange, x);
+      _finalRange.and(x);
     }
   }
-  bool checkDifference(){
-    if(!_hasBeenSolved) return true;
+  // bool checkDifference(){
+  //   if(!_hasBeenSolved) return true;
     
-    foreach(i, domain; _variables){
-      Term A;
-      int n = domain.bitcount();
-      if(domain.isBool()){
-	A = Term(cast(int)domain.getBool());
-      }
-      else{
-	if (n>32 && n<64){
-	  A = Term(cast(long)domain.value()); 
-	}
-	else if (n < 32){
-	  A = Term(cast(int)domain.value()); 
-	}
-	else if(n == 32){
-	  if (domain.signed()){
-	    A = Term(cast(int)domain.value()); 
-	  }
-	  else {
-	    A = Term(cast(uint)domain.value()); 
-	  }
-	}
-	else {
-	  if (domain.signed()){
-	    A = Term(cast(long)domain.value()); 
-	  }
-	  else {
-	    A = Term(cast(ulong)domain.value()); 
-	  }
-	}
-      }
-      if(A != _prevVariableVals[i]){
-	return true;
-      }
-    }
-    return false;
-  }
+  //   foreach(i, domain; _variables){
+  //     Term A;
+  //     int n = domain.bitcount();
+  //     if(domain.isBool()){
+  // 	A = Term(cast(int)domain.getBool());
+  //     }
+  //     else{
+  // 	if (n>32 && n<64){
+  // 	  A = Term(cast(long)domain.value()); 
+  // 	}
+  // 	else if (n < 32){
+  // 	  A = Term(cast(int)domain.value()); 
+  // 	}
+  // 	else if(n == 32){
+  // 	  if (domain.signed()){
+  // 	    A = Term(cast(int)domain.value()); 
+  // 	  }
+  // 	  else {
+  // 	    A = Term(cast(uint)domain.value()); 
+  // 	  }
+  // 	}
+  // 	else {
+  // 	  if (domain.signed()){
+  // 	    A = Term(cast(long)domain.value()); 
+  // 	  }
+  // 	  else {
+  // 	    A = Term(cast(ulong)domain.value()); 
+  // 	  }
+  // 	}
+  //     }
+  //     if(A != _prevVariableVals[i]){
+  // 	return true;
+  //     }
+  //   }
+  //   return false;
+  // }
   override bool solve(CstPredGroup group) {
     CstDomBase [] doms = group.domains();
     assert (doms.length == 1);
@@ -624,9 +871,10 @@ class CstMonoSolver (S): CstSolver
     //   }
     //   return true;
     // }
-    _prevVariableVals.length = 0;
-    _variables.length = 0;
-    _finalRange = [S.min, S.max];
+    // _prevVariableVals.length = 0;
+    // _variables.length = 0;
+    S [2] temp = [S.min, S.max];
+    _finalRange.copyVal(temp);
     CstPredicate [] predSet = group.predicates();
     bool isEnum = doms[0].visitDomain(this);
     if(!isEnum && predSet.length == 0){
@@ -635,12 +883,7 @@ class CstMonoSolver (S): CstSolver
     }
     assert(_rangeStack.length == 1 || !isEnum);
     if(isEnum){
-      if(_rangeStack[0].getType() == RangeType.DYN){
-	ANDRANGE(_finalRange, _rangeStack[0].getD());
-      }
-      else if(_rangeStack[0].getType() == RangeType.STA){
-	ANDRANGE(_finalRange, _rangeStack[0].getS());
-      }      
+      _finalRange.and(_rangeStack[0]);
     }
     _proxy = group.getProxy();
     foreach (pred; predSet){
@@ -658,69 +901,63 @@ class CstMonoSolver (S): CstSolver
 	debug (MONOSOLVER){
 	  import std.stdio;
 	  writeln("range for predicate ",pred.describe(), " is:");
-	  displayRangeStack(_rangeStack);
+	  _rangeStack.display();
 	}
-	if(_rangeStack[0].getType() == RangeType.DYN){
-	  ANDRANGE(_finalRange, _rangeStack[0].getD());
-	}
-	else if(_rangeStack[0].getType() == RangeType.STA){
-	  ANDRANGE(_finalRange, _rangeStack[0].getS());
-	}
-	else{
-	  _endFlag = 1;
+	_finalRange.and(_rangeStack[0]);
+	if(_finalRange.isEmpty()){
 	  assert(false, "no solutions found");
 	}
 	debug (MONOSOLVER){
 	  import std.stdio;
 	  writeln("_finalRange after this predicate is :");
-	  display(_finalRange);
+	  _finalRange.display();
 	}
       }
     }
     _rangeStack.length = 0;
-    if(_finalRange.length == 0){
+    if(_finalRange.isEmpty()){
       assert(false, "no solutions found");
     }
     /* debug (CHECKMONO){
-      _debugFlag = true;
-      import std.conv;
-      while (_currentRangePos < _finalRange.length){
-	_testfinalRange = [S.min, S.max];
-	foreach (pred; predSet){
-	  reset();
-	  pred.visit(this);
-	  assert(_rangeStack.length == 1);
-	  if(_rangeStack[0].getType() == RangeType.DYN){
-	    assert(_rangeStack[0].getD() == [S.min, S.max]);
-	  }
-	  else if(_rangeStack[0].getType() == RangeType.STA){
-	    assert(_rangeStack[0].getS() == [S.min, S.max]);
-	  }
-	  else{
-	    _testfinalRange.length = 0;
-	  }
-	}
-	if(_testfinalRange.length == 0){
-	  assert(!isInRange(nextRangeVal(), _finalRange), "the value " ~to!string(nextRangeVal()) ~ " is in range yet it doesnt satisfy the predgroup");
-	}
-	else {
-	  assert(_testfinalRange == [S.min, S.max]);
-	  assert(isInRange(nextRangeVal(), _finalRange), "the value " ~ to!string(nextRangeVal()) ~ " is not in range yet it satisfies the predgroup");
-	}
-	if(!_inRangeFlag){
-	  _inRangeFlag = true;
-	}
-	else {
-	  _inRangeFlag = false;
-	  _currentRangePos += 1; 
-	}
-	_rangeStack.length = 0;
-      }
-    }
-    debug (MONOSOLVER){
-      import std.stdio;
-      writeln("all edge elements of the range tested successfully");
-      }*/
+       _debugFlag = true;
+       import std.conv;
+       while (_currentRangePos < _finalRange.length){
+       _testfinalRange = [S.min, S.max];
+       foreach (pred; predSet){
+       reset();
+       pred.visit(this);
+       assert(_rangeStack.length == 1);
+       if(_rangeStack[0].getType() == RangeType.DYN){
+       assert(_rangeStack[0].getD() == [S.min, S.max]);
+       }
+       else if(_rangeStack[0].getType() == RangeType.STA){
+       assert(_rangeStack[0].getS() == [S.min, S.max]);
+       }
+       else{
+       _testfinalRange.length = 0;
+       }
+       }
+       if(_testfinalRange.length == 0){
+       assert(!isInRange(nextRangeVal(), _finalRange), "the value " ~to!string(nextRangeVal()) ~ " is in range yet it doesnt satisfy the predgroup");
+       }
+       else {
+       assert(_testfinalRange == [S.min, S.max]);
+       assert(isInRange(nextRangeVal(), _finalRange), "the value " ~ to!string(nextRangeVal()) ~ " is not in range yet it satisfies the predgroup");
+       }
+       if(!_inRangeFlag){
+       _inRangeFlag = true;
+       }
+       else {
+       _inRangeFlag = false;
+       _currentRangePos += 1; 
+       }
+       _rangeStack.length = 0;
+       }
+       }
+       debug (MONOSOLVER){
+       import std.stdio;
+       writeln("all edge elements of the range tested successfully");
+       }*/
     else {
       int bitc = doms[0].bitcount();
       if(bitc != 32 && bitc != 64){
@@ -729,11 +966,11 @@ class CstMonoSolver (S): CstSolver
 	  import std.stdio;
 	  writeln("reducing _finalRange to fit in bitcount ", bitc);
 	  writeln("finalRange now: ");
-	  display(_finalRange);
+	  _finalRange.display();
 	}
       }
     }
-    if (_finalRange.length == 0) {
+    if (_finalRange.isEmpty()) {
       assert (false, "No solution found");
     }
     _count = counter();
@@ -746,7 +983,11 @@ class CstMonoSolver (S): CstSolver
       writeln("count for the range is: " ,_count);
       writeln("random number generated is (between 0 and count): " ,rand);
       writeln("random number chosen from range: " ,num);
-      assert (isInRange(cast(S)num, _finalRange), "chosen number doesnt fall in range");
+      if (!_finalRange.fallsIn(cast(S)num, _finalRange[], 0)){
+	_finalRange.display();
+	import std.stdio;
+      }
+      assert (_finalRange.fallsIn(cast(S)num, _finalRange[], 0), "chosen number doesnt fall in range");
     }
     return true;
   }
@@ -1041,10 +1282,10 @@ class CstMonoSolver (S): CstSolver
       bool s = doesSatisfy(_evalStack[0], op, _evalStack[1]);
       if(s){
 	S[2] temp = [S.min,S.max];
-	_rangeStack ~= Range!S(temp);
+	_rangeStack ~= temp;
       }
       else{
-	_rangeStack ~= Range!S(false);
+	_rangeStack ~= false;
       }
       _evalStack.length = 0;
       return;
@@ -1114,11 +1355,11 @@ class CstMonoSolver (S): CstSolver
     _evalStack.length = 0;
     _hasRand = false;
     if(_endFlag == 1){
-      _rangeStack ~= Range!S(false);
+      _rangeStack ~= false;
       _endFlag = 0;
     }
     else{
-      _rangeStack ~= Range!S(range1);
+      _rangeStack ~= range1;
     }
   }
 
@@ -1162,323 +1403,449 @@ class CstMonoSolver (S): CstSolver
       }
       
       writeln("previous _rangeStack :");
-      display(_rangeStack);
+      _rangeStack.display();
     }
     final switch (op){
     case CstLogicOp.LOGICOR:
-      final switch(_rangeStack[$-1].getType()){
-      case RangeType.DYN:
-	final switch(_rangeStack[$-2].getType()){
-	case RangeType.DYN:
-	  ORRANGE(_rangeStack[$-2].getD(), _rangeStack[$-1].getD());
-	  _rangeStack.length -= 1;
-	  break;
-	case RangeType.STA:
-	  ORRANGE(_rangeStack[$-1].getD(), _rangeStack[$-2].getS());
-	  _rangeStack[$-2] = Range!S(_rangeStack[$-1].getD());
-	  _rangeStack.length -= 1;
-	  break;
-	case RangeType.NUL:
-	  _rangeStack[$-2] = Range!S(_rangeStack[$-1].getD());
-	  _rangeStack.length -= 1;
-	  break;
-	}
-	break;
-      case RangeType.STA:
-	final switch(_rangeStack[$-2].getType()){
-	case RangeType.DYN:
-	  ORRANGE(_rangeStack[$-2].getD(), _rangeStack[$-1].getS());
-	  _rangeStack.length -= 1;
-	  break;
-	case RangeType.STA:
-	  S[] temp = [];
-	  S[2] a = _rangeStack[$-2].getS;
-	  if(a[1] < a[0]){
-	    temp ~= S.min;
-	    temp ~= a[1];
-	    temp ~= a[0];
-	    temp ~= S.max;
-	  }
-	  else{
-	    temp ~= a[0];
-	    temp ~= a[1];
-	  }
-	  _rangeStack[$-2] = Range!S(temp);
-	  ORRANGE(_rangeStack[$-2].getD(), _rangeStack[$-1].getS());
-	  _rangeStack.length -= 1;
-	  break;
-	case RangeType.NUL:
-	  _rangeStack[$-2] = Range!S(_rangeStack[$-1].getS());
-	  _rangeStack.length -= 1;
-	  break;
-	}
-	break;
-      case RangeType.NUL:
-	_rangeStack.length -= 1;
-	break;
-      }
+      _rangeStack.procOr();
       break;
+      // final switch(_rangeStack[$-1].getType()){
+      // case RangeType.DYN:
+      // 	final switch(_rangeStack[$-2].getType()){
+      // 	case RangeType.DYN:
+      // 	  ORRANGE(_rangeStack[$-2].getD(), _rangeStack[$-1].getD());
+      // 	  _rangeStack.length -= 1;
+      // 	  break;
+      // 	case RangeType.STA:
+      // 	  ORRANGE(_rangeStack[$-1].getD(), _rangeStack[$-2].getS());
+      // 	  // _rangeStack[$-2] = Range!S(_rangeStack[$-1].getD());
+      // 	  _rangeStack.length -= 2;
+      // 	  _rangeStack ~= _rangeStack[$+1].getD();
+      // 	  break;
+      // 	case RangeType.NUL:
+      // 	  _rangeStack[$-2] = Range!S(_rangeStack[$-1].getD());
+      // 	  _rangeStack.length -= 1;
+      // 	  break;
+      // 	}
+      // 	break;
+      // case RangeType.STA:
+      // 	final switch(_rangeStack[$-2].getType()){
+      // 	case RangeType.DYN:
+      // 	  ORRANGE(_rangeStack[$-2].getD(), _rangeStack[$-1].getS());
+      // 	  _rangeStack.length -= 1;
+      // 	  break;
+      // 	case RangeType.STA:
+      // 	  S[] temp = [];
+      // 	  S[2] a = _rangeStack[$-2].getS;
+      // 	  if(a[1] < a[0]){
+      // 	    temp ~= S.min;
+      // 	    temp ~= a[1];
+      // 	    temp ~= a[0];
+      // 	    temp ~= S.max;
+      // 	  }
+      // 	  else{
+      // 	    temp ~= a[0];
+      // 	    temp ~= a[1];
+      // 	  }
+      // 	  _rangeStack[$-2] = Range!S(temp);
+      // 	  ORRANGE(_rangeStack[$-2].getD(), _rangeStack[$-1].getS());
+      // 	  _rangeStack.length -= 1;
+      // 	  break;
+      // 	case RangeType.NUL:
+      // 	  _rangeStack[$-2] = Range!S(_rangeStack[$-1].getS());
+      // 	  _rangeStack.length -= 1;
+      // 	  break;
+      // 	}
+      // 	break;
+      // case RangeType.NUL:
+      // 	_rangeStack.length -= 1;
+      // 	break;
+      // }
+      // break;
     case CstLogicOp.LOGICAND:
-      final switch(_rangeStack[$-1].getType()){
-      case RangeType.DYN:
-	final switch(_rangeStack[$-2].getType()){
-	case RangeType.DYN:
-	  ANDRANGE(_rangeStack[$-2].getD(), _rangeStack[$-1].getD());
-	  _rangeStack.length -= 1;
-	  break;
-	case RangeType.STA:
-	  ANDRANGE(_rangeStack[$-1].getD(), _rangeStack[$-2].getS());
-	  _rangeStack[$-2] = Range!S(_rangeStack[$-1].getD());
-	  _rangeStack.length -= 1;
-	  break;
-	case RangeType.NUL:
-	  _rangeStack.length -= 1;
-	  break;
-	}
-	break;
-      case RangeType.STA:
-	final switch(_rangeStack[$-2].getType()){
-	case RangeType.DYN:
-	  ANDRANGE(_rangeStack[$-2].getD(), _rangeStack[$-1].getS());
-	  _rangeStack.length -= 1;
-	  break;
-	case RangeType.STA:
-	  S[2] a = _rangeStack[$-2].getS();
-	  if(a[1] < a[0]){
-	    S[] temp = [];
-	    temp ~= S.min;
-	    temp ~= a[1];
-	    temp ~= a[0];
-	    temp ~= S.max;
-	    _rangeStack[$-2] = Range!S(temp);
-	    ANDRANGE(_rangeStack[$-2].getD(), _rangeStack[$-1].getS());
-	    _rangeStack.length -= 1;
-	  }
-	  else{
-	    S[2] b = _rangeStack[$-1].getS();
-	    if(b[1] < b[0]){
-	      S[] temp = [];
-	      temp ~= S.min;
-	      temp ~= b[1];
-	      temp ~= b[0];
-	      temp ~= S.max;
-	      _rangeStack[$-1] = Range!S(temp);
-	      ANDRANGE(_rangeStack[$-1].getD(), _rangeStack[$-2].getS());
-	      _rangeStack[$-2] = Range!S(_rangeStack[$-1].getD());
-	      _rangeStack.length -= 1;
-	    }
-	    else{
-	      if(!ANDRANGE(a,b)){
-		_rangeStack.length -= 2;
-		_rangeStack ~= Range!S(false);
-	      }
-	      else{
-		_rangeStack[$-2] = Range!S(a);
-		_rangeStack.length -=1;
-	      }
-	    }
-	  }
-	  break;
-	case RangeType.NUL:
-	  _rangeStack.length -= 1;
-	  break;
-	}
-	break;
-      case RangeType.NUL:
-	_rangeStack.length -= 2;
-	_rangeStack ~= Range!S(false);
-	break;
-      }
-      if(_rangeStack[$-1].getType() == RangeType.DYN && _rangeStack[$-1].getD().length == 0){
-	_rangeStack[$-1] = Range!S(false);
-      }
+      _rangeStack.procAnd();
       break;
+      // final switch(_rangeStack[$-1].getType()){
+      // case RangeType.DYN:
+      // 	final switch(_rangeStack[$-2].getType()){
+      // 	case RangeType.DYN:
+      // 	  ANDRANGE(_rangeStack[$-2].getD(), _rangeStack[$-1].getD());
+      // 	  _rangeStack.length -= 1;
+      // 	  break;
+      // 	case RangeType.STA:
+      // 	  ANDRANGE(_rangeStack[$-1].getD(), _rangeStack[$-2].getS());
+      // 	  _rangeStack[$-2] = Range!S(_rangeStack[$-1].getD());
+      // 	  _rangeStack.length -= 1;
+      // 	  break;
+      // 	case RangeType.NUL:
+      // 	  _rangeStack.length -= 1;
+      // 	  break;
+      // 	}
+      // 	break;
+      // case RangeType.STA:
+      // 	final switch(_rangeStack[$-2].getType()){
+      // 	case RangeType.DYN:
+      // 	  ANDRANGE(_rangeStack[$-2].getD(), _rangeStack[$-1].getS());
+      // 	  _rangeStack.length -= 1;
+      // 	  break;
+      // 	case RangeType.STA:
+      // 	  S[2] a = _rangeStack[$-2].getS();
+      // 	  if(a[1] < a[0]){
+      // 	    S[] temp = [];
+      // 	    temp ~= S.min;
+      // 	    temp ~= a[1];
+      // 	    temp ~= a[0];
+      // 	    temp ~= S.max;
+      // 	    _rangeStack[$-2] = Range!S(temp);
+      // 	    ANDRANGE(_rangeStack[$-2].getD(), _rangeStack[$-1].getS());
+      // 	    _rangeStack.length -= 1;
+      // 	  }
+      // 	  else{
+      // 	    S[2] b = _rangeStack[$-1].getS();
+      // 	    if(b[1] < b[0]){
+      // 	      S[] temp = [];
+      // 	      temp ~= S.min;
+      // 	      temp ~= b[1];
+      // 	      temp ~= b[0];
+      // 	      temp ~= S.max;
+      // 	      _rangeStack[$-1] = Range!S(temp);
+      // 	      ANDRANGE(_rangeStack[$-1].getD(), _rangeStack[$-2].getS());
+      // 	      _rangeStack[$-2] = Range!S(_rangeStack[$-1].getD());
+      // 	      _rangeStack.length -= 1;
+      // 	    }
+      // 	    else{
+      // 	      if(!ANDRANGE(a,b)){
+      // 		_rangeStack.length -= 2;
+      // 		_rangeStack ~= Range!S(false);
+      // 	      }
+      // 	      else{
+      // 		_rangeStack[$-2] = Range!S(a);
+      // 		_rangeStack.length -=1;
+      // 	      }
+      // 	    }
+      // 	  }
+      // 	  break;
+      // 	case RangeType.NUL:
+      // 	  _rangeStack.length -= 1;
+      // 	  break;
+      // 	}
+      // 	break;
+      // case RangeType.NUL:
+      // 	_rangeStack.length -= 2;
+      // 	_rangeStack ~= Range!S(false);
+      // 	break;
+      // }
+      // if(_rangeStack[$-1].getType() == RangeType.DYN && _rangeStack[$-1].getD().length == 0){
+      // 	_rangeStack[$-1] = Range!S(false);
+      // }
+      // break;
     case CstLogicOp.LOGICNOT:
-      _rangeStack[$-1].reverseRange();
+      _rangeStack.procNeg();
       break;
     case CstLogicOp.LOGICIMP:
-      _rangeStack[$-2].reverseRange();
-      final switch(_rangeStack[$-1].getType()){
-      case RangeType.DYN:
-	final switch(_rangeStack[$-2].getType()){
-	case RangeType.DYN:
-	  ORRANGE(_rangeStack[$-2].getD(), _rangeStack[$-1].getD());
-	  _rangeStack.length -= 1;
-	  break;
-	case RangeType.STA:
-	  ORRANGE(_rangeStack[$-1].getD(), _rangeStack[$-2].getS());
-	  _rangeStack[$-2] = Range!S(_rangeStack[$-1].getD());
-	  _rangeStack.length -= 1;
-	  break;
-	case RangeType.NUL:
-	  _rangeStack[$-2] = Range!S(_rangeStack[$-1].getD());
-	  _rangeStack.length -= 1;
-	  break;
-	}
-	break;
-      case RangeType.STA:
-	final switch(_rangeStack[$-2].getType()){
-	case RangeType.DYN:
-	  ORRANGE(_rangeStack[$-2].getD(), _rangeStack[$-1].getS());
-	  _rangeStack.length -= 1;
-	  break;
-	case RangeType.STA:
-	  S[] temp = [];
-	  S[2] a = _rangeStack[$-2].getS;
-	  if(a[1] < a[0]){
-	    temp ~= S.min;
-	    temp ~= a[1];
-	    temp ~= a[0];
-	    temp ~= S.max;
-	  }
-	  else{
-	    temp ~= a[0];
-	    temp ~= a[1];
-	  }
-	  _rangeStack[$-2] = Range!S(temp);
-	  ORRANGE(_rangeStack[$-2].getD(), _rangeStack[$-1].getS());
-	  _rangeStack.length -= 1;
-	  break;
-	case RangeType.NUL:
-	  _rangeStack[$-2] = Range!S(_rangeStack[$-1].getS());
-	  _rangeStack.length -= 1;
-	  break;
-	}
-	break;
-      case RangeType.NUL:
-	_rangeStack.length -= 1;
-	break;
-      }
+      _rangeStack.procNeg();
+      _rangeStack.procOr();
       break;
+      // final switch(_rangeStack[$-1].getType()){
+      // case RangeType.DYN:
+      // 	final switch(_rangeStack[$-2].getType()){
+      // 	case RangeType.DYN:
+      // 	  ORRANGE(_rangeStack[$-2].getD(), _rangeStack[$-1].getD());
+      // 	  _rangeStack.length -= 1;
+      // 	  break;
+      // 	case RangeType.STA:
+      // 	  ORRANGE(_rangeStack[$-1].getD(), _rangeStack[$-2].getS());
+      // 	  _rangeStack[$-2] = Range!S(_rangeStack[$-1].getD());
+      // 	  _rangeStack.length -= 1;
+      // 	  break;
+      // 	case RangeType.NUL:
+      // 	  _rangeStack[$-2] = Range!S(_rangeStack[$-1].getD());
+      // 	  _rangeStack.length -= 1;
+      // 	  break;
+      // 	}
+      // 	break;
+      // case RangeType.STA:
+      // 	final switch(_rangeStack[$-2].getType()){
+      // 	case RangeType.DYN:
+      // 	  ORRANGE(_rangeStack[$-2].getD(), _rangeStack[$-1].getS());
+      // 	  _rangeStack.length -= 1;
+      // 	  break;
+      // 	case RangeType.STA:
+      // 	  S[] temp = [];
+      // 	  S[2] a = _rangeStack[$-2].getS;
+      // 	  if(a[1] < a[0]){
+      // 	    temp ~= S.min;
+      // 	    temp ~= a[1];
+      // 	    temp ~= a[0];
+      // 	    temp ~= S.max;
+      // 	  }
+      // 	  else{
+      // 	    temp ~= a[0];
+      // 	    temp ~= a[1];
+      // 	  }
+      // 	  _rangeStack[$-2] = Range!S(temp);
+      // 	  ORRANGE(_rangeStack[$-2].getD(), _rangeStack[$-1].getS());
+      // 	  _rangeStack.length -= 1;
+      // 	  break;
+      // 	case RangeType.NUL:
+      // 	  _rangeStack[$-2] = Range!S(_rangeStack[$-1].getS());
+      // 	  _rangeStack.length -= 1;
+      // 	  break;
+      // 	}
+      // 	break;
+      // case RangeType.NUL:
+      // 	_rangeStack.length -= 1;
+      // 	break;
+      // }
+      // break;
     case CstLogicOp.LOGICEQ:
-      auto tempRangeType1 = _rangeStack[$-1].getType();
-      auto tempRangeType2 = _rangeStack[$-2].getType();
-      if(tempRangeType1 == RangeType.NUL){
-	if(tempRangeType2 == RangeType.NUL){
-	  //false == false
-	  _rangeStack.length -= 2;
-	  S [2] tmp = [S.min, S.max];
-	  _rangeStack ~= Range!S(tmp);
-	}
-	else if(_rangeStack[$-2].getS()[0] == 1){
-	  //domain == false
-	  _rangeStack.length -= 2;
-	  S [2] tmp = [0, 0];
-	  _rangeStack ~= Range!S(tmp);
-	}
-	else{
-	  //true == false
-	  _rangeStack.length -= 2;
-	  _rangeStack ~= Range!S(false);
-	}
+      if(_rangeStack[$-1].isEmpty()){
+      	if(_rangeStack[$-2].isEmpty()){
+      	  //false == false
+      	  _rangeStack.length -= 2;
+      	  S [2] tmp = [S.min, S.max];
+      	  _rangeStack ~= tmp;
+      	}
+      	else if(_rangeStack[$-2][0] == 1){
+      	  //domain == false
+      	  _rangeStack.length -= 2;
+      	  S [2] tmp = [0, 0];
+      	  _rangeStack ~= tmp;
+      	}
+      	else{
+      	  //true == false
+      	  _rangeStack.length -= 2;
+      	  _rangeStack ~= false;
+      	}
       }
-      else if (_rangeStack[$-1].getS()[0] == 1){
-	if(tempRangeType2 == RangeType.NUL){
-	  //false == domain
-	  _rangeStack.length -= 2;
-	  S [2] tmp = [0, 0];
-	  _rangeStack ~= Range!S(tmp);
-	}
-	else if(_rangeStack[$-2].getS()[0] == 1){
-	  //domain == domain
-	  _rangeStack.length -= 2;
-	  S [2] tmp = [S.min, S.max];
-	  _rangeStack ~= Range!S(tmp);
-	}
-	else{
-	  //true == domain
-	  _rangeStack.length -= 2;
-	  S [2] tmp = [1,1];
-	  _rangeStack ~= Range!S(tmp);
-	}
+      else if (_rangeStack[$-1][0] == 1){
+      	if(_rangeStack[$-2].isEmpty()){
+      	  //false == domain
+      	  _rangeStack.length -= 2;
+      	  S [2] tmp = [0, 0];
+      	  _rangeStack ~= tmp;
+      	}
+      	else if(_rangeStack[$-2][0] == 1){
+      	  //domain == domain
+      	  _rangeStack.length -= 2;
+      	  S [2] tmp = [S.min, S.max];
+      	  _rangeStack ~= tmp;
+      	}
+      	else{
+      	  //true == domain
+      	  _rangeStack.length -= 2;
+      	  S [2] tmp = [1,1];
+      	  _rangeStack ~= tmp;
+      	}
       }
       else{
-	if(tempRangeType2 == RangeType.NUL){
-	  //false == true
-	  _rangeStack.length -= 2;
-	  _rangeStack ~= Range!S(false);
-	}
-	else if(_rangeStack[$-2].getS()[0] == 1){
-	  //domain == true
-	  _rangeStack.length -= 2;
-	  S [2] tmp = [1, 1];
-	  _rangeStack ~= Range!S(tmp);
-	}
-	else{
-	  //true == true
-	  _rangeStack.length -= 2;
-	  S [2] tmp = [S.min, S.max];
-	  _rangeStack ~= Range!S(tmp);
-	}
+      	if(_rangeStack[$-2].isEmpty()){
+      	  //false == true
+      	  _rangeStack.length -= 2;
+      	  _rangeStack ~= false;
+      	}
+      	else if(_rangeStack[$-2][0] == 1){
+      	  //domain == true
+      	  _rangeStack.length -= 2;
+      	  S [2] tmp = [1, 1];
+      	  _rangeStack ~= tmp;
+      	}
+      	else{
+      	  //true == true
+      	  _rangeStack.length -= 2;
+      	  S [2] tmp = [S.min, S.max];
+      	  _rangeStack ~= tmp;
+      	}
       }
       
       break;
+      // auto tempRangeType1 = _rangeStack[$-1].getType();
+      // auto tempRangeType2 = _rangeStack[$-2].getType();
+      // if(tempRangeType1 == RangeType.NUL){
+      // 	if(tempRangeType2 == RangeType.NUL){
+      // 	  //false == false
+      // 	  _rangeStack.length -= 2;
+      // 	  S [2] tmp = [S.min, S.max];
+      // 	  _rangeStack ~= Range!S(tmp);
+      // 	}
+      // 	else if(_rangeStack[$-2].getS()[0] == 1){
+      // 	  //domain == false
+      // 	  _rangeStack.length -= 2;
+      // 	  S [2] tmp = [0, 0];
+      // 	  _rangeStack ~= Range!S(tmp);
+      // 	}
+      // 	else{
+      // 	  //true == false
+      // 	  _rangeStack.length -= 2;
+      // 	  _rangeStack ~= Range!S(false);
+      // 	}
+      // }
+      // else if (_rangeStack[$-1].getS()[0] == 1){
+      // 	if(tempRangeType2 == RangeType.NUL){
+      // 	  //false == domain
+      // 	  _rangeStack.length -= 2;
+      // 	  S [2] tmp = [0, 0];
+      // 	  _rangeStack ~= Range!S(tmp);
+      // 	}
+      // 	else if(_rangeStack[$-2].getS()[0] == 1){
+      // 	  //domain == domain
+      // 	  _rangeStack.length -= 2;
+      // 	  S [2] tmp = [S.min, S.max];
+      // 	  _rangeStack ~= Range!S(tmp);
+      // 	}
+      // 	else{
+      // 	  //true == domain
+      // 	  _rangeStack.length -= 2;
+      // 	  S [2] tmp = [1,1];
+      // 	  _rangeStack ~= Range!S(tmp);
+      // 	}
+      // }
+      // else{
+      // 	if(tempRangeType2 == RangeType.NUL){
+      // 	  //false == true
+      // 	  _rangeStack.length -= 2;
+      // 	  _rangeStack ~= Range!S(false);
+      // 	}
+      // 	else if(_rangeStack[$-2].getS()[0] == 1){
+      // 	  //domain == true
+      // 	  _rangeStack.length -= 2;
+      // 	  S [2] tmp = [1, 1];
+      // 	  _rangeStack ~= Range!S(tmp);
+      // 	}
+      // 	else{
+      // 	  //true == true
+      // 	  _rangeStack.length -= 2;
+      // 	  S [2] tmp = [S.min, S.max];
+      // 	  _rangeStack ~= Range!S(tmp);
+      // 	}
+      // }
+      
+      // break;
     case CstLogicOp.LOGICNEQ:
-      auto tempRangeType1 = _rangeStack[$-1].getType();
-      auto tempRangeType2 = _rangeStack[$-2].getType();
-      if(tempRangeType1 == RangeType.NUL){
-	if(tempRangeType2 == RangeType.NUL){
-	  //false != false
-	  _rangeStack.length -= 2;
-	  _rangeStack ~= Range!S(false);
-	}
-	else if(_rangeStack[$-2].getS()[0] == 1){
-	  //domain != false
-	  _rangeStack.length -= 2;
-	  S [2] tmp = [1, 1];
-	  _rangeStack ~= Range!S(tmp);
-	}
-	else{
-	  //true != false
-	  _rangeStack.length -= 2;
-	  S [2] tmp = [S.min, S.max];
-	  _rangeStack ~= Range!S(tmp);
-	}
+
+      if(_rangeStack[$-1].isEmpty()){
+      	if(_rangeStack[$-2].isEmpty()){
+      	  //false != false
+      	  _rangeStack.length -= 2;
+      	  _rangeStack ~= false;
+      	}
+      	else if(_rangeStack[$-2][0] == 1){
+      	  //domain != false
+      	  _rangeStack.length -= 2;
+      	  S [2] tmp = [1, 1];
+      	  _rangeStack ~= tmp;
+      	}
+      	else{
+      	  //true != false
+      	  _rangeStack.length -= 2;
+      	  S [2] tmp = [S.min, S.max];
+      	  _rangeStack ~= tmp;
+      	}
       }
-      else if (_rangeStack[$-1].getS()[0] == 1){
-	if(tempRangeType2 == RangeType.NUL){
-	  //false != domain
-	  _rangeStack.length -= 2;
-	  S [2] tmp = [1, 1];
-	  _rangeStack ~= Range!S(tmp);
-	}
-	else if(_rangeStack[$-2].getS()[0] == 1){
-	  //domain != domain
-	  _rangeStack.length -= 2;
-	  _rangeStack ~= Range!S(false);
-	}
-	else{
-	  //true != domain
-	  _rangeStack.length -= 2;
-	  S [2] tmp = [0, 0];
-	  _rangeStack ~= Range!S(tmp);
-	}
+      else if (_rangeStack[$-1][0] == 1){
+      	if(_rangeStack[$-2].isEmpty()){
+      	  //false != domain
+      	  _rangeStack.length -= 2;
+      	  S [2] tmp = [1, 1];
+      	  _rangeStack ~= tmp;
+      	}
+      	else if(_rangeStack[$-2][0] == 1){
+      	  //domain != domain
+      	  _rangeStack.length -= 2;
+      	  _rangeStack ~= false;
+      	}
+      	else{
+      	  //true != domain
+      	  _rangeStack.length -= 2;
+      	  S [2] tmp = [0, 0];
+      	  _rangeStack ~= tmp;
+      	}
       }
       else{
-	if(tempRangeType2 == RangeType.NUL){
-	  //false != true
-	  _rangeStack.length -= 2;
-	  S [2] tmp = [S.min, S.max];
-	  _rangeStack ~= Range!S(tmp);
-	}
-	else if(_rangeStack[$-2].getS()[0] == 1){
-	  //domain != true
-	  _rangeStack.length -= 2;
-	  S [2] tmp = [0, 0];
-	  _rangeStack ~= Range!S(tmp);
-	}
-	else{
-	  //true != true
-	  _rangeStack.length -= 2;
-	  _rangeStack ~= Range!S(false);
-	}
+      	if(_rangeStack[$-2].isEmpty()){
+      	  //false != true
+      	  _rangeStack.length -= 2;
+      	  S [2] tmp = [S.min, S.max];
+      	  _rangeStack ~= tmp;
+      	}
+      	else if(_rangeStack[$-2][0] == 1){
+      	  //domain != true
+      	  _rangeStack.length -= 2;
+      	  S [2] tmp = [0, 0];
+      	  _rangeStack ~= tmp;
+      	}
+      	else{
+      	  //true != true
+      	  _rangeStack.length -= 2;
+      	  _rangeStack ~= false;
+      	}
       }
       break;
+      // auto tempRangeType1 = _rangeStack[$-1].getType();
+      // auto tempRangeType2 = _rangeStack[$-2].getType();
+      // if(tempRangeType1 == RangeType.NUL){
+      // 	if(tempRangeType2 == RangeType.NUL){
+      // 	  //false != false
+      // 	  _rangeStack.length -= 2;
+      // 	  _rangeStack ~= Range!S(false);
+      // 	}
+      // 	else if(_rangeStack[$-2].getS()[0] == 1){
+      // 	  //domain != false
+      // 	  _rangeStack.length -= 2;
+      // 	  S [2] tmp = [1, 1];
+      // 	  _rangeStack ~= Range!S(tmp);
+      // 	}
+      // 	else{
+      // 	  //true != false
+      // 	  _rangeStack.length -= 2;
+      // 	  S [2] tmp = [S.min, S.max];
+      // 	  _rangeStack ~= Range!S(tmp);
+      // 	}
+      // }
+      // else if (_rangeStack[$-1].getS()[0] == 1){
+      // 	if(tempRangeType2 == RangeType.NUL){
+      // 	  //false != domain
+      // 	  _rangeStack.length -= 2;
+      // 	  S [2] tmp = [1, 1];
+      // 	  _rangeStack ~= Range!S(tmp);
+      // 	}
+      // 	else if(_rangeStack[$-2].getS()[0] == 1){
+      // 	  //domain != domain
+      // 	  _rangeStack.length -= 2;
+      // 	  _rangeStack ~= Range!S(false);
+      // 	}
+      // 	else{
+      // 	  //true != domain
+      // 	  _rangeStack.length -= 2;
+      // 	  S [2] tmp = [0, 0];
+      // 	  _rangeStack ~= Range!S(tmp);
+      // 	}
+      // }
+      // else{
+      // 	if(tempRangeType2 == RangeType.NUL){
+      // 	  //false != true
+      // 	  _rangeStack.length -= 2;
+      // 	  S [2] tmp = [S.min, S.max];
+      // 	  _rangeStack ~= Range!S(tmp);
+      // 	}
+      // 	else if(_rangeStack[$-2].getS()[0] == 1){
+      // 	  //domain != true
+      // 	  _rangeStack.length -= 2;
+      // 	  S [2] tmp = [0, 0];
+      // 	  _rangeStack ~= Range!S(tmp);
+      // 	}
+      // 	else{
+      // 	  //true != true
+      // 	  _rangeStack.length -= 2;
+      // 	  _rangeStack ~= Range!S(false);
+      // 	}
+      // }
+      // break;
     }
     debug (MONOSOLVER){
       import std.stdio;
       writeln("new _rangeStack :");
-      display(_rangeStack);
+      _rangeStack.display();
     }
   }
   override void processEvalStack(CstInsideOp op) {
@@ -1648,7 +2015,7 @@ class CstMonoSolver (S): CstSolver
 	_insideRange.length = 0;
 	/*if(_rangeStack.length > 1){
 	  processEvalStack(CstLogicOp.LOGICAND);
-	}*/
+	  }*/
 	return;
       }
     }
@@ -1657,7 +2024,7 @@ class CstMonoSolver (S): CstSolver
       _insideEqual.length = 0;
       /*if(_rangeStack.length > 1){
 	processEvalStack(CstLogicOp.LOGICAND);
-      }*/
+	}*/
       return;
     }
     foreach(i, elem; _insideEqual){
@@ -2327,8 +2694,8 @@ class CstMonoSolver (S): CstSolver
   }
   ulong counter(){
     ulong num = 0;
-    assert(_finalRange.length > 0);
-    for(int i = 0; i < _finalRange.length - 1; i += 2){
+    assert(!(_finalRange.isEmpty()));
+    for(int i = 0; i < _finalRange.length() - 1; i += 2){
       num += (cast(ulong)(_finalRange[i+1]) - _finalRange[i] + 1);
     }
     return num;
@@ -2340,7 +2707,7 @@ class CstMonoSolver (S): CstSolver
       import std.stdio;
       writeln(rand);
     }
-    for(i = 0; i < _finalRange.length - 1; i += 2) {
+    for(i = 0; i < _finalRange.length() - 1; i += 2) {
       step = cast(ulong)(_finalRange[i+1]) - _finalRange[i] + 1;
       if (rand < step) break;
       else rand -= step;
@@ -2348,457 +2715,457 @@ class CstMonoSolver (S): CstSolver
     debug (MONOSOLVER){
       import std.stdio;
       writeln(i);
-      writeln(_finalRange.length);
+      writeln(_finalRange.length());
       writeln(rand);
     }
     return (cast(ulong)(_finalRange[i] + rand));
   }
-  void ANDRANGE(ref S[] a, ref S[] b){
-    int a1 = 0;
-    int b1 = 0;
-    size_t len = a.length;
-    while (a1 != len && b1 != b.length){
-      if (a[a1] < b[b1]){
-	if (fallsIn(a[a1], b, b1)){
-	  a ~= a[a1];
-	}
-	a1++;
-      }
-      else if (a[a1] > b[b1]){
-	if (fallsIn(b[b1], a, a1)){
-	  a ~= b[b1];
-	}
-	b1++;
-      }
-      else {
-	if ((a1+b1)%2==0){
-	  a ~= a[a1];
-	  a1++;
-	  b1++;
-	}
-	else {
-	  a ~= a[a1];
-	  a ~= a[a1];
-	  a1++;
-	  b1++;
-	}
-      }
-    }
-    if (len == a.length){
-      a.length = 0;
-    }
-    else {
-      a = a[len .. $];
-    }
-  }
-  bool ANDRANGE(ref S[2] a, S[2] b){
-    if(a[1] < b[0] || b[1] < a[0]){
-      return false;
-    }
-    S[2] temp = [S.min, S.max];
-    if(a[0] > b[0]){
-      temp[0] = a[0];
-    }
-    else{
-      temp[0] = b[0];
-    }
-    if(a[1] < b[1]){
-      temp[1] = a[1];
-    }
-    else{
-      temp[1] = b[1];
-    }
-    a = temp;
-    return true;
-  }
-  void ORRANGE(ref S[] a, ref S[] b){
-    int a1 = 0;
-    int b1 = 0;
-    size_t len = a.length;
-    while (a1 < len || b1 < b.length){
-      if (a1 >= len){
-	size_t temp = a.length - len;
-	if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == b[b1]-1)||(a[$-1] == b[b1]))){
-	  a.length --;
-	  b1 ++;
-	}
-	while (b1 < b.length){
-	  a ~= b[b1];
-	  b1++;
-	}
-	continue;
-      }
-      else if (b1 >= b.length){
-	size_t temp = a.length - len;
-	if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == a[a1]-1)||(a[$-1] == a[a1]))){
-	  a.length --;
-	  a1 ++;
-	}
-	while (a1 < len){
-	  a ~= a[a1];
-	  a1++;
-	}
-	continue;
-      }
-      if (a[a1] < b[b1]){
-	if (!fallsIn(a[a1], b, b1)){
-	  size_t temp = a.length - len;
-	  if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == a[a1]-1)||(a[$-1] == a[a1]-1))){
-	    a.length --;
-	  }
-	  else {
-	    a ~= a[a1];
-	  }
-	}
-	a1++;
-      }
-      else if (a[a1] > b[b1]){
-	if (!fallsIn(b[b1], a, a1)){
-	  size_t temp = a.length - len;
-	  if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == b[b1] -1)||(a[$-1] == b[b1]))){
-	    a.length --;
-	  }
-	  else {
-	    a ~= b[b1];
-	  }
-	}
-	b1++;
-      }
-      else {
-	if ((a1+b1)%2==0){
-	  a ~= a[a1];
-	  a1++;
-	  b1++;
-	}
-	else {
-	  a1++;
-	  b1++;
-	}
-      }
-    }
-    if (len == a.length){
-      a.length = 0;
-    }
-    else {
-      a = a[len .. $];
-    }
-  }
-  void ANDRANGE(T)(ref T[] a, T[2] b){
-    if (b[0] > b[1]){
-      T[4] B = [T.min, b[1], b[0], T.max];
-      int a1 = 0;
-      int b1 = 0;
-      size_t len = a.length;
-      while (a1 != len && b1 != B.length){
-	if (a[a1] < B[b1]){
-	  if (fallsIn(a[a1], B)){
-	    a ~= a[a1];
-	  }
-	  a1++;
-	}
-	else if (a[a1] > B[b1]){
-	  if (fallsIn(B[b1], a, a1)){
-	    a ~= B[b1];
-	  }
-	  b1++;
-	}
-	else {
-	  if ((a1+b1)%2==0){
-	    a ~= a[a1];
-	    a1++;
-	    b1++;
-	  }
-	  else {
-	    a ~= a[a1];
-	    a ~= a[a1];
-	    a1++;
-	    b1++;
-	  }
-	}
-      }
-      if (len == a.length){
-	a.length = 0;
-      }
-      else {
-	a = a[len .. $];
-      }
-    }
-    else {
-      int a1 = 0;
-      int b1 = 0;
-      size_t len = a.length;
-      while (a1 != len && b1 != b.length){
-	if (a[a1] < b[b1]){
-	  if (fallsIn(a[a1], b)){
-	    a ~= a[a1];
-	  }
-	  a1++;
-	}
-	else if (a[a1] > b[b1]){
-	  if (fallsIn(b[b1], a, a1)){
-	    a ~= b[b1];
-	  }
-	  b1++;
-	}
-	else {
-	  if ((a1+b1)%2==0){
-	    a ~= a[a1];
-	    a1++;
-	    b1++;
-	  }
-	  else {
-	    a ~= a[a1];
-	    a ~= a[a1];
-	    a1++;
-	    b1++;
-	  }
-	}
-      }
-      if (len == a.length){
-	a.length = 0;
-      }
-      else {
-	a = a[len .. $];
-      }
-    }
-  }
-  void ORRANGE(ref S[] a, S[2] b){
-    if (b[0] > b[1]){
-      S[4] B = [S.min, b[1], b[0], S.max];
-      int a1 = 0;
-      int b1 = 0;
-      size_t len = a.length;
-      while (a1 < len || b1 < B.length){
-	if (a1 >= len){
-	  ptrdiff_t temp = a.length - len;
-	  if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == B[b1]-1)||(a[$-1] == B[b1]))){
-	    a.length --;
-	    b1 ++;
-	  }
-	  while (b1 < B.length){
-	    a ~= B[b1];
-	    b1++;
-	  }
-	  continue;
-	}
-	else if (b1 >= B.length){
-	  ptrdiff_t temp = a.length - len;
-	  if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == a[a1]-1)||(a[$-1] == a[a1]))){
-	    a.length --;
-	    a1 ++;
-	  }
-	  while (a1 < len){
-	    a ~= a[a1];
-	    a1++;
-	  }
-	  continue;
-	}
-	if (a[a1] < B[b1]){
-	  if (!fallsIn(a[a1], B)){
-	    ptrdiff_t temp = a.length - len;
-	    if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == a[a1]-1)||(a[$-1] == a[a1]))){
-	      a.length --;
-	    }
-	    else {
-	      a ~= a[a1];
-	    }
-	  }
-	  a1++;
-	}
-	else if (a[a1] > B[b1]){
-	  if (!fallsIn(B[b1], a, a1)){
-	    ptrdiff_t temp = a.length - len;
-	    if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == B[b1] -1)||(a[$-1] == B[b1]))){
-	      a.length --;
-	    }
-	    else {
-	      a ~= B[b1];
-	    }
-	  }
-	  b1++;
-	}
-	else {
-	  if ((a1+b1)%2==0){
-	    a ~= a[a1];
-	    a1++;
-	    b1++;
-	  }
-	  else {
-	    a1++;
-	    b1++;
-	  }
-	}
-      }
-      if (len == a.length){
-	a.length = 0;
-      }
-      else {
-	a = a[len .. $];
-      }
-    }
-    else {
-      int a1 = 0;
-      int b1 = 0;
-      size_t len = a.length;
-      while (a1 < len || b1 < b.length){
-	if (a1 >= len){
-	  ptrdiff_t temp = a.length - len;
-	  if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == b[b1]-1)||(a[$-1] == b[b1]))){
-	    a.length --;
-	    b1 ++;
-	  }
-	  while (b1 < b.length){
-	    a ~= b[b1];
-	    b1++;
-	  }
-	  continue;
-	}
-	else if (b1 >= b.length){
-	  ptrdiff_t temp = a.length - len;
-	  if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == a[a1]-1)||(a[$-1] == a[a1]))){
-	    a.length --;
-	    a1 ++;
-	  }
-	  while (a1 < len){
-	    a ~= a[a1];
-	    a1++;
-	  }
-	  continue;
-	}
-	if (a[a1] < b[b1]){
-	  if (!fallsIn(a[a1], b)){
-	    ptrdiff_t temp = a.length - len;
-	    if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == a[a1]-1)||(a[$-1] == a[a1]))){
-	      a.length --;
-	    }
-	    else {
-	      a ~= a[a1];
-	    }
-	  }
-	  a1++;
-	}
-	else if (a[a1] > b[b1]){
-	  if (!fallsIn(b[b1], a, a1)){
-	    ptrdiff_t temp = a.length - len;
-	    if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == b[b1] -1)||(a[$-1] == b[b1]))){
-	      a.length --;
-	    }
-	    else {
-	      a ~= b[b1];
-	    }
-	  }
-	  b1++;
-	}
-	else {
-	  if ((a1+b1)%2==0){
-	    a ~= a[a1];
-	    a1++;
-	    b1++;
-	  }
-	  else {
-	    a1++;
-	    b1++;
-	  }
-	}
-      }
-      if (len == a.length){
-	a.length = 0;
-      }
-      else {
-	a = a[len .. $];
-      }
-    }
-  }
-  bool isInRange(T)(T x, ref T [] a){
-    foreach (i, elem; a){
-      if (i % 2 == 0){
-	if (x < elem){
-	  return false;
-	}
-      }
-      else {
-	if (x <= elem){
-	  return true;
-	}
-      }
-    }
-    return false;
-  }
-  bool isInRange(T)(T x, ref T [2] a){
-    foreach (i, elem; a){
-      if (i % 2 == 0){
-	if (x < elem){
-	  return false;
-	}
-      }
-      else {
-	if (x <= elem){
-	  return true;
-	}
-      }
-    }
-    return false;
-  }
-  bool isInRange(T)(T x, ref T [4] a){
-    foreach (i, elem; a){
-      if (i % 2 == 0){
-	if (x < elem){
-	  return false;
-	}
-      }
-      else {
-	if (x <= elem){
-	  return true;
-	}
-      }
-    }
-    return false;
-  }
-  bool fallsIn(T)(T x, ref T [] a){
-    foreach (i, elem; a){
-      if (x < elem){
-	if (i % 2==0){
-	  return false;
-	}
-	return true;
-      }
-    }
-    return false;
-  }
-  bool fallsIn(T)(T x, T [2] a){
-    foreach (i, elem; a){
-      if (x < elem){
-	if (i % 2==0){
-	  return false;
-	}
-	return true;
-      }
-    }
-    return false;
-  }
-  bool fallsIn(T)(T x, T [4] a){
-    foreach (i, elem; a){
-      if (x < elem){
-	if (i % 2==0){
-	  return false;
-	}
-	return true;
-      }
-    }
-    return false;
-  }
-  bool fallsIn(T)(T x, ref T [] a, int pos){
-    for (int i = pos; i < a.length; i++){
-      T elem = a[i];
-      if (x < elem){
-	if (i % 2==0){
-	  return false;
-	}
-	return true;
-      }
-    }
-    return false;
-  }
+  // void ANDRANGE(ref S[] a, ref S[] b){
+  //   int a1 = 0;
+  //   int b1 = 0;
+  //   size_t len = a.length;
+  //   while (a1 != len && b1 != b.length){
+  //     if (a[a1] < b[b1]){
+  // 	if (fallsIn(a[a1], b, b1)){
+  // 	  a ~= a[a1];
+  // 	}
+  // 	a1++;
+  //     }
+  //     else if (a[a1] > b[b1]){
+  // 	if (fallsIn(b[b1], a, a1)){
+  // 	  a ~= b[b1];
+  // 	}
+  // 	b1++;
+  //     }
+  //     else {
+  // 	if ((a1+b1)%2==0){
+  // 	  a ~= a[a1];
+  // 	  a1++;
+  // 	  b1++;
+  // 	}
+  // 	else {
+  // 	  a ~= a[a1];
+  // 	  a ~= a[a1];
+  // 	  a1++;
+  // 	  b1++;
+  // 	}
+  //     }
+  //   }
+  //   if (len == a.length){
+  //     a.length = 0;
+  //   }
+  //   else {
+  //     a = a[len .. $];
+  //   }
+  // }
+  // bool ANDRANGE(ref S[2] a, S[2] b){
+  //   if(a[1] < b[0] || b[1] < a[0]){
+  //     return false;
+  //   }
+  //   S[2] temp = [S.min, S.max];
+  //   if(a[0] > b[0]){
+  //     temp[0] = a[0];
+  //   }
+  //   else{
+  //     temp[0] = b[0];
+  //   }
+  //   if(a[1] < b[1]){
+  //     temp[1] = a[1];
+  //   }
+  //   else{
+  //     temp[1] = b[1];
+  //   }
+  //   a = temp;
+  //   return true;
+  // }
+  // void ORRANGE(ref S[] a, ref S[] b){
+  //   int a1 = 0;
+  //   int b1 = 0;
+  //   size_t len = a.length;
+  //   while (a1 < len || b1 < b.length){
+  //     if (a1 >= len){
+  // 	size_t temp = a.length - len;
+  // 	if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == b[b1]-1)||(a[$-1] == b[b1]))){
+  // 	  a.length --;
+  // 	  b1 ++;
+  // 	}
+  // 	while (b1 < b.length){
+  // 	  a ~= b[b1];
+  // 	  b1++;
+  // 	}
+  // 	continue;
+  //     }
+  //     else if (b1 >= b.length){
+  // 	size_t temp = a.length - len;
+  // 	if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == a[a1]-1)||(a[$-1] == a[a1]))){
+  // 	  a.length --;
+  // 	  a1 ++;
+  // 	}
+  // 	while (a1 < len){
+  // 	  a ~= a[a1];
+  // 	  a1++;
+  // 	}
+  // 	continue;
+  //     }
+  //     if (a[a1] < b[b1]){
+  // 	if (!fallsIn(a[a1], b, b1)){
+  // 	  size_t temp = a.length - len;
+  // 	  if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == a[a1]-1)||(a[$-1] == a[a1]-1))){
+  // 	    a.length --;
+  // 	  }
+  // 	  else {
+  // 	    a ~= a[a1];
+  // 	  }
+  // 	}
+  // 	a1++;
+  //     }
+  //     else if (a[a1] > b[b1]){
+  // 	if (!fallsIn(b[b1], a, a1)){
+  // 	  size_t temp = a.length - len;
+  // 	  if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == b[b1] -1)||(a[$-1] == b[b1]))){
+  // 	    a.length --;
+  // 	  }
+  // 	  else {
+  // 	    a ~= b[b1];
+  // 	  }
+  // 	}
+  // 	b1++;
+  //     }
+  //     else {
+  // 	if ((a1+b1)%2==0){
+  // 	  a ~= a[a1];
+  // 	  a1++;
+  // 	  b1++;
+  // 	}
+  // 	else {
+  // 	  a1++;
+  // 	  b1++;
+  // 	}
+  //     }
+  //   }
+  //   if (len == a.length){
+  //     a.length = 0;
+  //   }
+  //   else {
+  //     a = a[len .. $];
+  //   }
+  // }
+  // void ANDRANGE(T)(ref T[] a, T[2] b){
+  //   if (b[0] > b[1]){
+  //     T[4] B = [T.min, b[1], b[0], T.max];
+  //     int a1 = 0;
+  //     int b1 = 0;
+  //     size_t len = a.length;
+  //     while (a1 != len && b1 != B.length){
+  // 	if (a[a1] < B[b1]){
+  // 	  if (fallsIn(a[a1], B)){
+  // 	    a ~= a[a1];
+  // 	  }
+  // 	  a1++;
+  // 	}
+  // 	else if (a[a1] > B[b1]){
+  // 	  if (fallsIn(B[b1], a, a1)){
+  // 	    a ~= B[b1];
+  // 	  }
+  // 	  b1++;
+  // 	}
+  // 	else {
+  // 	  if ((a1+b1)%2==0){
+  // 	    a ~= a[a1];
+  // 	    a1++;
+  // 	    b1++;
+  // 	  }
+  // 	  else {
+  // 	    a ~= a[a1];
+  // 	    a ~= a[a1];
+  // 	    a1++;
+  // 	    b1++;
+  // 	  }
+  // 	}
+  //     }
+  //     if (len == a.length){
+  // 	a.length = 0;
+  //     }
+  //     else {
+  // 	a = a[len .. $];
+  //     }
+  //   }
+  //   else {
+  //     int a1 = 0;
+  //     int b1 = 0;
+  //     size_t len = a.length;
+  //     while (a1 != len && b1 != b.length){
+  // 	if (a[a1] < b[b1]){
+  // 	  if (fallsIn(a[a1], b)){
+  // 	    a ~= a[a1];
+  // 	  }
+  // 	  a1++;
+  // 	}
+  // 	else if (a[a1] > b[b1]){
+  // 	  if (fallsIn(b[b1], a, a1)){
+  // 	    a ~= b[b1];
+  // 	  }
+  // 	  b1++;
+  // 	}
+  // 	else {
+  // 	  if ((a1+b1)%2==0){
+  // 	    a ~= a[a1];
+  // 	    a1++;
+  // 	    b1++;
+  // 	  }
+  // 	  else {
+  // 	    a ~= a[a1];
+  // 	    a ~= a[a1];
+  // 	    a1++;
+  // 	    b1++;
+  // 	  }
+  // 	}
+  //     }
+  //     if (len == a.length){
+  // 	a.length = 0;
+  //     }
+  //     else {
+  // 	a = a[len .. $];
+  //     }
+  //   }
+  // }
+  // void ORRANGE(ref S[] a, S[2] b){
+  //   if (b[0] > b[1]){
+  //     S[4] B = [S.min, b[1], b[0], S.max];
+  //     int a1 = 0;
+  //     int b1 = 0;
+  //     size_t len = a.length;
+  //     while (a1 < len || b1 < B.length){
+  // 	if (a1 >= len){
+  // 	  ptrdiff_t temp = a.length - len;
+  // 	  if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == B[b1]-1)||(a[$-1] == B[b1]))){
+  // 	    a.length --;
+  // 	    b1 ++;
+  // 	  }
+  // 	  while (b1 < B.length){
+  // 	    a ~= B[b1];
+  // 	    b1++;
+  // 	  }
+  // 	  continue;
+  // 	}
+  // 	else if (b1 >= B.length){
+  // 	  ptrdiff_t temp = a.length - len;
+  // 	  if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == a[a1]-1)||(a[$-1] == a[a1]))){
+  // 	    a.length --;
+  // 	    a1 ++;
+  // 	  }
+  // 	  while (a1 < len){
+  // 	    a ~= a[a1];
+  // 	    a1++;
+  // 	  }
+  // 	  continue;
+  // 	}
+  // 	if (a[a1] < B[b1]){
+  // 	  if (!fallsIn(a[a1], B)){
+  // 	    ptrdiff_t temp = a.length - len;
+  // 	    if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == a[a1]-1)||(a[$-1] == a[a1]))){
+  // 	      a.length --;
+  // 	    }
+  // 	    else {
+  // 	      a ~= a[a1];
+  // 	    }
+  // 	  }
+  // 	  a1++;
+  // 	}
+  // 	else if (a[a1] > B[b1]){
+  // 	  if (!fallsIn(B[b1], a, a1)){
+  // 	    ptrdiff_t temp = a.length - len;
+  // 	    if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == B[b1] -1)||(a[$-1] == B[b1]))){
+  // 	      a.length --;
+  // 	    }
+  // 	    else {
+  // 	      a ~= B[b1];
+  // 	    }
+  // 	  }
+  // 	  b1++;
+  // 	}
+  // 	else {
+  // 	  if ((a1+b1)%2==0){
+  // 	    a ~= a[a1];
+  // 	    a1++;
+  // 	    b1++;
+  // 	  }
+  // 	  else {
+  // 	    a1++;
+  // 	    b1++;
+  // 	  }
+  // 	}
+  //     }
+  //     if (len == a.length){
+  // 	a.length = 0;
+  //     }
+  //     else {
+  // 	a = a[len .. $];
+  //     }
+  //   }
+  //   else {
+  //     int a1 = 0;
+  //     int b1 = 0;
+  //     size_t len = a.length;
+  //     while (a1 < len || b1 < b.length){
+  // 	if (a1 >= len){
+  // 	  ptrdiff_t temp = a.length - len;
+  // 	  if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == b[b1]-1)||(a[$-1] == b[b1]))){
+  // 	    a.length --;
+  // 	    b1 ++;
+  // 	  }
+  // 	  while (b1 < b.length){
+  // 	    a ~= b[b1];
+  // 	    b1++;
+  // 	  }
+  // 	  continue;
+  // 	}
+  // 	else if (b1 >= b.length){
+  // 	  ptrdiff_t temp = a.length - len;
+  // 	  if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == a[a1]-1)||(a[$-1] == a[a1]))){
+  // 	    a.length --;
+  // 	    a1 ++;
+  // 	  }
+  // 	  while (a1 < len){
+  // 	    a ~= a[a1];
+  // 	    a1++;
+  // 	  }
+  // 	  continue;
+  // 	}
+  // 	if (a[a1] < b[b1]){
+  // 	  if (!fallsIn(a[a1], b)){
+  // 	    ptrdiff_t temp = a.length - len;
+  // 	    if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == a[a1]-1)||(a[$-1] == a[a1]))){
+  // 	      a.length --;
+  // 	    }
+  // 	    else {
+  // 	      a ~= a[a1];
+  // 	    }
+  // 	  }
+  // 	  a1++;
+  // 	}
+  // 	else if (a[a1] > b[b1]){
+  // 	  if (!fallsIn(b[b1], a, a1)){
+  // 	    ptrdiff_t temp = a.length - len;
+  // 	    if ((temp != 0) && (temp % 2 == 0) && ((a[$-1] == b[b1] -1)||(a[$-1] == b[b1]))){
+  // 	      a.length --;
+  // 	    }
+  // 	    else {
+  // 	      a ~= b[b1];
+  // 	    }
+  // 	  }
+  // 	  b1++;
+  // 	}
+  // 	else {
+  // 	  if ((a1+b1)%2==0){
+  // 	    a ~= a[a1];
+  // 	    a1++;
+  // 	    b1++;
+  // 	  }
+  // 	  else {
+  // 	    a1++;
+  // 	    b1++;
+  // 	  }
+  // 	}
+  //     }
+  //     if (len == a.length){
+  // 	a.length = 0;
+  //     }
+  //     else {
+  // 	a = a[len .. $];
+  //     }
+  //   }
+  // }
+  // bool isInRange(T)(T x, ref T [] a){
+  //   foreach (i, elem; a){
+  //     if (i % 2 == 0){
+  // 	if (x < elem){
+  // 	  return false;
+  // 	}
+  //     }
+  //     else {
+  // 	if (x <= elem){
+  // 	  return true;
+  // 	}
+  //     }
+  //   }
+  //   return false;
+  // }
+  // bool isInRange(T)(T x, ref T [2] a){
+  //   foreach (i, elem; a){
+  //     if (i % 2 == 0){
+  // 	if (x < elem){
+  // 	  return false;
+  // 	}
+  //     }
+  //     else {
+  // 	if (x <= elem){
+  // 	  return true;
+  // 	}
+  //     }
+  //   }
+  //   return false;
+  // }
+  // bool isInRange(T)(T x, ref T [4] a){
+  //   foreach (i, elem; a){
+  //     if (i % 2 == 0){
+  // 	if (x < elem){
+  // 	  return false;
+  // 	}
+  //     }
+  //     else {
+  // 	if (x <= elem){
+  // 	  return true;
+  // 	}
+  //     }
+  //   }
+  //   return false;
+  // }
+  // bool fallsIn(T)(T x, ref T [] a){
+  //   foreach (i, elem; a){
+  //     if (x < elem){
+  // 	if (i % 2==0){
+  // 	  return false;
+  // 	}
+  // 	return true;
+  //     }
+  //   }
+  //   return false;
+  // }
+  // bool fallsIn(T)(T x, T [2] a){
+  //   foreach (i, elem; a){
+  //     if (x < elem){
+  // 	if (i % 2==0){
+  // 	  return false;
+  // 	}
+  // 	return true;
+  //     }
+  //   }
+  //   return false;
+  // }
+  // bool fallsIn(T)(T x, T [4] a){
+  //   foreach (i, elem; a){
+  //     if (x < elem){
+  // 	if (i % 2==0){
+  // 	  return false;
+  // 	}
+  // 	return true;
+  //     }
+  //   }
+  //   return false;
+  // }
+  // bool fallsIn(T)(T x, ref T [] a, int pos){
+  //   for (int i = pos; i < a.length; i++){
+  //     T elem = a[i];
+  //     if (x < elem){
+  // 	if (i % 2==0){
+  // 	  return false;
+  // 	}
+  // 	return true;
+  //     }
+  //   }
+  //   return false;
+  // }
   void AddInRange(T)(ref T[2] range, T num){
     foreach (ref e; range){
       e = e + num;
@@ -2821,58 +3188,58 @@ class CstMonoSolver (S): CstSolver
   /*void reverseRange(ref Range!S range){
     final switch (range.getType()){
     case RangeType.STA:
-      S[2] temp = range.getS();
-      if(temp == [S.min, S.max]){
-	range.setType(RangeType.NUL);
-	break;
-      }
-      S a = temp[0];
-      temp[0] = temp[1] + 1;
-      temp[1] = a - 1;
-      break;
+    S[2] temp = range.getS();
+    if(temp == [S.min, S.max]){
+    range.setType(RangeType.NUL);
+    break;
+    }
+    S a = temp[0];
+    temp[0] = temp[1] + 1;
+    temp[1] = a - 1;
+    break;
     case RangeType.NUL:
-      S[2] temp = [S.min, S.max];
-      range = Range!S(temp);
-      break;
+    S[2] temp = [S.min, S.max];
+    range = Range!S(temp);
+    break;
     case RangeType.DYN:
-      //S[] temp = range.getD();
-      if (range.getD[0] == S.min){
-	range.getD = range.getD[1 .. $];
-      }
-      else{
-	range.getD ~= range.getD[$-1];
-	for(size_t i = range.getD.length - 2; i > 0; --i){
-	  range.getD[i] = range.getD[i-1];
-	}
-	range.getD[0] = S.max;
-      }
-      // import std.stdio;
-      // writeln();
-      // for(size_t i = 0; i < range.getD.length; ++i){
-      // 	write(range.getD[i]);
-      // }
-      // writeln();
-      if (range.getD[$-1] == S.max){
-	// writeln("ERROR");
-	range.getD.length -= 1;
-      }
-      else{
-	// writeln("NO ERROR");
-	range.getD ~= S.min;
-      }
+    //S[] temp = range.getD();
+    if (range.getD[0] == S.min){
+    range.getD = range.getD[1 .. $];
+    }
+    else{
+    range.getD ~= range.getD[$-1];
+    for(size_t i = range.getD.length - 2; i > 0; --i){
+    range.getD[i] = range.getD[i-1];
+    }
+    range.getD[0] = S.max;
+    }
+    // import std.stdio;
+    // writeln();
+    // for(size_t i = 0; i < range.getD.length; ++i){
+    // 	write(range.getD[i]);
+    // }
+    // writeln();
+    if (range.getD[$-1] == S.max){
+    // writeln("ERROR");
+    range.getD.length -= 1;
+    }
+    else{
+    // writeln("NO ERROR");
+    range.getD ~= S.min;
+    }
       
-      for(size_t i = 0; i < range.getD.length; ++i){
-	if(i%2 == 0){
-	  range.getD[i] ++;
-	}
-	else{
-	  range.getD[i] --;
-	}
-      }
-      if(range.getD.length == 0){
-	range.setType(RangeType.NUL);
-      }
-      // range.getD().length = temp.length;
+    for(size_t i = 0; i < range.getD.length; ++i){
+    if(i%2 == 0){
+    range.getD[i] ++;
+    }
+    else{
+    range.getD[i] --;
+    }
+    }
+    if(range.getD.length == 0){
+    range.setType(RangeType.NUL);
+    }
+    // range.getD().length = temp.length;
     }
     }*/
   void display(Term[] Stack){
@@ -2903,17 +3270,28 @@ class CstMonoSolver (S): CstSolver
     }
     write("]");
   }
-  void displayRangeStack(T)(Range!T [] r){
+  void display(T)(RangeStack!T r){
     import std.stdio;
     writeln();
     write("[");     
-    foreach (elem; r){
-      display(elem);
+    for (int i = 0; i < r.length; i ++){
+      display(r[i]);
       write(", ");
     }
     write("]");
     writeln();
   }
+  // void displayRangeStack(T)(Range!T [] r){
+  //   import std.stdio;
+  //   writeln();
+  //   write("[");     
+  //   foreach (elem; r){
+  //     display(elem);
+  //     write(", ");
+  //   }
+  //   write("]");
+  //   writeln();
+  // }
   void display(T)(Range!T r){
     import std.stdio;
     final switch(r.getType()){
@@ -3074,4 +3452,5 @@ class CstMonoSolver (S): CstSolver
 unittest
 {
   CstMonoSolver!int solver = new CstMonoSolver!int();
+  
 }
