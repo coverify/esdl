@@ -9,7 +9,7 @@ import esdl.rand.proxy: _esdl__Proxy;
 enum NumType: ubyte {INT, UINT, LONG, ULONG};
 enum Type: ubyte { NUM, ADD, SUB, RAND};
 
-debug = MONOSOLVER;
+// debug = MONOSOLVER;
 debug (MONOSOLVER){
   debug = CHECKMONO;
 }
@@ -47,6 +47,18 @@ struct RangeStack (T){
       length ++;
     }
   }
+  void opOpAssign(string op)(T[4] elem) if (op == "~"){
+    if (length + 1 >= capacity){
+      length ++;
+      capacity ++;
+      _load ~= Range!T();
+      _load[length-1].copyVal(elem);
+    }
+    else {
+      _load[length].copyVal(elem);
+      length ++;
+    }
+  }
   void opOpAssign(string op)(bool elem) if (op == "~"){
     if (length + 1 >= capacity){
       _load ~= Range!T();
@@ -67,6 +79,10 @@ struct RangeStack (T){
     assert(length > 1);
     this[$-2].and(this[$-1]);
     length --;
+  }
+  void procNegPrev(){
+    assert(length > 1);
+    this[$-2].negateRange();
   }
   void procNeg(){
     assert(length > 0);
@@ -117,6 +133,16 @@ struct Range (T)
     }
     _last += 2;
   }
+  void opOpAssign(string op)(T[4] r) if (op == "~"){
+    size_t i = 0;
+    for (; i < 4 && i + _last < _load.length; i ++){
+      _load[i + _last] = r[i];
+    }
+    for (; i < 4; i ++){
+      _load ~= r[i];
+    }
+    _last += 4;
+  }
   void opOpAssign(string op)(T r) if (op == "~"){
     if (_last < _load.length){
       _load[_last] = r;
@@ -146,12 +172,20 @@ struct Range (T)
   this(T[2] r){
     this ~= r;
   }
+  this(T[4] r){
+    this ~= r;
+  }
   void copyVal(ref T[] r){
     _first = 0;
     _last = 0;
     this ~= r;
   }
   void copyVal(T[2] r){
+    _first = 0;
+    _last = 0;
+    this ~= r;
+  }
+  void copyVal(T[4] r){
     _first = 0;
     _last = 0;
     this ~= r;
@@ -346,6 +380,9 @@ struct Range (T)
     writeln("[");
     for(ulong i = _first; i < _last; i ++){
       write(_load[i], ",");
+    }
+    for (ulong i = _first+1; i < _last; i ++){
+      assert(_load[i] >= _load[i-1]);
     }
     writeln("]");
   }
@@ -1358,6 +1395,10 @@ class CstMonoSolver (S): CstSolver
       _rangeStack ~= false;
       _endFlag = 0;
     }
+    else if (range1[0] > range1[1]){
+      S[4] range2 = [S.min, range1[1], range1[0], S.max];
+      _rangeStack ~= range2;
+    }
     else{
       _rangeStack ~= range1;
     }
@@ -1543,7 +1584,7 @@ class CstMonoSolver (S): CstSolver
       _rangeStack.procNeg();
       break;
     case CstLogicOp.LOGICIMP:
-      _rangeStack.procNeg();
+      _rangeStack.procNegPrev();
       _rangeStack.procOr();
       break;
       // final switch(_rangeStack[$-1].getType()){
