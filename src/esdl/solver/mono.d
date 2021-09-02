@@ -25,7 +25,7 @@ struct RangeStack (T){
     return _load[index];
   }
   void opOpAssign(string op)(T[2] elem) if (op == "~"){
-    if (length + 1 >= capacity){
+    if (length + 1 > capacity){
       length ++;
       capacity ++;
       _load ~= Range!T();
@@ -37,7 +37,7 @@ struct RangeStack (T){
     }
   }
   void opOpAssign(string op)(ref T[] elem) if (op == "~"){
-    if (length + 1 >= capacity){
+    if (length + 1 > capacity){
       _load ~= Range(elem);
       length ++;
       capacity ++;
@@ -48,7 +48,7 @@ struct RangeStack (T){
     }
   }
   void opOpAssign(string op)(T[4] elem) if (op == "~"){
-    if (length + 1 >= capacity){
+    if (length + 1 > capacity){
       length ++;
       capacity ++;
       _load ~= Range!T();
@@ -60,7 +60,7 @@ struct RangeStack (T){
     }
   }
   void opOpAssign(string op)(bool elem) if (op == "~"){
-    if (length + 1 >= capacity){
+    if (length + 1 > capacity){
       _load ~= Range!T();
       length ++;
       capacity ++;
