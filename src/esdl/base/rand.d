@@ -78,7 +78,8 @@ class _esdl__RandGen
     }
     else {
       if (_randGen is null) {
-	_randGen = new _esdl__RandGen(uniform!int());
+	_randGen = new _esdl__RandGen(// uniform!int()
+				      0);
       }
       return _randGen;
     }

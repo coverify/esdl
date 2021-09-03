@@ -116,7 +116,16 @@ class CstObjectIdx(V, rand RAND_ATTR, int N, int IDX,
       }
     }
   }
-
+  override bool rand_mode() {
+    static if (_esdl__PROXYT._esdl__HAS_RAND_INFO == false) return true;
+    else {
+      assert (_parent !is null);
+      _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
+      return true;
+      assert (proxy._esdl__outer !is null);
+      return proxy._esdl__outer.rand_mode!(IDX)();
+    }
+  }
 }
 
 abstract class _esdl__ProxyStub(T): CstObjectIntf, rand.disable, rand.barrier
@@ -192,6 +201,7 @@ abstract class CstObjectBase(V, rand RAND_ATTR, int N)
       {
 	enum HAS_RAND_ATTRIB = RAND_ATTR.isRand();
 	alias LEAF = LeafElementType!V;
+	alias RAND = RAND_ATTR;
 
 	static if (is (LEAF == struct)) {
 	  this(string name, _esdl__Proxy parent, LEAF* var) {
@@ -231,15 +241,7 @@ abstract class CstObjectBase(V, rand RAND_ATTR, int N)
 	  return this.to!string();
 	}
 
-	bool _isRand = true;
-	void rand_mode(bool mode) {
-	  if (mode != _isRand) {
-	    assert (_root !is null);
-	    _isRand = mode;
-	    _root.setNeedSync();
-	  }
-	}
-	bool rand_mode() { return _isRand; }
+	bool rand_mode() { return true; }
 	// overridden in derived classes
 	override bool isRand() { assert (false); }
       }
@@ -268,7 +270,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       final override bool isRand() {
-	return HAS_RAND_ATTRIB && _isRand && _parent.isRand();
+	return HAS_RAND_ATTRIB && rand_mode() && _parent.isRand();
       }
 
       final override bool inRange() { return _parent.inRange(); }
@@ -294,6 +296,10 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 
       final bool isRolled() {
 	return _parent.isRolled();		// N == 0
+      }
+
+      final RV getResolved() {
+	return this;
       }
 
       // RV
@@ -337,6 +343,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 
       CstVecTerm _indexExpr = null;
       ulong _pindex = 0;
+      bool _isMapped;
 
       uint _resolvedCycle;	// cycle for which indexExpr has been resolved
       RV _resolvedObj;
@@ -368,7 +375,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       final override bool isRand() {
-	return HAS_RAND_ATTRIB && _isRand && _parent.isRand();
+	return HAS_RAND_ATTRIB && rand_mode() && _parent.isRand();
       }
 
       final override bool inRange() {
@@ -552,6 +559,16 @@ class CstObjArrIdx(V, rand RAND_ATTR, int N, int IDX,
       return this;
     }
   }
+  override bool rand_mode() {
+    static if (_esdl__PROXYT._esdl__HAS_RAND_INFO == false) return true;
+    else {
+      assert (_parent !is null);
+      _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
+      return true;
+      assert (proxy._esdl__outer !is null);
+      return proxy._esdl__outer.rand_mode!(IDX)();
+    }
+  }
 }
 
 
@@ -564,6 +581,7 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
   enum ARR_ORDER = _esdl__ArrOrder!(V, N);
   enum HAS_RAND_ATTRIB = RAND_ATTR.isRand();
   alias LEAF = LeafElementType!V;
+  alias RAND = RAND_ATTR;
 
   alias L = ElementTypeN!(V, N);
   alias E = ElementTypeN!(V, N+1);
@@ -592,14 +610,7 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
   abstract EV createElem(CstVecTerm indexExpr);
   abstract EV createElem(uint i);
     
-  bool _isRand = true;
-  void rand_mode(bool mode) {
-    if (mode != _isRand) {
-      _isRand = mode;
-      _root.setNeedSync();
-    }
-  }
-  bool rand_mode() { return _isRand; }
+  bool rand_mode() { return true; }
   // overridded in derived classes
   bool isRand() { assert (false); }
 
@@ -771,8 +782,6 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
 class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
   CstObjArrBase!(V, RAND_ATTR, N)
     {
-      alias RAND=RAND_ATTR;
-
       V* _var;
       _esdl__Proxy _parent;
     
@@ -790,7 +799,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       final override bool isRand() {
-	return HAS_RAND_ATTRIB && _isRand && _parent.isRand();
+	return HAS_RAND_ATTRIB && rand_mode() && _parent.isRand();
       }
 
       final override bool inRange() {
@@ -904,9 +913,8 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
       P _parent;
       CstVecTerm _indexExpr = null;
       ulong _pindex = 0;
+      bool _isMapped;
 
-      alias RAND=RAND_ATTR;
-      
       uint _resolvedCycle;	// cycle for which indexExpr has been resolved
       RV _resolvedObj;
 
@@ -936,7 +944,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       final override bool isRand() {
-	return HAS_RAND_ATTRIB && _isRand && _parent.isRand();
+	return HAS_RAND_ATTRIB && rand_mode() && _parent.isRand();
       }
 
       final override bool inRange() {

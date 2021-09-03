@@ -205,8 +205,6 @@ abstract class _esdl__Constraint(string CONSTRAINT, string FILE=__FILE__, size_t
 
 abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 {
-  // static Buddy _esdl__buddy;
-
   // CstDomBase[] _cstRndDomains;
   CstDomBase[] _cstValDomains;
 
@@ -228,7 +226,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     }
   }
 
-  // only the root proxy gets a null name, other component proxies override
+  // _esdl__objIntf provides the interface to the objx instance
+  // would be null for root proxy
   CstObjectIntf _esdl__objIntf;
 
   _esdl__Proxy _esdl__getProxy() {
