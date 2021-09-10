@@ -248,16 +248,23 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   }
   
   bool isRand() {
-    if (_esdl__objIntf is null) return true;
+    if (_esdl__objIntf is null) return true; // root proxy
     else {
       return _esdl__objIntf.isRand();
     }
   }
   
   bool inRange() {
-    if (_esdl__objIntf is null) return true;
+    if (_esdl__objIntf is null) return true; // root proxy
     else {
       return _esdl__objIntf.inRange();
+    }
+  }
+
+  override bool depsAreResolved() {
+    if (_esdl__objIntf is null) return true; // root proxy
+    else {
+      return _esdl__objIntf.depsAreResolved();
     }
   }
 
@@ -292,15 +299,15 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   
   _esdl__Proxy getProxyRoot() {
-    if (_root is null) {return this;}
+    if (_root is null) { return this; }
     else return _root;
   }
 
   // CstObjNodeIntf
-  final bool _esdl__isObjArray() {return false;}
-  final CstIterator _esdl__iter() {return null;}
-  final CstVarNodeIntf _esdl__getChild(ulong n) {assert (false);}
-  void scan() {}		// when an object is unrolled
+  final bool _esdl__isObjArray() { return false; }
+  final CstIterator _esdl__iter() { return null; }
+  final CstVarNodeIntf _esdl__getChild(ulong n) { assert (false); }
+  void scan() { }		// when an object is unrolled
 
   static CstSolver[string] _solvers;
 
@@ -394,28 +401,28 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   Folder!(CstPredGroup, "solvedGroups") _solvedGroups;
 
   
-  Folder!(CstPredicate, "collectedPredicates") _collectedPredicates;
-  Folder!(CstDomBase, "groupDomains") _groupDomains;
-  Folder!(CstDomSet, "groupDomArrs") _groupDomArrs;
+  Folder!(CstPredicate, "collatedPredicates") _collatedPredicates;
+  Folder!(CstDomBase, "collatedDomains") _collatedDomains;
+  Folder!(CstDomSet, "collatedDomArrs") _collatedDomArrs;
   
   Folder!(CstVarNodeIntf, "beforeSolve") _beforeSolve;
   Folder!(CstVarNodeIntf, "afterSolve") _afterSolve;
 
 
-  void addGroupPredicate (CstPredicate pred){
-    _collectedPredicates ~= pred;
+  void collatePredicate (CstPredicate pred){
+    _collatedPredicates ~= pred;
     pred._orderLevel = 0;
     pred._state = CstPredicate.State.COLLATED;
   }
 
-  void addGroupDomain (CstDomBase dom){
-    _groupDomains ~= dom;
+  void collateDomain (CstDomBase dom){
+    _collatedDomains ~= dom;
     dom._orderLevel = 0;
     dom._state = CstDomBase.State.COLLATED;
   }
   
-  void addGroupDomArr (CstDomSet domArr){
-    _groupDomArrs ~= domArr;
+  void collateDomArr (CstDomSet domArr){
+    _collatedDomArrs ~= domArr;
     domArr._orderLevel = 0;
     domArr._state = CstDomSet.State.COLLATED;
   }
@@ -423,15 +430,15 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   void printGroup (){
     import std.stdio;
     writeln("\nPreds: ");
-    foreach (pred; _collectedPredicates){
+    foreach (pred; _collatedPredicates){
       writeln(pred.name(), ", ", pred.getOrderLevel);
     }
     writeln("Doms: ");
-    foreach (dom; _groupDomains){
+    foreach (dom; _collatedDomains){
       writeln(dom.fullName(), ", ", dom.getOrderLevel);
     }
     writeln("DomArrs: ");
-    foreach (dom; _groupDomArrs){
+    foreach (dom; _collatedDomArrs){
       writeln(dom.fullName(), ", ", dom.getOrderLevel);
     }
   }
@@ -441,7 +448,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _beforeSolve.reset();
     _afterSolve.reset();
 
-    foreach (dom; _groupDomains) {
+    foreach (dom; _collatedDomains) {
 
       if (dom.isSolved()) { //isSolved
 	assert(level == 1 || dom.getOrderLevel < level - 1);
@@ -452,14 +459,14 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       
       if (dependents.length == 0) continue;
       
-      foreach (domSec; _groupDomains){
+      foreach (domSec; _collatedDomains){
 	if (domSec.isDependent(dependents)){
 	  _beforeSolve ~= dom;
 	  _afterSolve ~= domSec;
 	  domSec.setOrder(SolveOrder.LATER);
 	}
       }
-      foreach (domArrSec; _groupDomArrs){
+      foreach (domArrSec; _collatedDomArrs){
 	if (domArrSec.isDependent(dependents)){
 	  _beforeSolve ~= dom;
 	  _afterSolve ~= domArrSec;
@@ -467,7 +474,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	}
       }
     }
-    foreach (domArr; _groupDomArrs) {
+    foreach (domArr; _collatedDomArrs) {
 
       if (domArr.getOrderLevel() < level-1) { //isSolved -- TBD
 	continue;
@@ -477,14 +484,14 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       
       if (dependents.length == 0) continue;
       
-      foreach (domSec; _groupDomains){
+      foreach (domSec; _collatedDomains){
 	if (domSec.isDependent(dependents)){
 	  _beforeSolve ~= domArr;
 	  _afterSolve ~= domSec;
 	  domSec.setOrder(SolveOrder.LATER);
 	}
       }
-      foreach (domArrSec; _groupDomArrs){
+      foreach (domArrSec; _collatedDomArrs){
 	if (domArrSec.isDependent(dependents)){
 	  _beforeSolve ~= domArr;
 	  _afterSolve ~= domArrSec;
@@ -618,17 +625,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   // Keep a list of constraints in the class
   _esdl__ConstraintBase _esdl__cstWith;
 
-  bool _esdl__cstWithChanged = true;
-  bool _esdl__needSync = true;
-
-  bool needSync() {
-    return _esdl__needSync;
-  }
-
-  void setNeedSync() {
-    _esdl__needSync = true;
-  }
-
   _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
 				      CstObjectIntf obj, void* outer) {
     assert (false,
@@ -715,8 +711,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   private bool _solvedSome = false;
   void solvedSome() { _solvedSome = true; }
   void solve() {
-    if (_esdl__cstWithChanged is true)
-      _esdl__needSync = true;
     assert(_root is this);
     this._cycle += 1;
     while (// _newPreds.length > 0 ||
@@ -799,31 +793,19 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	//   pred.setDomainContext(pred);
 	// }
 
-	// import std.stdio;
-	// writeln("There are: ", _unrolledPreds.length);
-      
-	foreach (pred; _unrolledPreds) {
-	  // import std.stdio;
-	  // writeln("Processing Unrolled Predicate: ", pred.name());
-	  _solvedSome = true;
-	  procUnrolledPredicate(pred);
-	}
-	_unrolledPreds.reset();
-
+	foreach (pred; _unrolledPreds) procUnrolledPredicate(pred);
 	foreach (pred; _newPreds) procNewPredicate(pred);
+
+	_unrolledPreds.reset();
 	_newPreds.reset();
 	solvedSome();
+
       }
       
-      // foreach (pred; _resolvedDistPreds) {
-      // 	_solvedDomains ~= solveDist(pred);
-      // 	_solvedSome = true;
-      // }
-      // _resolvedDistPreds.reset();
-
       // _lap, like _cycle starts with 1
       // this is to avoid default values
       _lap += 1;
+
       // writeln("Lap: ", _lap);
 
       _rolledPreds.reset();
@@ -840,7 +822,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       }
 
       foreach (pred; _unresolvedPreds) {
-	if (pred.isResolved()) {
+	if (pred.depsAreResolved()) {
 	  procResolved(pred);
 	  _solvedSome = true;
 	}
@@ -900,9 +882,9 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	  }
 	  // resetLevels();
 
-	  _collectedPredicates.reset();
-	  _groupDomains.reset();
-	  _groupDomArrs.reset();
+	  _collatedPredicates.reset();
+	  _collatedDomains.reset();
+	  _collatedDomArrs.reset();
 	  
 	}
       }
@@ -958,8 +940,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       pred.reset();
     }
     _predsThatUnrolled.reset();
-    
-    _esdl__needSync = false;
   }
 
   // CstDomBase solveDist(CstPredicate pred) {
@@ -968,7 +948,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   //     writeln("Solving Dist Predicate: ", pred.describe());
   //   }
   //   CstDomBase distDom = pred.distDomain();
-  //   CstPredicate[] distPreds = distDom.getRandPreds();
+  //   CstPredicate[] distPreds = distDom._unresolvedDomainPreds();
   //   // long[] toRemove;
   //   CstDistSolverBase dist = pred._expr.getDist();
   //   dist.reset();
@@ -976,7 +956,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   //     CstVecTerm ex = predicate._expr.isCompatWithDist(distDom);
   //     // isCompatWithDist returns rhs if the predicate is of != type,
   //     // otherwise it returns null
-  //     if (predicate.getRnds().length == 1 && ! predicate.isDist()) {
+  //     if (predicate.getUnresolvedRnds().length == 1 && ! predicate.isDist()) {
   // 	if (ex is null) {
   // 	  assert (false, "can only use != operator on distributed domains");
   // 	}
@@ -988,20 +968,21 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   // }
 
   void procResolved(CstPredicate pred) {
-    // assert (pred._rnds.length > 0 || pred._rndArrs.length > 0 || pred.isGuard(),
+    // assert (pred._unresolvedRnds.length > 0 || pred._unresolvedRndArrs.length > 0 || pred.isGuard(),
     // 	    pred.describe());
     // if (pred.isDist()) {
     //   _resolvedDistPreds ~= pred;
     // }
-    // // else if (pred._rnds.length == 1 &&
-    // // 	     pred._rndArrs.length == 0 &&
-    // // 	     pred._rnds[0]._type <= DomType.LAZYMONO//  &&
-    // // 	     // pred._rnds[0]._esdl__parentIsConstrained is false
+    // // else if (pred._unresolvedRnds.length == 1 &&
+    // // 	     pred._unresolvedRndArrs.length == 0 &&
+    // // 	     pred._unresolvedRnds[0]._type <= DomType.LAZYMONO//  &&
+    // // 	     // pred._unresolvedRnds[0]._esdl__parentIsConstrained is false
     // // 	     ) {
     // //   _resolvedMonoPreds ~= pred;
-    // //   // procMonoDomain(pred._rnds[0], pred);
+    // //   // procMonoDomain(pred._unresolvedRnds[0], pred);
     // // }
     // else
+    pred.processResolved();
     _toResolvedPreds ~= pred;
   }
 
@@ -1019,8 +1000,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   void procNewPredicate(CstPredicate pred) {
     pred.tryResolveDeps(this);
-    if (pred.getExpr().isOrderingExpr()) { }
-    else if (pred.isVisitor()) {
+    if (pred.isVisitor()) {
       procResolved(pred);
     }
     else if (pred._iters.length > 0) {
@@ -1029,7 +1009,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     else if (pred._deps.length > 0) {
       bool allDepsResolved = true;
       foreach (dep; pred._deps) {
-	if (! dep.isResolvedDep()) {
+	if (! dep.isResolved()) {
 	  allDepsResolved = false;
 	  break;
 	}
@@ -1052,7 +1032,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       procResolved(pred);
     }
     else if (pred._iters.length == 0) {
-      if (pred.isResolved(true)) {
+      if (pred.depsAreResolved(true)) {
 	// import std.stdio;
 	// writeln("Predicate marked as resolved: ", pred.name());
 	procResolved(pred);
@@ -1067,7 +1047,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   }
 
   void solveMarkedPreds(uint level) {
-    foreach (pred; _collectedPredicates) {
+    foreach (pred; _collatedPredicates) {
       if (! pred.isGuard() && pred.isCollated()) {
 	if (pred.getOrderLevel() == level - 1 && ! (pred.isSolved)) {
 	  CstPredGroup group = pred.group();
@@ -1083,7 +1063,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	    writeln("Reuse group ", group._id, " for predicate: ", pred.describe());
 	  }
 	  if (pred.withDist()) group.markDist();
-	  group.needSync();
 	  assert (! group.isSolved(),
 		  "Group can not be solved when the predicate is still not solved; group: " ~
 		  group.describe() ~ " predicate: " ~ pred.describe());
@@ -1100,7 +1079,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	}
       }
     }
-    foreach (dom; _groupDomains) {
+    foreach (dom; _collatedDomains) {
       if (dom.getOrderLevel() == level){
 	assert( !(dom.isSolved()), "unexpected error in solving predicates");
       }
@@ -1116,10 +1095,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     scope (success) {
       _solvedSome = true;
     }
-    if (_collectedPredicates.length == 0) {
+    if (_collatedPredicates.length == 0) {
       return;
     }
-    auto pred1 = _collectedPredicates[0];
+    auto pred1 = _collatedPredicates[0];
     CstPredGroup group = pred1.group();
     if (group is null) {
       group = new CstPredGroup(this);
@@ -1133,12 +1112,11 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       writeln("Reuse group ", group._id, " for predicate: ", pred1.describe());
     }
     if (pred1.withDist()) group.markDist();
-    group.needSync();
     assert (! group.isSolved(),
 	    "Group can not be solved when the predicate is still not solved; group: " ~
 	    group.describe() ~ " predicate: " ~ pred1.describe());
      
-    foreach (pred; _collectedPredicates) {
+    foreach (pred; _collatedPredicates) {
       if (pred.isCollated()) {
 	pred.addPredicateToGroup(group);
       }
@@ -1148,10 +1126,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _solvedGroups ~= group;
   }
   // void resetLevels(){
-  //   foreach (elem: _groupDomains[]){
+  //   foreach (elem: _collatedDomains[]){
   //     elem._orderLevel = 0;
   //   }
-  //   foreach (elem: _groupDomArrs[]){
+  //   foreach (elem: _collatedDomArrs[]){
   //     elem._orderLevel = 0;
   //   }
   // }

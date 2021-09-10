@@ -20,7 +20,7 @@ import std.algorithm: canFind;
 
 abstract class CstLogicExpr: CstLogicTerm
 {
-  void setPredContext(CstPredicate pred) { }
+  void setDistPredContext(CstPredicate pred) { }
   CstDomBase getDomain() { return null; }
 }
 
@@ -28,46 +28,6 @@ abstract class CstVecExpr: CstVecTerm
 {
   CstDomBase getDomain() { return null; }
 }
-
-// class CstOrderingExpr: CstLogicExpr
-// {
-//   CstDomBase _first;
-//   CstDomBase _second;
-//   bool _isSolved;
-//   this (CstDomBase a, CstDomBase b) {
-//     _first = a;
-//     _second = b;
-//   }
-//   override bool isOrderingExpr() { return true; }
-//   override CstDistSolverBase getDist() { assert(false); }
-//   override bool isCompatWithDist(CstDomBase A) { assert(false); }
-//   override void visit(CstDistSolverBase solver) { assert(false); }
-  
-//   override CstLogicTerm unroll(CstIterator iter, ulong n) { assert(false); }
-
-//   void setDomainContext(CstPredicate pred,
-//                      DomainContextEnum context) {
-//     rnds ~= _first;
-//     rnds ~= _second;
-//   }
-//   bool isSolved() {
-//     return _isSolved;
-//   }
-//   void visit(CstSolver solver) {
-//     assert(false, "cannot visit an ordering expression");
-//   }
-//   void writeExprString(ref Charbuf str) {
-//     assert(false);
-//   }
-//   string describe(bool descExpr=false) {
-//     string str = "( " ~ _first.describe(true) ~ " is solved before " ~ _second.describe(true) ~ " )";
-//     return str;
-//   }
-//   void scan() { }
-//   bool eval() {
-//     assert (false);
-//   }
-// }
 
 class CstVecArrExpr: CstVecExpr
 {
@@ -152,7 +112,7 @@ class CstVecArrExpr: CstVecExpr
   void setDomainContext(CstPredicate pred, DomainContextEnum context) {
     pred._vectorOp = _op;
     _arr.setDomainArrContext(pred, context);
-    assert (pred._rndArrs.length > 0 || pred._varArrs.length > 0);
+    assert (pred._unresolvedRndArrs.length > 0 || pred._unresolvedVarArrs.length > 0);
   }
 
   bool isSolved() {
@@ -600,7 +560,7 @@ class CstUniqueSetElem
   void setDomainContext(CstPredicate pred, DomainContextEnum context) {
     if (_arr !is null) {
       _arr.setDomainArrContext(pred, context);
-      assert (pred._rndArrs.length > 0 || pred._varArrs.length > 0);
+      assert (pred._unresolvedRndArrs.length > 0 || pred._unresolvedVarArrs.length > 0);
     }
     if (_vec !is null)
       _vec.setDomainContext(pred, context);
@@ -957,21 +917,21 @@ class CstLogicDistExpr(T): CstLogicExpr
     return new CstLogicDistExpr!T(cast (CstDomBase) (_vec.unroll(iter, n)), dists);
   }
 
-  override void setPredContext(CstPredicate pred) {
+  override void setDistPredContext(CstPredicate pred) {
     pred.distDomain(_vec);
     _vec.isDist(DomDistEnum.DETECT);
   }
 
   void setDomainContext(CstPredicate pred, DomainContextEnum context) {
-    pred.addRnd(_vec);
-    size_t rndLen = pred._rnds.length;
-    size_t rndArrLen = pred._rndArrs.length;
+    pred.addUnresolvedRnd(_vec);
+    size_t rndLen = pred._unresolvedRnds.length;
+    size_t rndArrLen = pred._unresolvedRndArrs.length;
     size_t distLen = pred._dists.length;
     foreach (dist; _dists)
       dist.setDomainContext(pred, context);
-    assert (pred._rnds.length == rndLen &&
+    assert (pred._unresolvedRnds.length == rndLen &&
 	    pred._dists.length == distLen &&
-	    pred._rndArrs.length == rndArrLen);
+	    pred._unresolvedRndArrs.length == rndArrLen);
   }
 
   bool isSolved() {
@@ -1001,7 +961,6 @@ class CstLogicDistExpr(T): CstLogicExpr
   bool eval() {assert (false, "Enable to evaluate CstLogicDistExpr");}
 
   override void scan() { }
-  override bool isOrderingExpr() { return false; }
 }
 
 class CstVecDistExpr(T): CstLogicExpr
@@ -1079,20 +1038,20 @@ class CstVecDistExpr(T): CstLogicExpr
     return new CstVecDistExpr!T(cast (CstDomBase) (_vec.unroll(iter, n)), dists);
   }
 
-  override void setPredContext(CstPredicate pred) {
+  override void setDistPredContext(CstPredicate pred) {
     pred.distDomain(_vec);
     _vec.isDist(DomDistEnum.DETECT);
   }
 
   void setDomainContext(CstPredicate pred, DomainContextEnum context) {
-    size_t rndLen = pred._rnds.length;
-    size_t rndArrLen = pred._rndArrs.length;
+    size_t rndLen = pred._unresolvedRnds.length;
+    size_t rndArrLen = pred._unresolvedRndArrs.length;
     size_t distLen = pred._dists.length;
     foreach (dist; _dists)
       dist.setDomainContext(pred, context);
-    assert (pred._rnds.length == rndLen &&
+    assert (pred._unresolvedRnds.length == rndLen &&
 	    pred._dists.length == distLen &&
-	    pred._rndArrs.length == rndArrLen);
+	    pred._unresolvedRndArrs.length == rndArrLen);
     _vec.setDomainContext(pred, context);
   }
 
@@ -1123,7 +1082,6 @@ class CstVecDistExpr(T): CstLogicExpr
   bool eval() {assert (false, "Enable to evaluate CstVecDistExpr");}
 
   override void scan() { }
-  override bool isOrderingExpr() { return false; }
 }
 
 // class CstVecSliceExpr: CstVecExpr
@@ -1610,7 +1568,6 @@ class CstLogic2LogicExpr: CstLogicExpr
   }
   
   override void scan() { }
-  override bool isOrderingExpr() { return false; }
 }
 
 class CstInsideArrExpr: CstLogicExpr
@@ -1705,7 +1662,7 @@ class CstInsideArrExpr: CstLogicExpr
       // special processing for dist domains
       CstDomBase tdom = _term.getDomain();
       if (tdom !is null && tdom.isDist()) {
-	pred.addRnd(tdom, context);
+	pred.addUnresolvedRnd(tdom, context);
 	foreach (elem; _elems) {
 	  elem.setDomainContext(pred, DomainContextEnum.DIST);
 	}
@@ -1769,8 +1726,6 @@ class CstInsideArrExpr: CstLogicExpr
   }
 
   override void scan() { }
-
-  override bool isOrderingExpr() { return false; }
 
 }
 
@@ -1854,8 +1809,6 @@ class CstUniqueArrExpr: CstLogicExpr
   override bool eval() {assert (false, "Enable to evaluate CstUniqueArrExpr");}
 
   override void scan() { }
-  override bool isOrderingExpr() { return false; }
-
 }
 
 // TBD
@@ -1893,8 +1846,6 @@ class CstIteLogicExpr: CstLogicExpr
 
   override bool eval() {assert (false, "Enable to evaluate CstIteLogicExpr");}
   override void scan() { }
-  override bool isOrderingExpr() { return false; }
-
 }
 
 class CstVec2LogicExpr: CstLogicExpr
@@ -1939,14 +1890,14 @@ class CstVec2LogicExpr: CstLogicExpr
 	if (rdom !is null && rdom.isDist()) {
 	  pred.addDep(rdom, context);
 	  pred.addVar(rdom, context);
-	  pred.addRnd(ldom, context);
+	  pred.addUnresolvedRnd(ldom, context);
 	  return;
 	}
 	else {
 	  _rhs.setDomainContext(pred, DomainContextEnum.DIST);
 	  if (pred._distRnds.length > 0) {
 	    foreach (rnd; pred._distRnds) {
-	      pred.addRnd(rnd, context);
+	      pred.addUnresolvedRnd(rnd, context);
 	    }
 	    pred.addDep(ldom, context);
 	    pred.addVar(ldom, context);
@@ -1954,7 +1905,7 @@ class CstVec2LogicExpr: CstLogicExpr
 	    return;
 	  }
 	  else {
-	    pred.addRnd(ldom, context);
+	    pred.addUnresolvedRnd(ldom, context);
 	    return;
 	  }
 	}
@@ -1967,7 +1918,7 @@ class CstVec2LogicExpr: CstLogicExpr
 	_lhs.setDomainContext(pred, DomainContextEnum.DIST);
 	if (pred._distRnds.length > 0) {
 	  foreach (rnd; pred._distRnds) {
-	    pred.addRnd(rnd, context);
+	    pred.addUnresolvedRnd(rnd, context);
 	  }
 	  pred.addDep(rdom, context);
 	  pred.addVar(rdom, context);
@@ -2121,8 +2072,6 @@ class CstVec2LogicExpr: CstLogicExpr
   }
 
   override void scan() { }
-  override bool isOrderingExpr() { return false; }
-
 }
 
 class CstNotLogicExpr: CstLogicExpr
@@ -2177,8 +2126,6 @@ class CstNotLogicExpr: CstLogicExpr
   override bool eval() {return !_expr.eval();}
 
   override void scan() { }
-  override bool isOrderingExpr() { return false; }
-
 }
 
 class CstVarVisitorExpr: CstLogicExpr
@@ -2214,7 +2161,7 @@ class CstVarVisitorExpr: CstLogicExpr
     CstIterator iter = _obj._esdl__iter();
     if (iter !is null) {
       iter.setDomainContext(pred, context);
-      pred.addRnd(iter.getLenVec(), context);
+      pred.addUnresolvedRnd(iter.getLenVec(), context);
     }
   }
 
@@ -2245,7 +2192,5 @@ class CstVarVisitorExpr: CstLogicExpr
   }
 
   override bool eval() {assert(false);}
-
-  override bool isOrderingExpr() { return false; }
 
 }

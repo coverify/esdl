@@ -16,7 +16,7 @@ import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.expr: CstRangeExpr;
 import esdl.rand.domain: CstArrIterator, CstArrLength;
 
-import esdl.rand.meta: _esdl__ProxyResolve, _esdl__staticCast;
+import esdl.rand.meta: _esdl__ProxyResolve, _esdl__staticCast, _esdl__ARG;
 
 import std.algorithm.searching: canFind;
 import esdl.base.rand: _esdl__RandGen, getRandGen;
@@ -104,8 +104,13 @@ class CstObjectIdx(V, rand RAND_ATTR, int N, int IDX,
     }
   }    
 
-  static if (PIDX >= 0) {	// exclude randomize_with
-    override typeof(this) unroll(CstIterator iter, ulong n) {
+  static if (is (P: _esdl__ARG)) {
+    override RV unroll(CstIterator iter, ulong n) {
+      return this;
+    }
+  }
+  else {
+    override RV unroll(CstIterator iter, ulong n) {
       if (_parent !is _root) {
 	P uparent = cast(P)(_parent.unroll(iter, n));
 	assert (uparent !is null);
@@ -113,6 +118,14 @@ class CstObjectIdx(V, rand RAND_ATTR, int N, int IDX,
       }
       else {
 	return this;
+      }
+    }
+    override RV getResolvedNode() {
+      if (_parentsDepsAreResolved) return this;
+      else {
+	P uparent = cast(P)(_parent.getResolvedNode());
+	assert (uparent !is null);
+	return uparent.tupleof[PIDX];
       }
     }
   }
@@ -238,6 +251,7 @@ abstract class CstObjectBase(V, rand RAND_ATTR, int N)
 	}
 
 	override string toString() {
+	  import std.conv: to;
 	  return this.to!string();
 	}
 
@@ -252,12 +266,14 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
       alias RV = typeof(this);
 
       _esdl__Proxy _parent;
+      bool _parentsDepsAreResolved;
       
       // Call super only after the _parent has been set
       static if (is (LEAF == struct)) {
 	this(string name, _esdl__Proxy parent, V* var) {
 	  _parent = parent;
 	  _root = _parent.getProxyRoot();
+	  _parentsDepsAreResolved = _parent.depsAreResolved();
 	  super(name, parent, var);
 	}
       }
@@ -265,6 +281,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	this(string name, _esdl__Proxy parent, V var) {
 	  _parent = parent;
 	  _root = _parent.getProxyRoot();
+	  _parentsDepsAreResolved = _parent.depsAreResolved();
 	  super(name, parent, var);
 	}
       }
@@ -298,7 +315,11 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	return _parent.isRolled();		// N == 0
       }
 
-      final RV getResolved() {
+      override bool depsAreResolved() { // this level is resolved
+	return _parentsDepsAreResolved;
+      }
+
+      override RV getResolvedNode() {
 	return this;
       }
 
@@ -341,37 +362,44 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
       alias P = CstObjArr!(V, RAND_ATTR, N-1);
       P _parent;
 
+      bool _parentsDepsAreResolved;
+
       CstVecTerm _indexExpr = null;
       ulong _pindex = 0;
-      bool _isMapped;
+      immutable bool _nodeIsMapped = false;
 
       uint _resolvedCycle;	// cycle for which indexExpr has been resolved
       RV _resolvedObj;
 
       // Call super only after the _parent has been set
-      this(string name, P parent, CstVecTerm indexExpr) {
-	if (indexExpr.isConst()) {
-	  ulong index = indexExpr.evaluate();
-	  this(name, parent, index);
-	}
-	else {
-	  assert (parent !is null);
-	  _name = name;
-	  _parent = parent;
-	  _root = _parent.getProxyRoot();
-	  _indexExpr = indexExpr;
-	  super(name, parent.getProxyRoot(), null);
-	}
+      this(string name, P parent, CstVecTerm indexExpr, bool isMapped) {
+	// if (indexExpr.isConst()) {
+	//   ulong index = indexExpr.evaluate();
+	//   this(name, parent, index);
+	// }
+	// else {
+	assert (parent !is null);
+	_nodeIsMapped = isMapped;
+	_name = name ~ "[" ~ indexExpr.describe() ~ "]";
+	_parent = parent;
+	_root = _parent.getProxyRoot();
+	_parentsDepsAreResolved = _parent.depsAreResolved();
+	_indexExpr = indexExpr;
+	super(_name, parent.getProxyRoot(), null);
+	// }
       }
 
       // Call super only after the _parent has been set
-      this(string name, P parent, ulong index) {
+      this(string name, P parent, ulong index, bool isMapped) {
+	import std.conv: to;
 	assert (parent !is null);
-	_name = name;
+	_nodeIsMapped = isMapped;
+	_name = name ~ "[#" ~ index.to!string() ~ "]";
 	_parent = parent;
 	_pindex = index;
 	_root = _parent.getProxyRoot();
-	super(name, parent.getProxyRoot(), null);
+	_parentsDepsAreResolved = _parent.depsAreResolved();
+	super(_name, parent.getProxyRoot(), null);
       }
 
       final override bool isRand() {
@@ -416,9 +444,13 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	return _root;
       }
 
-      RV getResolved() {
+      override bool depsAreResolved() {
+	return _parentsDepsAreResolved && _nodeIsMapped;
+      }
+
+      override RV getResolvedNode() {
 	if (_resolvedCycle != getProxyRoot()._cycle) {
-	  auto parent = _parent.getResolved();
+	  auto parent = _parent.getResolvedNode();
 	  if (_indexExpr) {
 	    _resolvedObj = parent[cast(size_t) _indexExpr.evaluate()];
 	  }
@@ -431,7 +463,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       // RV
-      override typeof(this) unroll(CstIterator iter, ulong n) {
+      override RV unroll(CstIterator iter, ulong n) {
 	if (_indexExpr) {
 	  return _parent.unroll(iter,n)[_indexExpr.unroll(iter,n)];
 	}
@@ -549,14 +581,29 @@ class CstObjArrIdx(V, rand RAND_ATTR, int N, int IDX,
   this(string name, _esdl__Proxy parent, V* var) {
     super(name, parent, var);
   }
-  override RV unroll(CstIterator iter, ulong n) {
-    if (_parent !is _root) {
-      P uparent = cast(P)(_parent.unroll(iter, n));
-      assert (uparent !is null);
-      return uparent.tupleof[PIDX];
-    }
-    else {
+  static if (is (P: _esdl__ARG)) {
+    override RV unroll(CstIterator iter, ulong n) {
       return this;
+    }
+  }
+  else {
+    override RV unroll(CstIterator iter, ulong n) {
+      if (_parent !is _root) {
+	P uparent = cast(P)(_parent.unroll(iter, n));
+	assert (uparent !is null);
+	return uparent.tupleof[PIDX];
+      }
+      else {
+	return this;
+      }
+    }
+    override RV getResolvedNode() {
+      if (_parentsDepsAreResolved) return this;
+      else {
+	P uparent = cast(P)(_parent.getResolvedNode());
+	assert (uparent !is null);
+	return uparent.tupleof[PIDX];
+      }
     }
   }
   override bool rand_mode() {
@@ -607,8 +654,8 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
   EV[] _elems;
   EV   _negIndexElem;
 
-  abstract EV createElem(CstVecTerm indexExpr);
-  abstract EV createElem(uint i);
+  abstract EV createElem(CstVecTerm indexExpr, bool isMapped);
+  abstract EV createElem(uint i, bool isMapped);
     
   bool rand_mode() { return true; }
   // overridded in derived classes
@@ -640,7 +687,7 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
     if (currLen < v) {
       _elems.length = v;
       for (uint i=currLen; i!=v; ++i) {
-	_elems[i] = createElem(i);
+	_elems[i] = createElem(i, true);
       }
     }
   }
@@ -654,7 +701,7 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
       return this[index];
     }
     else {
-      return createElem(indexExpr);
+      return createElem(indexExpr, false);
     }
   }
 
@@ -664,22 +711,20 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
   }
 
   EV opIndex(ulong index) {
-    size_t key = mapIndex(index);
-    if (key > uint.max/2) { // negative index
-      if (_negIndexElem is null) _negIndexElem = createElem(uint.max);
-      return _negIndexElem;
+    // import std.stdio;
+    // writeln(this.fullName());
+    static if (isAssociativeArray!V) {
+      return createElem(cast(int) index, false);
     }
     else {
-      // if (_arrLen.isSolved()) {
-      // 	auto len = _arrLen.evaluate();
-      // 	if (len <= key) {
-      // 	  assert (false, "Index Out of Range");
-      // 	}
-      // 	buildElements(len);
-      // }
-      // else {
-      if (key >= _elems.length) buildElements(key+1);
-      return _elems[key];
+      if (index > uint.max/2) { // negative index
+	if (_negIndexElem is null) _negIndexElem = createElem(uint.max, false);
+	return _negIndexElem;
+      }
+      else {
+	if (index >= _elems.length) buildElements(index+1);
+	return _elems[index];
+      }
     }
   }
 
@@ -726,13 +771,13 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
     // import std.stdio;
     // writeln("buildElements: ", length);
     static if (is (EV: CstObjectIntf)) {
-      _esdl__unresolvedArrLen = 0;
-      _esdl__leafElemsCount = cast(uint) length;
-      markSolved();
+      _esdl__domsetUnresolvedArrLen = 0;
+      _esdl__domsetLeafElemsCount = cast(uint) length;
+      markResolved();
     }
     else {
-      _esdl__unresolvedArrLen = cast(uint) length;
-      _esdl__leafElemsCount = 0;
+      _esdl__domsetUnresolvedArrLen = cast(uint) length;
+      _esdl__domsetLeafElemsCount = 0;
     }
   }
 
@@ -761,8 +806,8 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
       uint iter;
       for (iter = 0; iter != _elems.length; ++iter) {
 	assert (_elems[iter] !is null);
-	if (idx >= _elems[iter]._esdl__leafElemsCount) {
-	  idx -= _elems[iter]._esdl__leafElemsCount;
+	if (idx >= _elems[iter]._esdl__domsetLeafElemsCount) {
+	  idx -= _elems[iter]._esdl__domsetLeafElemsCount;
 	}
 	else {
 	  break;
@@ -784,6 +829,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
     {
       V* _var;
       _esdl__Proxy _parent;
+      bool _parentsDepsAreResolved;
     
       void _esdl__setValRef(V* var) {
 	_var = var;
@@ -794,6 +840,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	_var = var;
 	_parent = parent;
 	_root = _parent.getProxyRoot();
+	_parentsDepsAreResolved = _parent.depsAreResolved();
 	_arrLen = new CstArrLength!RV(name ~ "->length", this);
 	super(name);
       }
@@ -824,7 +871,11 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	  return _parent.fullName() ~ "." ~ name();
       }
       
-      RV getResolved() {
+      override bool depsAreResolved() {
+	return _parentsDepsAreResolved;
+      }
+
+      override RV getResolvedNode() {
 	return this;
       }
 
@@ -876,32 +927,30 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	}
       }
 
-      override EV createElem(CstVecTerm indexExpr) {
-	return new EV(name ~ "[" ~ indexExpr.describe() ~ "]", this, indexExpr);
+      override EV createElem(CstVecTerm indexExpr, bool isMapped) {
+	return new EV(_name, this, indexExpr, isMapped);
       }
   
-      override EV createElem(uint i) {
-	import std.conv: to;
-	return new EV(_name ~ "[#" ~ i.to!string() ~ "]",
-		      this, cast(uint) i);
+      override EV createElem(uint i, bool isMapped) {
+	return new EV(_name, this, cast(uint) i, isMapped);
       }
   
-      override void markSolved() {
+      override void markResolved() {
 	// top level array -- no need to do anything
 	// import std.stdio;
-	// stdout.writeln("Array elements count: ", _esdl__leafElemsCount);
+	// stdout.writeln("Array elements count: ", _esdl__domsetLeafElemsCount);
 	// foreach (elem; this[]) {
 	//   stdout.writeln(elem.name());
 	// }
       }
 
-      void markChildSolved(uint n) {
-	assert (_esdl__unresolvedArrLen != 0 &&
-		_esdl__unresolvedArrLen != uint.max);
-	_esdl__unresolvedArrLen -= 1;
-	_esdl__leafElemsCount += n;
-	if (_esdl__unresolvedArrLen == 0) {
-	  markSolved();
+      void markChildResolved(uint n) {
+	assert (_esdl__domsetUnresolvedArrLen != 0 &&
+		_esdl__domsetUnresolvedArrLen != uint.max);
+	_esdl__domsetUnresolvedArrLen -= 1;
+	_esdl__domsetLeafElemsCount += n;
+	if (_esdl__domsetUnresolvedArrLen == 0) {
+	  markResolved();
 	}
       }
     }
@@ -911,36 +960,44 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
     {
       alias P = CstObjArr!(V, RAND_ATTR, N-1);
       P _parent;
+
+      bool _parentsDepsAreResolved;
+      
       CstVecTerm _indexExpr = null;
       ulong _pindex = 0;
-      bool _isMapped;
+      immutable bool _nodeIsMapped = false;
 
       uint _resolvedCycle;	// cycle for which indexExpr has been resolved
       RV _resolvedObj;
 
       // Call super only after the _parent has been set
-      this(string name, P parent, CstVecTerm indexExpr) {
+      this(string name, P parent, CstVecTerm indexExpr, bool isMapped) {
 	// import std.stdio;
 	// writeln("New ", name);
 	assert (parent !is null);
+	_nodeIsMapped = isMapped;
 	_parent = parent;
 	_indexExpr = indexExpr;
 	_root = _parent.getProxyRoot();
+	_parentsDepsAreResolved = _parent.depsAreResolved();
 	_arrLen = new CstArrLength!RV(name ~ "->length", this);
-	super(name);
+	super(name ~ "[" ~ indexExpr.describe() ~ "]");
       }
 
       // Call super only after the _parent has been set
-      this(string name, P parent, ulong index) {
+      this(string name, P parent, ulong index, bool isMapped) {
+	import std.conv: to;
 	// import std.stdio;
 	// writeln("New ", name);
 	assert (parent !is null);
+	_nodeIsMapped = isMapped;
 	_parent = parent;
 	// _indexExpr = _esdl__cstVal(index);
 	_pindex = index;
 	_root = _parent.getProxyRoot();
+	_parentsDepsAreResolved = _parent.depsAreResolved();
 	_arrLen = new CstArrLength!RV(name ~ "->length", this);
-	super(name);
+	super(name ~ "[#" ~ index.to!string() ~ "]");
       }
 
       final override bool isRand() {
@@ -980,9 +1037,13 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	return _parent.fullName() ~ "." ~ name();
       }
       
-      RV getResolved() {
+      override bool depsAreResolved() {
+	return _parentsDepsAreResolved && _nodeIsMapped;
+      }
+
+      override RV getResolvedNode() {
 	if (_resolvedCycle != getProxyRoot()._cycle) {
-	  auto parent = _parent.getResolved();
+	  auto parent = _parent.getResolvedNode();
 	  if (_indexExpr) {
 		_resolvedObj = parent[_indexExpr.evaluate()];
 	  }
@@ -1043,29 +1104,27 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	else return cast(size_t) index;
       }
 
-      override EV createElem(CstVecTerm indexExpr) {
-	return new EV(name ~ "[" ~ indexExpr.describe() ~ "]", this, indexExpr);
+      override EV createElem(CstVecTerm indexExpr, bool isMapped) {
+	return new EV(_name, this, indexExpr, isMapped);
       }
   
-      override EV createElem(uint i) {
-	import std.conv: to;
-	return new EV(_name ~ "[#" ~ i.to!string() ~ "]",
-		      this, cast(uint) i);
+      override EV createElem(uint i, bool isMapped) {
+	return new EV(_name, this, cast(uint) i, isMapped);
       }
   
-      override void markSolved() {
+      override void markResolved() {
 	if (_indexExpr is null) {
-	  _parent.markChildSolved(_esdl__leafElemsCount);
+	  _parent.markChildResolved(_esdl__domsetLeafElemsCount);
 	}
       }
 
-      void markChildSolved(uint n) {
-	assert (_esdl__unresolvedArrLen != 0 &&
-		_esdl__unresolvedArrLen != uint.max);
-	_esdl__unresolvedArrLen -= 1;
-	_esdl__leafElemsCount += n;
-	if (_esdl__unresolvedArrLen == 0) {
-	  markSolved();
+      void markChildResolved(uint n) {
+	assert (_esdl__domsetUnresolvedArrLen != 0 &&
+		_esdl__domsetUnresolvedArrLen != uint.max);
+	_esdl__domsetUnresolvedArrLen -= 1;
+	_esdl__domsetLeafElemsCount += n;
+	if (_esdl__domsetUnresolvedArrLen == 0) {
+	  markResolved();
 	}
       }
     }

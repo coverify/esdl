@@ -148,7 +148,6 @@ class CstPredGroup			// group of related predicates
 
   void markDist() {
     _hasDistContraints = true;
-    _state = State.NEEDSYNC;	// mark that we need to reassign a solver
   }
   // List of predicates permanently in this group
   Folder!(CstPredicate, "preds") _preds;
@@ -242,8 +241,6 @@ class CstPredGroup			// group of related predicates
     _hasUniqueConstraints = false;
     _hasDistContraints = false;
 
-    _state = State.NEEDSYNC;	// mark that we need to reassign a solver
-
     foreach (pred; _preds) pred._group = null;
     _preds.reset();
     foreach (pred; sort!((x, y) => x.name() < y.name())(_predList[])) {
@@ -322,7 +319,6 @@ class CstPredGroup			// group of related predicates
 
   public enum State: ubyte
   {   INIT,
-      NEEDSYNC,
       SOLVED
       }
 
@@ -338,10 +334,6 @@ class CstPredGroup			// group of related predicates
 
     // Now handled in proxy
     // foreach (pred; _preds) pred.reset();
-  }
-
-  void needSync() {
-    _state = State.NEEDSYNC;
   }
 
   void markSolved() {
@@ -719,7 +711,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       }
     }
       
-    this.setPredContext();
+    this.setDistPredContext();
 
     // setDomainContext is now being called on the newly unrolled predicates
     // using procUnrolledNewPredicates method in the proxy
@@ -818,11 +810,11 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
 
-  final bool isResolved(bool force=false) {
+  final bool depsAreResolved(bool force=false) {
     if (_markResolve || force) {
       _markResolve = false;
       foreach (dep; _deps) {
-	if (! dep.isResolvedDep()) {
+	if (! dep.isResolved()) {
 	  return false;
 	}
       }
@@ -846,12 +838,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return _dom;
   }
   
-  Folder!(CstDomBase, "rnds") _rnds;
+  Folder!(CstDomBase, "unresolvedRnds") _unresolvedRnds;
   Folder!(CstDomBase, "distRnds") _distRnds;	// temporary folder used in expr.d
-  void addRnd(CstDomBase rnd,
+  void addUnresolvedRnd(CstDomBase rnd,
 	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
     final switch (context) {
-    case DomainContextEnum.DEFAULT: if (! _rnds[].canFind(rnd)) _rnds ~= rnd;
+    case DomainContextEnum.DEFAULT: if (! _unresolvedRnds[].canFind(rnd)) _unresolvedRnds ~= rnd;
       break;
     case DomainContextEnum.DIST: if (! _distRnds[].canFind(rnd)) _distRnds ~= rnd;
       break;
@@ -861,18 +853,30 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       break;
     }
   }
-  Folder!(CstDomSet, "rndArrs") _rndArrs;
-  void addRndArr(CstDomSet rndArr,
+
+  Folder!(CstDomBase, "resolvedRnds") _resolvedRnds;
+  void addResolvedRnd(CstDomBase rnd) {
+    if (! _resolvedRnds[].canFind(rnd)) _resolvedRnds ~= rnd;
+  }
+
+  Folder!(CstDomSet, "unrosolvedRndArrs") _unresolvedRndArrs;
+  void addUnresolvedRndArr(CstDomSet rndArr,
 		 DomainContextEnum context=DomainContextEnum.DEFAULT) {
     assert (context == DomainContextEnum.DEFAULT);
-    if (! _rndArrs[].canFind(rndArr)) _rndArrs ~= rndArr;
+    if (! _unresolvedRndArrs[].canFind(rndArr)) _unresolvedRndArrs ~= rndArr;
   }
-  Folder!(CstDomBase, "vars") _vars;
+
+  Folder!(CstDomSet, "resolvedRndArrs") _resolvedRndArrs;
+  void addResolvedRndArr(CstDomSet rdn) {
+    if (! _resolvedRndArrs[].canFind(rdn)) _resolvedRndArrs ~= rdn;
+  }
+
+  Folder!(CstDomBase, "unrosolvedVars") _unresolvedVars;
   void addVar(CstDomBase var,
 	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
     final switch (context) {
     case DomainContextEnum.DEFAULT, DomainContextEnum.DIST:
-      if (! _vars[].canFind(var)) _vars ~= var;
+      if (! _unresolvedVars[].canFind(var)) _unresolvedVars ~= var;
       break;
     case DomainContextEnum.INDEX: if (! _idxs[].canFind(var)) _idxs ~= var;
       break;
@@ -880,12 +884,24 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       break;
     }
   }
-  Folder!(CstDomSet, "varArrs") _varArrs;
+
+  Folder!(CstDomBase, "resolvedVars") _resolvedVars;
+  void addResolvedVar(CstDomBase var) {
+    if (! _resolvedVars[].canFind(var)) _resolvedVars ~= var;
+  }
+
+  Folder!(CstDomSet, "unresolvedVarArrs") _unresolvedVarArrs;
   void addVarArr(CstDomSet varArr,
 		 DomainContextEnum context=DomainContextEnum.DEFAULT) {
     // assert (context == DomainContextEnum.DEFAULT);
-    if (! _varArrs[].canFind(varArr)) _varArrs ~= varArr;
+    if (! _unresolvedVarArrs[].canFind(varArr)) _unresolvedVarArrs ~= varArr;
   }
+
+  Folder!(CstDomSet, "resolvedVarArrs") _resolvedVarArrs;
+  void addResolvedVarArr(CstDomSet rdn) {
+    if (! _resolvedVarArrs[].canFind(rdn)) _resolvedVarArrs ~= rdn;
+  }
+
   Folder!(CstDomBase, "dists") _dists;
   void addDist(CstDomBase dist,
 	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
@@ -935,48 +951,81 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   uint _unresolveLap;
 
-  final CstDomBase[] getRnds() {
-    return _rnds[];
+  final CstDomBase[] getUnresolvedRnds() {
+    return _unresolvedRnds[];
   }
 
-  final CstDomBase[] getVars() {
-    return _vars[];
+  final CstDomSet[] getUnresolvedRndArrs(){
+    return _unresolvedRndArrs[];
+  }
+
+  final CstDomBase[] getUnresolvedVars() {
+    return _unresolvedVars[];
+  }
+
+  final CstDomSet[] getUnresolvedVarArrs() {
+    return _unresolvedVarArrs[];
   }
 
   final CstValue[] getVals() {
     return _vals[];
   }
 
-  final CstDomBase[] getDomains() {
-    return _rnds[];
+  final CstDomBase[] getRnds() {
+    return _resolvedRnds[];
   }
 
-  final CstDomSet[] getDomArrs(){
-    return _rndArrs[];
+  final CstDomSet[] getRndArrs() {
+    return _resolvedRndArrs[];
   }
 
-  // final void tryResolveDepsRolled() {
-  //   for (size_t i=0; i!=_uwLength; ++i) {
-  //     _uwPreds[i].tryResolveDeps();
-  //   }
-  // }
+  final CstDomBase[] getVars() {
+    return _resolvedVars[];
+  }
 
-  // final void markAsUnresolvedRolled(uint lap) {
-  //   if (this.isRolled()) {
-  //     this.markAsUnresolved(lap);
-  //   }
-  //   // else if (_iters.length > 1) {
-  //   //   for (size_t i=0; i!=_uwLength; ++i) {
-  //   // 	_uwPreds[i].markAsUnresolvedRolled(lap);
-  //   //   }
-  //   // }
-  // }
-  
+  final CstDomSet[] getVarArrs() {
+    return _resolvedVarArrs[];
+  }
+
+  void processResolved() {
+    _resolvedRnds.reset();
+    // _resolvedVars.reset();
+    _resolvedRndArrs.reset();
+    // _resolvedVarArrs.reset();
+
+    foreach (rnd; _unresolvedRnds) {
+      CstDomBase resolved = rnd.getResolvedNode();
+      if (resolved.isRand()) {
+	addResolvedRnd(resolved);
+	resolved._resolvedDomainPreds ~= this;
+      }
+      // else addResolvedVar(resolved);
+    }
+    
+    foreach (rnd; _unresolvedRndArrs) {
+      CstDomSet resolved = rnd.getResolvedNode();
+      if (resolved.isRand()) {
+	addResolvedRndArr(resolved);
+	resolved._resolvedDomainPreds ~= this;
+      }
+      // else addResolvedVarArr(resolved);
+    }
+    
+    // foreach (rnd; _unresolvedVars) {
+    //   addResolvedVar(rnd.getResolvedNode());
+    // }
+    
+    // foreach (rnd; _unresolvedVarArrs) {
+    //   addResolvedVarArr(rnd.getResolvedNode());
+    // }
+    
+  }
+
   final void markAsUnresolved(uint lap) {
     if (_unresolveLap != lap) {	 // already marked -- avoid infinite recursion
       _unresolveLap = lap;
-      foreach (rnd; _rnds) rnd.markAsUnresolved(lap);
-      foreach (rndArr; _rndArrs) rndArr.markAsUnresolved(lap, true);
+      foreach (rnd; _unresolvedRnds) rnd.markAsUnresolved(lap);
+      foreach (rndArr; _unresolvedRndArrs) rndArr.markAsUnresolved(lap, true);
     }
   }
 
@@ -1024,8 +1073,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return _deps.length == 0 && _iters.length == 0;
   }
   
-  final void setPredContext() {
-    _expr.setPredContext(this);
+  final void setDistPredContext() {
+    _expr.setDistPredContext(this);
   }
 
   final void setDomainContext(CstPredicate pred, bool thisPred=true) {
@@ -1038,9 +1087,9 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
     if (pred._dists.length > 0) {
       if (thisPred is true && pred._dists.length == 1 &&
-	  _rnds.length == 0 && _rndArrs.length == 0) {
+	  _unresolvedRnds.length == 0 && _unresolvedRndArrs.length == 0) {
 	assert (pred._dists[0].isDist());
-	pred._rnds ~= pred._dists[0];
+	pred._unresolvedRnds ~= pred._dists[0];
       }
       else {
 	foreach (dist; pred._dists) {
@@ -1052,11 +1101,11 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
       
 
-    if (thisPred && _rnds.length == 1 && _rndArrs.length == 0)
-      _dom = _rnds[0];
+    if (thisPred && _unresolvedRnds.length == 1 && _unresolvedRndArrs.length == 0)
+      _dom = _unresolvedRnds[0];
 
     // if (this is pred && this.isDist()) {
-    //   assert (_rnds.length == 1 && _rndArrs.length == 0);
+    //   assert (_unresolvedRnds.length == 1 && _unresolvedRndArrs.length == 0);
     // }
 
     
@@ -1085,29 +1134,23 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       //   _len = _iters[0].getLenVec();
       // }
     
-      if (! getExpr().isOrderingExpr()) {
-	foreach (rnd; _rnds) {
-	  rnd.registerRndPred(this);
-	}
-	foreach (rnd; _rndArrs) {
-	  rnd.registerRndPred(this);
-	}
-      }
+      foreach (rnd; _unresolvedRnds) rnd.registerRndPred(this);
+      foreach (rnd; _unresolvedRndArrs) rnd.registerRndPred(this);
 
-      // foreach (var; _vars) var.registerVarPred(this);
+      // foreach (var; _unresolvedVars) var.registerVarPred(this);
 
-      if ((! this.isVisitor()) && (! this.isGuard()) && _rndArrs.length == 0) {
-	// assert (_rnds.length != 0, this.describe());
-	if (_rnds.length > 1) {
-	  foreach (rnd; _rnds) {
+      if ((! this.isVisitor()) && (! this.isGuard()) && _unresolvedRndArrs.length == 0) {
+	// assert (_unresolvedRnds.length != 0, this.describe());
+	if (_unresolvedRnds.length > 1) {
+	  foreach (rnd; _unresolvedRnds) {
 	    rnd._type = DomType.MULTI;
 	  }
 	}
 	else if (! this.isDist()) {
-	  if (_rnds.length == 1) {
-	    auto rnd = _rnds[0];
+	  if (_unresolvedRnds.length == 1) {
+	    auto rnd = _unresolvedRnds[0];
 	    if (rnd._type == DomType.TRUEMONO) {
-	      if (_vars.length > 0) {
+	      if (_unresolvedVars.length > 0) {
 		rnd._type = DomType.LAZYMONO;
 	      }
 	      if (_idxs.length > 0) {
@@ -1125,13 +1168,13 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       //   _deps = _foundDeps.filter!(dep => (! canFind(_parent._deps, dep))).array;
       // }
 
-      foreach (idx; _idxs) if (! idx.isResolvedDep()) addDep(idx);
+      foreach (idx; _idxs) if (! idx.isResolved()) addDep(idx);
       foreach (idx; _bitIdxs) if (! idx.isSolved()) addDep(idx);
     
       foreach (dep; _deps) dep.registerDepPred(this);
 
       // if (this.isGuard()) {
-      // 	foreach (dep; _rnds) dep.registerDepPred(this);
+      // 	foreach (dep; _unresolvedRnds) dep.registerDepPred(this);
       // }
 
       // For now treat _idxs as _deps since _idxs are merged with _deps
@@ -1162,11 +1205,11 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     // writeln("Removing dep from rnds: ", dep.name());
     CstDomBase dom = cast (CstDomBase) dep;
     if (dom !is null) {
-      auto index = countUntil(_rnds[], dep);
+      auto index = countUntil(_unresolvedRnds[], dep);
       if (index >= 0) {
-	_rnds[index] = _rnds[$-1];
-	_rnds.length = _rnds.length - 1;
-	_vars ~= dom;
+	_unresolvedRnds[index] = _unresolvedRnds[$-1];
+	_unresolvedRnds.length = _unresolvedRnds.length - 1;
+	_unresolvedVars ~= dom;
 	dom.purgeRndPred(this);
       }
     }
@@ -1175,12 +1218,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   
   void procDomainContext() {
     import std.algorithm.searching: canFind;
-    foreach (rnd; _rnds) {
+    foreach (rnd; _unresolvedRnds) {
       foreach (dep; rnd.getDeps()) {
 	if (! _deps[].canFind(dep)) _deps ~= dep;
       }
     }
-    foreach (rnd; _rndArrs) {
+    foreach (rnd; _unresolvedRndArrs) {
       foreach (dep; rnd.getDeps()) {
 	if (! _deps[].canFind(dep)) _deps ~= dep;
       }
@@ -1199,7 +1242,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
 
   bool hasUpdate() {
-    foreach (var; _vars) {
+    foreach (var; _unresolvedVars) {
       if (var.hasChanged()) {
 	return true;
       }
@@ -1229,15 +1272,15 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	description ~= "\t" ~ iter.fullName() ~ "\n";
       }
     }
-    if (_rnds.length > 0) {
+    if (_unresolvedRnds.length > 0) {
       description ~= "    Domains: \n";
-      foreach (rnd; _rnds) {
+      foreach (rnd; _unresolvedRnds) {
 	description ~= "\t" ~ rnd.fullName() ~ "\n";
       }
     }
-    if (_vars.length > 0) {
+    if (_unresolvedVars.length > 0) {
       description ~= "    Variables: \n";
-      foreach (var; _vars) {
+      foreach (var; _unresolvedVars) {
 	description ~= "\t" ~ var.fullName() ~ "\n";
       }
     }
@@ -1279,7 +1322,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     // import std.stdio;
     // writeln("setProxyContext: ", this.describe());
 
-    foreach (dom; _rnds) {
+    foreach (dom; _unresolvedRnds) {
       if (! dom.inRange()) {
 	// import std.stdio;
 	// writeln(this.describe());
@@ -1292,7 +1335,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       }
     }
 
-    foreach (dom; _vars) {
+    foreach (dom; _unresolvedVars) {
       if (! dom.inRange()) {
 	// import std.stdio;
 	// writeln(this.describe());
@@ -1304,14 +1347,14 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	return;
       }
     }
-    proxy.addGroupPredicate(this);
+    proxy.collatePredicate(this);
 
-    foreach (dom; _rnds) {
+    foreach (dom; _unresolvedRnds) {
       if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
 	dom.setProxyContext(proxy);
       }
     }
-    foreach (arr; _rndArrs) {
+    foreach (arr; _unresolvedRndArrs) {
       if (arr._state is CstDomSet.State.INIT && arr.isRand()) {
 	arr.setProxyContext(proxy);
       }
@@ -1323,7 +1366,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     
     assert(getOrderLevel() == level - 1, "unexpected error in solving before constraints");
       
-    foreach (dom; _rnds) {
+    foreach (dom; _unresolvedRnds) {
       assert(dom.getOrderLevel() != level, "unexpected error in solving before constraints");
       if (dom.getOrderLevel < level - 1){
 	assert(dom.isSolved(), "unexpected error in solving before constraints");
@@ -1332,12 +1375,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     
     addPredicateToGroup(group);
     
-    foreach (dom; _rnds) {
+    foreach (dom; _unresolvedRnds) {
       if (dom._state is CstDomBase.State.COLLATED && (! dom.isSolved())) {
 	dom.setGroupContext(group, level);
       }
     }
-    foreach (arr; _rndArrs) {
+    foreach (arr; _unresolvedRndArrs) {
       if (arr._state is CstDomSet.State.COLLATED // && (! arr.isSolved())
 	  ) {
 	arr.setGroupContext(group, level);
@@ -1377,7 +1420,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   // void setGroupContext(CstPredGroup group) {
   //   // import std.stdio;
   //   // writeln("setGroupContext: ", this.describe());
-  //   foreach (dom; _rnds) {
+  //   foreach (dom; _unresolvedRnds) {
   //     if (! dom.inRange()) {
   // 	// import std.stdio;
   // 	// writeln(this.describe());
@@ -1389,7 +1432,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   //     }
   //   }
 
-  //   foreach (dom; _vars) {
+  //   foreach (dom; _unresolvedVars) {
   //     if (! dom.inRange()) {
   // 	// import std.stdio;
   // 	// writeln(this.describe());
@@ -1405,10 +1448,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   //   if (_group !is group) {
   //     assert(_group is null,
   // 	     "A predicate may be added to a group, but group should not change");
-  //     group.needSync();
   //   }
-  //   if (_rndArrs.length != 0) group.needSync();
-  //   if (_bitIdxs.length != 0) group.needSync();
   //   if (this.isDist()) {
   //     assert (group.hasDistConstraints());
   //     if (this.isGuardEnabled()) {
@@ -1428,7 +1468,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   //   else {
   //     group.addPredicate(this);
   //   }
-  //   foreach (dom; _rnds) {
+  //   foreach (dom; _unresolvedRnds) {
   //     // import std.stdio;
   //     // writeln("setGroupContext: ", dom.name());
   //     // if (dom.group is null && (! dom.isSolved())) {
@@ -1436,7 +1476,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   // 	dom.setGroupContext(group);
   //     }
   //   }
-  //   foreach (arr; _rndArrs) {
+  //   foreach (arr; _unresolvedRndArrs) {
   //     // import std.stdio;
   //     // writeln("setGroupContext: ", arr.name());
   //     // if (arr.group is null && (! arr.isSolved())) {
@@ -1453,19 +1493,19 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     assert ((! this.isGuard()) || recurse);
     if (_guard !is null) _guard.annotate(group, true);
 
-    foreach (rnd; this._rnds) {
+    foreach (rnd; this._unresolvedRnds) {
       rnd.annotate(group);
     }
-    foreach (rndArr; this._rndArrs) {
+    foreach (rndArr; this._unresolvedRndArrs) {
       group.addDomainArr(rndArr);
       foreach (rnd; rndArr[]) {
 	rnd.annotate(group);
       }
     }
-    foreach (var; this._vars) {
+    foreach (var; this._unresolvedVars) {
       var.annotate(group);
     }
-    foreach (varArr; this._varArrs) {
+    foreach (varArr; this._unresolvedVarArrs) {
       group.addVariableArr(varArr);
       foreach (var; varArr[]) {
 	var.annotate(group);
@@ -1524,16 +1564,17 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   bool tryResolveFixed(_esdl__Proxy proxy) {
     assert (isGuard());
-    if (_rnds.length > 0 || _vars.length > 0) return false;
+    if (_unresolvedRnds.length > 0 || _unresolvedVars.length > 0) return false;
     else return tryResolve(proxy);
   }
   
   bool tryResolve(_esdl__Proxy proxy) {
     assert (isGuard());
-    if (_varArrs.length > 0 || _rndArrs.length > 0) return false;
+    if (_unresolvedVarArrs.length > 0 ||
+	_unresolvedRndArrs.length > 0) return false;
     else {
       bool success = true;
-      foreach (rnd; _rnds) {
+      foreach (rnd; _unresolvedRnds) {
 	if (! rnd.tryResolve(proxy)) {
 	  success = false;
 	}
@@ -1546,7 +1587,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
   
-  bool isResolvedDep() {
+  bool isResolved() {
     return isSolved();
   }
 

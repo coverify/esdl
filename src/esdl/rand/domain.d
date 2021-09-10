@@ -57,8 +57,6 @@ abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
 
       override bool isBool() {return true;}
       
-      bool isOrderingExpr() { return false; }
-
       bool eval() {
 	return cast(bool) *(getRef());
       }
@@ -68,7 +66,7 @@ abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
       override uint bitcount() { return 1; }
       
       override bool signed() { return false; }
-      override void setPredContext(CstPredicate pred) {}
+      override void setDistPredContext(CstPredicate pred) { }
 
       override CstDomBase getDomain() { return this; }
     }
@@ -442,12 +440,8 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
 
 
   override void registerRndPred(CstPredicate rndPred) {
-    foreach (pred; _rndPreds) {
-      if (pred is rndPred) {
-	return;
-      }
-    }
-    _rndPreds ~= rndPred;
+    if (! _unresolvedDomainPreds[].canFind(rndPred))
+      _unresolvedDomainPreds ~= rndPred;
   }
   
   // override void registerVarPred(CstPredicate varPred) {
@@ -470,16 +464,16 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
       // if (_type !is DomType.MULTI) {
       //   desc ~= "\nIntRS: " ~ _rs.toString();
       // }
-      if (_rndPreds.length > 0) {
-	desc ~= "\n	Preds:";
-	foreach (pred; _rndPreds) {
+      if (_unresolvedDomainPreds.length > 0) {
+	desc ~= "\n	Unresolved Domain Preds:";
+	foreach (pred; _unresolvedDomainPreds) {
 	  desc ~= "\n		" ~ pred.name();
 	}
 	desc ~= "\n";
       }
-      if (_tempPreds.length > 0) {
-	desc ~= "\n	Temporary Preds:";
-	foreach (pred; _tempPreds) {
+      if (_resolvedDomainPreds.length > 0) {
+	desc ~= "\n	Resolved Domain Preds:";
+	foreach (pred; _resolvedDomainPreds) {
 	  desc ~= "\n		" ~ pred.name();
 	}
 	desc ~= "\n";
@@ -631,10 +625,6 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     return _parent.getProxyRoot();
   }
 
-  override AV getResolved() { // always self
-    return this;
-  }
-
   override void visit(CstSolver solver) {
     solver.pushToEvalStack(this);
   }
@@ -653,14 +643,15 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   }
 
   override bool tryResolve(_esdl__Proxy proxy) {
+    import std.algorithm.iteration: filter;
     debug (CSTSOLVER) {
       import std.stdio;
       writeln("tryResolve: ", fullName());
     }
-    import std.algorithm.iteration: filter;
     // if (isRand() && isSolved()) {
     //   forceResolve(proxy);
     // }
+    if (! this.depsAreResolved()) return false;
     if (isMarkedSolved()) {
       debug (CSTSOLVER) {
 	import std.stdio;
@@ -670,13 +661,13 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
       return false;
     }
     else {
-      // foreach (pred; _rndPreds) {
+      // foreach (pred; _unresolvedDomainPreds) {
       // 	import std.stdio;
       // 	writeln (pred.name());
       // }
       if ((! this.isRand()) ||
-	  _rndPreds.length == 0 ||
-	  _rndPreds.filter!(pred => ! (pred.isGuard() || pred.isVisitor())).empty()) {
+	  _unresolvedDomainPreds.length == 0 ||
+	  _unresolvedDomainPreds[].filter!(pred => ! (pred.isGuard() || pred.isVisitor())).empty()) {
 	debug (CSTSOLVER) {
 	  import std.stdio;
 	  writeln("tryResolve: Resoling: ", fullName());
@@ -805,6 +796,15 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     return _parent.unroll(iter,n).arrLen();
   }
 
+  override AV getResolvedNode() {
+    if (_parent.depsAreResolved()) return this;
+    else return _parent.getResolvedNode().arrLen;
+  }
+
+  override bool depsAreResolved() {
+    return _parent.depsAreResolved();
+  }
+
   void solveBefore(CstVecPrim other) {
     other.addPreRequisite(this);
   }
@@ -819,7 +819,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   
   void setDomainContext(CstPredicate pred, DomainContextEnum context) {
     if (pred._scope is null || ! pred._scope.isRelated(this))
-      pred.addRnd(this, context);
+      pred.addUnresolvedRnd(this, context);
     else
       pred.addVar(this, context);
     static if (HAS_RAND_ATTRIB) {
@@ -957,12 +957,11 @@ class CstLogicValue: CstValue, CstLogicTerm
     hash.modify(0);
   }
 
-  override bool isOrderingExpr() { return false; }
   override CstDistSolverBase getDist() { assert(false); }
   override bool isCompatWithDist(CstDomBase A) { assert(false); }
   override void visit(CstDistSolverBase solver) { assert(false); }
   override CstLogicValue unroll(CstIterator iter, ulong n) { return this; }
-  override void setPredContext(CstPredicate pred) { }
+  override void setDistPredContext(CstPredicate pred) { }
   override CstDomBase getDomain() { return null; }
 }
 
