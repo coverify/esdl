@@ -313,7 +313,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     if (_orderLevel == level) return;
     assert (_orderLevel == level - 1);
     _orderLevel = level;
-    CstPredicate[] preds = _unresolvedDomainPreds[];
+    CstPredicate[] preds = _resolvedDomainPreds[];
     foreach (pred; preds){
       if (pred.getOrderLevel() < level) {
 	assert(pred.getOrderLevel() == level - 1, "unexpected error in ordering");
@@ -556,7 +556,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     // assert (_group is null && (! this.isSolved()));
     // _group = group;
     if (this.isRand()) {
-      foreach (pred; _unresolvedDomainPreds) {
+      foreach (pred; _resolvedDomainPreds) {
 	if (pred.isEnabled() &&
 	    pred._state is CstPredicate.State.INIT//  &&
 	    // ! pred.hasUnrolled() // now taken care of in _state (UNROLLED)
@@ -579,7 +579,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
 	    (! this.isSolved()) && getOrderLevel() == level - 1);
     _state = State.GROUPED;
     if (this.isRand()) {
-      foreach (pred; _unresolvedDomainPreds) {
+      foreach (pred; _resolvedDomainPreds) {
   	if (pred.isEnabled() &&
 	    pred.isCollated() &&
 	    pred.getOrderLevel == level - 1) {
@@ -659,6 +659,11 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
 
   void scan() { }
   CstDomBase getDomain() { return this; }
+
+  final void visit(CstSolver solver) {
+    solver.pushToEvalStack(this.getResolvedNode());
+  }
+
 }
 
 abstract class CstValue: CstTerm
@@ -773,7 +778,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     if (_orderLevel == level) return;
     assert (_orderLevel == level - 1);
     _orderLevel = level;
-    CstPredicate [] preds = _unresolvedDomainPreds[];
+    CstPredicate [] preds = _resolvedDomainPreds[];
     foreach (pred; preds) {
       if (pred.getOrderLevel() < level){
 	assert (pred.getOrderLevel() == level - 1, "unexpected error in ordering");
@@ -841,6 +846,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   }
 
   uint _esdl__domsetUnresolvedArrLen = uint.max;
+  uint _esdl__domsetUnsolvedLeafCount = uint.max;
   uint _esdl__domsetLeafElemsCount = 0;
 
   // override bool isSolved() {
@@ -858,7 +864,17 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     return _esdl__domsetUnresolvedArrLen == 0;
   }
 
+  final bool isSolved() {
+    return _esdl__domsetUnsolvedLeafCount == 0;
+  }
+
   abstract void markResolved();
+
+  void markSolved() {
+    // import std.stdio;
+    // writeln("markSolved: ", fullName());
+    _resolvedDomainPreds.reset();
+  }
   
   bool hasChanged() {
     assert (false);
@@ -901,13 +917,16 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     }
   }
 
+  bool _esdl__parentIsConstrained;
+  
   Folder!(CstPredicate, "unresolvedDomainPreds") _unresolvedDomainPreds;
   Folder!(CstPredicate, "resolvedDomainPreds") _resolvedDomainPreds;
 
   CstPredicate [] getRandPreds(){
     return _unresolvedDomainPreds[];
   }
-  bool _esdl__parentIsConstrained;
+
+  
   override void registerRndPred(CstPredicate rndPred) {
     if (! _unresolvedDomainPreds[].canFind(rndPred))
       _unresolvedDomainPreds ~= rndPred;
@@ -963,6 +982,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   override void reset() {
     _state = State.INIT;
     _esdl__domsetUnresolvedArrLen = uint.max;
+    _esdl__domsetUnsolvedLeafCount = uint.max;
     _esdl__domsetLeafElemsCount = 0;
     _orderVar = SolveOrder.UNDECIDED;
     _orderLevel = 0;
@@ -973,7 +993,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     // writeln("setProxyContext on: ", this.name());
     assert (this.isResolved(), this.name() ~ " is unresolved");
     assert (_state is State.INIT);
-    foreach (pred; _unresolvedDomainPreds[]) {
+    foreach (pred; _resolvedDomainPreds[]) {
       if (! pred.isGuard()) {
 	if (pred.isEnabled() &&
 	    pred._state is CstPredicate.State.INIT) {
@@ -1001,7 +1021,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   void setGroupContext(CstPredGroup group, uint level) {
     assert (_state is State.COLLATED || _state is State.INIT);
     assert (this.isResolved(), this.name() ~ " is unresolved");
-    foreach (pred; _unresolvedDomainPreds[]) {
+    foreach (pred; _resolvedDomainPreds[]) {
       if (! pred.isGuard()) {
   	if (pred.isEnabled() &&
 	    pred.isCollated() &&

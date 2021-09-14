@@ -380,7 +380,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	// else {
 	assert (parent !is null);
 	_nodeIsMapped = isMapped;
-	_name = name ~ "[" ~ indexExpr.describe() ~ "]";
+	_name = name ~ (isMapped ? "[#" : "[%") ~ indexExpr.describe() ~ "]";
 	_parent = parent;
 	_root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
@@ -394,7 +394,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	import std.conv: to;
 	assert (parent !is null);
 	_nodeIsMapped = isMapped;
-	_name = name ~ "[#" ~ index.to!string() ~ "]";
+	_name = name ~ (isMapped ? "[#" : "[%") ~ index.to!string() ~ "]";
 	_parent = parent;
 	_pindex = index;
 	_root = _parent.getProxyRoot();
@@ -455,7 +455,13 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	    _resolvedObj = parent[cast(size_t) _indexExpr.evaluate()];
 	  }
 	  else {
-	    _resolvedObj = parent[_pindex];
+	    static if (isAssociativeArray!V) {
+	      _resolvedObj = _nodeIsMapped ? parent[_pindex] :
+		parent.getElem(_parent.mapIndex(_pindex));
+	    }
+	    else {
+	      _resolvedObj = parent[_pindex];
+	    }
 	  }
 	  _resolvedCycle = getProxyRoot()._cycle;
 	}
@@ -728,6 +734,19 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
     }
   }
 
+  EV getElem(ulong index) {
+    // import std.stdio;
+    // writeln(this.fullName());
+    if (index > uint.max/2) { // negative index
+      if (_negIndexElem is null) _negIndexElem = createElem(uint.max, false);
+      return _negIndexElem;
+    }
+    else {
+      if (index >= _elems.length) buildElements(index+1);
+      return _elems[index];
+    }
+  }
+
   void _esdl__doRandomize(_esdl__RandGen randGen) {
     static if (HAS_RAND_ATTRIB) {
       assert (_arrLen !is null);
@@ -981,7 +1000,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	_root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
 	_arrLen = new CstArrLength!RV(name ~ "->length", this);
-	super(name ~ "[" ~ indexExpr.describe() ~ "]");
+	super(name ~ (isMapped ? "[#" : "[%") ~ indexExpr.describe() ~ "]");
       }
 
       // Call super only after the _parent has been set
@@ -997,7 +1016,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	_root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
 	_arrLen = new CstArrLength!RV(name ~ "->length", this);
-	super(name ~ "[#" ~ index.to!string() ~ "]");
+	super(name ~ (isMapped ? "[#" : "[%") ~ index.to!string() ~ "]");
       }
 
       final override bool isRand() {
@@ -1048,7 +1067,13 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 		_resolvedObj = parent[_indexExpr.evaluate()];
 	  }
 	  else {
-		_resolvedObj = parent[_pindex];
+	    static if (isAssociativeArray!V) {
+	      _resolvedObj = _nodeIsMapped ? parent[_pindex] :
+		parent.getElem(_parent.mapIndex(_pindex));
+	    }
+	    else {
+	      _resolvedObj = parent[_pindex];
+	    }
 	  }
 	  _resolvedCycle = getProxyRoot()._cycle;
 	}

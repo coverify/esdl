@@ -263,7 +263,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
       override CstDomSet getParentDomSet() {
 	return null;
       }
-      
+
     }
 
 // Array Element
@@ -290,7 +290,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	// }
 	// else {
 	assert (parent !is null);
-	super(name ~ "[#" ~ indexExpr.describe() ~ "]", parent.getProxyRoot());
+	super(name ~ (isMapped ? "[#" : "[%") ~ indexExpr.describe() ~ "]", parent.getProxyRoot());
 	_nodeIsMapped = isMapped;
 	_parent = parent;
 	_root = _parent.getProxyRoot();
@@ -307,7 +307,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
       this(string name, P parent, ulong index, bool isMapped) {
 	import std.conv: to;
 	assert (parent !is null);
-	super(name  ~ "[#" ~ index.to!string() ~ "]", parent.getProxyRoot());
+	super(name  ~ (isMapped ? "[#" : "[%") ~ index.to!string() ~ "]", parent.getProxyRoot());
 	_nodeIsMapped = isMapped;
 	_parent = parent;
 	_pindex = index;
@@ -383,7 +383,13 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	    _resolvedVec = parent[cast(size_t) _indexExpr.evaluate()];
 	  }
 	  else {
-	    _resolvedVec = parent[_pindex];
+	    static if (isAssociativeArray!V) {
+	      _resolvedVec = _nodeIsMapped ? parent[_pindex] :
+		parent.getElem(_parent.mapIndex(_pindex));
+	    }
+	    else {
+	      _resolvedVec = parent[_pindex];
+	    }
 	  }
 	  _resolvedCycle = getProxyRoot()._cycle;
 	}
@@ -461,6 +467,11 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	return _parent;
       }
       
+      override void markSolved() {
+	super.markSolved();
+	assert (_indexExpr is null);
+	_parent.markChildSolved();
+      }
     }
 
 class CstVecArrGlob(V, rand RAND_ATTR, int N, alias SYM)
@@ -667,6 +678,19 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
     }
   }
 
+  EV getElem(ulong index) {
+    // import std.stdio;
+    // writeln(this.fullName());
+    if (index > uint.max/2) { // negative index
+      if (_negIndexElem is null) _negIndexElem = createElem(uint.max, false);
+      return _negIndexElem;
+    }
+    else {
+      if (index >= _elems.length) buildElements(index+1);
+      return _elems[index];
+    }
+  }
+
   void _esdl__doRandomize(_esdl__RandGen randGen) {
     if (isRand()) {
       assert (_arrLen !is null);
@@ -709,6 +733,7 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
   }
 
   void markArrLen(size_t length) {
+    assert (_resolvedDomainPreds.length == 0);
     buildElements(length);
     // import std.stdio;
     // writeln("buildElements: ", length);
@@ -721,6 +746,10 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
     else {
       _esdl__domsetUnresolvedArrLen = cast(uint) length;
       _esdl__domsetLeafElemsCount = 0;
+    }
+    _esdl__domsetUnsolvedLeafCount = cast(uint) length;
+    if (length == 0) {
+      markSolved();
     }
   }
 
@@ -947,6 +976,11 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	return new EV(name(), this, index, isMapped);
       }
 
+      override void markSolved() {
+	super.markSolved();
+	// // _parent.markChildSolved();
+      }
+
       override void markResolved() {
 	// top level array -- no need to do anything
 	// import std.stdio;
@@ -964,6 +998,15 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	if (_esdl__domsetUnresolvedArrLen == 0) {
 	  markResolved();
 	  execCbs();
+	}
+      }
+
+      void markChildSolved() {
+	assert (_esdl__domsetUnsolvedLeafCount != 0 &&
+		_esdl__domsetUnsolvedLeafCount != uint.max);
+	_esdl__domsetUnsolvedLeafCount -= 1;
+	if (_esdl__domsetUnsolvedLeafCount == 0) {
+	  markSolved();
 	}
       }
 
@@ -1001,7 +1044,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	// import std.stdio;
 	// writeln("New ", name);
 	assert (parent !is null);
-	super(name ~ "[#" ~ indexExpr.describe() ~ "]");
+	super(name ~ (isMapped ? "[#" : "[%") ~ indexExpr.describe() ~ "]");
 	_nodeIsMapped = isMapped;
 	_parent = parent;
 	_indexExpr = indexExpr;
@@ -1019,7 +1062,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	// import std.stdio;
 	// writeln("New ", name);
 	assert (parent !is null);
-	super(name  ~ "[#" ~ index.to!string() ~ "]");
+	super(name  ~ (isMapped ? "[#" : "[%") ~ index.to!string() ~ "]");
 	_nodeIsMapped = isMapped;
 	_parent = parent;
 	_pindex = index;
@@ -1088,7 +1131,18 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	    _resolvedVec = parent[_indexExpr.evaluate()];
 	  }
 	  else {
-	    _resolvedVec = parent[_pindex];
+	    static if (isAssociativeArray!P) {
+	      _resolvedVec = _nodeIsMapped ? parent[_pindex] :
+		parent.getElem(_parent.mapIndex(_pindex));
+	    }
+	    else {
+	      static if (isAssociativeArray!V) {
+		_resolvedVec = parent.getElem(_parent.mapIndex(_pindex));
+	      }
+	      else {
+		_resolvedVec = parent[_pindex];
+	      }
+	    }
 	  }
 	  _resolvedCycle = getProxyRoot()._cycle;
 	}
@@ -1159,6 +1213,12 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	}
       }
 
+      override void markSolved() {
+	super.markSolved();
+	assert (_indexExpr is null);
+	_parent.markChildSolved();
+      }
+
       void markChildResolved(uint n) {
 	assert (_esdl__domsetUnresolvedArrLen != 0 &&
 		_esdl__domsetUnresolvedArrLen != uint.max);
@@ -1167,6 +1227,15 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	if (_esdl__domsetUnresolvedArrLen == 0) {
 	  markResolved();
 	  execCbs();
+	}
+      }
+
+      void markChildSolved() {
+	assert (_esdl__domsetUnsolvedLeafCount != 0 &&
+		_esdl__domsetUnsolvedLeafCount != uint.max);
+	_esdl__domsetUnsolvedLeafCount -= 1;
+	if (_esdl__domsetUnsolvedLeafCount == 0) {
+	  markSolved();
 	}
       }
 

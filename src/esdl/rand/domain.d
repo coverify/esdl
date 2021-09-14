@@ -222,11 +222,6 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
     }
   }
 
-  void visit(CstSolver solver) {
-    // assert (solver !is null);
-    solver.pushToEvalStack(this);
-  }
-
   void writeExprString(ref Charbuf str) {
     if (this.isSolved()) {
       // import std.stdio;
@@ -623,10 +618,6 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 
   override _esdl__Proxy getProxyRoot() {
     return _parent.getProxyRoot();
-  }
-
-  override void visit(CstSolver solver) {
-    solver.pushToEvalStack(this);
   }
 
   override void forceResolve(_esdl__Proxy proxy) {

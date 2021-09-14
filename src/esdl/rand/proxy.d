@@ -81,6 +81,9 @@ abstract class _esdl__ConstraintBase: rand.disable
   abstract CstPredicate[] getConstraintGuards();
   abstract CstPredicate[] getConstraints();
   abstract string getCode();
+  void _esdl__doSetOuter() {
+    assert (false, "Overridden in _esdl__ConstraintWithImpl");
+  }
 }
 
 
