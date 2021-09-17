@@ -123,6 +123,8 @@ void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy) {
 	       ) {
       static if (P.tupleof[I]._esdl__ISRAND) {
 	if (p.tupleof[I].isRand()) {
+	  // import std.stdio;
+	  // writeln(p.tupleof[I].stringof, ": ", p.tupleof[I].rand_mode());
 	  p.tupleof[I]._esdl__doConstrain(proxy, true);
 	}
       // else {

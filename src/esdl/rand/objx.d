@@ -134,7 +134,6 @@ class CstObjectIdx(V, rand RAND_ATTR, int N, int IDX,
     else {
       assert (_parent !is null);
       _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
-      return true;
       assert (proxy._esdl__outer !is null);
       return proxy._esdl__outer.rand_mode!(IDX)();
     }
@@ -617,7 +616,6 @@ class CstObjArrIdx(V, rand RAND_ATTR, int N, int IDX,
     else {
       assert (_parent !is null);
       _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
-      return true;
       assert (proxy._esdl__outer !is null);
       return proxy._esdl__outer.rand_mode!(IDX)();
     }
