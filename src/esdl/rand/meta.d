@@ -250,8 +250,8 @@ void _esdl__doInitConstraintElems(P, Q, int I=0)(P p, Q q) {
   }
 }
 
-void _esdl__doSetDomainContext(_esdl__ConstraintBase cst) { cst.setDomainContext(); }
-void _esdl__doProcDomainContext(_esdl__ConstraintBase cst) { cst.procDomainContext(); }
+void _esdl__doSetDomainContext(_esdl__ConstraintBase cst) { cst.doSetDomainContext(); }
+void _esdl__doProcDomainContext(_esdl__ConstraintBase cst) { cst.doProcDomainContext(); }
 
 void _esdl__doProcPredicateElems(P, int I=0)(P p, void function(_esdl__ConstraintBase cst) func) {
   // static if (I == 0 &&
@@ -991,16 +991,12 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       return [_pred];
     }
 
-    final override void setDomainContext() {
-      // foreach (pred; _guards) pred.setDomainContext(pred);
-      _pred.setDomainContext(_pred);
-      // import std.stdio;
-      // writeln(_pred.describe());
+    final override void doSetDomainContext() {
+      _pred.doSetDomainContext(_pred);
     }
 
-    final override void procDomainContext() {
-      // foreach (pred; _guards) pred.procDomainContext();
-      _pred.procDomainContext();
+    final override void doProcDomainContext() {
+      _pred.doProcDomainContext();
     }
 
     override string getCode() {return "";}
@@ -1096,8 +1092,8 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     auto cstWith =
       new _esdl__ConstraintWithImpl!(_esdl__CstString,
 				     FILE, LINE, ARGS)(this, "randWith", values);
-    cstWith.setDomainContext();
-    cstWith.procDomainContext();
+    cstWith.doSetDomainContext();
+    cstWith.doProcDomainContext();
     // cstWith.withArgs(values);
     _esdl__cstWith = cstWith;
     setContextArgVisitors();
@@ -1196,16 +1192,12 @@ class _esdl__VisitorCst(TOBJ): _esdl__ConstraintBase, _esdl__VisitorCstIntf
     return [_pred];
   }
 
-  final override void setDomainContext() {
-    // foreach (pred; _guards) pred.setDomainContext(pred);
-    _pred.setDomainContext(_pred);
-    // import std.stdio;
-    // writeln(_pred.describe());
+  final override void doSetDomainContext() {
+    _pred.doSetDomainContext(_pred);
   }
 
-  final override void procDomainContext() {
-    // foreach (pred; _guards) pred.procDomainContext();
-    _pred.procDomainContext();
+  final override void doProcDomainContext() {
+    _pred.doProcDomainContext();
   }
 
   override string getCode() {return "";}
@@ -1508,15 +1500,18 @@ void randomizeWith(string C, string FILE=__FILE__, size_t LINE=__LINE__, T, ARGS
     _esdl__ProxyType proxyInst =
       _esdl__staticCast!(_esdl__ProxyType)(t._esdl__virtualGetProxyInst());
 
-    if (proxyInst._esdl__cstWith is null ||
-	proxyInst._esdl__cstWith._constraint != C) {
-      proxyInst._esdl__with!(C, FILE, LINE)(values);
-    }
-    else {
-      alias CONSTRAINT = proxyInst._esdl__ConstraintWithImpl!(C, FILE, LINE, ARGS);
-      auto cstWith = _esdl__staticCast!CONSTRAINT(proxyInst._esdl__cstWith);
+    alias CONSTRAINT = proxyInst._esdl__ConstraintWithImpl!(C, FILE, LINE, ARGS);
+
+    CONSTRAINT cstWith;
+
+    if (proxyInst._esdl__cstWith !is null)
+      cstWith = cast (CONSTRAINT) proxyInst._esdl__cstWith;
+      
+    if (cstWith is null)
+      proxyInst._esdl__with!(C, FILE, LINE, ARGS)(values);
+    else
       cstWith.withArgs(values);
-    }
+
     t._esdl__virtualRandomizeWith(proxyInst, proxyInst._esdl__cstWith);
   }
 

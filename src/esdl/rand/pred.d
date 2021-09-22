@@ -112,18 +112,10 @@ struct Hash
 
 class CstPredGroup			// group of related predicates
 {
-  __gshared uint _count;
-  immutable uint _id;
-
-  static CstMonoSolver!int intMono;
-  static CstMonoSolver!uint uintMono;
-  static CstMonoSolver!long longMono;
-  static CstMonoSolver!ulong ulongMono;
-
-  // solve cycle for which this group is getting processed. If this
-  // _cycle matches solver _cycle, that would mean this group is
-  // already processed
-  uint _cycle;
+  CstMonoSolver!int intMono;
+  CstMonoSolver!uint uintMono;
+  CstMonoSolver!long longMono;
+  CstMonoSolver!ulong ulongMono;
 
   bool _hasSoftConstraints;
   bool _hasVectorConstraints;
@@ -149,6 +141,28 @@ class CstPredGroup			// group of related predicates
   void markDist() {
     _hasDistContraints = true;
   }
+
+  void initialize(_esdl__Proxy proxy) {
+    _proxy = proxy;
+    _preds.reset();
+    _guards.reset();
+    _predList.reset();
+    _guardList.reset();
+    _doms.reset();
+    _domArrs.reset();
+    _vars.reset();
+    _varArrs.reset();
+
+    _hasSoftConstraints = false;
+    _hasVectorConstraints = false;
+    _hasUniqueConstraints = false;
+    _hasDistContraints = false;
+
+    _distPred = null;
+    _solver = null;
+    _state = State.INIT;
+  }
+  
   // List of predicates permanently in this group
   Folder!(CstPredicate, "preds") _preds;
   Folder!(CstPredicate, "guards") _guards;
@@ -164,19 +178,16 @@ class CstPredGroup			// group of related predicates
 
   _esdl__Proxy _proxy;
 
-  static this (){
+  this () {
     intMono = new CstMonoSolver!int("");
     uintMono = new CstMonoSolver!uint("");
     longMono = new CstMonoSolver!long("");
     ulongMono = new CstMonoSolver!ulong("");
   }
 
-  this(_esdl__Proxy proxy) {
-    _proxy = proxy;
-    synchronized (typeid(CstPredGroup)) {
-      _id = _count++;
-    }
-  }
+  // this(_esdl__Proxy proxy) {
+  //   _proxy = proxy;
+  // }
 
   _esdl__Proxy getProxy() {
     return _proxy;
@@ -245,23 +256,23 @@ class CstPredGroup			// group of related predicates
     _hasUniqueConstraints = false;
     _hasDistContraints = false;
 
-    foreach (pred; _preds) pred._group = null;
+    // foreach (pred; _preds) pred._group = null;
     _preds.reset();
     foreach (pred; sort!((x, y) => x.name() < y.name())(_predList[])) {
       if (pred.withDist()) this.markDist();
-      pred._group = this;
+      // pred._group = this;
       if (pred._soft != 0) _hasSoftConstraints = true;
       if (pred._vectorOp != CstVectorOp.NONE) _hasVectorConstraints = true;
       if (pred._uniqueFlag is true) _hasUniqueConstraints = true;
       _preds ~= pred;
     }
-    foreach (pred; _guards) pred._group = null;
+    // foreach (pred; _guards) pred._group = null;
     _guards.reset();
     foreach (pred; sort!((x, y) => x.name() < y.name())(_guardList[])) {
-      pred._group = this;
+      // pred._group = this;
       _guards ~= pred;
     }
-    if (_distPred !is null) _distPred._group = this;
+    // if (_distPred !is null) _distPred._group = this;
     
     // for the next cycle
     _predList.reset();
@@ -510,7 +521,7 @@ class CstPredGroup			// group of related predicates
 
   string describe() {
     import std.conv: to;
-    string description = "CstPredGroup Id: " ~ _id.to!string() ~ '\n';
+    string description = "CstPredGroup -- \n";
     if (_preds.length > 0) {
       description ~= "  Predicates:\n";
       foreach (pred; _preds) {
@@ -576,7 +587,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
   // alias _expr this;
 
-  enum State: byte { INIT, UNROLLED, COLLATED, DISABLED, GROUPED, SOLVED }
+  enum State: byte { NONE, INIT, UNROLLED, COLLATED, DISABLED, GROUPED, SOLVED }
 
   bool isUnrolled() {
     return _state == State.UNROLLED;
@@ -602,6 +613,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   uint _statement;
   bool _hasDistDomain;
   bool _domainContextSet;
+  bool _randWith = false;
 
   _esdl__Proxy _proxy;
   CstScope _scope;
@@ -664,6 +676,10 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     _state = State.INIT;
   }
 
+  void initialize() {
+    _state = State.INIT;
+  }
+
   Folder!(CstPredicate, "uwPreds") _uwPreds;
   size_t _uwLength;
   
@@ -717,9 +733,9 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       
     this.setDistPredContext();
 
-    // setDomainContext is now being called on the newly unrolled predicates
+    // doDetDomainContext is now being called on the newly unrolled predicates
     // using procUnrolledNewPredicates method in the proxy
-    // if (parent !is null) this.setDomainContext(this); // unrolled
+    // if (parent !is null) this.doSetDomainContext(this); // unrolled
 
     debug(CSTPREDS) {
       import std.stdio;
@@ -1081,7 +1097,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     _expr.setDistPredContext(this);
   }
 
-  final void setDomainContext(CstPredicate pred, bool thisPred=true) {
+  final void doSetDomainContext(CstPredicate pred, bool thisPred=true) {
     if (thisPred) {
       if (_domainContextSet) return;
       else _domainContextSet = true;
@@ -1124,7 +1140,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	pred._deps ~= _guard;
       }
       else {
-	_guard.setDomainContext(pred, false);
+	_guard.doSetDomainContext(pred, false);
       }
     }
 
@@ -1220,7 +1236,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     if (_guard !is null) _guard.procDependency(dep);
   }
   
-  void procDomainContext() {
+  void doProcDomainContext() {
     import std.algorithm.searching: canFind;
     foreach (rnd; _unresolvedRnds) {
       foreach (dep; rnd.getDeps()) {
@@ -1328,11 +1344,11 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return description;
   }
 
-  CstPredGroup _group;
+  // CstPredGroup _group;
 
-  CstPredGroup group() {
-    return _group;
-  }
+  // CstPredGroup group() {
+  //   return _group;
+  // }
 
   void setProxyContext(_esdl__Proxy proxy){
     // import std.stdio;
@@ -1407,10 +1423,10 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   void addPredicateToGroup(CstPredGroup group){
     _state = State.GROUPED;
     
-    if (_group !is group) {
-      assert(_group is null,
-  	     "A predicate may be added to a group, but group should not change");
-    }
+    // if (_group !is group) {
+    //   assert(_group is null,
+    // 	     "A predicate may be added to a group, but group should not change");
+    // }
     
     if (this.isDist()) {
       assert (group.hasDistConstraints());
@@ -1693,7 +1709,7 @@ class CstVisitorPredicate: CstPredicate
 					    );
       }
       for (size_t i=prevLen; i!=currLen; ++i) {
-	_uwPreds[i].setDomainContext(_uwPreds[i]);
+	_uwPreds[i].doSetDomainContext(_uwPreds[i]);
       }
     }
 
