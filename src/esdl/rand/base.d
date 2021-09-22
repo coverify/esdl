@@ -306,7 +306,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   abstract bool hasChanged();
   abstract bool isStatic();
   abstract bool isRolled();
-  abstract void registerRndPred(CstPredicate rndPred);
+  // abstract void registerRndPred(CstPredicate rndPred);
   abstract CstDomSet getParentDomSet();
 
   override void markOrderedAfter(uint level) {
@@ -504,6 +504,11 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   Folder!(CstPredicate, "unresolvedDomainPreds") _unresolvedDomainPreds;
 
 
+  override void registerRndPred(CstPredicate rndPred) {
+    if (! _unresolvedDomainPreds[].canFind(rndPred))
+      _unresolvedDomainPreds ~= rndPred;
+  }
+  
   void purgeRndPred(CstPredicate pred) {
     // import std.stdio;
     // writeln("Removing pred: ", pred.describe());

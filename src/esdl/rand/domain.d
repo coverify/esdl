@@ -434,11 +434,6 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
   }
 
 
-  override void registerRndPred(CstPredicate rndPred) {
-    if (! _unresolvedDomainPreds[].canFind(rndPred))
-      _unresolvedDomainPreds ~= rndPred;
-  }
-  
   // override void registerVarPred(CstPredicate varPred) {
   //   foreach (pred; _varPreds) {
   //     if (pred is varPred) {
