@@ -19,38 +19,56 @@ private import std.traits: BaseClassesTuple; // required for staticIndexOf
 
 class BuddyContext
 {
-  BDD _bdd;
+  bdd _bdd;
   Buddy _buddy;
   double[uint] _bddDist;
   bool _update = true;
 
+  BDD getBDD() { return BDD(_bdd, _buddy); }
+
   this(Buddy buddy) {
     _buddy = buddy;
     _bdd = _buddy.one();
+    _bddStack.reserve(10);
   }
 
-  BDD[] _bddStack;		// to be used with push/pop
+  bdd[] _bddStack;		// to be used with push/pop
 
   void push() {
+    _buddy.addRef(_bdd);
     _bddStack ~= _bdd;
   }
 
   void pop() {
     _update = true;
+    _buddy.delRef(_bdd);
     _bdd = _bddStack[$-1];
+    // _buddy.addRef(_bdd);
     _bddStack.length = _bddStack.length - 1;
   }
 
   void addRule(BDD rule) {
     _update = true;
-    _bdd = _bdd & rule;
+    _buddy.delRef(_bdd);
+    _bdd = getBDD() & rule;
+    _buddy.addRef(_bdd);
   }
 
   void updateDist() {
     if (_update) {
       _update = false;
       _bddDist.clear();
-      _bdd.satDist(_bddDist);
+      getBDD().satDist(_bddDist);
+    }
+  }
+
+  void print() {
+    import std.stdio;
+    writeln("BDD Context: ");
+    writeln("_bdd: ", _bdd);
+    writeln("_bddStack Length: ", _bddStack.length);
+    foreach(b; _bddStack) {
+      writeln("index: ", b);
     }
   }
 }
@@ -61,22 +79,50 @@ struct BuddyTerm
 
   enum Type: ubyte { INVALID, BOOLEXPR, BVEXPR, ULONG }
 
-  BDD    _boolExpr;
-  BddVec _bvExpr;
+  bdd    _boolExpr;
+  bddvec _bvExpr;
   ulong  _ulong;
+
+  Buddy  _buddy;
 
   Type _type;
 
-  ref BddVec toBv() return {
-    if (_type != Type.BVEXPR) assert(false, "Expected a BVEXPR, got "
-				     ~ _type.to!string);
-    return _bvExpr;
+  void print() {
+    import std.stdio;
+    writeln("BuddyTerm: ");
+    writeln("Type: ", _type);
+    writeln("BddVec: ", _bvExpr.bitvec);
+    writeln("BDD: ", _boolExpr);
   }
 
-  ref BDD toBool() return {
+  void delRef() {
+    final switch (_type) {
+    case Type.INVALID: break;
+    case Type.BOOLEXPR: _buddy.delRef(_boolExpr); break;
+    case Type.BVEXPR: _buddy.delRef(_bvExpr); break;
+    case Type.ULONG: break;
+    }
+  }
+  
+  void addRef() {
+    final switch (_type) {
+    case Type.INVALID: break;
+    case Type.BOOLEXPR: _buddy.addRef(_boolExpr); break;
+    case Type.BVEXPR: _buddy.addRef(_bvExpr); break;
+    case Type.ULONG: break;
+    }
+  }
+  
+  BddVec toBv() return {
+    if (_type != Type.BVEXPR) assert(false, "Expected a BVEXPR, got "
+				     ~ _type.to!string);
+    return BddVec(_bvExpr);
+  }
+
+  BDD toBool() return {
     if (_type != Type.BOOLEXPR) assert(false, "Expected a BOOLEXPR, got "
 				       ~ _type.to!string);
-    return _boolExpr;
+    return BDD(_boolExpr, _buddy);
   }
 
   ulong toUlong() {
@@ -99,7 +145,9 @@ struct BuddyTerm
   // @disable this(this);
   // workaround for https://issues.dlang.org/show_bug.cgi?id=20876
 
-  this(this) {}
+  this(this) {
+    this.addRef();
+  }
 
   // this(ref BuddyTerm other) {
   //   _boolExpr = other._boolExpr;
@@ -109,48 +157,52 @@ struct BuddyTerm
   // }
 
   ref BuddyTerm opAssign(ref BuddyTerm other) return {
+    this.delRef();
     _boolExpr = other._boolExpr;
     _bvExpr = other._bvExpr;
     _ulong = other._ulong;
+    _buddy = other._buddy;
     _type = other._type;
+    this.addRef();
     return this;
   }
 
-  ref BuddyTerm opAssign(ref BddVec expr) return {
+  this(ref BddVec expr, Buddy buddy) {
     _bvExpr = expr;
     _type = Type.BVEXPR;
-    return this;
+    _buddy = buddy;
+    this.addRef();
   }
-			 
-  ref BuddyTerm opAssign(ref BDD expr) return {
-    _boolExpr = expr;
-    _type = Type.BOOLEXPR;
-    return this;
-  }
-			 
-  this(ref BddVec expr) {
+
+  this(BddVec expr, Buddy buddy) {
     _bvExpr = expr;
     _type = Type.BVEXPR;
+    _buddy = buddy;
+    this.addRef();
   }
 
-  this(BddVec expr) {
-    _bvExpr = expr;
-    _type = Type.BVEXPR;
-  }
-
-  this(ref BDD expr) {
+  this(ref BDD expr, Buddy buddy) {
+    this.delRef();
     _boolExpr = expr;
     _type = Type.BOOLEXPR;
+    _buddy = buddy;
+    this.addRef();
   }
 
-  this(BDD expr) {
+  this(BDD expr, Buddy buddy) {
+    this.delRef();
     _boolExpr = expr;
     _type = Type.BOOLEXPR;
+    _buddy = buddy;
+    this.addRef();
   }
 
-  this(ulong expr) {
+  this(ulong expr, Buddy buddy) {
+    this.delRef();
     _ulong = expr;
     _type = Type.ULONG;
+    _buddy = buddy;
+    this.addRef();
   }
 
   string toString() {
@@ -167,14 +219,81 @@ struct BuddyTerm
       str = format("type: %s, val: %s", _type, _bvExpr.bitvec);
       break;
     case Type.BOOLEXPR:
-      str = format("type: %s, val: %s", _type, _boolExpr._index);
+      str = format("type: %s, val: %s", _type, _boolExpr);
       break;
     }
     return str;
   }
 }
 
-struct BuddyVar
+struct BuddyRndDomain
+{
+  enum Type: ubyte { BOOLEXPR, BVEXPR }
+
+  Type   _type;
+
+  bddvec _bvDom;
+  bdd    _boolDom;
+
+  Buddy  _buddy;
+
+  // alias _bvDom this;
+  
+  this(BddVec dom, Buddy buddy) {
+    _bvDom = dom;
+    _buddy = buddy;
+    _type = Type.BVEXPR;
+    this.addRef();
+  }
+
+  this(BDD dom, Buddy buddy) {
+    _boolDom = dom;
+    _buddy = buddy;
+    _type = Type.BOOLEXPR;
+    this.addRef();
+  }
+
+  void delRef() {
+    final switch (_type) {
+    case Type.BOOLEXPR: _buddy.delRef(_boolDom); break;
+    case Type.BVEXPR: _buddy.delRef(_bvDom); break;
+    }
+  }
+  
+  void addRef() {
+    final switch (_type) {
+    case Type.BOOLEXPR: _buddy.addRef(_boolDom); break;
+    case Type.BVEXPR: _buddy.addRef(_bvDom); break;
+    }
+  }
+  
+  void print() {
+    import std.stdio;
+    writeln(_bvDom.bitvec);
+    writeln(_boolDom);
+  }
+  
+  BddVec toBv() return {
+    import std.conv: to;
+    if (_type != Type.BVEXPR) assert(false, "Expected a BVEXPR, got "
+				     ~ _type.to!string);
+    return BddVec(_bvDom);
+  }
+
+  BDD toBool() return {
+    import std.conv: to;
+    if (_type != Type.BOOLEXPR) assert(false, "Expected a BOOLEXPR, got "
+				       ~ _type.to!string);
+    return BDD(_boolDom, _buddy);
+  }
+
+  // ~this() {
+  //   print();
+  // }
+
+}
+
+struct BuddyVarDomain
 {
   enum Type: ubyte { BOOLEXPR, BVEXPR }
 
@@ -182,8 +301,10 @@ struct BuddyVar
 
   Type   _type;
 
-  BddVec _bvDom;
-  BDD    _boolDom;
+  bddvec _bvDom;
+  bdd    _boolDom;
+
+  Buddy  _buddy;
 
   long   _bvVal;
   bool   _boolVal;
@@ -192,38 +313,38 @@ struct BuddyVar
 
   // alias _bvDom this;
   
-  this(BddVec dom) {
+  this(BddVec dom, Buddy buddy) {
     _bvDom = dom;
     _bvVal = 0;
     _type = Type.BVEXPR;
     _state = State.INIT;
+    _buddy = buddy;
+    this.addRef();
   }
 
-  this(BDD dom) {
+  this(BDD dom, Buddy buddy) {
     _boolDom = dom;
     _boolVal = false;
     _type = Type.BOOLEXPR;
     _state = State.INIT;
+    _buddy = buddy;
+    this.addRef();
   }
 
-  ref BuddyVar opAssign(ref BddVec dom) return {
-    assert (_bvDom.isNull());
-    _bvDom = dom;
-    _bvVal = 0;
-    _type = Type.BVEXPR;
-    _state = State.INIT;
-    return this;
+  void delRef() {
+    final switch (_type) {
+    case Type.BOOLEXPR: _buddy.delRef(_boolDom); break;
+    case Type.BVEXPR: _buddy.delRef(_bvDom); break;
+    }
   }
-
-  ref BuddyVar opAssign(ref BDD dom) return {
-    // assert (_boolDom.isNull());
-    _boolDom = dom;
-    _boolVal = 0;
-    _type = Type.BOOLEXPR;
-    _state = State.INIT;
-    return this;
+  
+  void addRef() {
+    final switch (_type) {
+    case Type.BOOLEXPR: _buddy.addRef(_boolDom); break;
+    case Type.BVEXPR: _buddy.addRef(_bvDom); break;
+    }
   }
-
+  
   BddVec getBvValExpr() {
     assert (_type == Type.BVEXPR);
     return _bvDom._buddy.buildVec(_bvDom.length, _bvVal, _bvDom.signed());
@@ -231,16 +352,16 @@ struct BuddyVar
 
   BDD getBoolValExpr() {
     assert (_type == Type.BOOLEXPR);
-    if (_boolVal) return _boolDom._buddy.one();
-    else          return _boolDom._buddy.zero();
+    if (_boolVal) return _buddy.one();
+    else          return _buddy.zero();
   }
 
   BDD getRule() {
     if (_type == Type.BVEXPR) {
-      return _bvDom.equ(getBvValExpr());
+      return BddVec(_bvDom).equ(getBvValExpr());
     }
     else {
-      return _boolDom.biimp(getBoolValExpr());
+      return BDD(_boolDom, _buddy).biimp(getBoolValExpr());
     }
   }
   
@@ -302,13 +423,29 @@ class CstBuddySolver: CstSolver
 
   BuddyTerm _term;		// for inside constraint processing
 
-  BuddyTerm[] _domains;
-  BuddyVar[] _variables;
+  BuddyRndDomain[] _domains;
+  BuddyVarDomain[] _variables;
 
   BuddyContext _context;
 
   _esdl__Proxy _proxy;
 
+  void print() {
+    import std.stdio;
+    writeln("CstBuddySolver:");
+    writeln("_evalStack: ", _evalStack.length);
+    _term.print();
+    writeln("_domains: ", _domains.length);
+    foreach (dom; _domains) {
+      dom.print();
+    }
+    writeln("_variables: ", _variables.length);
+  }
+
+  // ~this() {
+  //   print();
+  // }
+  
   uint _count0;
   uint _count1;
 
@@ -326,6 +463,8 @@ class CstBuddySolver: CstSolver
 
 
   this(string signature, CstPredGroup group) {
+    Buddy.enableBddGC();
+
     super(signature);
 
     _proxy = group.getProxy();
@@ -345,11 +484,11 @@ class CstBuddySolver: CstSolver
       // writeln("Adding Buddy Domain for @rand ", doms[i].name(), " of size: ", doms[i].bitcount);
       if (doms[i].isBool()) {
 	auto d = _context._buddy.createDomain(); // , doms[i].bitcount, doms[i].signed());
-	dom = d;
+	dom = BuddyRndDomain(d, _esdl__buddy);
       }
       else {
 	auto d = _esdl__buddy.createDomVec(doms[i].bitcount, doms[i].signed());
-	dom = d;
+	dom = BuddyRndDomain(d, _esdl__buddy);
       }
     }
 
@@ -361,11 +500,11 @@ class CstBuddySolver: CstSolver
       // writeln("Adding Buddy Domain for variable ", vars[i].name(), " of length: ", vars[i].bitcount);
       if (vars[i].isBool()) {
 	auto d = _esdl__buddy.createDomain();
-	var = d;
+	var = BuddyVarDomain(d, _esdl__buddy);
       }
       else {
 	auto d = _esdl__buddy.createDomVec(vars[i].bitcount, vars[i].signed());
-	var = d;
+	var = BuddyVarDomain(d, _esdl__buddy);
       }
     }
 
@@ -380,9 +519,9 @@ class CstBuddySolver: CstSolver
     foreach (pred; group.predicates()) {
       // import std.stdio;
       // writeln("Buddy Working on: ", pred.name());
-      if (pred.group() !is group) {
-	assert (false, "Group Violation " ~ pred.name());
-      }
+      // if (pred.group() !is group) {
+      // 	assert (false, "Group Violation " ~ pred.name());
+      // }
       if (! pred.isGuard() && ! pred.withDist()) {
 	// import std.stdio;
 	// writeln(pred.describe());
@@ -403,7 +542,7 @@ class CstBuddySolver: CstSolver
     return "OBDD Solver\n" ~ super.describe();
   }
 
-  BuddyVar.State varState;
+  BuddyVarDomain.State varState;
 
   void push() {
     assert(_pushCount <= 2);
@@ -420,12 +559,14 @@ class CstBuddySolver: CstSolver
   ulong[] _solveValue;
   
   override bool solve(CstPredGroup group) {
+    Buddy.enableBddGC();
+    
     CstDomBase[] doms = group.domains();
     updateVars(group);
     _context.updateDist();
 
-    BDD solution = _context._bdd.randSatOne(_proxy._esdl__rGen.get(),
-					     _context._bddDist);
+    BDD solution = _context.getBDD().randSatOne(_proxy._esdl__rGen.get(),
+						_context._bddDist);
     byte[][] solVecs = solution.toVector();
 
     byte[] bits;
@@ -434,7 +575,7 @@ class CstBuddySolver: CstSolver
     }
     
     foreach (n, ref dom; doms) {
-      auto bitindices = _context._bdd.getIndices(cast(uint) n);
+      auto bitindices = _context.getBDD().getIndices(cast(uint) n);
 
       if (dom.isBool()) {
 	int index = bitindices[0];
@@ -474,6 +615,9 @@ class CstBuddySolver: CstSolver
 	dom.setVal(array(_solveValue[0..NUMWORDS]));
       }
     }
+    // _context.print();
+    // this.print();
+    Buddy.disableBddGC();
     return true;
   }
   
@@ -498,14 +642,14 @@ class CstBuddySolver: CstSolver
     if (pcount0 != _count0 && _count0 > 0) {
       push();
       foreach (i, ref var; _variables) {
-	if (var._state == BuddyVar.State.CONST)
+	if (var._state == BuddyVarDomain.State.CONST)
 	  _context.addRule(var.getRule());
       }
     }
     if (_refreshVar || pcount1 != _count1) {
       push();
       foreach (i, ref var; _variables) {
-	if (var._state == BuddyVar.State.VAR)
+	if (var._state == BuddyVarDomain.State.VAR)
 	  _context.addRule(var.getRule());
       }
     }
@@ -516,11 +660,15 @@ class CstBuddySolver: CstSolver
     // writeln("push: ", domain.name(), " annotation: ", n);
     // writeln("_domains has a length: ", _domains.length);
     if (domain.isSolved()) { // is a variable
-      if (domain.isBool()) pushToEvalStack(_variables[n]._boolDom);
-      else                 pushToEvalStack(_variables[n]._bvDom);
+      if (domain.isBool()) pushToEvalStack(BDD(_variables[n]._boolDom, _esdl__buddy));
+      else                 pushToEvalStack(BddVec(_variables[n]._bvDom));
     }
     else {
-      pushToEvalStack(_domains[n]);
+      BuddyRndDomain dom = _domains[n];
+      if (dom._type == BuddyRndDomain.Type.BVEXPR)
+	pushToEvalStack(dom.toBv());
+      else
+	pushToEvalStack(dom.toBool());
     }
   }
 
@@ -539,18 +687,18 @@ class CstBuddySolver: CstSolver
   override void pushToEvalStack(bool value) {
     // writeln("push: ", value);
     if (value) {
-      BuddyTerm e = BuddyTerm(BDD(BddTrue, _esdl__buddy));
+      BuddyTerm e = BuddyTerm(BDD(BddTrue, _esdl__buddy), _esdl__buddy);
       pushToEvalStack(e);
     }
     else {
-      BuddyTerm e = BuddyTerm(BDD(BddFalse, _esdl__buddy));
+      BuddyTerm e = BuddyTerm(BDD(BddFalse, _esdl__buddy), _esdl__buddy);
       pushToEvalStack(e);
     }
   }
 
   override void pushIndexToEvalStack(ulong value) {
     // writeln("push: ", value);
-    BuddyTerm e = BuddyTerm(value);
+    BuddyTerm e = BuddyTerm(value, _esdl__buddy);
     pushToEvalStack(e);
   }
 
@@ -792,6 +940,10 @@ class CstBuddySolver: CstSolver
 
   void popEvalStack(uint count=1) {
     assert (_evalStack.length >= count);
+    for (size_t i=0; i!=count; ++i) {
+      _evalStack[$-1-i].delRef();
+      _evalStack[$-1-i]._type = BuddyTerm.Type.INVALID;
+    }
     _evalStack.length = _evalStack.length - count;
     // for (size_t i=0; i!=count; ++i) {
     //   // BuddyTerm invalid = BuddyTerm();
@@ -802,12 +954,12 @@ class CstBuddySolver: CstSolver
   }
 
   void pushToEvalStack(ref BddVec vec) {
-    BuddyTerm term = BuddyTerm(vec);
+    BuddyTerm term = BuddyTerm(vec, _esdl__buddy);
     pushToEvalStack(term);
   }
   
   void pushToEvalStack(ref BDD b) {
-    BuddyTerm term = BuddyTerm(b);
+    BuddyTerm term = BuddyTerm(b, _esdl__buddy);
     pushToEvalStack(term);
   }  
 
@@ -816,5 +968,21 @@ class CstBuddySolver: CstSolver
     _evalStack ~= term;
     // writeln("After PUSH _evalStack is of size: ", _evalStack.length);
   }
+    
+  void pushToEvalStack(BddVec vec) {
+    BuddyTerm term = BuddyTerm(vec, _esdl__buddy);
+    pushToEvalStack(term);
+  }
   
+  void pushToEvalStack(BDD b) {
+    BuddyTerm term = BuddyTerm(b, _esdl__buddy);
+    pushToEvalStack(term);
+  }  
+
+  void pushToEvalStack(BuddyTerm term) {
+    // writeln("Pushing on _evalStack: ", term.toString());
+    _evalStack ~= term;
+    // writeln("After PUSH _evalStack is of size: ", _evalStack.length);
+  }
+    
 }

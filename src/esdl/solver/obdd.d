@@ -445,6 +445,70 @@ struct BddDomain // fdd.c:52
 
 }
 
+struct bddvec
+{
+  private bdd[] _bitvec;
+
+  private bool _signed = false;
+
+  Buddy _buddy;
+  
+  bdd[] bitvec() {
+    return _bitvec;
+  }
+  
+  this(ref BddVec other) {
+    _buddy = other._buddy;
+    _signed = other._signed;
+    _bitvec = other._bitvec;
+    // this.addRef();
+  }
+
+  void addRef() {
+    if (_buddy !is null) {
+      foreach (b; _bitvec) {
+	// import std.stdio;
+	// writeln("bitvec addRef: ", b);
+	_buddy.addRef(b);
+      }
+    }
+  }
+
+  void delRef() {
+    if (_buddy !is null) {
+      foreach (b; _bitvec) {
+	// import std.stdio;
+	// writeln("bitvec addRef: ", b);
+	_buddy.delRef(b);
+      }
+    }
+  }
+  
+  ref bddvec opAssign(ref BddVec other) return {
+    // this.delRef();
+    _buddy = other._buddy;
+    _signed = other._signed;
+    _bitvec = other._bitvec;
+    // this.addRef();
+    return this;
+  }
+  
+  bool isNull() {
+    return (_bitvec.length == 0);
+  }
+
+  size_t length()
+  {
+    return _bitvec.length;
+  }
+
+  bool signed()
+  {
+    return _signed;
+  }
+
+}
+
 struct BddVec
 {
 
@@ -486,7 +550,7 @@ struct BddVec
   }
 
   this(this) {
-    foreach (b; _bitvec) _buddy.addRef(b);
+    this.addRef();
   }
 
   // this copy constructor does not get called,
@@ -495,36 +559,50 @@ struct BddVec
     _buddy = other._buddy;
     _signed = other._signed;
     _bitvec = other._bitvec;
-    foreach (b; _bitvec) {
-      // import std.stdio;
-      // writeln("bitvec addRef: ", b);
-      _buddy.addRef(b);
-    }
+    this.addRef();
   }
 
-  ref BddVec opAssign(ref BddVec other) return {
-    if (_buddy !is null) {
-      foreach (b; _bitvec) _buddy.delRef(b);
-    }
+  this(ref bddvec other) {
+    this.delRef();
     _buddy = other._buddy;
     _signed = other._signed;
     _bitvec = other._bitvec;
-    if (_buddy !is null) {
-      foreach (b; _bitvec) _buddy.addRef(b);
-    }
+    this.addRef();
+  }
+
+  ref BddVec opAssign(ref BddVec other) return {
+    this.delRef();
+    _buddy = other._buddy;
+    _signed = other._signed;
+    _bitvec = other._bitvec;
+    this.addRef();
     return this;
   }
   
   ~this() {
+    this.delRef();
+  }
+
+  void addRef() {
     if (_buddy !is null) {
       foreach (b; _bitvec) {
 	// import std.stdio;
-	// writeln("bitvec delRef: ", b);
-	_buddy.delRef(b);
+	// writeln("bitvec addRef: ", b);
+	_buddy.addRef(b);
       }
     }
   }
 
+  void delRef() {
+    if (_buddy !is null) {
+      foreach (b; _bitvec) {
+	// import std.stdio;
+	// writeln("bitvec addRef: ", b);
+	_buddy.delRef(b);
+      }
+    }
+  }
+  
 
   void buildVec(T)(T val)
   {
@@ -854,15 +932,15 @@ struct BddVec
     _bitvec = null;
   }
 
-  // bvec addref(bvec v)
+  // bvec addRef(bvec v)
   // {
-  //   foreach(ref b; _bitvec) b.addref();
+  //   foreach(ref b; _bitvec) b.addRef();
   //   return v;
   // }
 
-  // bvec delref(bvec v)
+  // bvec delRef(bvec v)
   // {
-  //   foreach(ref b; _bitvec) b.delref();
+  //   foreach(ref b; _bitvec) b.delRef();
   //   return v;
   // }
 
@@ -1660,7 +1738,7 @@ struct BDD
   // TODO -- explicit delete
   ~this()
   {
-    if (_index !is 0 &&	_buddy !is null) {
+    if (Buddy.GC_ENABLED && _index !is 0) {
       _buddy.delRef(_index);
     }
   }
@@ -2562,6 +2640,11 @@ class Buddy
 {
   // VERIFY_ASSERTIONS would be handled as a debug behavior
 
+  static bool GC_ENABLED = true;
+
+  static void enableBddGC() {GC_ENABLED = true;}
+  static void disableBddGC() {GC_ENABLED = false;}
+  
   enum string REVISION = "$Revision: 1.0 $";
   
   bool gbc_enabled = true;
@@ -4889,7 +4972,7 @@ class Buddy
     for (n = supportMax; n >= supportMin; --n) {
       if (supportSet[n] == supportID) {
 	int tmp;
-	// res is an int -- so delref and addref are required
+	// res is an int -- so delRef and addRef are required
 	addRef(res);
 	tmp = bdd_makenode(n, 0, res);
 	delRef(res);
@@ -5780,6 +5863,18 @@ class Buddy
     return root;
   }
 
+  void delRef(bddvec vec) {
+    foreach (bit; vec._bitvec) {
+      delRef(bit);
+    }
+  }
+
+  void addRef(bddvec vec) {
+    foreach (bit; vec._bitvec) {
+      addRef(bit);
+    }
+  }
+
   void bdd_mark(int i)
   {
 
@@ -6336,7 +6431,7 @@ class Buddy
     if (newvar < 0 || newvar > _varNum - 1) {
       bdd_error(BddError.BDD_VAR);
     }
-    // delref is required
+    // delRef is required
     // BddPair.result is an array of ints
     delRef(pair.result[_var2Level[oldvar]]);
     pair.result[_var2Level[oldvar]] = bdd_ithvar(newvar);
@@ -6361,7 +6456,7 @@ class Buddy
     }
     int oldlevel = _var2Level[oldvar];
 
-    // delref is required
+    // delRef is required
     // BddPair.result is an array of ints
     delRef(pair.result[oldlevel]);
     // newvar is an int
@@ -8431,8 +8526,8 @@ class Buddy
 	dep[VARr(n)] = true;
 	levels[VARr(n)].nodenum++;
 
-	addref_rec(LOW(n), dep);
-	addref_rec(HIGH(n), dep);
+	addRef_rec(LOW(n), dep);
+	addRef_rec(HIGH(n), dep);
 
 	addDependencies(dep);
       }
@@ -8466,7 +8561,7 @@ class Buddy
     return mtx;
   }
 
-  void addref_rec(int r, bool* dep)
+  void addRef_rec(int r, bool* dep)
   {
     if(r < 2)
       return;
@@ -8481,8 +8576,8 @@ class Buddy
 	/* Make sure the nodenum field is updated. Used in the initial GBC */
 	levels[VARr(r) & ~(BddNode.MARK_MASK)].nodenum++;
 
-	addref_rec(LOW(r), dep);
-	addref_rec(HIGH(r), dep);
+	addRef_rec(LOW(r), dep);
+	addRef_rec(HIGH(r), dep);
       } else {
       int n;
 

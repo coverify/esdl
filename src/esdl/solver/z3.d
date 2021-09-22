@@ -327,9 +327,6 @@ class CstZ3Solver: CstSolver
     foreach (pred; group.predicates()) {
       // import std.stdio;
       // writeln("Z3 Working on: ", pred.name());
-      if (pred.group() !is group) {
-	assert (false, "Group Violation " ~ pred.name());
-      }
 
       if (! pred.isGuard() && ! pred.withDist()) {
 	// import std.stdio;
