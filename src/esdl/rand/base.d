@@ -67,10 +67,10 @@ interface CstVecNodeIntf: CstVarNodeIntf, CstDepIntf {
   abstract void setProxyContext(_esdl__Proxy proxy);
   abstract void reset();
 
-  // abstract void resetLambdaConstraints();
+  abstract void resetLambdaPreds();
 }
 
-interface CstVectorIntf: CstVecNodeIntf {}
+interface CstVectorIntf: CstVecNodeIntf { }
 
 interface CstVecArrIntf: CstVecNodeIntf {
   CstDomBase _esdl__nthLeaf(uint idx);
@@ -516,6 +516,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     else {
       if (! _unresolvedDomainPreds[].canFind(rndPred)) {
 	_unresolvedDomainPreds ~= rndPred;
+	_root.addLambdaCstDom(this);
       }
     }
   }
@@ -538,6 +539,10 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
 	_unresolvedDomainPreds.length = _unresolvedDomainPreds.length - 1;
       }
     }
+  }
+
+  final override void resetLambdaPreds() {
+    _lambdaDomainPreds.reset();
   }
 
   // CstPredGroup _group;
@@ -960,6 +965,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     else {
       if (! _unresolvedDomainPreds[].canFind(rndPred)) {
 	_unresolvedDomainPreds ~= rndPred;
+	_root.addLambdaCstDom(this);
       }
     }
   }
@@ -1083,6 +1089,9 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
 
   abstract CstDomSet getResolvedNode();
 
+  final override void resetLambdaPreds() {
+    _lambdaDomainPreds.reset();
+  }
 }
 
 

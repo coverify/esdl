@@ -249,7 +249,7 @@ class CstPredGroup			// group of related predicates
     setOrderAndBools();
   }
 
-  void setOrderAndBools(){
+  void setOrderAndBools() {
     
     _hasSoftConstraints = false;
     _hasVectorConstraints = false;

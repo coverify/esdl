@@ -3,7 +3,7 @@ module esdl.rand.proxy;
 import esdl.solver.base: CstSolver, CstDistSolverBase;
 import esdl.rand.base: CstVecPrim, CstScope, CstDomBase,
   DomType, CstObjectVoid, CstVarNodeIntf, CstObjectIntf,
-  CstIterator, CstDomSet, CstVarGlobIntf;
+  CstIterator, CstDomSet, CstVarGlobIntf, CstVecNodeIntf;
 import esdl.rand.pred: CstPredicate, CstPredGroup;
 import esdl.rand.misc;
 import esdl.data.folder;
@@ -422,7 +422,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   Folder!(CstVarNodeIntf, "beforeSolve") _beforeSolve;
   Folder!(CstVarNodeIntf, "afterSolve") _afterSolve;
 
-
   void collatePredicate (CstPredicate pred){
     _collatedPredicates ~= pred;
     pred._orderLevel = 0;
@@ -439,6 +438,17 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _collatedDomArrs ~= domArr;
     domArr._orderLevel = 0;
     domArr._state = CstDomSet.State.COLLATED;
+  }
+
+  Folder!(CstVecNodeIntf, "lambdaCstDoms") _lambdaCstDoms;
+
+  final void addLambdaCstDom(CstVecNodeIntf dom) {
+    _lambdaCstDoms ~= dom;
+  }
+
+  final void doResetLambdaPreds() {
+    foreach (lambdaCstDom; _lambdaCstDoms) lambdaCstDom.resetLambdaPreds();
+    _lambdaCstDoms.reset();
   }
 
   void printGroup (){

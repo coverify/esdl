@@ -494,6 +494,8 @@ void _esdl__randomize(T) (ref T t) if (is (T == struct))
       _esdl__ProxyType._esdl__proxyInst = proxyInst;
     }
 
+    proxyInst.doResetLambdaPreds();
+
     _esdl__preRandomize(t);
 
     proxyInst._esdl__doSetOuter(&t, true);
@@ -521,6 +523,8 @@ void _esdl__randomize(T) (T t) if (is (T == class))
       proxyInst = _esdl__createProxy();
       _esdl__ProxyType._esdl__proxyInst = proxyInst;
     }
+
+    proxyInst.doResetLambdaPreds();
 
     _esdl__preRandomize(t);
 
@@ -1098,6 +1102,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   }
 
   void _esdl__with(string _esdl__CstString, string FILE, size_t LINE, ARGS...)(ARGS values) {
+    this.doResetLambdaPreds();
     auto cstLambda =
       new _esdl__ConstraintLambdaImpl!(_esdl__CstString,
 				     FILE, LINE, ARGS)(this, "lambdaConstraint", values);
