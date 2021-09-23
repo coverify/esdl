@@ -461,6 +461,13 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
 	}
 	desc ~= "\n";
       }
+      if (_lambdaDomainPreds.length > 0) {
+	desc ~= "\n	Lambda Domain Preds:";
+	foreach (pred; _lambdaDomainPreds) {
+	  desc ~= "\n		" ~ pred.name();
+	}
+	desc ~= "\n";
+      }
       if (_resolvedDomainPreds.length > 0) {
 	desc ~= "\n	Resolved Domain Preds:";
 	foreach (pred; _resolvedDomainPreds) {
@@ -652,11 +659,12 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
       // 	writeln (pred.name());
       // }
       if ((! this.isRand()) ||
-	  _unresolvedDomainPreds.length == 0 ||
-	  _unresolvedDomainPreds[].filter!(pred => ! (pred.isGuard() || pred.isVisitor())).empty()) {
+	  _unresolvedDomainPreds.length + _lambdaDomainPreds.length == 0 ||
+	  (_unresolvedDomainPreds[].filter!(pred => ! (pred.isGuard() || pred.isVisitor())).empty() &&
+	   _lambdaDomainPreds[].filter!(pred => ! (pred.isGuard() || pred.isVisitor())).empty())) {
 	debug (CSTSOLVER) {
 	  import std.stdio;
-	  writeln("tryResolve: Resoling: ", fullName());
+	  writeln("tryResolve: Resolving: ", fullName());
 	}
 	randomizeWithoutConstraints(proxy);
 	return true;
@@ -856,7 +864,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   }
 
   override CstDomSet getParentDomSet() {
-    static if (is (RV: CstDomSet)) return _parent;
+    static if (is (RV: CstDomSet)) return _parent.getParentDomSet();
     else return null;
   }
 
@@ -884,7 +892,17 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   final void visit(CstDistSolverBase dist) { assert(false); }
 
   override CstDomBase getDomain() { return this; }
-  
+
+  // return false for array length since array lengths need to be solved
+  // before any constraint on domain sets can be considered
+  final override bool _esdl__parentIsConstrained() {
+    // static if (is (RV: CstVecNodeIntf)) {
+    //   return _parent._esdl__parentIsConstrained();
+    // }
+    // else {
+    return false;
+    // }
+  }
 }
 
 class CstLogicValue: CstValue, CstLogicTerm

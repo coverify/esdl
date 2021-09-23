@@ -120,7 +120,7 @@ class CstPredGroup			// group of related predicates
   bool _hasSoftConstraints;
   bool _hasVectorConstraints;
   bool _hasUniqueConstraints;
-  bool _hasDistContraints;
+  bool _hasDistConstraints;
 
   bool hasSoftConstraints() {
     return _hasSoftConstraints;
@@ -135,11 +135,11 @@ class CstPredGroup			// group of related predicates
   }
   
   bool hasDistConstraints() {
-    return _hasDistContraints;
+    return _hasDistConstraints;
   }
 
   void markDist() {
-    _hasDistContraints = true;
+    _hasDistConstraints = true;
   }
 
   void initialize(_esdl__Proxy proxy) {
@@ -156,7 +156,7 @@ class CstPredGroup			// group of related predicates
     _hasSoftConstraints = false;
     _hasVectorConstraints = false;
     _hasUniqueConstraints = false;
-    _hasDistContraints = false;
+    _hasDistConstraints = false;
 
     _distPred = null;
     _solver = null;
@@ -254,7 +254,7 @@ class CstPredGroup			// group of related predicates
     _hasSoftConstraints = false;
     _hasVectorConstraints = false;
     _hasUniqueConstraints = false;
-    _hasDistContraints = false;
+    _hasDistConstraints = false;
 
     // foreach (pred; _preds) pred._group = null;
     _preds.reset();
@@ -613,7 +613,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   uint _statement;
   bool _hasDistDomain;
   bool _domainContextSet;
-  bool _randWith = false;
+
+  immutable bool _isLambdaPred = false;
+  immutable bool _isVisitorPred = false;
+
+  final bool isLambdaPred() { return _isLambdaPred; }
+  final bool isVisitorPred() { return _isVisitorPred; }
 
   _esdl__Proxy _proxy;
   CstScope _scope;
@@ -692,6 +697,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
        CstIterator unrollIter=null, uint unrollIterVal=0 // ,
        // CstIterator[] iters ...
        ) {
+    _isLambdaPred = cst.isLambdaConstraint();
+    _isVisitorPred = cst.isVisitorConstraint();
     synchronized (typeid(CstPredicate)) {
       _id = _count++;
     }

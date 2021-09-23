@@ -992,13 +992,14 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	// import std.stdio;
 	// writeln("New ", name);
 	assert (parent !is null);
+	string iname = name ~ (isMapped ? "[#" : "[%") ~ indexExpr.describe() ~ "]";
 	_nodeIsMapped = isMapped;
 	_parent = parent;
 	_indexExpr = indexExpr;
 	_root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
-	_arrLen = new CstArrLength!RV(name ~ "->length", this);
-	super(name ~ (isMapped ? "[#" : "[%") ~ indexExpr.describe() ~ "]");
+	_arrLen = new CstArrLength!RV(iname ~ "->length", this);
+	super(iname);
       }
 
       // Call super only after the _parent has been set
@@ -1007,14 +1008,15 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	// import std.stdio;
 	// writeln("New ", name);
 	assert (parent !is null);
+	string iname = name ~ (isMapped ? "[#" : "[%") ~ index.to!string() ~ "]";
 	_nodeIsMapped = isMapped;
 	_parent = parent;
 	// _indexExpr = _esdl__cstVal(index);
 	_pindex = index;
 	_root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
-	_arrLen = new CstArrLength!RV(name ~ "->length", this);
-	super(name ~ (isMapped ? "[#" : "[%") ~ index.to!string() ~ "]");
+	_arrLen = new CstArrLength!RV(iname ~ "->length", this);
+	super(iname);
       }
 
       final override bool isRand() {

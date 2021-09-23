@@ -188,6 +188,10 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 	_parentsDepsAreResolved = _parent.depsAreResolved();
       }
 
+      final override bool _esdl__parentIsConstrained() {
+	return false;
+      }
+      
       final override bool isRand() {
 	return HAS_RAND_ATTRIB && rand_mode() && _parent.isRand();
       }
@@ -295,11 +299,6 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	_root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
 	_indexExpr = indexExpr;
-	if (_parent._unresolvedDomainPreds.length > 0 ||
-	    _parent._esdl__parentIsConstrained) {
-	  _type = DomType.MULTI;
-	  _esdl__parentIsConstrained = true;
-	}
 	// }
       }
 
@@ -312,13 +311,16 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	_pindex = index;
 	_root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
-	if (_parent._unresolvedDomainPreds.length > 0 ||
-	    _parent._esdl__parentIsConstrained) {
-	  _type = DomType.MULTI;
-	  _esdl__parentIsConstrained = true;
-	}
       }
 
+      final override bool _esdl__parentIsConstrained() {
+	if (_parent._unresolvedDomainPreds.length + _parent._lambdaDomainPreds.length > 0 ||
+	    _parent._esdl__parentIsConstrained()) {
+	  return true;
+	}
+	else return false;
+      }
+      
       final override bool isRand() {
 	return HAS_RAND_ATTRIB && rand_mode() && _parent.isRand();
       }
@@ -807,6 +809,8 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
 	parent.markAsUnresolved(lap, false);
       foreach (pred; _unresolvedDomainPreds)
 	pred.markAsUnresolved(lap);
+      foreach (pred; _lambdaDomainPreds)
+	pred.markAsUnresolved(lap);
       if (hier is true) {
 	foreach (elem; _elems) {
 	  static if (is (EV: CstDomSet))
@@ -888,6 +892,10 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	_arrLen = new CstArrLength!(RV) (name ~ "->length", this);
       }
 
+      final override bool _esdl__parentIsConstrained() {
+	return false;
+      }
+      
       final override bool isRand() {
 	return HAS_RAND_ATTRIB && rand_mode() && _parent.isRand();
       }
@@ -1042,17 +1050,14 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	// import std.stdio;
 	// writeln("New ", name);
 	assert (parent !is null);
-	super(name ~ (isMapped ? "[#" : "[%") ~ indexExpr.describe() ~ "]");
+	string iname = name ~ (isMapped ? "[#" : "[%") ~ indexExpr.describe() ~ "]";
+	super(iname);
 	_nodeIsMapped = isMapped;
 	_parent = parent;
 	_indexExpr = indexExpr;
 	_root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
-	_arrLen = new CstArrLength!(RV) (name ~ "->length", this);
-	if (_parent._unresolvedDomainPreds.length > 0 ||
-	    _parent._esdl__parentIsConstrained) {
-	  _esdl__parentIsConstrained = true;
-	}
+	_arrLen = new CstArrLength!(RV) (iname ~ "->length", this);
       }
 
       this(string name, P parent, ulong index, bool isMapped) {
@@ -1060,19 +1065,24 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	// import std.stdio;
 	// writeln("New ", name);
 	assert (parent !is null);
-	super(name  ~ (isMapped ? "[#" : "[%") ~ index.to!string() ~ "]");
+	string iname = name  ~ (isMapped ? "[#" : "[%") ~ index.to!string() ~ "]";
+	super(iname);
 	_nodeIsMapped = isMapped;
 	_parent = parent;
 	_pindex = index;
 	_root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
-	_arrLen = new CstArrLength!(RV) (name ~ "->length", this);
-	if (_parent._unresolvedDomainPreds.length > 0 ||
-	    _parent._esdl__parentIsConstrained) {
-	  _esdl__parentIsConstrained = true;
-	}
+	_arrLen = new CstArrLength!(RV) (iname ~ "->length", this);
       }
 
+      final override bool _esdl__parentIsConstrained() {
+	if (_parent._unresolvedDomainPreds.length + _parent._lambdaDomainPreds.length > 0 ||
+	    _parent._esdl__parentIsConstrained()) {
+	  return true;
+	}
+	else return false;
+      }
+      
       final override bool isRand() {
 	return HAS_RAND_ATTRIB && rand_mode() && _parent.isRand();
       }

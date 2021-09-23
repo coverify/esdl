@@ -103,7 +103,7 @@ void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy) {
   else {
     alias Q = typeof (P.tupleof[I]);
     static if (is (Q: _esdl__ConstraintBase)) {
-      static if (p.tupleof[I].stringof != "p._esdl__cstWith") {
+      static if (p.tupleof[I].stringof != "p._esdl__lambdaCst") {
 	if (p.tupleof[I].isEnabled()) {
 	  // Update constraint guards if any
 	  p.tupleof[I]._esdl__updateCst();
@@ -498,7 +498,7 @@ void _esdl__randomize(T) (ref T t) if (is (T == struct))
 
     proxyInst._esdl__doSetOuter(&t, true);
 
-    proxyInst._esdl__cstWith = null;
+    proxyInst._esdl__lambdaCst = null;
     proxyInst.reset();
     proxyInst._esdl__doConstrain(proxyInst, false);
     proxyInst.solve();
@@ -526,7 +526,7 @@ void _esdl__randomize(T) (T t) if (is (T == class))
 
     proxyInst._esdl__doSetOuter(t, true);
 
-    proxyInst._esdl__cstWith = null;
+    proxyInst._esdl__lambdaCst = null;
     proxyInst.reset();
     proxyInst._esdl__doConstrain(proxyInst, false);
     proxyInst.solve();
@@ -557,7 +557,7 @@ _esdl__Proxy _esdl__getProxyInst(T)(T t) {
 }
 
 void _esdl__randomizeWith(T)(T t, _esdl__Proxy proxy,
-			     _esdl__ConstraintBase withCst) if (is (T == class))
+			     _esdl__ConstraintBase lambdaCst) if (is (T == class))
   {
     alias _esdl__ProxyType = _esdl__ProxyResolve!T;
     _esdl__ProxyType proxyInst = _esdl__staticCast!(_esdl__ProxyType)(proxy);
@@ -565,14 +565,14 @@ void _esdl__randomizeWith(T)(T t, _esdl__Proxy proxy,
 
     proxyInst._esdl__doSetOuter(t, true);
 
-    // withCst._esdl__doSetOuter();
+    // lambdaCst._esdl__doSetOuter();
   
     proxyInst.reset();
     proxyInst._esdl__doConstrain(proxyInst, false);
-    foreach (pred; withCst.getConstraintGuards()) {
+    foreach (pred; lambdaCst.getConstraintGuards()) {
       proxyInst.addNewPredicate(pred);
     }
-    foreach (pred; withCst.getConstraints()) {
+    foreach (pred; lambdaCst.getConstraints()) {
       proxyInst.addNewPredicate(pred);
     }
     proxyInst.solve();
@@ -582,7 +582,7 @@ void _esdl__randomizeWith(T)(T t, _esdl__Proxy proxy,
   }
 
 void _esdl__randomizeWith(T) (ref T t, _esdl__Proxy proxy,
-			      _esdl__ConstraintBase withCst) if (is (T == struct))
+			      _esdl__ConstraintBase lambdaCst) if (is (T == struct))
   {
     alias _esdl__ProxyType = _esdl__ProxyResolve!T;
     _esdl__ProxyType proxyInst = _esdl__staticCast!(_esdl__ProxyType)(proxy);
@@ -591,14 +591,14 @@ void _esdl__randomizeWith(T) (ref T t, _esdl__Proxy proxy,
 
     proxyInst._esdl__doSetOuter(&t, true);
 
-    // withCst._esdl__doSetOuter();
+    // lambdaCst._esdl__doSetOuter();
   
     proxyInst.reset();
     proxyInst._esdl__doConstrain(proxyInst, false);
-    foreach (pred; withCst.getConstraintGuards()) {
+    foreach (pred; lambdaCst.getConstraintGuards()) {
       proxyInst.addNewPredicate(pred);
     }
-    foreach (pred; withCst.getConstraints()) {
+    foreach (pred; lambdaCst.getConstraints()) {
       proxyInst.addNewPredicate(pred);
     }
     proxyInst.solve();
@@ -800,8 +800,8 @@ mixin template Randomization()
       return _esdl__getProxyInst(this);
     }
     override void _esdl__virtualRandomizeWith(_esdl__Proxy proxy,
-					      _esdl__ConstraintBase withCst) {
-      _esdl__randomizeWith(this, proxy, withCst);
+					      _esdl__ConstraintBase lambdaCst) {
+      _esdl__randomizeWith(this, proxy, lambdaCst);
     }
     alias srandom = seedRandom;
     override void seedRandom(int seed) {
@@ -822,8 +822,8 @@ mixin template Randomization()
       return _esdl__getProxyInst(this);
     }
     void _esdl__virtualRandomizeWith(_esdl__Proxy proxy,
-				     _esdl__ConstraintBase withCst) {
-      _esdl__randomizeWith(this, proxy, withCst);
+				     _esdl__ConstraintBase lambdaCst) {
+      _esdl__randomizeWith(this, proxy, lambdaCst);
     }
     alias srandom = seedRandom;
     void seedRandom(int seed) {
@@ -973,6 +973,9 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     CstPredicate _pred;
     protected bool _initialized;
 
+    final override bool isLambdaConstraint() { return false; }
+    final override bool isVisitorConstraint() { return true; }
+
     override void makeConstraints() {
       auto obj = mixin(OBJ);
       alias TOBJ = typeof(obj);
@@ -1011,6 +1014,9 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       makeConstraints();
     }
 
+    final override bool isLambdaConstraint() { return false; }
+    final override bool isVisitorConstraint() { return false; }
+    
     mixin (CST_PARSE_DATA.cstDecls);
     mixin (CST_PARSE_DATA.cstDefines);
     mixin (CST_PARSE_DATA.guardDecls);
@@ -1029,37 +1035,40 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 
   }
 
-  class _esdl__ConstraintWithImpl(string _esdl__CstString, string FILE, size_t LINE, ARGS...): // size_t N):
+  class _esdl__ConstraintLambdaImpl(string _esdl__CstString, string FILE, size_t LINE, ARGS...): // size_t N):
     _esdl__Constraint!(_esdl__CstString, FILE, LINE)
   {
     import std.typecons;
 
-    Tuple!(ARGS) _withArgs;
+    Tuple!(ARGS) _lambdaArgs;
 
-    CstVarNodeIntf[ARGS.length] _proxyWithArgs;
+    CstVarNodeIntf[ARGS.length] _proxyLambdaArgs;
 
-    void withArgs(ARGS...)(ARGS values) // if(allIntengral!ARGS)
+    void lambdaArgs(ARGS...)(ARGS values) // if(allIntengral!ARGS)
     {
       // static assert(ARGS.length == N);
       foreach (i, /*ref*/ v; values) {
-	_withArgs[i] = v;
+	_lambdaArgs[i] = v;
       }
     }
+
+    final override bool isLambdaConstraint() { return true; }
+    final override bool isVisitorConstraint() { return false; }
 
     this(ARGS...)(_esdl__Proxy eng, string name, ARGS args) {
       super(eng, name);
       // writeln("pointer: ", &(args[0]));
       foreach (i, arg; args) {
-	_withArgs[i] = arg;
+	_lambdaArgs[i] = arg;
       }
       this._esdl__initCst();
       makeConstraints();
     }
 
     ref auto _esdl__arg(size_t VAR)() {
-      static assert(VAR < _withArgs.length, "Can not map specified constraint with argument: @" ~
+      static assert(VAR < _lambdaArgs.length, "Can not map specified constraint with argument: @" ~
       		    VAR.stringof);
-      return _withArgs[VAR];
+      return _lambdaArgs[VAR];
     }
 
     mixin (CST_PARSE_DATA.cstDecls);
@@ -1071,15 +1080,15 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     void _esdl__doSetOuterElems(int I=0)() {
       static if (I == ARGS.length) return;
       else {
-	alias L = typeof(_withArgs[I]);
+	alias L = typeof(_lambdaArgs[I]);
 	static if (isRandomizable!L) {
 	  alias TYPE = CstVectorIdx!(L, rand(true, true), 0, -1, _esdl__ARG, -1);
 	}
 	else static if (isRandVectorSet!L) {
 	  alias TYPE = CstVecArrIdx!(L, rand(true, true), 0, -1, _esdl__ARG, -1);
 	}
-	auto vvar = cast (TYPE) (_proxyWithArgs[I]);
-	vvar._esdl__setValRef(& _withArgs[I]);
+	auto vvar = cast (TYPE) (_proxyLambdaArgs[I]);
+	vvar._esdl__setValRef(& _lambdaArgs[I]);
       }
     }
 
@@ -1089,13 +1098,13 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   }
 
   void _esdl__with(string _esdl__CstString, string FILE, size_t LINE, ARGS...)(ARGS values) {
-    auto cstWith =
-      new _esdl__ConstraintWithImpl!(_esdl__CstString,
-				     FILE, LINE, ARGS)(this, "randWith", values);
-    cstWith.doSetDomainContext();
-    cstWith.doProcDomainContext();
-    // cstWith.withArgs(values);
-    _esdl__cstWith = cstWith;
+    auto cstLambda =
+      new _esdl__ConstraintLambdaImpl!(_esdl__CstString,
+				     FILE, LINE, ARGS)(this, "lambdaConstraint", values);
+    cstLambda.doSetDomainContext();
+    cstLambda.doProcDomainContext();
+    // cstLambda.lambdaArgs(values);
+    _esdl__lambdaCst = cstLambda;
     setContextArgVisitors();
   }
 
@@ -1176,6 +1185,9 @@ class _esdl__VisitorCst(TOBJ): _esdl__ConstraintBase, _esdl__VisitorCstIntf
 
   TOBJ _obj;
 
+  final override bool isLambdaConstraint() { return false; }
+  final override bool isVisitorConstraint() { return true; }
+  
   override void makeConstraints() {
     _pred =
       new CstVisitorPredicate(this, null, false, 0, _proxy, 0,
@@ -1390,10 +1402,10 @@ auto _esdl__arg_proxy(L, X, P)(size_t idx, string name, ref L arg, X proxy, P pa
     // import std.stdio;
     // writeln("Creating VarVec, ", name);
     alias CstVectorType = CstVectorIdx!(L, rand(true, true), 0, -1, _esdl__ARG, -1);
-    CstVarNodeIntf var = proxy._proxyWithArgs[idx];
+    CstVarNodeIntf var = proxy._proxyLambdaArgs[idx];
     if (var is null) {
       CstVectorType vvar = new CstVectorType(name, parent, &arg);
-      proxy._proxyWithArgs[idx] = vvar;
+      proxy._proxyLambdaArgs[idx] = vvar;
       return vvar;
     }
     else {
@@ -1404,13 +1416,13 @@ auto _esdl__arg_proxy(L, X, P)(size_t idx, string name, ref L arg, X proxy, P pa
   }
   else static if (isRandVectorSet!L) {
     alias CstVecArrType = CstVecArrIdx!(L, rand(true, true), 0, -1, _esdl__ARG, -1);
-    CstVarNodeIntf var = proxy._proxyWithArgs[idx];
+    CstVarNodeIntf var = proxy._proxyLambdaArgs[idx];
     if (var is null) {
       CstVecArrType vvar = new CstVecArrType(name, parent, &arg);
       auto visitor =
 	new _esdl__VisitorCst!CstVecArrType(parent, name ~ "_CstVisitor", vvar);
       parent.addArgVisitor(visitor);
-      proxy._proxyWithArgs[idx] = vvar;
+      proxy._proxyLambdaArgs[idx] = vvar;
       return vvar;
     }
     else {
@@ -1500,19 +1512,19 @@ void randomizeWith(string C, string FILE=__FILE__, size_t LINE=__LINE__, T, ARGS
     _esdl__ProxyType proxyInst =
       _esdl__staticCast!(_esdl__ProxyType)(t._esdl__virtualGetProxyInst());
 
-    alias CONSTRAINT = proxyInst._esdl__ConstraintWithImpl!(C, FILE, LINE, ARGS);
+    alias CONSTRAINT = proxyInst._esdl__ConstraintLambdaImpl!(C, FILE, LINE, ARGS);
 
-    CONSTRAINT cstWith;
+    CONSTRAINT cstLambda;
 
-    if (proxyInst._esdl__cstWith !is null)
-      cstWith = cast (CONSTRAINT) proxyInst._esdl__cstWith;
+    if (proxyInst._esdl__lambdaCst !is null)
+      cstLambda = cast (CONSTRAINT) proxyInst._esdl__lambdaCst;
       
-    if (cstWith is null)
+    if (cstLambda is null)
       proxyInst._esdl__with!(C, FILE, LINE, ARGS)(values);
     else
-      cstWith.withArgs(values);
+      cstLambda.lambdaArgs(values);
 
-    t._esdl__virtualRandomizeWith(proxyInst, proxyInst._esdl__cstWith);
+    t._esdl__virtualRandomizeWith(proxyInst, proxyInst._esdl__lambdaCst);
   }
 
 // FIXME add bitvectors to this template filter

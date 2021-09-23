@@ -772,7 +772,7 @@ struct CstParser {
       procChain(isSym);
     }
     else {
-      srcTag = parseWithArg();
+      srcTag = parseLambdaConstraintArgs();
       if (srcCursor > srcTag) {
 	chain = true;
 	// fillOut("_esdl__arg_proxy(\"");
@@ -972,7 +972,7 @@ struct CstParser {
     return start;
   }
 
-  size_t parseWithArg() {
+  size_t parseLambdaConstraintArgs() {
     size_t start = srcCursor;
     if (srcCursor < CST.length &&
 	CST[srcCursor] == '$') {

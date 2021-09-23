@@ -66,6 +66,8 @@ interface CstVecNodeIntf: CstVarNodeIntf, CstDepIntf {
   abstract void setGroupContext(CstPredGroup group);
   abstract void setProxyContext(_esdl__Proxy proxy);
   abstract void reset();
+
+  // abstract void resetLambdaConstraints();
 }
 
 interface CstVectorIntf: CstVecNodeIntf {}
@@ -412,16 +414,20 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
       }
       else {
 	if (resolved is this) {
-	  if (_unresolvedDomainPreds.length == 0 ||
-	      _unresolvedDomainPreds[].filter!(pred => ! pred.isGuard()).empty()) {
+	  if (_unresolvedDomainPreds.length + _lambdaDomainPreds.length == 0 ||
+	      (_unresolvedDomainPreds[].filter!(pred => ! pred.isGuard()).empty() &&
+	       _lambdaDomainPreds[].filter!(pred => ! pred.isGuard()).empty())) {
 	    randomizeWithoutConstraints(proxy);
 	    return true;
 	  }
 	}
 	else {
-	  if (resolved._unresolvedDomainPreds.length + this._unresolvedDomainPreds.length == 0 ||
+	  if (resolved._unresolvedDomainPreds.length + this._unresolvedDomainPreds.length +
+	      resolved._lambdaDomainPreds.length + this._lambdaDomainPreds.length == 0 ||
 	      (_unresolvedDomainPreds[].filter!(pred => ! pred.isGuard()).empty() &&
-	       resolved._unresolvedDomainPreds[].filter!(pred => ! pred.isGuard()).empty())) {
+	       resolved._unresolvedDomainPreds[].filter!(pred => ! pred.isGuard()).empty() &&
+	       _lambdaDomainPreds[].filter!(pred => ! pred.isGuard()).empty() &&
+	       resolved._lambdaDomainPreds[].filter!(pred => ! pred.isGuard()).empty())) {
 	    randomizeWithoutConstraints(proxy);
 	    return true;
 	  }
@@ -497,26 +503,40 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   // Callbacks
   CstDepCallback[] _depCbs;
 
-  CstPredicate [] getRandPreds(){
-    return _unresolvedDomainPreds[];
-  }
   Folder!(CstPredicate, "resolvedDomainPreds") _resolvedDomainPreds;
   Folder!(CstPredicate, "unresolvedDomainPreds") _unresolvedDomainPreds;
-
+  Folder!(CstPredicate, "lambdaDomainPreds") _lambdaDomainPreds;
 
   override void registerRndPred(CstPredicate rndPred) {
-    if (! _unresolvedDomainPreds[].canFind(rndPred))
-      _unresolvedDomainPreds ~= rndPred;
+    if (rndPred.isLambdaPred()) {
+      if (! _lambdaDomainPreds[].canFind(rndPred)) {
+	_lambdaDomainPreds ~= rndPred;
+      }
+    }
+    else {
+      if (! _unresolvedDomainPreds[].canFind(rndPred)) {
+	_unresolvedDomainPreds ~= rndPred;
+      }
+    }
   }
   
   void purgeRndPred(CstPredicate pred) {
     // import std.stdio;
     // writeln("Removing pred: ", pred.describe());
     import std.algorithm: countUntil;
-    auto index = countUntil(_unresolvedDomainPreds[], pred);
-    if (index >= 0) {
-      _unresolvedDomainPreds[index] = _unresolvedDomainPreds[$-1];
-      _unresolvedDomainPreds.length = _unresolvedDomainPreds.length - 1;
+    if (pred.isLambdaPred()) {
+      auto index = countUntil(_lambdaDomainPreds[], pred);
+      if (index >= 0) {
+	_lambdaDomainPreds[index] = _lambdaDomainPreds[$-1];
+	_lambdaDomainPreds.length = _lambdaDomainPreds.length - 1;
+      }
+    }
+    else {
+      auto index = countUntil(_unresolvedDomainPreds[], pred);
+      if (index >= 0) {
+	_unresolvedDomainPreds[index] = _unresolvedDomainPreds[$-1];
+	_unresolvedDomainPreds.length = _unresolvedDomainPreds.length - 1;
+      }
     }
   }
 
@@ -553,7 +573,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     assert(false, "inRange is not defined for: " ~ name());
   }
 
-  void setProxyContext(_esdl__Proxy proxy){
+  void setProxyContext(_esdl__Proxy proxy) {
     // import std.stdio;
     // writeln("setProxyContext on: ", this.name());
     assert (_state is State.INIT && (! this.isSolved()));
@@ -569,8 +589,9 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
 	  pred.setProxyContext(proxy);
 	}
       }
-      if (_esdl__parentIsConstrained) {
+      if (_esdl__parentIsConstrained()) {
 	CstDomSet parent = getParentDomSet();
+	// writeln("setProxyContext on parent: ", parent.name());
 	assert (parent !is null);
 	if (parent._state is CstDomSet.State.INIT) {
 	  parent.setProxyContext(proxy);
@@ -591,7 +612,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   	  pred.setGroupContext(group, level);
   	}
       }
-      if (_esdl__parentIsConstrained) {
+      if (_esdl__parentIsConstrained()) {
   	CstDomSet parent = getParentDomSet();
   	assert (parent !is null);
   	if (parent._state is CstDomSet.State.INIT ||
@@ -626,6 +647,8 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
 	parent.markAsUnresolved(lap, false);
       foreach (pred; _unresolvedDomainPreds)
 	pred.markAsUnresolved(lap);
+      foreach (pred; _lambdaDomainPreds)
+	pred.markAsUnresolved(lap);
     }
   }
 
@@ -659,7 +682,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     _depCbs ~= idxCb; // use same callbacks as deps for now
   }
 
-  bool _esdl__parentIsConstrained;
+  abstract bool _esdl__parentIsConstrained();
   abstract string describe(bool descExpr=false);
 
   void scan() { }
@@ -922,21 +945,25 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     }
   }
 
-  bool _esdl__parentIsConstrained;
+  abstract bool _esdl__parentIsConstrained();
   
-  Folder!(CstPredicate, "unresolvedDomainPreds") _unresolvedDomainPreds;
   Folder!(CstPredicate, "resolvedDomainPreds") _resolvedDomainPreds;
+  Folder!(CstPredicate, "unresolvedDomainPreds") _unresolvedDomainPreds;
+  Folder!(CstPredicate, "lambdaDomainPreds") _lambdaDomainPreds;
 
-  CstPredicate [] getRandPreds(){
-    return _unresolvedDomainPreds[];
-  }
-
-  
   override void registerRndPred(CstPredicate rndPred) {
-    if (! _unresolvedDomainPreds[].canFind(rndPred))
-      _unresolvedDomainPreds ~= rndPred;
+    if (rndPred.isLambdaPred()) {
+      if (! _lambdaDomainPreds[].canFind(rndPred)) {
+	_lambdaDomainPreds ~= rndPred;
+      }
+    }
+    else {
+      if (! _unresolvedDomainPreds[].canFind(rndPred)) {
+	_unresolvedDomainPreds ~= rndPred;
+      }
+    }
   }
-
+  
   CstVecArrExpr sum() {
     return new CstVecArrExpr(this// , CstVectorOp.SUM
     );
@@ -993,7 +1020,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     _orderLevel = 0;
   }
   
-  void setProxyContext(_esdl__Proxy proxy){
+  void setProxyContext(_esdl__Proxy proxy) {
     // import std.stdio;
     // writeln("setProxyContext on: ", this.name());
     assert (this.isResolved(), this.name() ~ " is unresolved");
@@ -1006,7 +1033,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
 	}
       }
     }
-    if (_esdl__parentIsConstrained) {
+    if (_esdl__parentIsConstrained()) {
       CstDomSet parent = getParentDomSet();
       assert (parent !is null);
       if (parent._state is State.INIT) {
@@ -1035,7 +1062,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   	}
       }
     }
-    if (_esdl__parentIsConstrained) {
+    if (_esdl__parentIsConstrained()) {
       CstDomSet parent = getParentDomSet();
       assert (parent !is null);
       parent.setGroupContext(group, level);

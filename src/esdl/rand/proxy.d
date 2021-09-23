@@ -81,6 +81,9 @@ abstract class _esdl__ConstraintBase: rand.disable
   abstract CstPredicate[] getConstraintGuards();
   abstract CstPredicate[] getConstraints();
   abstract string getCode();
+  abstract bool isLambdaConstraint();
+  abstract bool isVisitorConstraint();
+
   void _esdl__doSetOuter() {
     assert (false, "Overridden in _esdl__ConstraintWithImpl");
   }
@@ -634,7 +637,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   abstract bool _esdl__debugSolver();
 
   // Keep a list of constraints in the class
-  _esdl__ConstraintBase _esdl__cstWith;
+  _esdl__ConstraintBase _esdl__lambdaCst;
 
   _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
 				      CstObjectIntf obj, void* outer) {
@@ -989,7 +992,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     // // else if (pred._unresolvedRnds.length == 1 &&
     // // 	     pred._unresolvedRndArrs.length == 0 &&
     // // 	     pred._unresolvedRnds[0]._type <= DomType.LAZYMONO//  &&
-    // // 	     // pred._unresolvedRnds[0]._esdl__parentIsConstrained is false
+    // // 	     // pred._unresolvedRnds[0]._esdl__parentIsConstrained() is false
     // // 	     ) {
     // //   _resolvedMonoPreds ~= pred;
     // //   // procMonoDomain(pred._unresolvedRnds[0], pred);
