@@ -27,6 +27,7 @@ abstract class CstLogicExpr: CstLogicTerm
 abstract class CstVecExpr: CstVecTerm
 {
   CstDomBase getDomain() { return null; }
+  final override bool isDistVar() { return false; }
 }
 
 class CstVecArrExpr: CstVecExpr
@@ -136,7 +137,21 @@ class CstVecArrExpr: CstVecExpr
     _arr.calcHash(hash);
     hash.modify(41);
   }
-
+  
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(40);
+    _hash.modify(_op);
+    _hash.modify(32);
+    _arr.makeHash();
+    _hash.modify(_arr.hashValue());
+    _hash.modify(41);
+  }
+  
   void scan() { }
 
   final void visit(CstDistSolverBase dist) { assert(false); }
@@ -330,6 +345,66 @@ class CstVec2VecExpr: CstVecExpr
     hash.modify(41);
   }
   
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(40);
+    bool isSymmetric;
+    _lhs.makeHash();
+    _rhs.makeHash();
+    final switch (_op){
+    case CstBinaryOp.AND:
+      isSymmetric = true;
+      break;
+    case CstBinaryOp.OR:
+      isSymmetric = true;
+      break;
+    case CstBinaryOp.XOR:
+      isSymmetric = true;
+      break;
+    case CstBinaryOp.ADD:
+      isSymmetric = true;
+      break;
+    case CstBinaryOp.SUB:
+      isSymmetric = false;
+      break;
+    case CstBinaryOp.MUL:
+      isSymmetric = true;
+      break;
+    case CstBinaryOp.DIV:
+      isSymmetric = false;
+      break;
+    case CstBinaryOp.REM:
+      isSymmetric = false;
+      break;
+    case CstBinaryOp.LSH:
+      isSymmetric = false;
+      break;
+    case CstBinaryOp.RSH:
+      isSymmetric = false;
+      break;
+    case CstBinaryOp.LRSH:
+      isSymmetric = false;
+      break;
+    }
+    if (isSymmetric){
+      if (_lhs.hashValue() > _rhs.hashValue()){
+    	CstVecTerm temp = _lhs;
+    	_lhs = _rhs;
+    	_rhs = temp;
+      }
+    }
+    _hash.modify(_op);
+    _hash.modify(32);
+    _hash.modify(_lhs.hashValue());
+    _hash.modify(32);
+    _hash.modify(_rhs.hashValue());
+    _hash.modify(41);
+  }
+  
   void scan() { }
 
   final void visit(CstDistSolverBase dist) { assert(false); }
@@ -408,7 +483,23 @@ class CstRangeExpr
       _rhs.calcHash(hash);
     }
   }
-
+  
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(0);
+    _lhs.makeHash();
+    _hash.modify(_lhs.hashValue());
+    if (_rhs !is null) {
+      _rhs.makeHash();
+      if (_inclusive) _hash.modify(58);
+      else _hash.modify(46);
+      _hash.modify(_rhs.hashValue());
+    }
+  }
 }
 
 class CstVecDistSetElem
@@ -439,7 +530,7 @@ class CstVecDistSetElem
       return new CstVecDistSetElem(_lhs.unroll(iter, n), null, _inclusive);
     else
       return new CstVecDistSetElem(_lhs.unroll(iter, n),
-				  _rhs.unroll(iter, n), _inclusive);
+				   _rhs.unroll(iter, n), _inclusive);
   }
 
   this(CstVecTerm lhs, CstVecTerm rhs, bool inclusive=false) {
@@ -481,6 +572,23 @@ class CstVecDistSetElem
       if (_inclusive) hash.modify(58);
       else hash.modify(46);
       _rhs.calcHash(hash);
+    }
+  }
+  
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(0);
+    _lhs.makeHash();
+    _hash.modify(_lhs.hashValue());
+    if (_rhs !is null) {
+      _rhs.makeHash();
+      if (_inclusive) _hash.modify(58);
+      else _hash.modify(46);
+      _hash.modify(_rhs.hashValue());
     }
   }
 
@@ -592,6 +700,24 @@ class CstUniqueSetElem
     }
   }
   
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    if (_arr !is null){
+      _hash = Hash(91);
+      _arr.makeHash();
+      _hash.modify(_arr.hashValue());
+      _hash.modify(93);
+    }
+    else {
+      _hash = Hash(0);
+      _vec.makeHash();
+      _hash.modify(_vec.hashValue());
+    }
+  }
 }
 
 
@@ -701,6 +827,30 @@ class CstInsideSetElem
       }
     }
   }
+
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    if (_arr !is null){
+      _hash = Hash(91);
+      _arr.makeHash();
+      _hash.modify(_arr.hashValue());
+      _hash.modify(93);
+    }
+    else {
+      _hash = Hash(0);
+      _lhs.makeHash();
+      _hash.modify(_lhs.hashValue());
+      if (_rhs !is null) {
+	if (_inclusive) _hash.modify(58);
+	else _hash.modify(46);
+	_hash.modify(_rhs.hashValue());
+      }
+    }
+  }
   
   final void visit(CstDistSolverBase dist) {
     if (_arr !is null) _arr.visit(dist);
@@ -792,9 +942,23 @@ class CstLogicWeightedDistSetElem
     _term.calcHash(hash);
     if (_perItem) hash.modify(64);
     else hash.modify(42);
-    hash.modify(cast(uint)_weight.evaluate());
+    hash.modify(_weight.evaluate());
   }
-
+  
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(0);
+    _term.makeHash();
+    _hash.modify(_term.hashValue());
+    if (_perItem) _hash.modify(64);
+    else _hash.modify(42);
+    // _hash.modify(_weight.evaluate()); // cant call evaluate here because it isnt resolved
+    _hash.modify('w');
+  }
 }
 
 class CstVecWeightedDistSetElem
@@ -851,9 +1015,22 @@ class CstVecWeightedDistSetElem
     _range.calcHash(hash);
     if (_perItem) hash.modify(64);
     else hash.modify(42);
-    hash.modify(cast(uint)_weight.evaluate());
+    hash.modify(_weight.evaluate());
   }
   
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(0);
+    _range.makeHash();
+    _hash.modify(_range.hashValue());
+    if (_perItem) _hash.modify(64);
+    else _hash.modify(42);
+    _hash.modify(_weight.evaluate());
+  }
 }
 
 class CstLogicDistExpr(T): CstLogicExpr
@@ -951,6 +1128,21 @@ class CstLogicDistExpr(T): CstLogicExpr
     _vec.calcHash(hash);
     foreach (dist; _dists) {
       dist.calcHash(hash);
+    }
+  }
+
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(100);
+    _vec.makeHash();
+    _hash.modify(_vec.hashValue());
+    foreach (dist; _dists){
+      dist.makeHash();
+      _hash.modify(dist.hashValue());
     }
   }
 
@@ -1072,6 +1264,21 @@ class CstVecDistExpr(T): CstLogicExpr
     _vec.calcHash(hash);
     foreach (dist; _dists) {
       dist.calcHash(hash);
+    }
+  }
+
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(100);
+    _vec.makeHash();
+    _hash.modify(_vec.hashValue());
+    foreach (dist; _dists){
+      dist.makeHash();
+      _hash.modify(dist.hashValue());
     }
   }
 
@@ -1249,6 +1456,19 @@ class CstVecSliceExpr: CstVecExpr
     _range.calcHash(hash);
     hash.modify(93);
   }
+  
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(0);
+    _vec.makeHash();
+    _hash.modify(_vec.hashValue());
+    _range.makeHash();
+    _hash.modify(_range.hashValue());
+  }
 
   void scan() { }
 
@@ -1394,6 +1614,20 @@ class CstNotVecExpr: CstVecExpr
     hash.modify(41);
   }
 
+  
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(40);
+    _hash.modify(78);
+    _expr.makeHash();
+    _hash.modify(_expr.hashValue());
+    _hash.modify(41);
+  }
+
   void scan() { }
 
   final void visit(CstDistSolverBase dist) { assert(false); }
@@ -1477,6 +1711,19 @@ class CstNegVecExpr: CstVecExpr
     _expr.calcHash(hash);
     hash.modify(41);
   }
+    
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(40);
+    _hash.modify(126);
+    _expr.makeHash();
+    _hash.modify(_expr.hashValue());
+    _hash.modify(41);
+  }
 
   void scan() { }
 
@@ -1545,7 +1792,52 @@ class CstLogic2LogicExpr: CstLogicExpr
     _rhs.calcHash(hash);
     hash.modify(41);
   }
-
+    
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(40);
+    bool isSymetrical;
+    _lhs.makeHash();
+    _rhs.makeHash();
+    final switch (_op){
+    case CstLogicOp.LOGICAND:
+      isSymetrical = true;
+      break;
+    case CstLogicOp.LOGICOR:
+      isSymetrical = true;
+      break;
+    case CstLogicOp.LOGICIMP:
+      isSymetrical = false;
+      break;
+    case CstLogicOp.LOGICNOT:
+      isSymetrical = false;
+      break;
+    case CstLogicOp.LOGICEQ:
+      isSymetrical = true;
+      break;
+    case CstLogicOp.LOGICNEQ:
+      isSymetrical = true;
+      break;
+    }
+    if (isSymetrical){
+      if (_lhs.hashValue() > _rhs.hashValue()){
+    	CstLogicTerm temp = _lhs;
+    	_lhs = _rhs;
+    	_rhs = temp;
+      }
+    }
+    _hash.modify(_op);
+    _hash.modify(32);
+    _hash.modify(_lhs.hashValue());
+    _hash.modify(32);
+    _hash.modify(_rhs.hashValue());
+    _hash.modify(41);
+  }
+  
   CstDistSolverBase getDist() {
     assert (false);
   }
@@ -1714,6 +2006,26 @@ class CstInsideArrExpr: CstLogicExpr
     hash.modify(41);
   }
   
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(40);
+    if (_notinside) _hash.modify(92);
+    else            _hash.modify(47);
+    _term.makeHash();
+    _hash.modify(_term.hashValue());
+    _hash.modify(91);
+    foreach (elem; _elems){
+      elem.makeHash();
+      _hash.modify(elem.hashValue());
+    }
+    _hash.modify(93);
+    _hash.modify(41);
+  }
+  
   CstDistSolverBase getDist() {
     assert (false);
   }
@@ -1803,6 +2115,24 @@ class CstUniqueArrExpr: CstLogicExpr
     hash.modify(93);
     hash.modify(41);
   }
+ 
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(40);
+    _hash = Hash(117);
+    _hash = Hash(91);
+    foreach (elem; _elems){
+      elem.makeHash();
+      _hash.modify(elem.hashValue());
+    }
+    _hash.modify(93);
+    _hash.modify(41);
+  }
+  
 
   CstDistSolverBase getDist() { assert (false); }
 
@@ -1843,6 +2173,16 @@ class CstIteLogicExpr: CstLogicExpr
   void calcHash(ref Hash hash){
     assert (false, "TBD");
   }
+
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    assert(false, "TBD");
+  }
+  
 
   override bool eval() {assert (false, "Enable to evaluate CstIteLogicExpr");}
   override void scan() { }
@@ -1978,6 +2318,59 @@ class CstVec2LogicExpr: CstLogicExpr
     hash.modify(32);
     _rhs.calcHash(hash);
     hash.modify(41);
+  }
+
+  Hash _hash;
+  
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(40);
+    _lhs.makeHash();
+    _rhs.makeHash();
+    final switch(_op){
+    case CstCompareOp.LTH:
+      break;
+    case CstCompareOp.LTE:
+      break;
+    case CstCompareOp.GTH:
+      CstVecTerm temp = _lhs;
+      _lhs = _rhs;
+      _rhs = temp;
+      _op = CstCompareOp.LTH;
+      break;
+    case CstCompareOp.GTE:
+      CstVecTerm temp = _lhs;
+      _lhs = _rhs;
+      _rhs = temp;
+      _op = CstCompareOp.LTE;
+      break;
+    case CstCompareOp.EQU:
+      if (_lhs.hashValue() > _rhs.hashValue()){
+    	CstVecTerm temp = _lhs;
+    	_lhs = _rhs;
+    	_rhs = temp;
+      }
+      break;
+    case CstCompareOp.NEQ:
+      if (_lhs.isDistVar() || _rhs.isDistVar()){
+	break;
+      }
+      if (_lhs.hashValue() > _rhs.hashValue()){
+    	CstVecTerm temp = _lhs;
+    	_lhs = _rhs;
+    	_rhs = temp;
+      }
+      break;
+    }
+    _hash.modify(_op);
+    _hash.modify(32);
+    _hash.modify(_lhs.hashValue());
+    _hash.modify(32);
+    _hash.modify(_rhs.hashValue());
+    _hash.modify(41);
   }
 
   CstDistSolverBase getDist() {
@@ -2119,6 +2512,20 @@ class CstNotLogicExpr: CstLogicExpr
     hash.modify(41);
   }
   
+  Hash _hash;
+  
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(40);
+    _hash.modify(78);
+    _expr.makeHash();
+    _hash.modify(_expr.hashValue());
+    _hash.modify(41);
+  }
+  
   CstDistSolverBase getDist() {
     assert (false);
   }
@@ -2177,6 +2584,16 @@ class CstVarVisitorExpr: CstLogicExpr
   void calcHash(ref Hash hash){
     hash.modify(118);
     hash.modify(_obj.fullName());
+  }
+  Hash _hash;
+  
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(118);
+    _hash.modify(_obj.fullName());
   }
 
   bool isCompatWithDist(CstDomBase dom) { return false; }

@@ -32,8 +32,9 @@ struct Hash
   
   enum uint m = 0x5bd1e995;
   enum uint r = 24;
-  void modify (uint c){
-    uint k = c * m;
+
+  void modify (size_t c){
+    size_t k = c * m;
     k ^= k >> r;
     hash = (hash * m) ^ (k * m);
   }
@@ -242,14 +243,14 @@ class CstPredGroup			// group of related predicates
   }
 
   void setGroupContext(CstPredicate solvablePred, uint level) {
-    import std.algorithm.sorting: sort; 
-    
     solvablePred.setGroupContext(this, level);
 
     setOrderAndBools();
   }
 
   void setOrderAndBools() {
+    
+    import std.algorithm.sorting: sort; 
     
     _hasSoftConstraints = false;
     _hasVectorConstraints = false;
@@ -562,7 +563,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	'[' ~ _unrollIterVal.to!string() ~ ']' ~'%' ~ _id.to!string();
     }
   }
-
+  
   string fullName() {
     return name();
   }
@@ -592,7 +593,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   bool isUnrolled() {
     return _state == State.UNROLLED;
   }
-
+  
 
   void hasDistDomain(bool v) {
     _hasDistDomain = v;
@@ -739,11 +740,13 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
       
     this.setDistPredContext();
-
+    
     // doDetDomainContext is now being called on the newly unrolled predicates
     // using procUnrolledNewPredicates method in the proxy
     // if (parent !is null) this.doSetDomainContext(this); // unrolled
-
+    makeHash();
+    // import std.stdio;
+    // writeln(this.describe());
     debug(CSTPREDS) {
       import std.stdio;
       stdout.writeln(this.describe());
@@ -1579,7 +1582,23 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
     _expr.calcHash(hash);
   }
-
+  
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  void makeHash(){
+    _hash = Hash(0);
+    _hash.modify(_soft);
+    if (_guard !is null) {
+      _guard.makeHash();
+      if (_guardInv) _hash.modify(33);
+      _hash.modify(_guard.hashValue());
+    }
+    _expr.makeHash();
+    _hash.modify(_expr.hashValue());
+  }
+  
   bool isDist() { return _distDomain !is null; }
   CstDomBase _distDomain;
   void distDomain(CstDomBase vec) {

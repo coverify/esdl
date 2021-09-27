@@ -84,6 +84,8 @@ abstract class CstDomain(T, rand RAND_ATTR) if (!is (T == bool)):
 
       final override void setBool(bool val) {assert (false);}
 
+      final override bool isDistVar() { return isDist(); }
+
       long evaluate() {
 	static if (HAS_RAND_ATTRIB) {
 	  if (! this.isRand || this.isSolved()) {
@@ -280,7 +282,16 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
       hash.modify(T.stringof);
     }
   }
-
+  
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  void makeHash(){
+    _hash = Hash(82);
+    _hash.modify(T.stringof);
+  }
+  
   this(string name, _esdl__Proxy root) {
     _name = name;
     _root = root;
@@ -583,6 +594,10 @@ class CstArrIterator(RV): CstIterator
     // assert(false);
   }
   void calcHash(ref Hash hash) { }
+  void makeHash(){}
+  size_t hashValue(){
+    return 1729;
+  }
 }
 
 class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
@@ -599,6 +614,8 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   string _name;
 
   CstVecPrim[] _preReqs;
+
+  final override bool isDistVar() { return false; }
 
   override string name() {
     return _name;
@@ -864,7 +881,8 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   }
 
   override CstDomSet getParentDomSet() {
-    static if (is (RV: CstDomSet)) return _parent.getParentDomSet();
+    static if (is (RV: CstDomSet)) return _parent// .getParentDomSet()
+				     ;
     else return null;
   }
 
@@ -958,7 +976,16 @@ class CstLogicValue: CstValue, CstLogicTerm
 
   void calcHash(ref Hash hash){
     hash.modify(86);
-    hash.modify(0);
+    hash.modify(_val);
+  }
+    
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  void makeHash(){
+    _hash = Hash(86);
+    _hash.modify(_val);
   }
 
   override CstDistSolverBase getDist() { assert(false); }
@@ -1123,7 +1150,38 @@ class CstVecValue(T): CstVecValueBase
     else {
       static assert (false);
     }
-    hash.modify(cast(uint)_val);
+    hash.modify(_val);
   }
-
+    
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  void makeHash(){
+    _hash = Hash(86);
+    static if (isBoolean!T) {
+      _hash.modify(85);
+    }
+    else static if (isIntegral!T) {
+      static if (isSigned!T) {
+	_hash.modify(83);
+      }
+      else {
+	_hash.modify(85);
+      }
+    }
+    else static if (isBitVector!T) {
+      static if (T.ISSIGNED) {
+	_hash.modify(83);
+      }
+      else {
+	_hash.modify(85);
+      }
+    }
+    else {
+      static assert (false);
+    }
+    _hash.modify(_val);
+  }
+  
 }

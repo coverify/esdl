@@ -274,6 +274,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   uint         _domN = uint.max;
   uint         _varN = uint.max;
 
+
   _esdl__Proxy _root;
   string _name;
 
@@ -705,6 +706,7 @@ abstract class CstValue: CstTerm
 
   bool isIterator() { return false; }
 
+
   CstValue unroll(CstIterator iters, ulong n) {
     return this;
   }
@@ -714,7 +716,7 @@ abstract class CstValue: CstTerm
   abstract bool getBool();
   // abstract bool signed();
   // abstract uint bitcount();
-
+  
   void scan() { }
 
 }
@@ -723,6 +725,7 @@ abstract class CstVecValueBase: CstValue, CstVecTerm {
   final override bool isConst() { return true; }
   final override bool isIterator() { return false; }
   final override CstDomBase getDomain() { return null; }
+  final override bool isDistVar() { return false; }
 }
 
 
@@ -943,12 +946,29 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   }
 
   void calcHash(ref Hash hash){
-    assert (isResolved());
     foreach (dom; this[]) {
       dom.calcHash(hash);
       hash.modify(' ');
     }
   }
+
+  Hash _hash;
+  
+  size_t hashValue(){
+    return _hash.hash;
+  }
+  void makeHash(){
+    _hash = Hash(0);
+    // foreach (dom; this[]) {
+    //   dom.makeHash();
+    //   _hash.modify(dom.hashValue());
+    //   _hash.modify(' ');
+    // }
+    // this[] cant be resolved rn
+
+    _hash.modify(1733); //random number
+  }
+  
 
   abstract bool _esdl__parentIsConstrained();
   
@@ -1126,6 +1146,8 @@ interface CstTerm
 
   void writeExprString(ref Charbuf str);
   void calcHash(ref Hash hash);
+  void makeHash();
+  size_t hashValue();
 
   CstTerm unroll(CstIterator iter, ulong n);
   
@@ -1147,6 +1169,7 @@ abstract class CstIterator: CstVecTerm
       cb.doUnroll();
     }
   }
+  final override bool isDistVar() { return false; } 
   abstract ulong size();
   abstract string name();
   abstract string fullName();
@@ -1165,7 +1188,6 @@ abstract class CstIterator: CstVecTerm
   long evaluate() {
     assert(false, "Can not evaluate an Iterator: " ~ this.name());
   }
-
   void scan() { }
 
   override CstDomBase getDomain() { return null; }
@@ -1176,10 +1198,12 @@ interface CstVecTerm: CstTerm
 {
   bool isConst();
   bool isIterator();
-
+  bool isDistVar();
+  
   long evaluate();
   uint bitcount();
   bool signed();
+
 
   CstVecTerm unroll(CstIterator iter, ulong n);
 
@@ -1344,7 +1368,6 @@ interface CstVecTerm: CstTerm
       return lhs & rhs;
     }
   }
-
 }
 
 interface CstLogicTerm: CstTerm
@@ -1355,6 +1378,7 @@ interface CstLogicTerm: CstTerm
   void setDistPredContext(CstPredicate pred);
 
   bool eval();
+
 
   CstLogicTerm unroll(CstIterator iter, ulong n);
 

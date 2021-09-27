@@ -338,24 +338,24 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     else return null;
   }
 
-  _esdl__ConstraintBase[] _globalVisitors;
+  Folder!(_esdl__ConstraintBase, "globalVisitors") _globalVisitors;
 
   void addGlobalVisitor(_esdl__ConstraintBase visitor) {
     _globalVisitors ~= visitor;
   }
 
   void setContextGlobalVisitors() {
-    foreach (visitor; _globalVisitors) {
+    foreach (visitor; _globalVisitors[]) {
       visitor.doSetDomainContext();
       visitor.doProcDomainContext();
     }
   }
 
   _esdl__ConstraintBase[] getGlobalVisitors() {
-    return _globalVisitors;
+    return _globalVisitors[];
   }
 
-  _esdl__ConstraintBase[] _argVisitors;
+  Folder!(_esdl__ConstraintBase, "argVisitors") _argVisitors;
 
   void addArgVisitor(_esdl__ConstraintBase visitor) {
     _argVisitors ~= visitor;
@@ -369,7 +369,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   }
 
   _esdl__ConstraintBase[] getArgVisitors() {
-    return _argVisitors;
+    return _argVisitors[];
   }
 
   Folder!(CstPredicate, "unrolledNewPreds") _unrolledNewPreds;
@@ -449,6 +449,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   final void doResetLambdaPreds() {
     foreach (lambdaCstDom; _lambdaCstDoms) lambdaCstDom.resetLambdaPreds();
     _lambdaCstDoms.reset();
+    // reset lambda arg visitors
+    _argVisitors.reset();
   }
 
   void printGroup (){
@@ -1096,6 +1098,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 		  "Group can not be solved when the predicate is still not solved; group: " ~
 		  group.describe() ~ " predicate: " ~ pred.describe());
 	  group.setGroupContext(pred, level);
+
 	  group.solve();
 	  _solvedDomains ~= group.domains();
 	  _solvedDomainArrs ~= group.domainArrs();
