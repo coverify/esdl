@@ -259,7 +259,7 @@ class CstPredGroup			// group of related predicates
 
     // foreach (pred; _preds) pred._group = null;
     _preds.reset();
-    foreach (pred; sort!((x, y) => x.name() < y.name())(_predList[])) {
+    foreach (pred; sort!((x, y) => x.hashValue() < y.hashValue())(_predList[])) {
       if (pred.withDist()) this.markDist();
       // pred._group = this;
       if (pred._soft != 0) _hasSoftConstraints = true;
@@ -269,7 +269,7 @@ class CstPredGroup			// group of related predicates
     }
     // foreach (pred; _guards) pred._group = null;
     _guards.reset();
-    foreach (pred; sort!((x, y) => x.name() < y.name())(_guardList[])) {
+    foreach (pred; sort!((x, y) => x.hashValue() < y.hashValue())(_guardList[])) {
       // pred._group = this;
       _guards ~= pred;
     }
