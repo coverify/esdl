@@ -2,12 +2,61 @@ module esdl.rand.misc;
 
 import esdl.data.queue;
 import esdl.data.charbuf;
-import std.traits: isIntegral, isBoolean, isArray, EnumMembers,
+import std.traits: isIntegral, isBoolean, isArray, EnumMembers, isSigned,
   isSomeChar, isAssociativeArray, ValueType, KeyType, OriginalType;
 import std.range: ElementType;
 import std.meta: AliasSeq;
+import esdl.data.bvec: isBitVector;
 
 public enum SolveOrder: ubyte { UNDECIDED, NOW, LATER }
+
+// https://stackoverflow.com/questions/46073295/implicit-type-promotion-rules
+// Mainly two things:
+// 1. if a number smaller than int can fit into an int, it will be promoted to int
+//    We can extend this principle to vectors with < 64 bits and promote that to long
+// 2. if a signed integer interacts with a non-singed interger of the same size,
+//    both will be promoted to unsigned
+public enum CstVecType: ubyte { BOOL, INT, UINT, LONG, ULONG, CENT, UCENT, NAN }
+
+template GetVecType(T) // if (isIntegral!T || isBitVector!T || isBoolean!T)
+{
+  static assert (isIntegral!T || isBitVector!T || isBoolean!T);
+
+  static if (isIntegral!T) {
+    enum size_t tSize = T.sizeof * 8;
+    enum bool tSign = isSigned!T;
+  }
+  else static if (isBitVector!T) {
+    enum size_t tSize = T.SIZE * 8;
+    enum bool tSign = T.ISSIGNED;
+  }
+  else static if (isBoolean!T) {
+    enum size_t tSize = 1;
+    enum bool tSign = false;
+  }
+
+  static if (tSign) {
+    static if (tSize <= 32) enum CstVecType GetVecType = CstVecType.INT;
+    else static if (tSize <= 64) enum CstVecType GetVecType = CstVecType.LONG;
+    else static if (tSize <= 128) enum CstVecType GetVecType = CstVecType.CENT;
+    else enum CstVecType GetVecType = CstVecType.NAN;
+  }
+  else {
+    static if (tSize == 1) enum CstVecType GetVecType = CstVecType.BOOL;
+    else static if (tSize < 32) enum CstVecType GetVecType = CstVecType.INT;
+    else static if (tSize == 32) enum CstVecType GetVecType = CstVecType.UINT;
+    else static if (tSize < 64) enum CstVecType GetVecType = CstVecType.LONG;
+    else static if (tSize == 64) enum CstVecType GetVecType = CstVecType.ULONG;
+    else static if (tSize < 128) enum CstVecType GetVecType = CstVecType.CENT;
+    else static if (tSize == 128) enum CstVecType GetVecType = CstVecType.UCENT;
+    else enum CstVecType GetVecType = CstVecType.NAN;
+  }
+}
+
+CstVecType getCommonVecType(CstVecType lhs, CstVecType rhs) {
+  if (rhs > lhs) return rhs;
+  else return lhs;
+}
 
 public enum DomainContextEnum: ubyte { DEFAULT, INDEX, BITINDEX, DIST }
 

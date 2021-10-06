@@ -10,8 +10,9 @@ import esdl.data.charbuf: Charbuf;
 import esdl.rand.base: CstValue, CstDomBase, CstDomSet, CstIterator,
   CstVecNodeIntf, CstVarNodeIntf, CstVecPrim, DomType, CstLogicTerm,
   CstVecTerm, CstVecValueBase, CstDepIntf;
-import esdl.rand.misc: rand, writeHexString, isVecSigned,
-  CstVectorOp, CstInsideOp, CstCompareOp, CstLogicOp, DomainContextEnum;
+import esdl.rand.misc: rand, writeHexString, isVecSigned, CstVectorOp,
+  CstInsideOp, CstCompareOp, CstLogicOp, DomainContextEnum, GetVecType,
+  CstVecType;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.pred: CstPredicate, Hash;
 import esdl.rand.expr: CstNotLogicExpr, CstLogic2LogicExpr;
@@ -61,6 +62,10 @@ abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
 	return cast(bool) *(getRef());
       }
 
+      override long evaluate() {
+	return cast(long) eval();
+      }
+
       override void scan() { }
 
       override uint bitcount() { return 1; }
@@ -86,7 +91,7 @@ abstract class CstDomain(T, rand RAND_ATTR) if (!is (T == bool)):
 
       final override bool isDistVar() { return isDist(); }
 
-      long evaluate() {
+      override long evaluate() {
 	static if (HAS_RAND_ATTRIB) {
 	  if (! this.isRand || this.isSolved()) {
 	    return value();
@@ -124,6 +129,10 @@ abstract class CstDomain(T, rand RAND_ATTR) if (!is (T == bool)):
       }
 
       override CstDomBase getDomain() { return this; }
+
+      final override CstVecType getVecType() {
+	return GetVecType!T;
+      }
     }
 
 abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
@@ -881,8 +890,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   }
 
   override CstDomSet getParentDomSet() {
-    static if (is (RV: CstDomSet)) return _parent// .getParentDomSet()
-				     ;
+    static if (is (RV: CstDomSet)) return _parent;
     else return null;
   }
 
@@ -921,6 +929,11 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     return false;
     // }
   }
+
+  override final CstVecType getVecType() {
+    return CstVecType.ULONG;
+  }
+  
 }
 
 class CstLogicValue: CstValue, CstLogicTerm
@@ -1011,6 +1024,10 @@ class CstVecValue(T): CstVecValueBase
   else static if (isBoolean!T) {
     enum bool SIGNED = false;
     enum uint BITCOUNT = 1;
+  }
+
+  final override CstVecType getVecType() {
+    return GetVecType!T;
   }
 
   override bool isBool() {

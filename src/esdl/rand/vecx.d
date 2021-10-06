@@ -868,6 +868,9 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
     }
   }
 
+  final override CstVecType getVecType() {
+    return GetVecType!LEAF;
+  }
   
 }
 

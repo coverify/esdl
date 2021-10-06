@@ -2,9 +2,10 @@ module esdl.rand.expr;
 
 import esdl.solver.base: CstSolver, CstDistSolverBase;
 
-import esdl.rand.misc: rand, isVecSigned, Unconst,
+import esdl.rand.misc: rand, isVecSigned, Unconst, CstVecType,
   CstVectorOp, CstInsideOp, CstBinaryOp, CstCompareOp, CstLogicOp,
-  CstUnaryOp, CstSliceOp, writeHexString, CstUniqueOp, DomainContextEnum;
+  CstUnaryOp, CstSliceOp, writeHexString, CstUniqueOp, DomainContextEnum,
+  getCommonVecType;
 
 import esdl.rand.base: DomDistEnum, CstTerm, CstDomBase, CstDomSet,
   CstIterator, CstVecNodeIntf, CstVarNodeIntf, CstVecArrIntf,
@@ -66,7 +67,28 @@ class CstVecArrExpr: CstVecExpr
   }
 
   long evaluate() {
-    assert (false, "TBD");
+    CstVecType type = _arr.getVecType();
+
+    switch (type) {
+    case CstVecType.BOOL, CstVecType.INT:
+      int sum = 0;
+      foreach (v; _arr[]) { sum += cast(int) v.evaluate(); }
+      return sum;
+    case CstVecType.UINT:
+      uint sum = 0;
+      foreach (v; _arr[]) { sum += cast(uint) v.evaluate(); }
+      return sum;
+    case CstVecType.LONG:
+      long sum = 0;
+      foreach (v; _arr[]) { sum += cast(long) v.evaluate(); }
+      return sum;
+    case CstVecType.ULONG:
+      ulong sum = 0;
+      foreach (v; _arr[]) { sum += cast(ulong) v.evaluate(); }
+      return sum;
+    default: assert (false, "Unsupported expression type: " ~
+		     type.to!string());
+    }
   }
 
   CstVecArrExpr unroll(CstIterator iter, ulong n) {
@@ -156,6 +178,9 @@ class CstVecArrExpr: CstVecExpr
 
   final void visit(CstDistSolverBase dist) { assert(false); }
 
+  final override CstVecType getVecType() {
+    return _arr.getVecType();
+  }
 }
 
 // This class would hold two(bin) vector nodes and produces a vector
@@ -179,90 +204,26 @@ class CstVec2VecExpr: CstVecExpr
   }
 
   long evaluate() {
-    auto lvec = _lhs.evaluate();
-    auto rvec = _rhs.evaluate();
+    long lvec = _lhs.evaluate();
+    long rvec = _rhs.evaluate();
 
-    if (_lhs.bitcount() < 32 || (_lhs.bitcount() == 32 && _lhs.signed())) {
-      int lhs_ = cast(int) lvec;
-      if (_rhs.bitcount() < 32 || (_rhs.bitcount() == 32 && _rhs.signed())) {
-	int rhs_ = cast(int) rvec;
-	return _esdl__evaluate(lhs_, rhs_, _op);
-      }
-      if (_rhs.bitcount() == 32 && !_rhs.signed()) {
-	uint rhs_ = cast(uint) rvec;
-	return _esdl__evaluate(lhs_, rhs_, _op);
-      }
-      if (_rhs.bitcount() < 64 || (_rhs.bitcount() == 64 && _rhs.signed())) {
-	long rhs_ = cast(long) rvec;
-	return _esdl__evaluate(lhs_, rhs_, _op);
-      }
-      if (_rhs.bitcount() == 64 && !_rhs.signed()) {
-	ulong rhs_ = cast(ulong) rvec;
-	return _esdl__evaluate(lhs_, rhs_, _op);
-      }
-      assert(false, "TBD -- Can not yet handle > 64 bit math operations");
+    CstVecType ltype = _lhs.getVecType();
+    CstVecType rtype = _rhs.getVecType();
+
+    CstVecType type = getCommonVecType(ltype, rtype);
+
+    switch (type) {
+    case CstVecType.BOOL, CstVecType.INT:
+      return _esdl__evaluate(cast(int) lvec, cast(int) rvec, _op);
+    case CstVecType.UINT:
+      return _esdl__evaluate(cast(uint) lvec, cast(uint) rvec, _op);
+    case CstVecType.LONG:
+      return _esdl__evaluate(cast(long) lvec, cast(long) rvec, _op);
+    case CstVecType.ULONG:
+      return _esdl__evaluate(cast(ulong) lvec, cast(ulong) rvec, _op);
+    default: assert (false, "Unsupported expression type: " ~
+		     type.to!string());
     }
-    if (_lhs.bitcount() == 32 && !_lhs.signed) {
-      uint lhs_ = cast(uint) lvec;
-      if (_rhs.bitcount() < 32 || (_rhs.bitcount() == 32 && _rhs.signed())) {
-	int rhs_ = cast(int) rvec;
-	return _esdl__evaluate(lhs_, rhs_, _op);
-      }
-      if (_rhs.bitcount() == 32 && !_rhs.signed()) {
-	uint rhs_ = cast(uint) rvec;
-	return _esdl__evaluate(lhs_, rhs_, _op);
-      }
-      if (_rhs.bitcount() < 64 || (_rhs.bitcount() == 64 && _rhs.signed())) {
-	long rhs_ = cast(long) rvec;
-	return _esdl__evaluate(lhs_, rhs_, _op);
-      }
-      if (_rhs.bitcount() == 64 && !_rhs.signed()) {
-	ulong rhs_ = cast(ulong) rvec;
-	return _esdl__evaluate(lhs_, rhs_, _op);
-      }
-      assert(false, "TBD -- Can not yet handle > 64 bit math operations");
-    }
-    if (_lhs.bitcount() < 64 || (_lhs.bitcount() == 64 && _lhs.signed())) {
-      long lhs_ = cast(long) lvec;
-      if (_rhs.bitcount() < 32 || (_rhs.bitcount() == 32 && _rhs.signed())) {
-	int rhs_ = cast(int) rvec;
-	return _esdl__evaluate(lhs_, rhs_, _op);
-      }
-      if (_rhs.bitcount() == 32 && !_rhs.signed()) {
-	uint rhs_ = cast(uint) rvec;
-	return _esdl__evaluate(lhs_, rhs_, _op);
-      }
-      if (_rhs.bitcount() < 64 || (_rhs.bitcount() == 64 && _rhs.signed())) {
-	long rhs_ = cast(long) rvec;
-	return _esdl__evaluate(lhs_, rhs_, _op);
-      }
-      if (_rhs.bitcount() == 64 && !_rhs.signed()) {
-	ulong rhs_ = cast(ulong) rvec;
-	return _esdl__evaluate(lhs_, rhs_, _op);
-      }
-      assert(false, "TBD -- Can not yet handle > 64 bit math operations");
-    }
-    if (_lhs.bitcount() == 64 && !_lhs.signed()) {
-      ulong lhs_ = cast(ulong) lvec;
-      if (_rhs.bitcount() < 32 || (_rhs.bitcount() == 32 && _rhs.signed())) {
-	int rhs_ = cast(int) rvec;
-	return _esdl__evaluate(lhs_, rhs_, _op);
-      }
-      if (_rhs.bitcount() == 32 && !_rhs.signed()) {
-	uint rhs_ = cast(uint) rvec;
-	return _esdl__evaluate(lhs_, rhs_, _op);
-      }
-      if (_rhs.bitcount() < 64 || (_rhs.bitcount() == 64 && _rhs.signed())) {
-	long rhs_ = cast(long) rvec;
-	return _esdl__evaluate(lhs_, rhs_, _op);
-      }
-      if (_rhs.bitcount() == 64 && !_rhs.signed()) {
-	ulong rhs_ = cast(ulong) rvec;
-	return _esdl__evaluate(lhs_, rhs_, _op);
-      }
-      assert(false, "TBD -- Can not yet handle > 64 bit math operations");
-    }
-    assert(false, "TBD -- Can not yet handle > 64 bit math operations");
   }
 
   CstVec2VecExpr unroll(CstIterator iter, ulong n) {
@@ -294,15 +255,15 @@ class CstVec2VecExpr: CstVecExpr
     if (lhsSigned && rhsSigned) return true; // both signed
     else if (lhsBitcount > rhsBitcount) {
       if (lhsBitcount == 32 || lhsBitcount == 64) return lhsSigned;
-      else return false;
+      else return true;
     }
     else if (rhsBitcount > lhsBitcount) {
       if (rhsBitcount == 32 || rhsBitcount == 64) return rhsSigned;
-      else return false;
+      else return true;
     }
     else {			// size is same
       if (rhsBitcount == 32 || rhsBitcount == 64) return rhsSigned && lhsSigned;
-      else return false;
+      else return true;
     }
   }
   
@@ -408,6 +369,10 @@ class CstVec2VecExpr: CstVecExpr
   void scan() { }
 
   final void visit(CstDistSolverBase dist) { assert(false); }
+
+  final override CstVecType getVecType() {
+    return getCommonVecType(_lhs.getVecType(), _rhs.getVecType);
+  }
 
 }
 
@@ -598,6 +563,7 @@ class CstUniqueSetElem
 {
   import std.conv;
 
+  // to make that more generic, could _vec be CstVecExpr
   CstVecTerm _vec;
   CstDomSet  _arr;
 
@@ -704,8 +670,8 @@ class CstUniqueSetElem
   size_t hashValue() {
     return _hash.hash;
   }
-  
-  void makeHash(){
+
+  void makeHash() {
     if (_arr !is null){
       _hash = Hash(91);
       _arr.makeHash();
@@ -716,6 +682,97 @@ class CstUniqueSetElem
       _hash = Hash(0);
       _vec.makeHash();
       _hash.modify(_vec.hashValue());
+    }
+  }
+
+  CstVecType getVecType() {
+    if (_arr !is null) return _arr.getVecType();
+    else return _vec.getVecType();
+  }
+  
+
+  bool inAssoc(ref bool[bool] assoc) {
+    if (_arr !is null) {
+      foreach (leaf; _arr[]) {
+	bool val = cast(bool) leaf.evaluate();
+	if (val in assoc) return true;
+	else assoc[val] = true;
+      }
+      return false;
+    }
+    else {
+      bool val = cast(bool) _vec.evaluate();
+      if (val in assoc) return true;
+      else assoc[val] = true;
+      return false;
+    }
+  }
+
+  bool inAssoc(ref bool[int] assoc) {
+    if (_arr !is null) {
+      foreach (leaf; _arr[]) {
+	int val = cast(int) leaf.evaluate();
+	if (val in assoc) return true;
+	else assoc[val] = true;
+      }
+      return false;
+    }
+    else {
+      int val = cast(int) _vec.evaluate();
+      if (val in assoc) return true;
+      else assoc[val] = true;
+      return false;
+    }
+  }  
+
+  bool inAssoc(ref bool[uint] assoc) {
+    if (_arr !is null) {
+      foreach (leaf; _arr[]) {
+	uint val = cast(uint) leaf.evaluate();
+	if (val in assoc) return true;
+	else assoc[val] = true;
+      }
+      return false;
+    }
+    else {
+      uint val = cast(uint) _vec.evaluate();
+      if (val in assoc) return true;
+      else assoc[val] = true;
+      return false;
+    }
+  }
+
+  bool inAssoc(ref bool[long] assoc) {
+    if (_arr !is null) {
+      foreach (leaf; _arr[]) {
+	long val = cast(long) leaf.evaluate();
+	if (val in assoc) return true;
+	else assoc[val] = true;
+      }
+      return false;
+    }
+    else {
+      long val = cast(long) _vec.evaluate();
+      if (val in assoc) return true;
+      else assoc[val] = true;
+      return false;
+    }
+  }  
+
+  bool inAssoc(ref bool[ulong] assoc) {
+    if (_arr !is null) {
+      foreach (leaf; _arr[]) {
+	ulong val = cast(ulong) leaf.evaluate();
+	if (val in assoc) return true;
+	else assoc[val] = true;
+      }
+      return false;
+    }
+    else {
+      ulong val = cast(ulong) _vec.evaluate();
+      if (val in assoc) return true;
+      else assoc[val] = true;
+      return false;
     }
   }
 }
@@ -876,13 +933,85 @@ class CstInsideSetElem
   }
 
   final bool eval(CstVecTerm vec) {
-    if (_arr !is null) return canFind!((CstDomBase a, CstVecTerm b)
-				       => a.value() == b.evaluate())(_arr[], vec);
-    else if (_rhs is null) return vec.evaluate() == _lhs.evaluate();
+    import std.conv: to;
+    if (_arr !is null) {
+      CstVecType type = getCommonVecType(_arr.getVecType(), vec.getVecType());
+
+      switch (type) {
+      case CstVecType.BOOL:
+	return canFind!((CstDomBase a, CstVecTerm b) {
+	    return cast(bool) a.evaluate() == cast(bool) b.evaluate();
+	  }) (_arr[], vec);
+      case CstVecType.INT:
+	return canFind!((CstDomBase a, CstVecTerm b) {
+	    return cast(int) a.evaluate() == cast(int) b.evaluate();
+	  }) (_arr[], vec);
+      case CstVecType.UINT:
+	return canFind!((CstDomBase a, CstVecTerm b) {
+	    return cast(uint) a.evaluate() == cast(uint) b.evaluate();
+	  }) (_arr[], vec);
+      case CstVecType.LONG:
+	return canFind!((CstDomBase a, CstVecTerm b) {
+	    return cast(long) a.evaluate() == cast(long) b.evaluate();
+	  }) (_arr[], vec);
+      case CstVecType.ULONG:
+	return canFind!((CstDomBase a, CstVecTerm b) {
+	    return cast(ulong) a.evaluate() == cast(ulong) b.evaluate();
+	  }) (_arr[], vec);
+      // case CstVecType.CENT:
+      // 	return canFind!((CstDomBase a, CstVecTerm b) {
+      // 	    return cast(cent) a.evaluate() == cast(cent) b.evaluate();
+      // 	  }) (_arr[], vec);
+      // case CstVecType.UCENT:
+      // 	return canFind!((CstDomBase a, CstVecTerm b) {
+      // 	    return cast(ucent) a.evaluate() == cast(ucent) b.evaluate();
+      // 	  }) (_arr[], vec);
+      default: assert (false, "Type " ~ type.to!string() ~ " not supported");
+      }
+    }
+    else if (_rhs is null) {
+      CstVecType type = getCommonVecType(_lhs.getVecType(), vec.getVecType());
+      switch (type) {
+      case CstVecType.BOOL:
+	return cast(bool) vec.evaluate() == cast(bool) _lhs.evaluate();
+      case CstVecType.INT:
+	return cast(int) vec.evaluate() == cast(int) _lhs.evaluate();
+      case CstVecType.UINT:
+	return cast(uint) vec.evaluate() == cast(uint) _lhs.evaluate();
+      case CstVecType.LONG:
+	return cast(long) vec.evaluate() == cast(long) _lhs.evaluate();
+      case CstVecType.ULONG:
+	return cast(ulong) vec.evaluate() == cast(ulong) _lhs.evaluate();
+      default: assert (false, "Type " ~ type.to!string() ~ " not supported");
+      }
+    }
     else {
-      return vec.evaluate() >= _lhs.evaluate()
-	&& (_inclusive ? vec.evaluate() <= _rhs.evaluate() :
-	    vec.evaluate() < _rhs.evaluate());
+      CstVecType type = getCommonVecType(vec.getVecType(),
+					 getCommonVecType(_lhs.getVecType(),
+							  _rhs.getVecType()));
+      switch (type) {
+      case CstVecType.BOOL: 
+	return cast(bool) vec.evaluate() >= cast(bool) _lhs.evaluate()
+	  && (_inclusive ? cast(bool) vec.evaluate() <= cast(bool) _rhs.evaluate() :
+	      cast(bool) vec.evaluate() < cast(bool) _rhs.evaluate());
+      case CstVecType.INT: 
+	return cast(int) vec.evaluate() >= cast(int) _lhs.evaluate()
+	  && (_inclusive ? cast(int) vec.evaluate() <= cast(int) _rhs.evaluate() :
+	      cast(int) vec.evaluate() < cast(int) _rhs.evaluate());
+      case CstVecType.UINT: 
+	return cast(uint) vec.evaluate() >= cast(uint) _lhs.evaluate()
+	  && (_inclusive ? cast(uint) vec.evaluate() <= cast(uint) _rhs.evaluate() :
+	      cast(uint) vec.evaluate() < cast(uint) _rhs.evaluate());
+      case CstVecType.LONG: 
+	return cast(long) vec.evaluate() >= cast(long) _lhs.evaluate()
+	  && (_inclusive ? cast(long) vec.evaluate() <= cast(long) _rhs.evaluate() :
+	      cast(long) vec.evaluate() < cast(long) _rhs.evaluate());
+      case CstVecType.ULONG: 
+	return cast(ulong) vec.evaluate() >= cast(ulong) _lhs.evaluate()
+	  && (_inclusive ? cast(ulong) vec.evaluate() <= cast(ulong) _rhs.evaluate() :
+	      cast(ulong) vec.evaluate() < cast(ulong) _rhs.evaluate());
+      default: assert (false, "Type " ~ type.to!string() ~ " not supported");
+      }
     }
   }
 }
@@ -1150,7 +1279,7 @@ class CstLogicDistExpr(T): CstLogicExpr
 
   void visit (CstDistSolverBase solver) { assert (false); }
   
-  bool eval() {assert (false, "Enable to evaluate CstLogicDistExpr");}
+  bool eval() {assert (false, "Unable to evaluate CstLogicDistExpr");}
 
   override void scan() { }
 }
@@ -1286,7 +1415,7 @@ class CstVecDistExpr(T): CstLogicExpr
 
   void visit (CstDistSolverBase solver) { assert (false); }
   
-  bool eval() {assert (false, "Enable to evaluate CstVecDistExpr");}
+  bool eval() {assert (false, "Unable to evaluate CstVecDistExpr");}
 
   override void scan() { }
 }
@@ -1401,11 +1530,25 @@ class CstVecSliceExpr: CstVecExpr
   // }
 
   long evaluate() {
-    // auto vec  = _vec.evaluate();
-    // auto lvec = _lhs.evaluate();
-    // auto rvec = _range._rhs.evaluate();
+    ulong vec  = _vec.evaluate();
 
-    assert(false, "Can not evaluate a CstVecSliceExpr!");
+    ulong lvec = _range._lhs.evaluate();
+
+    ulong rvec;
+    if (_range._rhs is null) rvec = lvec + 1;
+    else       rvec = _range._rhs.evaluate();
+
+    ulong mask = (1L << (rvec - lvec)) - 1;
+
+    vec = vec >> lvec;
+
+    vec = vec & mask;
+
+    return vec;
+  }
+
+  override CstVecType getVecType() {
+    return _vec.getVecType();
   }
 
   CstVecSliceExpr unroll(CstIterator iter, ulong n) {
@@ -1561,6 +1704,10 @@ class CstNotVecExpr: CstVecExpr
     return ~(_expr.evaluate());
   }
 
+  override CstVecType getVecType() {
+    return _expr.getVecType();
+  }
+
   CstNotVecExpr unroll(CstIterator iter, ulong n) {
     return new CstNotVecExpr(_expr.unroll(iter, n));
   }
@@ -1657,6 +1804,10 @@ class CstNegVecExpr: CstVecExpr
 
   long evaluate() {
     return -(_expr.evaluate());
+  }
+
+  override CstVecType getVecType() {
+    return _expr.getVecType();
   }
 
   CstNegVecExpr unroll(CstIterator iter, ulong n) {
@@ -2136,7 +2287,39 @@ class CstUniqueArrExpr: CstLogicExpr
 
   CstDistSolverBase getDist() { assert (false); }
 
-  override bool eval() {assert (false, "Enable to evaluate CstUniqueArrExpr");}
+  override bool eval() {
+    import std.conv: to;
+    CstVecType type;
+    foreach (elem; _elems) {
+      if (type < elem.getVecType()) {
+	type = elem.getVecType();
+      }
+    }
+
+    switch (type) {
+    case CstVecType.BOOL:
+      bool[bool] assoc;
+      foreach (elem; _elems) {if (elem.inAssoc(assoc)) return false;}
+      return true;
+    case CstVecType.INT:
+      bool[int] assoc;
+      foreach (elem; _elems) {if (elem.inAssoc(assoc)) return false;}
+      return true;
+    case CstVecType.UINT:
+      bool[uint] assoc;
+      foreach (elem; _elems) {if (elem.inAssoc(assoc)) return false;}
+      return true;
+    case CstVecType.LONG:
+      bool[long] assoc;
+      foreach (elem; _elems) {if (elem.inAssoc(assoc)) return false;}
+      return true;
+    case CstVecType.ULONG:
+      bool[ulong] assoc;
+      foreach (elem; _elems) {if (elem.inAssoc(assoc)) return false;}
+      return true;
+    default: assert (false, "Type " ~ type.to!string() ~ " not supported");
+    }
+  }
 
   override void scan() { }
 }
@@ -2184,7 +2367,7 @@ class CstIteLogicExpr: CstLogicExpr
   }
   
 
-  override bool eval() {assert (false, "Enable to evaluate CstIteLogicExpr");}
+  override bool eval() { assert(false, "TBD"); }
   override void scan() { }
 }
 

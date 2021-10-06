@@ -14,7 +14,7 @@ import esdl.rand.expr: CstVecArrExpr, CstVecSliceExpr, CstRangeExpr,
 import esdl.rand.pred: CstPredGroup, CstPredicate, Hash;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.misc: CstVectorOp, CstLogicOp, CstCompareOp,
-  CstBinaryOp, SolveOrder, DomainContextEnum;
+  CstBinaryOp, SolveOrder, DomainContextEnum, CstVecType;
 
 import esdl.base.rand: _esdl__RandGen, getRandGen;
 
@@ -96,11 +96,11 @@ interface CstVecArrIntf: CstVecNodeIntf {
       _size -= 1;
     }
 
-    auto front() {
+    CstDomBase front() {
       return _arr._esdl__nthLeaf(_idx);
     }
 
-    auto length() {
+    uint length() {
       return _size;
     }
   }
@@ -311,6 +311,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   abstract bool isRolled();
   // abstract void registerRndPred(CstPredicate rndPred);
   abstract CstDomSet getParentDomSet();
+  abstract long evaluate();
 
   override void markOrderedAfter(uint level) {
     if (_orderLevel == level) return;
@@ -1112,6 +1113,8 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   final override void resetLambdaPreds() {
     _lambdaDomainPreds.reset();
   }
+
+  abstract CstVecType getVecType();
 }
 
 
@@ -1191,6 +1194,10 @@ abstract class CstIterator: CstVecTerm
   void scan() { }
 
   override CstDomBase getDomain() { return null; }
+
+  override final CstVecType getVecType() {
+    return CstVecType.ULONG;
+  }
   
 }
 
@@ -1204,6 +1211,7 @@ interface CstVecTerm: CstTerm
   uint bitcount();
   bool signed();
 
+  CstVecType getVecType();
 
   CstVecTerm unroll(CstIterator iter, ulong n);
 
