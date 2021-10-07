@@ -264,12 +264,7 @@ enum DomDistEnum: ubyte
 abstract class CstDomBase: CstTerm, CstVectorIntf
 {
 
-  public enum State: ubyte
-  {   INIT,
-      GROUPED,
-      COLLATED,
-      SOLVED
-      }
+  public enum State: ubyte { INIT, COLLATED, GROUPED, SOLVED }
 
   uint         _domN = uint.max;
   uint         _varN = uint.max;
@@ -996,12 +991,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     );
   }
 
-  public enum State: ubyte
-  {   INIT,
-      GROUPED,
-      COLLATED,
-      SOLVED
-      }
+  public enum State: ubyte { INIT, COLLATED, GROUPED, SOLVED }
 
   uint _orderLevel = 0;
       

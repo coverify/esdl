@@ -588,7 +588,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
   // alias _expr this;
 
-  enum State: byte { NONE, INIT, UNROLLED, COLLATED, DISABLED, GROUPED, SOLVED }
+  enum State: byte { NONE, INIT, UNROLLED, COLLATED, BLOCKED, GROUPED, SOLVED }
 
   bool isUnrolled() {
     return _state == State.UNROLLED;
@@ -661,8 +661,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return _state == State.COLLATED;
   }
   
-  bool isDisabled() {
-    return _state == State.DISABLED;
+  bool isBlocked() {
+    return _state == State.BLOCKED;
   }
   
   uint _level;
@@ -1372,7 +1372,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	if (_guard is null || _guard._expr.eval()) {
 	  assert (false, "Predicate " ~ name() ~ " has out of bound domain: " ~ dom.name());
 	}
-	_state = State.DISABLED;
+	_state = State.BLOCKED;
 	return;
       }
     }
@@ -1385,7 +1385,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	if (_guard is null || _guard._expr.eval()) {
 	  assert (false, "Predicate " ~ name() ~ " has out of bound domain: " ~ dom.name());
 	}
-	_state = State.DISABLED;
+	_state = State.BLOCKED;
 	return;
       }
     }
