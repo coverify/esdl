@@ -255,13 +255,13 @@ class CstZ3Solver: CstSolver
   Z3_ast[] _vector;
 
   CstVectorOp _state;
-  // the group is used only for the purpose of constructing the Z3 solver
+  // the handler is used only for the purpose of constructing the Z3 solver
   // otherwise the solver identifies with the signature only
-  this(string signature, CstPredGroup group) {
+  this(string signature, CstPredHandler handler) {
     import std.stdio;
     super(signature);
 
-    _proxy = group.getProxy();
+    _proxy = handler.getProxy();
 
     setParam("auto_config", false);
     setParam("smt.phase_selection", 5);
@@ -270,7 +270,7 @@ class CstZ3Solver: CstSolver
 
     // _vector = BvExprVector(_context);
     
-    CstDomBase[] doms = group.domains();
+    CstDomBase[] doms = handler.domains();
     _domains.length = doms.length;
 
     foreach (i, ref dom; _domains) {
@@ -287,7 +287,7 @@ class CstZ3Solver: CstSolver
       }
     }
 
-    CstDomBase[] vars = group.variables();
+    CstDomBase[] vars = handler.variables();
     _variables.length = vars.length;
 
     foreach (i, ref var; _variables) {
@@ -309,7 +309,7 @@ class CstZ3Solver: CstSolver
     Solver solver = Solver(_context);
     _solver = solver;
 
-    if (group.hasSoftConstraints()) {
+    if (handler.hasSoftConstraints()) {
       _needOptimize = true;
       Optimize optimize = Optimize(_context);
       _optimize = optimize;
@@ -324,7 +324,7 @@ class CstZ3Solver: CstSolver
       }
     }
     
-    foreach (pred; group.predicates()) {
+    foreach (pred; handler.predicates()) {
       // import std.stdio;
       // writeln("Z3 Working on: ", pred.name());
 
@@ -477,8 +477,8 @@ class CstZ3Solver: CstSolver
     return assumptions[];
   }
   
-  override bool solve(CstPredGroup group) {
-    updateVars(group);
+  override bool solve(CstPredHandler handler) {
+    updateVars(handler);
     if (_needOptimize) {
       if (updateOptimize() || (_optimizeInit is false)) {
 	if (_proxy._esdl__debugSolver()) {
@@ -514,7 +514,7 @@ class CstZ3Solver: CstSolver
 	      " _pushOptimizeCount: " ~ _pushSolverCount.to!string());
     }
     
-    CstDomBase[] doms = group.domains();
+    CstDomBase[] doms = handler.domains();
 
     if (_proxy._esdl__debugSolver()) {
       import std.stdio;
@@ -558,9 +558,9 @@ class CstZ3Solver: CstSolver
     }
   }
   
-  void updateVars(CstPredGroup group) {
+  void updateVars(CstPredHandler handler) {
     
-    CstDomBase[] vars = group.variables();
+    CstDomBase[] vars = handler.variables();
     _refreshVar = false;
     uint pcountStable = _countStable;
     uint pcountVariable = _countVariable;

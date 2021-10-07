@@ -4,7 +4,7 @@ import esdl.solver.base: CstSolver, CstDistSolverBase;
 import esdl.rand.base: CstVecPrim, CstScope, CstDomBase,
   DomType, CstObjectVoid, CstVarNodeIntf, CstObjectIntf,
   CstIterator, CstDomSet, CstVarGlobIntf, CstVecNodeIntf;
-import esdl.rand.pred: CstPredicate, CstPredGroup;
+import esdl.rand.pred: CstPredicate, CstPredHandler;
 import esdl.rand.misc;
 import esdl.data.folder;
 import esdl.data.charbuf;
@@ -316,11 +316,11 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   void scan() { }		// when an object is unrolled
 
 
-  static CstPredGroup _predGroup;
+  static CstPredHandler _predHandler;
 
-  static getPredGroup() {
-    if (_predGroup is null) _predGroup = new CstPredGroup();
-    return _predGroup;
+  static getPredHandler() {
+    if (_predHandler is null) _predHandler = new CstPredHandler();
+    return _predHandler;
   }
 
   static CstSolver[string] _solvers;
@@ -412,7 +412,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   Folder!(CstDomBase, "solvedDomains") _solvedDomains;
   Folder!(CstDomSet, "solvedDomainArrs") _solvedDomainArrs;
   
-  // Folder!(CstPredGroup, "solvedGroups") _solvedGroups;
+  // Folder!(CstPredHandler, "solvedHandlers") _solvedHandlers;
 
   
   Folder!(CstPredicate, "collatedPredicates") _collatedPredicates;
@@ -453,7 +453,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _argVisitors.reset();
   }
 
-  void printGroup (){
+  void printHandler (){
     import std.stdio;
     writeln("\nPreds: ");
     foreach (pred; _collatedPredicates){
@@ -890,16 +890,16 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	  }
 	  pred.setProxyContext(this);
 	  
-	  // makeGroupDomains();
+	  // makeHandlerDomains();
 	  uint level = 0;
 	  while (markDependents(++level)){
 	    if (_esdl__debugSolver) {
-	      printGroup();
+	      printHandler();
 	    }
 	    solveMarkedPreds(level);
 	  }
 	  if (_esdl__debugSolver) {
-	    printGroup();
+	    printHandler();
 	  }
 	  if (level == 1) {
 	    solveAll();
@@ -957,12 +957,12 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       _solvePreds.reset();
 
     }
-    // foreach (group; _solvedGroups) {
-    //   group.reset();
-    //   _solvedDomains ~= group.domains();
-    //   _solvedDomainArrs ~= group.domainArrs();
+    // foreach (handler; _solvedHandlers) {
+    //   handler.reset();
+    //   _solvedDomains ~= handler.domains();
+    //   _solvedDomainArrs ~= handler.domainArrs();
     // }
-    // _solvedGroups.reset();
+    // _solvedHandlers.reset();
 
     foreach (pred; _predsThatUnrolled) {
       pred.reset();
@@ -1080,30 +1080,30 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     foreach (pred; _collatedPredicates) {
       if (! pred.isGuard() && pred.isCollated()) {
 	if (pred.getOrderLevel() == level - 1 && ! (pred.isSolved)) {
-	  CstPredGroup group = null;
-	  if (group is null) {
-	    group = getPredGroup();
-	    group.initialize(this);
+	  CstPredHandler handler = null;
+	  if (handler is null) {
+	    handler = getPredHandler();
+	    handler.initialize(this);
 	    // if (_esdl__debugSolver) {
 	    //   import std.stdio;
-	    //   writeln("Created new group ", group._id, " for predicate: ", pred.describe());
+	    //   writeln("Created new handler ", handler._id, " for predicate: ", pred.describe());
 	    // }
 	  }
 	  // else if (_esdl__debugSolver) {
 	  //   import std.stdio;
-	  //   writeln("Reuse group ", group._id, " for predicate: ", pred.describe());
+	  //   writeln("Reuse handler ", handler._id, " for predicate: ", pred.describe());
 	  // }
-	  if (pred.withDist()) group.markDist();
-	  assert (! group.isSolved(),
-		  "Group can not be solved when the predicate is still not solved; group: " ~
-		  group.describe() ~ " predicate: " ~ pred.describe());
-	  group.setGroupContext(pred, level);
+	  if (pred.withDist()) handler.markDist();
+	  assert (! handler.isSolved(),
+		  "Handler can not be solved when the predicate is still not solved; handler: " ~
+		  handler.describe() ~ " predicate: " ~ pred.describe());
+	  handler.setBatchContext(pred, level);
 
-	  group.solve();
-	  _solvedDomains ~= group.domains();
-	  _solvedDomainArrs ~= group.domainArrs();
-	  group.reset();
-	  // _solvedGroups ~= group;
+	  handler.solve();
+	  _solvedDomains ~= handler.domains();
+	  _solvedDomainArrs ~= handler.domainArrs();
+	  handler.reset();
+	  // _solvedHandlers ~= handler;
 	  _solvedSome = true;
 	}
 	else if (pred.getOrderLevel() == level){
@@ -1134,35 +1134,35 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       return;
     }
     auto pred1 = _collatedPredicates[0];
-    CstPredGroup group = null;
-    if (group is null) {
-      group = getPredGroup();
-      group.initialize(this);
+    CstPredHandler handler = null;
+    if (handler is null) {
+      handler = getPredHandler();
+      handler.initialize(this);
       // if (_esdl__debugSolver) {
       // 	import std.stdio;
-      // 	writeln("Created new group ", group._id, " for predicate: ", pred1.describe());
+      // 	writeln("Created new handler ", handler._id, " for predicate: ", pred1.describe());
       // }
     }
     // else if (_esdl__debugSolver) {
     //   import std.stdio;
-    //   writeln("Reuse group ", group._id, " for predicate: ", pred1.describe());
+    //   writeln("Reuse handler ", handler._id, " for predicate: ", pred1.describe());
     // }
-    if (pred1.withDist()) group.markDist();
-    assert (! group.isSolved(),
-	    "Group can not be solved when the predicate is still not solved; group: " ~
-	    group.describe() ~ " predicate: " ~ pred1.describe());
+    if (pred1.withDist()) handler.markDist();
+    assert (! handler.isSolved(),
+	    "Handler can not be solved when the predicate is still not solved; handler: " ~
+	    handler.describe() ~ " predicate: " ~ pred1.describe());
      
     foreach (pred; _collatedPredicates) {
       if (pred.isCollated()) {
-	pred.addPredicateToGroup(group);
+	pred.sendPredToHandler(handler);
       }
     }
-    group.setOrderAndBools();
-    group.solve();
-    _solvedDomains ~= group.domains();
-    _solvedDomainArrs ~= group.domainArrs();
-    group.reset();
-    // _solvedGroups ~= group;
+    handler.setOrderAndBools();
+    handler.solve();
+    _solvedDomains ~= handler.domains();
+    _solvedDomainArrs ~= handler.domainArrs();
+    handler.reset();
+    // _solvedHandlers ~= handler;
   }
   // void resetLevels(){
   //   foreach (elem: _collatedDomains[]){

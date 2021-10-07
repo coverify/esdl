@@ -2,7 +2,7 @@ module esdl.solver.mono;
 
 import esdl.solver.base;
 import esdl.rand.base: CstDomBase, CstVecValueBase;
-import esdl.rand.pred: CstPredGroup, CstPredicate;
+import esdl.rand.pred: CstPredHandler, CstPredicate;
 import esdl.rand.misc;
 import esdl.data.folder;
 import esdl.rand.proxy: _esdl__Proxy;
@@ -947,8 +947,8 @@ class CstMonoSolver (S): CstSolver
   //   }
   //   return false;
   // }
-  override bool solve(CstPredGroup group) {
-    CstDomBase [] doms = group.domains();
+  override bool solve(CstPredHandler handler) {
+    CstDomBase [] doms = handler.domains();
     assert (doms.length == 1);
 
     
@@ -971,7 +971,7 @@ class CstMonoSolver (S): CstSolver
     // _variables.length = 0;
     S [2] temp = [S.min, S.max];
     _finalRange.copyVal(temp);
-    CstPredicate [] predSet = group.predicates();
+    CstPredicate [] predSet = handler.predicates();
     bool isEnum = doms[0].visitDomain(this);
     if(!isEnum && predSet.length == 0){
       //doms[0].randomizeWithoutConstraints(doms[0].getProxyRoot());
@@ -981,7 +981,7 @@ class CstMonoSolver (S): CstSolver
     if(isEnum){
       _finalRange.and(_rangeStack[0]);
     }
-    _proxy = group.getProxy();
+    _proxy = handler.getProxy();
     foreach (pred; predSet){
       if (! pred.isGuard()) {
 	reset();
@@ -1034,11 +1034,11 @@ class CstMonoSolver (S): CstSolver
        }
        }
        if(_testfinalRange.length == 0){
-       assert(!isInRange(nextRangeVal(), _finalRange), "the value " ~to!string(nextRangeVal()) ~ " is in range yet it doesnt satisfy the predgroup");
+       assert(!isInRange(nextRangeVal(), _finalRange), "the value " ~to!string(nextRangeVal()) ~ " is in range yet it doesnt satisfy the predhandler");
        }
        else {
        assert(_testfinalRange == [S.min, S.max]);
-       assert(isInRange(nextRangeVal(), _finalRange), "the value " ~ to!string(nextRangeVal()) ~ " is not in range yet it satisfies the predgroup");
+       assert(isInRange(nextRangeVal(), _finalRange), "the value " ~ to!string(nextRangeVal()) ~ " is not in range yet it satisfies the predhandler");
        }
        if(!_inRangeFlag){
        _inRangeFlag = true;

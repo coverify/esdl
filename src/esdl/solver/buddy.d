@@ -462,12 +462,12 @@ class CstBuddySolver: CstSolver
   }
 
 
-  this(string signature, CstPredGroup group) {
+  this(string signature, CstPredHandler handler) {
     Buddy.enableBddGC();
 
     super(signature);
 
-    _proxy = group.getProxy();
+    _proxy = handler.getProxy();
 
     if (_esdl__buddy is null) {
       _esdl__buddy = new Buddy(1000, 1000);
@@ -475,7 +475,7 @@ class CstBuddySolver: CstSolver
 
     _context = new BuddyContext(_esdl__buddy);
 
-    CstDomBase[] doms = group.domains();
+    CstDomBase[] doms = handler.domains();
 
     _domains.length = doms.length;
 
@@ -492,7 +492,7 @@ class CstBuddySolver: CstSolver
       }
     }
 
-    CstDomBase[] vars = group.variables();
+    CstDomBase[] vars = handler.variables();
     _variables.length = vars.length;
 
     foreach (i, ref var; _variables) {
@@ -516,11 +516,11 @@ class CstBuddySolver: CstSolver
       }
     }
 
-    foreach (pred; group.predicates()) {
+    foreach (pred; handler.predicates()) {
       // import std.stdio;
       // writeln("Buddy Working on: ", pred.name());
-      // if (pred.group() !is group) {
-      // 	assert (false, "Group Violation " ~ pred.name());
+      // if (pred.handler() !is handler) {
+      // 	assert (false, "Handler Violation " ~ pred.name());
       // }
       if (! pred.isGuard() && ! pred.withDist()) {
 	// import std.stdio;
@@ -558,11 +558,11 @@ class CstBuddySolver: CstSolver
 
   ulong[] _solveValue;
   
-  override bool solve(CstPredGroup group) {
+  override bool solve(CstPredHandler handler) {
     Buddy.enableBddGC();
     
-    CstDomBase[] doms = group.domains();
-    updateVars(group);
+    CstDomBase[] doms = handler.domains();
+    updateVars(handler);
     _context.updateDist();
 
     BDD solution = _context.getBDD().randSatOne(_proxy._esdl__rGen.get(),
@@ -621,8 +621,8 @@ class CstBuddySolver: CstSolver
     return true;
   }
   
-  void updateVars(CstPredGroup group) {
-    CstDomBase[] vars = group.variables();
+  void updateVars(CstPredHandler handler) {
+    CstDomBase[] vars = handler.variables();
     _refreshVar = false;
     uint pcount0 = _count0;
     uint pcount1 = _count1;

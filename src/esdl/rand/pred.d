@@ -111,7 +111,7 @@ struct Hash
 
 
 
-class CstPredGroup			// group of related predicates
+class CstPredHandler			// handler of related predicates
 {
   CstMonoSolver!int intMono;
   CstMonoSolver!uint uintMono;
@@ -164,7 +164,6 @@ class CstPredGroup			// group of related predicates
     _state = State.INIT;
   }
   
-  // List of predicates permanently in this group
   Folder!(CstPredicate, "preds") _preds;
   Folder!(CstPredicate, "guards") _guards;
 
@@ -242,8 +241,8 @@ class CstPredGroup			// group of related predicates
     _varArrs ~= varArr;
   }
 
-  void setGroupContext(CstPredicate solvablePred, uint level) {
-    solvablePred.setGroupContext(this, level);
+  void setBatchContext(CstPredicate solvablePred, uint level) {
+    solvablePred.setBatchContext(this, level);
 
     setOrderAndBools();
   }
@@ -257,23 +256,23 @@ class CstPredGroup			// group of related predicates
     _hasUniqueConstraints = false;
     _hasDistConstraints = false;
 
-    // foreach (pred; _preds) pred._group = null;
+    // foreach (pred; _preds) pred._handler = null;
     _preds.reset();
     foreach (pred; sort!((x, y) => x.hashValue() < y.hashValue())(_predList[])) {
       if (pred.withDist()) this.markDist();
-      // pred._group = this;
+      // pred._handler = this;
       if (pred._soft != 0) _hasSoftConstraints = true;
       if (pred._vectorOp != CstVectorOp.NONE) _hasVectorConstraints = true;
       if (pred._uniqueFlag is true) _hasUniqueConstraints = true;
       _preds ~= pred;
     }
-    // foreach (pred; _guards) pred._group = null;
+    // foreach (pred; _guards) pred._handler = null;
     _guards.reset();
     foreach (pred; sort!((x, y) => x.hashValue() < y.hashValue())(_guardList[])) {
-      // pred._group = this;
+      // pred._handler = this;
       _guards ~= pred;
     }
-    // if (_distPred !is null) _distPred._group = this;
+    // if (_distPred !is null) _distPred._handler = this;
     
     // for the next cycle
     _predList.reset();
@@ -304,7 +303,7 @@ class CstPredGroup			// group of related predicates
   
   string signature() {
     _sig.reset();
-    _sig ~= "GROUP:\n";
+    _sig ~= "HANDLER:\n";
     foreach (pred; _preds) {
       if (! hasDistConstraints || pred.isGuardEnabled())
 	pred.writeSignature(_sig);
@@ -522,7 +521,7 @@ class CstPredGroup			// group of related predicates
 
   string describe() {
     import std.conv: to;
-    string description = "CstPredGroup -- \n";
+    string description = "CstPredHandler -- \n";
     if (_preds.length > 0) {
       description ~= "  Predicates:\n";
       foreach (pred; _preds) {
@@ -1085,7 +1084,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
 
   // No longer required -- Taken care of by _state (UNROLLED)
-  // used by setGroupContext to find if the predicate has been unrolled and
+  // used by setBatchContext to find if the predicate has been unrolled and
   // therefor it should not be considered for grouping
   // final bool hasUnrolled() {
   //   if (this._iters.length == 0 ||
@@ -1354,10 +1353,10 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return description;
   }
 
-  // CstPredGroup _group;
+  // CstPredHandler _handler;
 
-  // CstPredGroup group() {
-  //   return _group;
+  // CstPredHandler handler() {
+  //   return _handler;
   // }
 
   void setProxyContext(_esdl__Proxy proxy){
@@ -1403,7 +1402,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
 
-   void setGroupContext(CstPredGroup group, uint level) {
+   void setBatchContext(CstPredHandler handler, uint level) {
     
     
     assert(getOrderLevel() == level - 1, "unexpected error in solving before constraints");
@@ -1415,53 +1414,53 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       }
     } 
     
-    addPredicateToGroup(group);
+    sendPredToHandler(handler);
     
     foreach (dom; _resolvedRnds) {
       if (dom._state is CstDomBase.State.COLLATED && (! dom.isSolved())) {
-	dom.setGroupContext(group, level);
+	dom.setBatchContext(handler, level);
       }
     }
     foreach (arr; _resolvedRndArrs) {
       if (arr._state is CstDomSet.State.COLLATED // && (! arr.isSolved())
 	  ) {
-	arr.setGroupContext(group, level);
+	arr.setBatchContext(handler, level);
       }
     }
   }
 
-  void addPredicateToGroup(CstPredGroup group){
+  void sendPredToHandler(CstPredHandler handler){
     _state = State.GROUPED;
     
-    // if (_group !is group) {
-    //   assert(_group is null,
-    // 	     "A predicate may be added to a group, but group should not change");
+    // if (_handler !is handler) {
+    //   assert(_handler is null,
+    // 	     "A predicate may be added to a handler, but handler should not change");
     // }
     
     if (this.isDist()) {
-      assert (group.hasDistConstraints());
+      assert (handler.hasDistConstraints());
       if (this.isGuardEnabled()) {
-  	if (group._distPred !is null) {
+  	if (handler._distPred !is null) {
   	  assert (false,
   		  "It is illegal to have more than one dist predicate active on the same domain");
   	}
-  	group._distPred = this;
+  	handler._distPred = this;
       }
       else {
-  	group.addPredicate(this);
+  	handler.addPredicate(this);
       }
     }
     else if (this.isGuard()) {
-      group.addGuard(this);
+      handler.addGuard(this);
     }
     else {
-      group.addPredicate(this);
+      handler.addPredicate(this);
     }
     
   }
-  // void setGroupContext(CstPredGroup group) {
+  // void setBatchContext(CstPredHandler handler) {
   //   // import std.stdio;
-  //   // writeln("setGroupContext: ", this.describe());
+  //   // writeln("setBatchContext: ", this.describe());
   //   foreach (dom; _unresolvedRnds) {
   //     if (! dom.inRange()) {
   // 	// import std.stdio;
@@ -1487,70 +1486,70 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   //   }
 
   //   _state = State.GROUPED;
-  //   if (_group !is group) {
-  //     assert(_group is null,
-  // 	     "A predicate may be added to a group, but group should not change");
+  //   if (_handler !is handler) {
+  //     assert(_handler is null,
+  // 	     "A predicate may be added to a handler, but handler should not change");
   //   }
   //   if (this.isDist()) {
-  //     assert (group.hasDistConstraints());
+  //     assert (handler.hasDistConstraints());
   //     if (this.isGuardEnabled()) {
-  // 	if (group._distPred !is null) {
+  // 	if (handler._distPred !is null) {
   // 	  assert (false,
   // 		  "It is illegal to have more than one dist predicate active on the same domain");
   // 	}
-  // 	group._distPred = this;
+  // 	handler._distPred = this;
   //     }
   //     else {
-  // 	group.addPredicate(this);
+  // 	handler.addPredicate(this);
   //     }
   //   }
   //   else if (this.isGuard()) {
-  //     group.addGuard(this);
+  //     handler.addGuard(this);
   //   }
   //   else {
-  //     group.addPredicate(this);
+  //     handler.addPredicate(this);
   //   }
   //   foreach (dom; _unresolvedRnds) {
   //     // import std.stdio;
-  //     // writeln("setGroupContext: ", dom.name());
-  //     // if (dom.group is null && (! dom.isSolved())) {
+  //     // writeln("setBatchContext: ", dom.name());
+  //     // if (dom.handler is null && (! dom.isSolved())) {
   //     if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
-  // 	dom.setGroupContext(group);
+  // 	dom.setBatchContext(handler);
   //     }
   //   }
   //   foreach (arr; _unresolvedRndArrs) {
   //     // import std.stdio;
-  //     // writeln("setGroupContext: ", arr.name());
-  //     // if (arr.group is null && (! arr.isSolved())) {
+  //     // writeln("setBatchContext: ", arr.name());
+  //     // if (arr.handler is null && (! arr.isSolved())) {
   //     if (arr._state is CstDomSet.State.INIT // && (! arr.isSolved())
   // 	  ) {
-  // 	arr.setGroupContext(group);
+  // 	arr.setBatchContext(handler);
   //     }
   //   }
   // }
 
-  void annotate(CstPredGroup group, bool recurse=false) {
+  void annotate(CstPredHandler handler, bool recurse=false) {
     // import std.stdio;
     // writeln("Annotating: ", this.describe());
     assert ((! this.isGuard()) || recurse);
-    if (_guard !is null) _guard.annotate(group, true);
+    if (_guard !is null) _guard.annotate(handler, true);
 
     foreach (rnd; this._resolvedRnds) {
-      rnd.annotate(group);
+      rnd.annotate(handler);
     }
     foreach (rndArr; this._resolvedRndArrs) {
-      group.addDomainArr(rndArr);
+      handler.addDomainArr(rndArr);
       foreach (rnd; rndArr[]) {
-	rnd.annotate(group);
+	rnd.annotate(handler);
       }
     }
     foreach (var; this._resolvedVars) {
-      var.annotate(group);
+      var.annotate(handler);
     }
     foreach (varArr; this._resolvedVarArrs) {
-      group.addVariableArr(varArr);
+      handler.addVariableArr(varArr);
       foreach (var; varArr[]) {
-	var.annotate(group);
+	var.annotate(handler);
       }
     }
   }

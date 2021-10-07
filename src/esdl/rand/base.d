@@ -11,7 +11,7 @@ import esdl.rand.domain: CstVecValue;
 import esdl.rand.expr: CstVecArrExpr, CstVecSliceExpr, CstRangeExpr,
   CstInsideSetElem, CstVec2LogicExpr, CstLogic2LogicExpr, CstVec2VecExpr,
   CstNotLogicExpr, CstNegVecExpr, CstInsideArrExpr;
-import esdl.rand.pred: CstPredGroup, CstPredicate, Hash;
+import esdl.rand.pred: CstPredHandler, CstPredicate, Hash;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.misc: CstVectorOp, CstLogicOp, CstCompareOp,
   CstBinaryOp, SolveOrder, DomainContextEnum, CstVecType;
@@ -63,7 +63,7 @@ interface CstVecNodeIntf: CstVarNodeIntf, CstDepIntf {
   // constrains
   abstract void registerRndPred(CstPredicate rndPred);  
 
-  abstract void setGroupContext(CstPredGroup group);
+  abstract void setBatchContext(CstPredHandler handler);
   abstract void setProxyContext(_esdl__Proxy proxy);
   abstract void reset();
 
@@ -542,10 +542,10 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     _lambdaDomainPreds.reset();
   }
 
-  // CstPredGroup _group;
+  // CstPredHandler _handler;
 
-  // CstPredGroup group() {
-  //   return _group;
+  // CstPredHandler handler() {
+  //   return _handler;
   // }
 
   uint annotation() {
@@ -558,14 +558,14 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     _domN = n;
   }
   
-  final void annotate(CstPredGroup group) {
+  final void annotate(CstPredHandler handler) {
     import std.conv: to;
     // import std.stdio;
     // writeln("annotate: ", this.name());
     if (_domN == uint.max) {
       if (_varN == uint.max) _varN = _root.indexVar();
-      if (this.isSolved()) setAnnotation(group.addVariable(this));
-      else setAnnotation(group.addDomain(this));
+      if (this.isSolved()) setAnnotation(handler.addVariable(this));
+      else setAnnotation(handler.addDomain(this));
     }
     // writeln("annotate: ", _varN.to!string());
     // writeln("annotate: ", _domN.to!string());
@@ -580,8 +580,8 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     // writeln("setProxyContext on: ", this.name());
     assert (_state is State.INIT && (! this.isSolved()));
     proxy.collateDomain(this);
-    // assert (_group is null && (! this.isSolved()));
-    // _group = group;
+    // assert (_handler is null && (! this.isSolved()));
+    // _handler = handler;
     if (this.isRand()) {
       foreach (pred; _resolvedDomainPreds) {
 	if (pred.isEnabled() &&
@@ -602,7 +602,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     }
   }
   
-  void setGroupContext(CstPredGroup group, uint level) {
+  void setBatchContext(CstPredHandler handler, uint level) {
     assert (_state is State.COLLATED &&
 	    (! this.isSolved()) && getOrderLevel() == level - 1);
     _state = State.GROUPED;
@@ -611,7 +611,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   	if (pred.isEnabled() &&
 	    pred.isCollated() &&
 	    pred.getOrderLevel == level - 1) {
-  	  pred.setGroupContext(group, level);
+  	  pred.setBatchContext(handler, level);
   	}
       }
       if (_esdl__parentIsConstrained()) {
@@ -619,13 +619,13 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   	assert (parent !is null);
   	if (parent._state is CstDomSet.State.INIT ||
 	    parent._state is CstDomSet.State.COLLATED) {
-  	  parent.setGroupContext(group, level);
+  	  parent.setBatchContext(handler, level);
   	}
       }
     }
   }
 
-  // abstract void annotate(CstPredGroup group);
+  // abstract void annotate(CstPredHandler handler);
   abstract bool visitDomain(CstSolver solver);
   
   // init value has to be different from proxy._cycle init value
@@ -1067,7 +1067,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     }
   }
   
-  void setGroupContext(CstPredGroup group, uint level) {
+  void setBatchContext(CstPredHandler handler, uint level) {
     assert (_state is State.COLLATED || _state is State.INIT);
     assert (this.isResolved(), this.name() ~ " is unresolved");
     foreach (pred; _resolvedDomainPreds[]) {
@@ -1075,14 +1075,14 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   	if (pred.isEnabled() &&
 	    pred.isCollated() &&
 	    pred.getOrderLevel() == level - 1) {
-  	  pred.setGroupContext(group, level);
+  	  pred.setBatchContext(handler, level);
   	}
       }
     }
     if (_esdl__parentIsConstrained()) {
       CstDomSet parent = getParentDomSet();
       assert (parent !is null);
-      parent.setGroupContext(group, level);
+      parent.setBatchContext(handler, level);
     }
     else {			// only for the top arr
       _state = State.GROUPED;
@@ -1090,7 +1090,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   	if (dom._state is CstDomBase.State.COLLATED &&
 	    (! dom.isSolved()) &&
 	    dom.getOrderLevel() == level - 1) {
-  	  dom.setGroupContext(group, level);
+  	  dom.setBatchContext(handler, level);
   	}
       }
     }
