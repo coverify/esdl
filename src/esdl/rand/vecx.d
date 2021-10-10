@@ -446,8 +446,10 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	}
 
 	if (_parent.isStatic()) {
+	  import std.algorithm.searching: canFind;
 	  auto len = _parent._arrLen;
-	  pred.addDep(len, context);
+	  if (! pred._unrolledIters[].canFind(len.iterVar()))
+	    pred.addDep(len, context);
 	}
 
 	_parent.setDomainContext(pred, context);
@@ -1186,8 +1188,10 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	// iters ~= iter;
 
 	if (_parent.isStatic()) {
+	  import std.algorithm.searching: canFind;
 	  auto len = _parent._arrLen;
-	  pred.addDep(len, context);
+	  if (! pred._unrolledIters[].canFind(len.iterVar()))
+	    pred.addDep(len, context);
 	}
 
 	_parent.setDomainContext(pred, context);

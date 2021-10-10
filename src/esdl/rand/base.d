@@ -399,7 +399,8 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
 
   bool tryResolve(_esdl__Proxy proxy) {
     import std.algorithm.iteration: filter;
-    if (! this.depsAreResolved()) {	// dependency itself has unresolved dependencies
+    if (! this.depsAreResolved()) {
+      // this dependency itself has unresolved dependencies
       return false;
     }
     else {

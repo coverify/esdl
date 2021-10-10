@@ -632,6 +632,18 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   bool _guardInv;
   bool guardInv() { return _guardInv; }
+
+  enum GuardState: ubyte {UNRESOLVED, ENABLED, DISABLED}
+  GuardState _guardState;
+
+  
+  // List of dependent predicates that this guard may block
+  // This can be set once in the setDomainContext
+  Folder!(CstPredicate, "depPreds") _depPreds;
+
+  void addDepPred(CstPredicate dep) {
+    _depPreds ~= dep;
+  }
     
   bool isGuardEnabled() {
     if (_guard is null) return true;
@@ -683,6 +695,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   void initialize() {
     _state = State.INIT;
+    _guardState = GuardState.UNRESOLVED;
   }
 
   Folder!(CstPredicate, "uwPreds") _uwPreds;
@@ -816,17 +829,19 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     for (uint i=0; i != _uwPreds.length; ++i) {
       if (i < _currLen) {
 	if (i >= builtLen) {
-	  CstPredicate _uwPred = _uwPreds[i];
-	  assert (_uwPred is null);
+	  CstPredicate uwPred = _uwPreds[i];
+	  assert (uwPred is null);
 	  CstPredicate guard = _guard;
 	  if (guardUnrolled) guard = _guard._uwPreds[i];
-	  _uwPred = new CstPredicate(_constraint, guard, _guardInv, _statement,
-				     _proxy, _soft, _expr.unroll(iter, iter.mapIter(i)),
-				     _isGuard, this, iter, i// ,
-				     // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
-				     );
-	  _uwPreds[i] = _uwPred;
-	  _proxy.addUnrolledNewPredicate(_uwPred);
+	  uwPred = new CstPredicate(_constraint, guard, _guardInv, _statement,
+				    _proxy, _soft, _expr.unroll(iter, iter.mapIter(i)),
+				    _isGuard, this, iter, i// ,
+				    // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
+				    );
+	  uwPred._unrolledIters ~= this._unrolledIters[];
+	  uwPred._unrolledIters ~= iter;
+	  _uwPreds[i] = uwPred;
+	  _proxy.addUnrolledNewPredicate(uwPred);
 	}
 	else if (i >= prevLen) {
 	  _uwPreds[i]._isInRange = true;
@@ -839,7 +854,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
 
-  final bool depsAreResolved(bool force=false) {
+  final bool predDepsAreResolved(bool force=false) {
     if (_markResolve || force) {
       _markResolve = false;
       foreach (dep; _deps) {
@@ -871,6 +886,16 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   Folder!(CstDomBase, "distRnds") _distRnds;	// temporary folder used in expr.d
   void addUnresolvedRnd(CstDomBase rnd,
 	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
+    // A guard should on store its own rands as deps
+    // should ignore the nested guards
+    if (this.isGuard()) {
+      if (this !is this._predContext) return;
+      else {
+	this.addDep(rnd);
+	return;
+      }
+    }
+
     final switch (context) {
     case DomainContextEnum.DEFAULT: if (! _unresolvedRnds[].canFind(rnd)) _unresolvedRnds ~= rnd;
       break;
@@ -891,6 +916,13 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   Folder!(CstDomSet, "unrosolvedRndArrs") _unresolvedRndArrs;
   void addUnresolvedRndArr(CstDomSet rndArr,
 		 DomainContextEnum context=DomainContextEnum.DEFAULT) {
+    if (this.isGuard()) {
+      if (this !is this._predContext) return;
+      else {
+	this.addDep(rndArr);
+	return;
+      }
+    }
     assert (context == DomainContextEnum.DEFAULT);
     if (! _unresolvedRndArrs[].canFind(rndArr)) _unresolvedRndArrs ~= rndArr;
   }
@@ -975,6 +1007,10 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     _varIters ~= varIter;
   }
 
+  // For the predicates that have been created by unrolling,
+  // keep track of the iterators unrolled
+  Folder!(CstIterator, "unrolledIters") _unrolledIters;
+  
   CstIterator _unrollIter;
   uint _unrollIterVal;
 
@@ -1106,19 +1142,27 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     _expr.setDistPredContext(this);
   }
 
-  final void doSetDomainContext(CstPredicate pred, bool thisPred=true) {
-    if (thisPred) {
+  // A temporary context useful only for setDomainContext
+  // it is either null or points to the guard predicate that is
+  // currently being processed
+  CstPredicate _predContext;
+
+  final void doSetDomainContext(CstPredicate pred) {
+    if (pred is this) {
       if (_domainContextSet) return;
       else _domainContextSet = true;
     }
 
+    _predContext = this;
+    scope (exit) _predContext = null;
+    
     _expr.setDomainContext(pred, DomainContextEnum.DEFAULT);
 
     if (pred._dists.length > 0) {
-      if (thisPred is true && pred._dists.length == 1 &&
+      if (pred is this && pred._dists.length == 1 &&
 	  _unresolvedRnds.length == 0 && _unresolvedRndArrs.length == 0) {
 	assert (pred._dists[0].isDist());
-	pred._unresolvedRnds ~= pred._dists[0];
+	pred.addUnresolvedRnd(pred._dists[0]);
       }
       else {
 	foreach (dist; pred._dists) {
@@ -1130,7 +1174,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
       
 
-    if (thisPred && _unresolvedRnds.length == 1 && _unresolvedRndArrs.length == 0)
+    if (pred is this && _unresolvedRnds.length == 1 && _unresolvedRndArrs.length == 0)
       _dom = _unresolvedRnds[0];
 
     // if (this is pred && this.isDist()) {
@@ -1139,21 +1183,20 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
     
     if (_guard !is null) {
-      if (_distDomain !is null && thisPred is true) { // processing a dist predicate
-	// assert (thisPred is true);
+      if (pred is this) _guard.addDepPred(this);
+      if (_distDomain !is null && pred is this) { // processing a dist predicate
 	assert (_dom !is null && _dom == _distDomain);
 	pred._deps ~= _guard;
       }
       else if (_dom !is null && _dom.isDist()) {
-	// assert (thisPred is true);
 	pred._deps ~= _guard;
       }
       else {
-	_guard.doSetDomainContext(pred, false);
+	_guard.doSetDomainContext(pred);
       }
     }
 
-    if (thisPred) {
+    if (pred is this) {
     
       // foreach (varIter; varIters) {
       //   import std.stdio;
@@ -1201,10 +1244,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       foreach (idx; _bitIdxs) if (! idx.isSolved()) addDep(idx);
     
       foreach (dep; _deps) dep.registerDepPred(this);
-
-      // if (this.isGuard()) {
-      // 	foreach (dep; _unresolvedRnds) dep.registerDepPred(this);
-      // }
 
       // For now treat _idxs as _deps since _idxs are merged with _deps
       // foreach (idx; _idxs) idx.registerIdxPred(this);
@@ -1270,6 +1309,25 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     foreach (dep; _idxs) dep.tryResolve(proxy);
   }
 
+  bool _exprVal;
+  final void procResolvedGuard() {
+    assert (this.isGuard());
+    _state = State.SOLVED;
+    _exprVal = _expr.eval();
+    foreach (pred; _depPreds) {
+      pred.block(_exprVal);
+    }
+  }
+
+  void block(bool flag) {
+    if (! (flag ^ _guardInv)) block();
+  }
+  
+  void block() {
+    this._state = State.BLOCKED;
+    foreach (pred; _depPreds) pred.block();
+  }
+  
   bool hasUpdate() {
     foreach (var; _resolvedVars) {
       if (var.hasChanged()) {
@@ -1298,6 +1356,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     if (_iters.length > 0) {
       description ~= "    Iterators: \n";
       foreach (iter; _iters) {
+	description ~= "\t" ~ iter.fullName() ~ "\n";
+      }
+    }
+    if (_unrolledIters.length > 0) {
+      description ~= "    Unrolled Iterators: \n";
+      foreach (iter; _unrolledIters) {
 	description ~= "\t" ~ iter.fullName() ~ "\n";
       }
     }
@@ -1344,8 +1408,14 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       }
     }
     if (_deps.length > 0) {
-      description ~= "    Depends: \n";
+      description ~= "    Depends on: \n";
       foreach (dep; _deps) {
+	description ~= "\t" ~ dep.fullName() ~ "\n";
+      }
+    }
+    if (_depPreds.length > 0) {
+      description ~= "    Gated Predicates: \n";
+      foreach (dep; _depPreds) {
 	description ~= "\t" ~ dep.fullName() ~ "\n";
       }
     }
@@ -1724,14 +1794,17 @@ class CstVisitorPredicate: CstPredicate
     if (currLen > prevLen) {
       // import std.stdio;
       // writeln("Need to unroll ", currLen - _uwPreds.length, " times");
-      for (uint i = cast(uint) _uwPreds.length;
-	   i != currLen; ++i) {
+      for (uint i = cast(uint) _uwPreds.length; i != currLen; ++i) {
 	// import std.stdio;
 	// writeln("i: ", i, " mapped: ", iter.mapIter(i));
-	_uwPreds ~= new CstVisitorPredicate(_constraint, _guard, _guardInv, _statement, _proxy, _soft,
-					    _expr.unroll(iter, iter.mapIter(i)), false, this, iter, i// ,
-					    // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
-					    );
+	CstVisitorPredicate uwPred =
+	  new CstVisitorPredicate(_constraint, _guard, _guardInv, _statement, _proxy, _soft,
+				  _expr.unroll(iter, iter.mapIter(i)), false, this, iter, i// ,
+				  // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
+				  );
+	uwPred._unrolledIters ~= this._unrolledIters[];
+	uwPred._unrolledIters ~= iter;
+	_uwPreds ~= uwPred;
       }
       for (size_t i=prevLen; i!=currLen; ++i) {
 	_uwPreds[i].doSetDomainContext(_uwPreds[i]);

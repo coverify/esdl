@@ -510,9 +510,12 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 
       void setDomainContext(CstPredicate pred, DomainContextEnum context) {
 	if (_parent.isStatic()) {
+	  import std.algorithm.searching: canFind;
 	  auto len = _parent._arrLen;
-	  pred.addDep(len, context);
+	  if (! pred._unrolledIters[].canFind(len.iterVar()))
+	    pred.addDep(len, context);
 	}
+
 	_parent.setDomainContext(pred, context);
 
 	if (_indexExpr !is null) {
@@ -1106,9 +1109,12 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	// auto iter = arrLen.makeIterVar();
 	// iters ~= iter;
 	if (_parent.isStatic()) {
+	  import std.algorithm.searching: canFind;
 	  auto len = _parent._arrLen;
-	  pred.addDep(len, context);
+	  if (! pred._unrolledIters[].canFind(len.iterVar()))
+	    pred.addDep(len, context);
 	}
+
 	_parent.setDomainContext(pred, context);
 	if (_indexExpr !is null) {
 	  _indexExpr.setDomainContext(pred, DomainContextEnum.INDEX);

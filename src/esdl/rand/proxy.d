@@ -404,7 +404,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   Folder!(CstPredicate, "_solvePreds") _solvePreds;
 
   Folder!(CstPredicate, "unresolvedPreds") _unresolvedPreds;
-  Folder!(CstPredicate, "toResolvedPreds") _toUnresolvedPreds;
+  Folder!(CstPredicate, "toUnresolvedPreds") _toUnresolvedPreds;
 
   // Folder!(CstPredicate, "resolvedDistPreds") _resolvedDistPreds;
   Folder!(CstPredicate, "resolvedMonoPreds") _resolvedMonoPreds;
@@ -849,7 +849,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       }
 
       foreach (pred; _unresolvedPreds) {
-	if (pred.depsAreResolved()) {
+	if (pred.predDepsAreResolved()) {
 	  procResolved(pred);
 	  _solvedSome = true;
 	}
@@ -1011,7 +1011,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     // // }
     // else
     pred.processResolved();
-    _toResolvedPreds ~= pred;
+    if (pred.isGuard()) pred.procResolvedGuard();
+    else               _toResolvedPreds ~= pred;
   }
 
   void addNewPredicate(CstPredicate pred) {
@@ -1062,7 +1063,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       procResolved(pred);
     }
     else if (pred._iters.length == 0) {
-      if (pred.depsAreResolved(true)) {
+      if (pred.predDepsAreResolved(true)) {
 	// import std.stdio;
 	// writeln("Predicate marked as resolved: ", pred.name());
 	procResolved(pred);
