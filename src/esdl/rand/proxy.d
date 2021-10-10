@@ -384,15 +384,15 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _unrolledNewPreds.reset();
   }
 
-  Folder!(CstPredicate, "predsThatUnrolled") _predsThatUnrolled;
-  void registerUnrolled(CstPredicate pred) {
-    _predsThatUnrolled ~= pred;
-  }
+  // Folder!(CstPredicate, "predsThatUnrolled") _predsThatUnrolled;
+  // void registerUnrolled(CstPredicate pred) {
+  //   _predsThatUnrolled ~= pred;
+  // }
 
   Folder!(CstPredicate, "newPreds") _newPreds;
   Folder!(CstPredicate, "toNewPreds") _toNewPreds;
-  Folder!(CstPredicate, "unrolledPreds") _unrolledPreds;
-  Folder!(CstPredicate, "toUnrolledPreds") _toUnrolledPreds;
+  // Folder!(CstPredicate, "unrolledPreds") _unrolledPreds;
+  // Folder!(CstPredicate, "toUnrolledPreds") _toUnrolledPreds;
   
   Folder!(CstPredicate, "rolledPreds") _rolledPreds;
   Folder!(CstPredicate, "toRolledPreds") _toRolledPreds;
@@ -718,8 +718,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     // reset all bins
     _newPreds.reset();
     _toNewPreds.reset();
-    _unrolledPreds.reset();
-    _toUnrolledPreds.reset();
+    // _unrolledPreds.reset();
+    // _toUnrolledPreds.reset();
     _rolledPreds.reset();
     _toRolledPreds.reset();
     _resolvedPreds.reset();
@@ -743,14 +743,14 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     while (// _newPreds.length > 0 ||
 	   _toNewPreds.length > 0 ||
 	   // _unrolledPreds.length > 0 ||
-	   _toUnrolledPreds.length > 0 ||
+	   // _toUnrolledPreds.length > 0 ||
 	   // _resolvedMonoPreds.length > 0 ||
 	   // _resolvedPreds.length > 0 ||
 	   _toResolvedPreds.length > 0 ||
 	   _toUnresolvedPreds.length > 0 ||
 	   _toRolledPreds.length > 0) {
       assert (_newPreds.length == 0);
-      assert (_unrolledPreds.length == 0);
+      // assert (_unrolledPreds.length == 0);
       assert (_resolvedPreds.length == 0);
 
       if (_esdl__debugSolver) {
@@ -759,10 +759,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	  stdout.writeln("_toNewPreds: ");
 	  foreach (predicate; _toNewPreds) stdout.writeln(predicate.describe());
 	}
-	if (_toUnrolledPreds.length > 0) {
-	  stdout.writeln("_toUnrolledPreds: ");
-	  foreach (predicate; _toUnrolledPreds) stdout.writeln(predicate.describe());
-	}
+	// if (_toUnrolledPreds.length > 0) {
+	//   stdout.writeln("_toUnrolledPreds: ");
+	//   foreach (predicate; _toUnrolledPreds) stdout.writeln(predicate.describe());
+	// }
 	if (_toResolvedPreds.length > 0) {
 	  stdout.writeln("_toResolvedPreds: ");
 	  foreach (predicate; _toResolvedPreds) stdout.writeln(predicate.describe());
@@ -804,8 +804,9 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       _resolvedPreds.swap(_toResolvedPreds);
       _unresolvedPreds.swap(_toUnresolvedPreds);
 
-      if (_toUnrolledPreds.length > 0 || _toNewPreds.length > 0) {
-	_unrolledPreds.swap(_toUnrolledPreds);
+      if (// _toUnrolledPreds.length > 0 ||
+	  _toNewPreds.length > 0) {
+	// _unrolledPreds.swap(_toUnrolledPreds);
 	_newPreds.swap(_toNewPreds);
 
 	// foreach (pred; _unrolledPreds) {
@@ -820,10 +821,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	//   pred.doSetDomainContext(pred);
 	// }
 
-	foreach (pred; _unrolledPreds) procUnrolledPredicate(pred);
+	// foreach (pred; _unrolledPreds) procUnrolledPredicate(pred);
 	foreach (pred; _newPreds) procNewPredicate(pred);
 
-	_unrolledPreds.reset();
+	// _unrolledPreds.reset();
 	_newPreds.reset();
 	solvedSome();
 
@@ -964,10 +965,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     // }
     // _solvedHandlers.reset();
 
-    foreach (pred; _predsThatUnrolled) {
-      pred.reset();
-    }
-    _predsThatUnrolled.reset();
+    // foreach (pred; _predsThatUnrolled) {
+    //   pred.reset();
+    // }
+    // _predsThatUnrolled.reset();
   }
 
   // CstDomBase solveDist(CstPredicate pred) {
@@ -1022,42 +1023,42 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _toNewPreds ~= pred;
   }
 
-  void addUnrolledPredicate(CstPredicate pred) {
-    // import std.stdio;
-    // writeln("Adding : ", pred.name());
-    pred.initialize();
-    _toUnrolledPreds ~= pred;
-  }
+  // void addUnrolledPredicate(CstPredicate pred) {
+  //   // import std.stdio;
+  //   // writeln("Adding : ", pred.name());
+  //   pred.initialize();
+  //   _toUnrolledPreds ~= pred;
+  // }
+
+  // void procNewPredicate(CstPredicate pred) {
+  //   pred.tryResolveDeps(this);
+  //   if (pred.isVisitor()) {
+  //     procResolved(pred);
+  //   }
+  //   else if (pred._iters.length > 0) {
+  //     _toRolledPreds ~= pred;
+  //   }
+  //   else if (pred._deps.length > 0) {
+  //     bool allDepsResolved = true;
+  //     foreach (dep; pred._deps) {
+  // 	if (! dep.isResolved()) {
+  // 	  allDepsResolved = false;
+  // 	  break;
+  // 	}
+  //     }
+  //     if (allDepsResolved) {
+  // 	// import std.stdio;
+  // 	// writeln("All Deps resolved: ", pred.name());
+  // 	procResolved(pred);
+  //     }
+  //     else _toUnresolvedPreds ~= pred;
+  //   }
+  //   else {
+  //     procResolved(pred);
+  //   }
+  // }
 
   void procNewPredicate(CstPredicate pred) {
-    pred.tryResolveDeps(this);
-    if (pred.isVisitor()) {
-      procResolved(pred);
-    }
-    else if (pred._iters.length > 0) {
-      _toRolledPreds ~= pred;
-    }
-    else if (pred._deps.length > 0) {
-      bool allDepsResolved = true;
-      foreach (dep; pred._deps) {
-	if (! dep.isResolved()) {
-	  allDepsResolved = false;
-	  break;
-	}
-      }
-      if (allDepsResolved) {
-	// import std.stdio;
-	// writeln("All Deps resolved: ", pred.name());
-	procResolved(pred);
-      }
-      else _toUnresolvedPreds ~= pred;
-    }
-    else {
-      procResolved(pred);
-    }
-  }
-
-  void procUnrolledPredicate(CstPredicate pred) {
     pred.tryResolveDeps(this);
     if (pred.isVisitor()) {
       procResolved(pred);
@@ -1074,6 +1075,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     }
     else {
       _toRolledPreds ~= pred;
+      if (pred._iters[0].isUnrollable()) pred.doUnroll();
     }
   }
 

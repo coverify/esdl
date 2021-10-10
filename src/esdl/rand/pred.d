@@ -375,7 +375,6 @@ class CstPredHandler			// handler of related predicates
       bool monoFlag = false;
       if (!(_hasSoftConstraints || _hasVectorConstraints)) {
 	if (_preds.length == 1 && _preds[0].isVisitor()) {
-	  // _preds[0]._dom.forceResolve(_proxy);
 	  _preds[0]._state = CstPredicate.State.SOLVED;
 	  _proxy.addSolvedDomain(_preds[0]._dom);
 	  monoFlag = true;
@@ -696,6 +695,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   void initialize() {
     _state = State.INIT;
     _guardState = GuardState.UNRESOLVED;
+    _depCbs.reset();
   }
 
   Folder!(CstPredicate, "uwPreds") _uwPreds;
@@ -784,7 +784,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       return;
     }
 
-    _proxy.registerUnrolled(this);
+    // _proxy.registerUnrolled(this);
     assert (_state != State.UNROLLED,
 	    "Unexpected State: " ~ _state.to!string());
     _state = State.UNROLLED;
@@ -806,6 +806,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       this.unroll(iter, guardUnrolled);
       _unrollCycle = _proxy._cycle;
     }
+
+    _proxy.procUnrolledNewPredicates();
   }
 
   uint _currLen;
@@ -846,7 +848,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	else if (i >= prevLen) {
 	  _uwPreds[i]._isInRange = true;
 	}
-	_proxy.addUnrolledPredicate(_uwPreds[i]);
+	_proxy.addNewPredicate(_uwPreds[i]);
       }
       else {
 	_uwPreds[i]._isInRange = false;
@@ -868,9 +870,9 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       // 	  return false;
       // 	}
       // }
-      if (this.isGuard()) {
-	tryResolve(_proxy);
-      }
+      // if (this.isGuard()) {
+      // 	tryResolve(_proxy);
+      // }
       return true;
     }
     return false;
@@ -1240,8 +1242,10 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       //   _deps = _foundDeps.filter!(dep => (! canFind(_parent._deps, dep))).array;
       // }
 
-      foreach (idx; _idxs) if (! idx.isResolved()) addDep(idx);
-      foreach (idx; _bitIdxs) if (! idx.isSolved()) addDep(idx);
+      foreach (idx; _idxs) // if (! idx.isSolved())
+	addDep(idx);
+      foreach (idx; _bitIdxs) // if (! idx.isSolved())
+	addDep(idx);
     
       foreach (dep; _deps) dep.registerDepPred(this);
 
@@ -1305,8 +1309,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
 
   void tryResolveDeps(_esdl__Proxy proxy) {
-    foreach (dep; _deps) dep.tryResolve(proxy);
-    foreach (dep; _idxs) dep.tryResolve(proxy);
+    foreach (dep; _deps) {
+      if (! dep.tryResolve(proxy)) {
+	dep.registerDepPred(this);
+      }
+    }
+    // foreach (dep; _idxs) dep.tryResolve(proxy);
   }
 
   bool _exprVal;
@@ -1722,13 +1730,10 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return (_state == State.SOLVED);
   }
 
-  CstDepCallback[] _depCbs;
+  Folder!(CstDepCallback, "depCbs") _depCbs;
+
   void registerDepPred(CstDepCallback depCb) {
-    foreach (cb; _depCbs) {
-      if (cb is depCb) {
-	return;
-      }
-    }
+    // if (! _depCbs[].canFind(depCb))
     _depCbs ~= depCb;
   }
 
@@ -1820,7 +1825,7 @@ class CstVisitorPredicate: CstPredicate
 	// writeln("Collecting constraints from: ", _uwPreds[i]._expr.describe());
       }
       else {
-	_proxy.addUnrolledPredicate(_uwPreds[i]);
+	_proxy.addNewPredicate(_uwPreds[i]);
       }
     }
 

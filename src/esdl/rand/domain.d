@@ -49,7 +49,6 @@ abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
 	  }
 	  *(getRef()) = val;
 	  markSolved();
-	  execCbs();
 	}
 	else {
 	  assert(false);
@@ -341,7 +340,6 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
       }
       *(getRef()) = newVal;
       markSolved();
-      execCbs();
     }
     else {
       assert(false);
@@ -374,7 +372,6 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
       }
       *(getRef()) = newVal;
       markSolved();
-      execCbs();
     }
     else {
       assert(false);
@@ -648,42 +645,22 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     return _parent.getProxyRoot();
   }
 
-  override void forceResolve(_esdl__Proxy proxy) {
-    import std.algorithm.iteration: filter;
-    if (isRand() && isSolved()) {
-      _parent.buildElements(_parent.getLen());
-      execCbs();
-    }
-    else {
-      markSolved();
-      _parent.buildElements(_parent.getLen());
-      execCbs();
-    }
-  }
-
   override bool tryResolve(_esdl__Proxy proxy) {
     import std.algorithm.iteration: filter;
     debug (CSTSOLVER) {
       import std.stdio;
       writeln("tryResolve: ", fullName());
     }
-    // if (isRand() && isSolved()) {
-    //   forceResolve(proxy);
-    // }
     if (! this.depsAreResolved()) return false;
     if (isMarkedSolved()) {
       debug (CSTSOLVER) {
 	import std.stdio;
 	writeln("tryResolve: Already marked solved: ", fullName());
       }
-      execCbs();
-      return false;
+      // execCbs();
+      return true;
     }
     else {
-      // foreach (pred; _unresolvedDomainPreds) {
-      // 	import std.stdio;
-      // 	writeln (pred.name());
-      // }
       if ((! this.isRand()) ||
 	  _unresolvedDomainPreds.length + _lambdaDomainPreds.length == 0 ||
 	  (_unresolvedDomainPreds[].filter!(pred => ! (pred.isGuard() || pred.isVisitor())).empty() &&
@@ -697,18 +674,6 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
       }
     }
     return false;
-
-    // import std.algorithm.iteration: filter;
-    // if (isRand() && isSolved()) {
-    //   execCbs();
-    //   return true;
-    // }
-    // if (! isRand()) {
-    //   markSolved();
-    //   _parent.buildElements(_parent.getLen());
-    //   execCbs();
-    //   return true;
-    // }
   }
 
   override void _esdl__doRandomize(_esdl__RandGen randGen) {
@@ -788,7 +753,6 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     }
     _parent.setLen(cast(size_t) value);
     markSolved();
-    execCbs();
   }
 
   override void setVal(ulong[] v) {
@@ -799,7 +763,6 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     assert(v.length == 1);
     _parent.setLen(cast(size_t) v[0]);
     markSolved();
-    execCbs();
   }
 
   override void markSolved() {
@@ -853,8 +816,8 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   override void execIterCbs() {
     assert(_iterVar !is null);
     _iterVar.unrollCbs();
-    assert (_root !is null);
-    _root.procUnrolledNewPredicates();
+    // assert (_root !is null);
+    // _root.procUnrolledNewPredicates();
   }
 
   override uint* getRef() {
@@ -907,7 +870,9 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 	return value();
       }
       else {
-	assert (false, "Error evaluating " ~ _name);
+	import std.conv: to;
+	assert (false, "Error evaluating " ~ _name ~
+		" State: " ~ _state.to!string());
       }
     }
     else {

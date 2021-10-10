@@ -392,22 +392,20 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   
   abstract long value();
   
-  void forceResolve(_esdl__Proxy proxy) {
-    if (! tryResolve(proxy))
-	assert (false, "Unable to resolve domain: " ~ name());
-  }
-
   bool tryResolve(_esdl__Proxy proxy) {
+    //
+    // import std.stdio;
+    // writeln("Trying to Resolve: ", this.fullName());
     import std.algorithm.iteration: filter;
     if (! this.depsAreResolved()) {
       // this dependency itself has unresolved dependencies
       return false;
     }
-    else {
+    else { // deps are resolved, so getResolvedNode will not fail
       auto resolved = this.getResolvedNode();
       if (resolved.isResolved()) {
-	execCbs();
-	if (resolved !is this) resolved.execCbs();
+	// if (resolved !is this) resolved.execCbs();
+	// this.markSolved();
 	return true;
       }
       else {
@@ -426,6 +424,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
 	       resolved._unresolvedDomainPreds[].filter!(pred => ! pred.isGuard()).empty() &&
 	       _lambdaDomainPreds[].filter!(pred => ! pred.isGuard()).empty() &&
 	       resolved._lambdaDomainPreds[].filter!(pred => ! pred.isGuard()).empty())) {
+	    // we point to resolved node inside randomizeWithoutConstraints
 	    randomizeWithoutConstraints(proxy);
 	    return true;
 	  }
@@ -438,7 +437,8 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   void randomizeWithoutConstraints(_esdl__Proxy proxy) {
     assert (this.depsAreResolved());
     auto resolved = this.getResolvedNode();
-    resolved._esdl__doRandomize(getProxyRoot()._esdl__getRandGen());
+    if (this.isRand())
+      resolved._esdl__doRandomize(getProxyRoot()._esdl__getRandGen());
     proxy.solvedSome();
     resolved.markSolved();
     proxy.addSolvedDomain(resolved);
@@ -447,6 +447,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   }
 
   void markSolved() {
+    if (_state == State.SOLVED) return;
     if (_root._esdl__debugSolver) {
       import std.stdio;
       writeln("Marking ", this.name(), " as SOLVED");
@@ -455,6 +456,8 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     assert (_state != State.SOLVED, this.name() ~
 	    " already marked as solved");
     _state = State.SOLVED;
+    _root.addSolvedDomain(this);
+    this.execCbs();
   }
 
   bool isMarkedSolved() {
@@ -499,7 +502,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   
 
   // Callbacks
-  CstDepCallback[] _depCbs;
+  Folder!(CstDepCallback, "depCbs") _depCbs;
 
   Folder!(CstPredicate, "resolvedDomainPreds") _resolvedDomainPreds;
   Folder!(CstPredicate, "unresolvedDomainPreds") _unresolvedDomainPreds;
@@ -638,6 +641,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     _state = State.INIT;
     _orderVar = SolveOrder.UNDECIDED;
     _orderLevel = 0;
+    _depCbs.reset();
   }
   
   DomType _type = DomType.TRUEMONO;
@@ -668,21 +672,13 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   }
 
   override void registerDepPred(CstDepCallback depCb) {
-    foreach (cb; _depCbs) {
-      if (cb is depCb) {
-	return;
-      }
-    }
+    // if (! _depCbs[].canFind(depCb))
     _depCbs ~= depCb;
   }
 
   override void registerIdxPred(CstDepCallback idxCb) {
-    foreach (cb; _depCbs) {
-      if (cb is idxCb) {
-	return;
-      }
-    }
-    _depCbs ~= idxCb; // use same callbacks as deps for now
+    if (! _depCbs[].canFind(idxCb))
+      _depCbs ~= idxCb;
   }
 
   abstract bool _esdl__parentIsConstrained();
@@ -770,7 +766,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   _esdl__Proxy _root;
   
   // Callbacks
-  CstDepCallback[] _depCbs;
+  Folder!(CstDepCallback, "depCbs") _depCbs;
 
   // Dependencies
   CstDepIntf[] _deps;
@@ -848,21 +844,13 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   abstract CstDomSet unroll(CstIterator iter, ulong n);
   
   override void registerDepPred(CstDepCallback depCb) {
-    foreach (cb; _depCbs) {
-      if (cb is depCb) {
-	return;
-      }
-    }
+    // if (! _depCbs[].canFind(depCb))
     _depCbs ~= depCb;
   }
 
   override void registerIdxPred(CstDepCallback idxCb) {
-    foreach (cb; _depCbs) {
-      if (cb is idxCb) {
-	return;
-      }
-    }
-    _depCbs ~= idxCb; // use same callbacks as deps for now
+    if (! _depCbs[].canFind(idxCb))
+      _depCbs ~= idxCb;
   }
 
   this(string name) {
@@ -1036,6 +1024,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     _esdl__domsetLeafElemsCount = 0;
     _orderVar = SolveOrder.UNDECIDED;
     _orderLevel = 0;
+    _depCbs.reset();
   }
   
   void setProxyContext(_esdl__Proxy proxy) {
