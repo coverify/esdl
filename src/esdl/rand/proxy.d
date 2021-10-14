@@ -453,6 +453,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _argVisitors.reset();
   }
 
+  Folder!(CstIterator, "itersWithCbs") _itersWithCbs;
+
   void printHandler (){
     import std.stdio;
     writeln("\nPreds: ");
@@ -884,37 +886,38 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
        // Work on _solvePreds
       foreach (pred; _solvePreds) {
-	if (! pred.isGuard()) {
-	  if (pred.isSolved() || pred.isBlocked() || (! pred.isInRange())) {
-	    _solvedSome = true;
-	    continue;
-	  }
-	  pred.setProxyContext(this);
+	assert (! pred.isGuard());
 	  
-	  // makeHandlerDomains();
-	  uint level = 0;
-	  while (markDependents(++level)){
-	    if (_esdl__debugSolver) {
-	      printHandler();
-	    }
-	    solveMarkedPreds(level);
-	  }
+	if (pred.isSolved() || pred.isBlocked() || (! pred.isInRange())) {
+	  _solvedSome = true;
+	  continue;
+	}
+	pred.setProxyContext(this);
+	  
+	// makeHandlerDomains();
+	uint level = 0;
+	while (markDependents(++level)){
 	  if (_esdl__debugSolver) {
 	    printHandler();
 	  }
-	  if (level == 1) {
-	    solveAll();
-	  }
-	  else {
-	    solveMarkedPreds(level);
-	  }
-	  // resetLevels();
-
-	  _collatedPredicates.reset();
-	  _collatedDomains.reset();
-	  _collatedDomArrs.reset();
-	  
+	  solveMarkedPreds(level);
 	}
+	if (_esdl__debugSolver) {
+	  printHandler();
+	}
+	if (level == 1) {
+	  solveAll();
+	}
+	else {
+	  solveMarkedPreds(level);
+	}
+	// resetLevels();
+
+	_collatedPredicates.reset();
+	_collatedDomains.reset();
+	_collatedDomArrs.reset();
+	  
+	// }
       }
 
       // Now we reset the predicates as they get added to the solve cycle
@@ -958,6 +961,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       _solvePreds.reset();
 
     }
+
+    foreach (iter; _itersWithCbs) iter.reset();
+    _itersWithCbs.reset();
+
     // foreach (handler; _solvedHandlers) {
     //   handler.reset();
     //   _solvedDomains ~= handler.domains();
@@ -1011,9 +1018,11 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     // //   // procMonoDomain(pred._unresolvedRnds[0], pred);
     // // }
     // else
-    pred.processResolved();
     if (pred.isGuard()) pred.procResolvedGuard();
-    else               _toResolvedPreds ~= pred;
+    else {
+      pred.processResolved();
+      _toResolvedPreds ~= pred;
+    }
   }
 
   void addNewPredicate(CstPredicate pred) {
@@ -1060,10 +1069,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   void procNewPredicate(CstPredicate pred) {
     pred.tryResolveDeps(this);
-    if (pred.isVisitor()) {
-      procResolved(pred);
-    }
-    else if (pred._iters.length == 0) {
+    if (pred._iters.length == 0) {
       if (pred.predDepsAreResolved(true)) {
 	// import std.stdio;
 	// writeln("Predicate marked as resolved: ", pred.name());
@@ -1074,8 +1080,16 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       }
     }
     else {
-      _toRolledPreds ~= pred;
-      if (pred._iters[0].isUnrollable()) pred.doUnroll();
+      CstIterator iter = pred._iters[0];
+      if (iter.isUnrollable()) pred.doUnroll();
+      else {
+	if (iter._iterCbs.length == 0) _itersWithCbs ~= iter;
+	iter.registerRolled(pred);
+      }
+      // A visitor needs to move ahead since we need to have
+      // a visitor to prioritize solving of array lengths
+      if (pred.isVisitor()) _toResolvedPreds ~= pred;
+      else                  _toRolledPreds   ~= pred;
     }
   }
 

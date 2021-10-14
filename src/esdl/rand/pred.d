@@ -772,6 +772,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   void doResolve() {
     if (_iters.length == 0) {
+      _resolvedDepsCount += 1;
       _markResolve = true;
       return;
     }
@@ -786,7 +787,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
     // _proxy.registerUnrolled(this);
     assert (_state != State.UNROLLED,
-	    "Unexpected State: " ~ _state.to!string());
+	    "Predicate: " ~ fullName() ~ " in unexpected state: " ~ _state.to!string());
     _state = State.UNROLLED;
     // check if all the dependencies are resolved
     // foreach (dep; _deps) {
@@ -856,12 +857,19 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
 
-  final bool predDepsAreResolved(bool force=false) {
-    if (_markResolve || force) {
+  uint _resolvedDepsCount = 0;
+  
+  final bool predDepsAreResolved(bool init_=false) {
+    if (_markResolve || init_) {
+      if (init_) _resolvedDepsCount = 0;
       _markResolve = false;
+      bool resolved = true;
       foreach (dep; _deps) {
 	if (! dep.isResolved()) {
-	  return false;
+	  resolved = false;
+	}
+	else {
+	  if (init_) _resolvedDepsCount += 1;
 	}
       }
       // All _idxs are rolled into _deps
@@ -873,7 +881,14 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       // if (this.isGuard()) {
       // 	tryResolve(_proxy);
       // }
-      return true;
+      if (resolved) {
+	import std.conv: to;
+
+	assert (_resolvedDepsCount == _deps.length,
+		_resolvedDepsCount.to!string ~ " != " ~ _deps.length.to!string() ~
+		" _markResolve: " ~ _markResolve.to!string() ~ " init_: " ~ init_.to!string());
+      }
+      return resolved;
     }
     return false;
   }
@@ -1247,7 +1262,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       foreach (idx; _bitIdxs) // if (! idx.isSolved())
 	addDep(idx);
     
-      foreach (dep; _deps) dep.registerDepPred(this);
+      // foreach (dep; _deps) dep.registerDepPred(this);
 
       // For now treat _idxs as _deps since _idxs are merged with _deps
       // foreach (idx; _idxs) idx.registerIdxPred(this);
@@ -1268,7 +1283,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	}
       }
     
-      if (_iters.length != 0) _iters[0].registerRolled(this);
+      // Now being done in proxy.d
+      // if (_iters.length != 0) _iters[0].registerRolled(this);
     }
   }
 

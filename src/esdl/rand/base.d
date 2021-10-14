@@ -442,8 +442,10 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     proxy.solvedSome();
     resolved.markSolved();
     proxy.addSolvedDomain(resolved);
-    resolved.execCbs();
-    if (this !is resolved) this.execCbs();
+    if (this !is resolved) {
+      this.markSolved();
+      proxy.addSolvedDomain(this);
+    }
   }
 
   void markSolved() {
@@ -635,6 +637,9 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   // init value has to be different from proxy._cycle init value
   uint _cycle = -1;
   State _state;
+
+  DomType _type = DomType.TRUEMONO;
+  
   uint _unresolveLap;
 
   override void reset() {
@@ -644,7 +649,6 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     _depCbs.reset();
   }
   
-  DomType _type = DomType.TRUEMONO;
 
   final void markAsUnresolved(uint lap) {
     if (_unresolveLap != lap) {
@@ -666,7 +670,10 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
 
   void execIterCbs() { }
   void execDepCbs() {
+    // import std.stdio;
+    // writeln("domain: ", this.fullName());
     foreach (cb; _depCbs) {
+      // writeln(cb.fullName());
       cb.doResolve();
     }
   }
@@ -677,8 +684,8 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   }
 
   override void registerIdxPred(CstDepCallback idxCb) {
-    if (! _depCbs[].canFind(idxCb))
-      _depCbs ~= idxCb;
+    // if (! _depCbs[].canFind(idxCb))
+    _depCbs ~= idxCb;
   }
 
   abstract bool _esdl__parentIsConstrained();
@@ -849,8 +856,8 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   }
 
   override void registerIdxPred(CstDepCallback idxCb) {
-    if (! _depCbs[].canFind(idxCb))
-      _depCbs ~= idxCb;
+    // if (! _depCbs[].canFind(idxCb))
+    _depCbs ~= idxCb;
   }
 
   this(string name) {
@@ -1102,18 +1109,21 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
 interface CstIterCallback
 {
   string name();
+  string fullName();
   void doUnroll();
 }
 
 interface CstDepCallback
 {
   string name();
+  string fullName();
   void doResolve();
 }
 
 interface CstVecPrim
 {
   string name();
+  string fullName();
   void solveBefore(CstVecPrim other);
   void addPreRequisite(CstVecPrim other);
 }
@@ -1143,15 +1153,18 @@ interface CstTerm
 // This class represents an unwound Foreach iter at vec level
 abstract class CstIterator: CstVecTerm
 {
-  CstIterCallback[] _cbs;
+  Folder!(CstIterCallback, "iterCbs") _iterCbs;
+
   void registerRolled(CstIterCallback cb) {
-    _cbs ~= cb;
+    _iterCbs ~= cb;
   }
+
   void unrollCbs() {
-    foreach (cb; _cbs) {
+    foreach (cb; _iterCbs) {
       cb.doUnroll();
     }
   }
+
   final override bool isDistVar() { return false; } 
   abstract ulong size();
   abstract string name();
@@ -1177,6 +1190,10 @@ abstract class CstIterator: CstVecTerm
 
   override final CstVecType getVecType() {
     return CstVecType.ULONG;
+  }
+
+  final void reset() {
+    _iterCbs.reset();
   }
   
 }
