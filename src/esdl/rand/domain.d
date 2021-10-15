@@ -611,7 +611,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 
   alias AV = typeof(this);
   
-  enum HAS_RAND_ATTRIB = RV.RAND.isRand();
+  enum bool HAS_RAND_ATTRIB = RV.RAND.isRand();
 
   CstArrIterator!RV _iterVar;
 
@@ -900,6 +900,271 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   }
   
 }
+
+class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm, CstVecPrim
+{
+
+  alias AV = typeof(this);
+  
+  enum bool HAS_RAND_ATTRIB = true;
+
+  // CstArrIterator!RV _iterVar;
+
+  RV _parent;
+
+  string _name;
+
+  CstVecPrim[] _preReqs;
+
+  final override bool isDistVar() { return false; }
+
+  override string name() {
+    return _name;
+  }
+
+  override string fullName() {
+    return _parent.fullName() ~ "->hierLength";
+  }
+
+  this(string name, RV parent) {
+    assert (parent !is null);
+    super(name, parent.getProxyRoot());
+    _name = name;
+    _parent = parent;
+    // _iterVar = new CstArrIterator!RV(_parent);
+  }
+
+  ~this() { }
+
+  override _esdl__Proxy getProxyRoot() {
+    return _parent.getProxyRoot();
+  }
+
+  override bool tryResolve(_esdl__Proxy proxy) {
+    // import std.stdio;
+    // writeln("Invoking tryResolve on: ", fullName());
+    if (isMarkedSolved()) {
+      debug (CSTSOLVER) {
+	import std.stdio;
+	writeln("tryResolve: Already marked solved: ", fullName());
+      }
+      // execCbs();
+      return true;
+    }
+    else {
+      // writeln("Invoking tryResolve on: ", false);
+      return false;
+    }
+  }
+
+  override void _esdl__doRandomize(_esdl__RandGen randGen) { }
+  
+  override bool isRand() {
+    return false;
+  }
+
+  override bool inRange() {
+    return _parent.inRange();
+  }
+
+  T to(T)()
+    if(is(T == string)) {
+      import std.conv;
+      if(isRand) {
+	return "RAND-" ~ "#" ~ _name ~ ":" ~ value().to!string();
+      }
+      else {
+	return "VAL#" ~ _name ~ ":" ~ value().to!string();
+      }
+    }
+
+  override string toString() {
+    return this.to!string();
+  }
+
+  // void iterVar(CstArrIterator!RV var) {
+  //   _iterVar = var;
+  // }
+
+  // CstArrIterator!RV iterVar() {
+  //   return _iterVar;
+  // }
+
+  // CstArrIterator!RV makeIterVar() {
+  //   if(_iterVar is null) {
+  //     _iterVar = new CstArrIterator!RV(_parent);
+  //   }
+  //   return _iterVar;
+  // }
+
+  override uint bitcount() {
+    return 32;
+    // if (_parent.maxArrLen == -1) {
+    //   return 32;
+    // }
+    // uint i = 1;
+    // for (size_t c=1; c < _parent.maxArrLen; c *= 2) {
+    //   i++;
+    // }
+    // return i;
+  }
+
+  override bool signed() {
+    return false;
+  }
+
+  uint _val;
+  
+  override long value() {
+    return _val;
+  }
+
+  override void setVal(ulong value) {
+    debug (CSTSOLVER) {
+      import std.stdio;
+      writeln("Setting value of ", fullName(), " to: ", value);
+    }
+    _val = cast(uint) value;
+    markSolved();
+  }
+
+  override void setVal(ulong[] v) {
+    debug (CSTSOLVER) {
+      import std.stdio;
+      writeln("Setting value of ", fullName(), " to: ", v[0]);
+    }
+    assert(v.length == 1);
+    _val = cast(uint) v[0];
+    markSolved();
+  }
+
+  // override void markSolved() {
+  //   super.markSolved();
+  //   // _parent.markArrLen(value());
+  // }
+
+  // override bool isResolved() {
+  //   if (_state == State.SOLVED) return true;
+  //   else return false;
+  // }
+
+  // override void collate(ulong v, int word = 0) {
+  //   assert(word == 0);
+  //   _parent.setLen(cast(size_t) v);
+  // }
+
+  CstVecTerm unroll(CstIterator iter, ulong n) {
+    return _parent.unroll(iter,n).arrLen();
+  }
+
+  override AV getResolvedNode() {
+    if (_parent.depsAreResolved()) return this;
+    else return _parent.getResolvedNode().arrHierLen;
+  }
+
+  override bool depsAreResolved() {
+    return _parent.depsAreResolved();
+  }
+
+  void solveBefore(CstVecPrim other) {
+    other.addPreRequisite(this);
+  }
+
+  void addPreRequisite(CstVecPrim domain) {
+    _preReqs ~= domain;
+  }
+
+  bool isConst() { return false; }
+  
+  bool isIterator() { return false; }
+  
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+    if (pred._scope is null || ! pred._scope.isRelated(this))
+      pred.addUnresolvedRnd(this, context);
+    else
+      pred.addVar(this, context);
+    static if (HAS_RAND_ATTRIB) {
+      if (! this.isStatic()) {
+	if (_type <= DomType.LAZYMONO) _type = DomType.MAYBEMONO;
+      }
+    }
+    _parent.setDomainContext(pred, context);
+  }
+
+  // override void execIterCbs() {
+  //   assert(_iterVar !is null);
+  //   _iterVar.unrollCbs();
+  //   // assert (_root !is null);
+  //   // _root.procUnrolledNewPredicates();
+  // }
+
+  override uint* getRef() {
+    assert(false);
+  }
+
+  override bool updateVal() {
+    return true;
+  }
+  
+  final override bool isStatic() {
+    return _parent.isStatic();
+  }
+
+  final override bool isRolled() {
+    return _parent.isRolled();
+  }
+
+  override CstDomSet getParentDomSet() {
+    static if (is (RV: CstDomSet)) return _parent;
+    else return null;
+  }
+
+  
+  final override bool isBool() {return false;}
+
+  final override bool getBool() {assert (false);}
+
+  final override void setBool(bool val) {assert (false);}
+
+  final override long evaluate() {
+    static if (HAS_RAND_ATTRIB) {
+      if (! this.isRand || this.isSolved()) {
+	return value();
+      }
+      else {
+	import std.conv: to;
+	assert (false, "Error evaluating " ~ _name ~
+		" State: " ~ _state.to!string());
+      }
+    }
+    else {
+      return value();
+    }
+  }
+
+  final void visit(CstDistSolverBase dist) { assert(false); }
+
+  override CstDomBase getDomain() { return this; }
+
+  // return false for array length since array lengths need to be solved
+  // before any constraint on domain sets can be considered
+  final override bool _esdl__parentIsConstrained() {
+    // static if (is (RV: CstVecNodeIntf)) {
+    //   return _parent._esdl__parentIsConstrained();
+    // }
+    // else {
+    return false;
+    // }
+  }
+
+  override final CstVecType getVecType() {
+    return CstVecType.ULONG;
+  }
+  
+}
+
+
+
 
 class CstLogicValue: CstValue, CstLogicTerm
 {

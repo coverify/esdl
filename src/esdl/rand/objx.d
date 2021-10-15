@@ -14,8 +14,7 @@ import esdl.rand.base: CstValue, CstVecTerm, CstIterator, DomType,
 import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.expr: CstRangeExpr;
-import esdl.rand.domain: CstArrIterator, CstArrLength;
-
+import esdl.rand.domain: CstArrIterator, CstArrLength, CstArrHierLength;
 import esdl.rand.meta: _esdl__ProxyResolve, _esdl__staticCast, _esdl__ARG;
 
 import std.algorithm.searching: canFind;
@@ -657,6 +656,7 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
   }
     
   CstArrLength!RV _arrLen;
+  CstArrHierLength!RV _arrHierLen;
 
   EV[] _elems;
   EV   _negIndexElem;
@@ -786,6 +786,10 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
     return _arrLen;
   }
 
+  CstArrHierLength!RV arrHierLen() {
+    return _arrHierLen;
+  }
+
   void markArrLen(size_t length) {
     buildElements(length);
     // import std.stdio;
@@ -793,7 +797,7 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
     static if (is (EV: CstObjectIntf)) {
       _esdl__domsetUnresolvedArrLen = 0;
       _esdl__domsetLeafElemsCount = cast(uint) length;
-      markResolved();
+      markHierResolved();
     }
     else {
       _esdl__domsetUnresolvedArrLen = cast(uint) length;
@@ -862,6 +866,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	_root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
 	_arrLen = new CstArrLength!RV(name ~ "->length", this);
+	_arrHierLen = new CstArrHierLength!RV (name ~ "->hierLength", this);
 	super(name);
       }
 
@@ -955,7 +960,8 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	return new EV(_name, this, cast(uint) i, isMapped);
       }
   
-      override void markResolved() {
+      override void markHierResolved() {
+	_arrHierLen.setVal(_esdl__domsetLeafElemsCount);
 	// top level array -- no need to do anything
 	// import std.stdio;
 	// stdout.writeln("Array elements count: ", _esdl__domsetLeafElemsCount);
@@ -970,7 +976,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	_esdl__domsetUnresolvedArrLen -= 1;
 	_esdl__domsetLeafElemsCount += n;
 	if (_esdl__domsetUnresolvedArrLen == 0) {
-	  markResolved();
+	  markHierResolved();
 	}
       }
     }
@@ -1002,6 +1008,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	_root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
 	_arrLen = new CstArrLength!RV(iname ~ "->length", this);
+	_arrHierLen = new CstArrHierLength!RV (name ~ "->hierLength", this);
 	super(iname);
       }
 
@@ -1019,6 +1026,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	_root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
 	_arrLen = new CstArrLength!RV(iname ~ "->length", this);
+	_arrHierLen = new CstArrHierLength!RV (name ~ "->hierLength", this);
 	super(iname);
       }
 
@@ -1143,7 +1151,8 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	return new EV(_name, this, cast(uint) i, isMapped);
       }
   
-      override void markResolved() {
+      override void markHierResolved() {
+	_arrHierLen.setVal(_esdl__domsetLeafElemsCount);
 	if (_indexExpr is null) {
 	  _parent.markChildResolved(_esdl__domsetLeafElemsCount);
 	}
@@ -1155,7 +1164,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	_esdl__domsetUnresolvedArrLen -= 1;
 	_esdl__domsetLeafElemsCount += n;
 	if (_esdl__domsetUnresolvedArrLen == 0) {
-	  markResolved();
+	  markHierResolved();
 	}
       }
     }

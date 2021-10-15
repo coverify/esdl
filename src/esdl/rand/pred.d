@@ -696,6 +696,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     _state = State.INIT;
     _guardState = GuardState.UNRESOLVED;
     _depCbs.reset();
+    _resolvedDepsCount = 0;
   }
 
   Folder!(CstPredicate, "uwPreds") _uwPreds;
@@ -860,16 +861,14 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   uint _resolvedDepsCount = 0;
   
   final bool predDepsAreResolved(bool init_=false) {
-    if (_markResolve || init_) {
-      if (init_) _resolvedDepsCount = 0;
+    // if (_markResolve || init_) {
+    if (_resolvedDepsCount == _deps.length) {
       _markResolve = false;
       bool resolved = true;
       foreach (dep; _deps) {
 	if (! dep.isResolved()) {
 	  resolved = false;
-	}
-	else {
-	  if (init_) _resolvedDepsCount += 1;
+	  break;
 	}
       }
       // All _idxs are rolled into _deps
@@ -884,7 +883,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       if (resolved) {
 	import std.conv: to;
 
-	assert (_resolvedDepsCount == _deps.length,
+	assert (_resolvedDepsCount == _deps.length, "Predicate: " ~ fullName() ~ " -- " ~
 		_resolvedDepsCount.to!string ~ " != " ~ _deps.length.to!string() ~
 		" _markResolve: " ~ _markResolve.to!string() ~ " init_: " ~ init_.to!string());
       }
@@ -1325,8 +1324,16 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
 
   void tryResolveDeps(_esdl__Proxy proxy) {
+    // import std.stdio;
+    // writeln("pred: ", fullName());
     foreach (dep; _deps) {
-      if (! dep.tryResolve(proxy)) {
+      // writeln("dep: ", dep.fullName());
+      if (dep.tryResolve(proxy)) {
+	// writeln("resolved: ", dep.fullName());
+	_resolvedDepsCount += 1;
+      }
+      else {
+	// writeln("cb: ", dep.fullName());
 	dep.registerDepPred(this);
       }
     }

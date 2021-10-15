@@ -466,7 +466,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     return _state == State.SOLVED;
   }
   
-  override final bool isResolved() {
+  final override bool isResolved() {
     return isSolved();
   }
 
@@ -760,7 +760,7 @@ abstract class CstObjSet: CstObjArrVoid, CstObjArrIntf
     return _esdl__domsetUnresolvedArrLen == 0;
   }
 
-  abstract void markResolved();
+  abstract void markHierResolved();
   
 }
 
@@ -896,12 +896,20 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     return _esdl__domsetUnsolvedLeafCount == 0;
   }
 
-  abstract void markResolved();
+  abstract void markHierResolved();
 
   void markSolved() {
-    // import std.stdio;
-    // writeln("markSolved: ", fullName());
+    if (_state == State.SOLVED) return;
+    if (_root._esdl__debugSolver) {
+      import std.stdio;
+      writeln("Marking ", this.name(), " as SOLVED");
+    }
     _resolvedDomainPreds.reset();
+    assert (_state != State.SOLVED, this.name() ~
+	    " already marked as solved");
+    _state = State.SOLVED;
+    _root.addSolvedDomainArr(this);
+    this.execCbs();
   }
   
   bool hasChanged() {

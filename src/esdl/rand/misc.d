@@ -568,10 +568,10 @@ template getRandAttr(T, int I) {
 }
 
 template scanRandAttr(A...) {
-  static if(A.length == 0) {
+  static if (A.length == 0) {
     enum rand scanRandAttr = rand(true, true);
   }
-  else static if(__traits(isSame, A[0], rand)) {
+  else static if (__traits(isSame, A[0], rand)) {
     enum rand scanRandAttr = rand(false, false);
   }
   else static if (__traits(compiles, typeof(A[0])) &&

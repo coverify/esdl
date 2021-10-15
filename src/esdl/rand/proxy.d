@@ -568,6 +568,11 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _solvedDomains ~= domain;
   }
 
+  void addSolvedDomainArr(CstDomSet domain) {
+    _solvedDomainArrs ~= domain;
+  }
+
+
   // the integer variable _lap is incremented everytime a set of @rand
   // variables is made available for constraint solving. This 
   // variable is used for:

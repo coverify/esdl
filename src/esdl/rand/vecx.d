@@ -13,7 +13,7 @@ import esdl.rand.base: CstVecPrim, CstVecTerm, CstIterator, DomType, CstDomBase,
 import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.expr: CstRangeExpr, CstVec2LogicExpr;
-import esdl.rand.domain: CstVecValue, CstArrIterator, CstArrLength, CstDomain;
+import esdl.rand.domain: CstArrIterator, CstArrLength, CstArrHierLength, CstDomain;
 import esdl.rand.meta: _esdl__ProxyResolve, _esdl__staticCast, _esdl__ARG;
 
 import esdl.base.rand: _esdl__RandGen;
@@ -601,7 +601,8 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
     super(name);
   }
 
-  CstArrLength!(RV) _arrLen;
+  CstArrLength!RV _arrLen;
+  CstArrHierLength!RV _arrHierLen;
 
   EV[] _elems;
   EV   _negIndexElem;
@@ -726,12 +727,16 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
     }
   }
 
-  CstArrLength!(RV) length() {
+  CstArrLength!RV length() {
     return _arrLen;
   }
 
-  CstArrLength!(RV) arrLen() {
+  CstArrLength!RV arrLen() {
     return _arrLen;
+  }
+
+  CstArrHierLength!RV arrHierLen() {
+    return _arrHierLen;
   }
 
   void markArrLen(size_t length) {
@@ -742,17 +747,14 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
     static if (is (EV: CstDomBase)) {
       _esdl__domsetUnresolvedArrLen = 0;
       _esdl__domsetLeafElemsCount = cast(uint) length;
-      markResolved();
-      execCbs();
+      markHierResolved();
     }
     else {
       _esdl__domsetUnresolvedArrLen = cast(uint) length;
       _esdl__domsetLeafElemsCount = 0;
     }
     _esdl__domsetUnsolvedLeafCount = cast(uint) length;
-    if (length == 0) {
-      markSolved();
-    }
+    if (length == 0) markSolved();
   }
 
   EV _esdl__elems() {
@@ -762,7 +764,7 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
   final bool _esdl__isVecArray() {return true;}
 
   final CstIterator _esdl__iter() {
-    CstArrIterator!(RV) iter = arrLen.makeIterVar();
+    CstArrIterator!RV iter = arrLen.makeIterVar();
     return iter;
   }
 
@@ -799,7 +801,7 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
     }
 
     // Unless the array gets resolved, we can not solve the elements
-    pred.addDep(this, context);
+    pred.addDep(_arrHierLen, context);
     pred.addDep(_arrLen, context);
   }
 
@@ -894,7 +896,8 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	_parent = parent;
 	_root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
-	_arrLen = new CstArrLength!(RV) (name ~ "->length", this);
+	_arrLen = new CstArrLength!RV (name ~ "->length", this);
+	_arrHierLen = new CstArrHierLength!RV (name ~ "->hierLength", this);
       }
 
       final override bool _esdl__parentIsConstrained() {
@@ -992,7 +995,8 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	// // _parent.markChildSolved();
       }
 
-      override void markResolved() {
+      override void markHierResolved() {
+	_arrHierLen.setVal(_esdl__domsetLeafElemsCount);
 	// top level array -- no need to do anything
 	// import std.stdio;
 	// stdout.writeln("Array elements count: ", _esdl__domsetLeafElemsCount);
@@ -1007,8 +1011,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	_esdl__domsetUnresolvedArrLen -= 1;
 	_esdl__domsetLeafElemsCount += n;
 	if (_esdl__domsetUnresolvedArrLen == 0) {
-	  markResolved();
-	  execCbs();
+	  markHierResolved();
 	}
       }
 
@@ -1062,7 +1065,8 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	_indexExpr = indexExpr;
 	_root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
-	_arrLen = new CstArrLength!(RV) (iname ~ "->length", this);
+	_arrLen = new CstArrLength!RV (iname ~ "->length", this);
+	_arrHierLen = new CstArrHierLength!RV (name ~ "->hierLength", this);
       }
 
       this(string name, P parent, ulong index, bool isMapped) {
@@ -1077,7 +1081,8 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	_pindex = index;
 	_root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
-	_arrLen = new CstArrLength!(RV) (iname ~ "->length", this);
+	_arrLen = new CstArrLength!RV (iname ~ "->length", this);
+	_arrHierLen = new CstArrHierLength!RV (name ~ "->hierLength", this);
       }
 
       final override bool _esdl__parentIsConstrained() {
@@ -1222,7 +1227,8 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	return new EV(name(), this, index, isMapped);
       }
 
-      override void markResolved() {
+      override void markHierResolved() {
+	_arrHierLen.setVal(_esdl__domsetLeafElemsCount);
 	if (_indexExpr is null) {
 	  _parent.markChildResolved(_esdl__domsetLeafElemsCount);
 	}
@@ -1240,8 +1246,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	_esdl__domsetUnresolvedArrLen -= 1;
 	_esdl__domsetLeafElemsCount += n;
 	if (_esdl__domsetUnresolvedArrLen == 0) {
-	  markResolved();
-	  execCbs();
+	  markHierResolved();
 	}
       }
 
