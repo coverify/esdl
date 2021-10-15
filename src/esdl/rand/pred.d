@@ -146,9 +146,7 @@ class CstPredHandler			// handler of related predicates
   void initialize(_esdl__Proxy proxy) {
     _proxy = proxy;
     _preds.reset();
-    _guards.reset();
     _predList.reset();
-    _guardList.reset();
     _doms.reset();
     _domArrs.reset();
     _vars.reset();
@@ -165,12 +163,10 @@ class CstPredHandler			// handler of related predicates
   }
   
   Folder!(CstPredicate, "preds") _preds;
-  Folder!(CstPredicate, "guards") _guards;
 
   CstPredicate _distPred;
 
   Folder!(CstPredicate, "predList") _predList;
-  Folder!(CstPredicate, "guardList") _guardList;
 
   CstPredicate[] predicates() {
     return _preds[];
@@ -197,10 +193,6 @@ class CstPredHandler			// handler of related predicates
     // import std.stdio;
     // writeln(pred.describe());
     _predList ~= pred;
-  }
-
-  void addGuard(CstPredicate pred) {
-    _guardList ~= pred;
   }
 
   Folder!(CstDomBase, "doms") _doms;
@@ -266,29 +258,9 @@ class CstPredHandler			// handler of related predicates
       if (pred._uniqueFlag is true) _hasUniqueConstraints = true;
       _preds ~= pred;
     }
-    // foreach (pred; _guards) pred._handler = null;
-    _guards.reset();
-    foreach (pred; sort!((x, y) => x.hashValue() < y.hashValue())(_guardList[])) {
-      // pred._handler = this;
-      _guards ~= pred;
-    }
-    // if (_distPred !is null) _distPred._handler = this;
-    
+
     // for the next cycle
     _predList.reset();
-    _guardList.reset();
-    
-  }
-
-  void setAnnotation() {
-    foreach (i, dom; _doms) {
-      assert (dom !is null);
-      dom.setAnnotation(cast(uint) i);
-    }
-    foreach (i, dom; _vars) {
-      assert (dom !is null);
-      dom.setAnnotation(cast(uint) i);
-    }
   }
 
   void annotate() {
@@ -299,13 +271,14 @@ class CstPredHandler			// handler of related predicates
     foreach (pred; _preds) pred.annotate(this);
   }
 
-  static Charbuf _sig;
+  Charbuf _sig;
   
   string signature() {
     _sig.reset();
     _sig ~= "HANDLER:\n";
     foreach (pred; _preds) {
-      if (! hasDistConstraints || pred.isGuardEnabled())
+      assert (! pred.isBlocked());
+      if (! hasDistConstraints)
 	pred.writeSignature(_sig);
     }
     return _sig.toString();
@@ -326,7 +299,8 @@ class CstPredHandler			// handler of related predicates
     }
     _hash = Hash(cast(uint) _preds.length);
     foreach (pred; _preds){
-      if (! hasDistConstraints || pred.isGuardEnabled())
+      assert (! pred.isBlocked());
+      if (! hasDistConstraints)
 	pred.calcHash(_hash);
     }
     return _hash.hash;
@@ -501,15 +475,6 @@ class CstPredHandler			// handler of related predicates
     }
 
 
-    foreach (guard; _guards) {
-      if (! guard.tryResolve(_proxy)) {
-	assert (false, "Unresolved Guard: " ~ guard.name());
-      }
-      // else {
-      // 	import std.stdio;
-      // 	writeln("Resolved Guard: ", guard.name());
-      // }
-    }
     this.markSolved();
 
     foreach (dom; _doms) dom.setAnnotation(uint.max);
@@ -530,12 +495,6 @@ class CstPredHandler			// handler of related predicates
     if (_distPred !is null) {
       description ~= "  Dist Predicate:\n";
       description ~= "    " ~ _distPred.name() ~ '\n';
-    }
-    if (_guards.length > 0) {
-      description ~= "  Guards:\n";
-      foreach (pred; _guards) {
-	description ~= "    " ~ pred.name() ~ '\n';
-      }
     }
     if (_hasSoftConstraints) {
       description ~= "  Has Soft Constraints: True\n";
@@ -1498,8 +1457,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
 
-   void setBatchContext(CstPredHandler handler, uint level) {
-    
+  void setBatchContext(CstPredHandler handler, uint level) {
+    if (this.isBlocked()) return;
     
     assert(getOrderLevel() == level - 1, "unexpected error in solving before constraints");
       
@@ -1528,11 +1487,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   void sendPredToHandler(CstPredHandler handler){
     _state = State.GROUPED;
     
-    // if (_handler !is handler) {
-    //   assert(_handler is null,
-    // 	     "A predicate may be added to a handler, but handler should not change");
-    // }
-    
     if (this.isDist()) {
       assert (handler.hasDistConstraints());
       if (this.isGuardEnabled()) {
@@ -1546,83 +1500,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   	handler.addPredicate(this);
       }
     }
-    else if (this.isGuard()) {
-      handler.addGuard(this);
-    }
     else {
+      assert (! this.isGuard());
       handler.addPredicate(this);
     }
     
   }
-  // void setBatchContext(CstPredHandler handler) {
-  //   // import std.stdio;
-  //   // writeln("setBatchContext: ", this.describe());
-  //   foreach (dom; _unresolvedRnds) {
-  //     if (! dom.inRange()) {
-  // 	// import std.stdio;
-  // 	// writeln(this.describe());
-  // 	// writeln(_guard.describe());
-  // 	if (_guard is null || _guard._expr.eval()) {
-  // 	  assert (false, "Predicate " ~ name() ~ " has out of bound domain: " ~ dom.name());
-  // 	}
-  // 	return;
-  //     }
-  //   }
-
-  //   foreach (dom; _unresolvedVars) {
-  //     if (! dom.inRange()) {
-  // 	// import std.stdio;
-  // 	// writeln(this.describe());
-  // 	// writeln(_guard.describe());
-  // 	if (_guard is null || _guard._expr.eval()) {
-  // 	  assert (false, "Predicate " ~ name() ~ " has out of bound domain: " ~ dom.name());
-  // 	}
-  // 	return;
-  //     }
-  //   }
-
-  //   _state = State.GROUPED;
-  //   if (_handler !is handler) {
-  //     assert(_handler is null,
-  // 	     "A predicate may be added to a handler, but handler should not change");
-  //   }
-  //   if (this.isDist()) {
-  //     assert (handler.hasDistConstraints());
-  //     if (this.isGuardEnabled()) {
-  // 	if (handler._distPred !is null) {
-  // 	  assert (false,
-  // 		  "It is illegal to have more than one dist predicate active on the same domain");
-  // 	}
-  // 	handler._distPred = this;
-  //     }
-  //     else {
-  // 	handler.addPredicate(this);
-  //     }
-  //   }
-  //   else if (this.isGuard()) {
-  //     handler.addGuard(this);
-  //   }
-  //   else {
-  //     handler.addPredicate(this);
-  //   }
-  //   foreach (dom; _unresolvedRnds) {
-  //     // import std.stdio;
-  //     // writeln("setBatchContext: ", dom.name());
-  //     // if (dom.handler is null && (! dom.isSolved())) {
-  //     if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
-  // 	dom.setBatchContext(handler);
-  //     }
-  //   }
-  //   foreach (arr; _unresolvedRndArrs) {
-  //     // import std.stdio;
-  //     // writeln("setBatchContext: ", arr.name());
-  //     // if (arr.handler is null && (! arr.isSolved())) {
-  //     if (arr._state is CstDomSet.State.INIT // && (! arr.isSolved())
-  // 	  ) {
-  // 	arr.setBatchContext(handler);
-  //     }
-  //   }
-  // }
 
   void annotate(CstPredHandler handler, bool recurse=false) {
     // import std.stdio;
