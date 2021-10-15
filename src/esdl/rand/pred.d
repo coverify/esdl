@@ -775,7 +775,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     if (_iters.length == 0) {
       _resolvedDepsCount += 1;
       _markResolve = true;
-      return;
+      if (this.isGuard() && this.checkResolved())
+	this.procResolvedGuard();
     }
   }
 
@@ -860,7 +861,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   uint _resolvedDepsCount = 0;
   
-  final bool predDepsAreResolved(bool init_=false) {
+  final bool checkResolved(bool init_=false) {
     // if (_markResolve || init_) {
     if (_resolvedDepsCount == _deps.length) {
       _markResolve = false;
@@ -871,21 +872,13 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	  break;
 	}
       }
-      // All _idxs are rolled into _deps
-      // foreach (idx; _idxs) {
-      // 	if (! idx.isSolved()) {
-      // 	  return false;
-      // 	}
-      // }
-      // if (this.isGuard()) {
-      // 	tryResolve(_proxy);
-      // }
       if (resolved) {
 	import std.conv: to;
-
 	assert (_resolvedDepsCount == _deps.length, "Predicate: " ~ fullName() ~ " -- " ~
 		_resolvedDepsCount.to!string ~ " != " ~ _deps.length.to!string() ~
 		" _markResolve: " ~ _markResolve.to!string() ~ " init_: " ~ init_.to!string());
+	if (isGuard()) procResolvedGuard();
+	else processResolved();
       }
       return resolved;
     }
@@ -1323,7 +1316,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return _expr;
   }
 
-  void tryResolveDeps(_esdl__Proxy proxy) {
+  bool tryResolveDeps(_esdl__Proxy proxy) {
+    bool resolved = true;
     // import std.stdio;
     // writeln("pred: ", fullName());
     foreach (dep; _deps) {
@@ -1335,9 +1329,10 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       else {
 	// writeln("cb: ", dep.fullName());
 	dep.registerDepPred(this);
+	resolved = false;
       }
     }
-    // foreach (dep; _idxs) dep.tryResolve(proxy);
+    return resolved;
   }
 
   bool _exprVal;
@@ -1713,7 +1708,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     import std.conv: to;
     // import std.stdio;
     // writeln("marking predicate solved: ", describe());
-    assert (this.isGuard() || this.isVisitor() || _state == State.GROUPED,
+    assert (this.isGuard() || this.isVisitor() ||
+	    _state == State.GROUPED || _state == State.BLOCKED,
 	    "State is: " ~ _state.to!string());
     _state = State.SOLVED;
 

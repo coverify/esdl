@@ -406,6 +406,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   Folder!(CstPredicate, "unresolvedPreds") _unresolvedPreds;
   Folder!(CstPredicate, "toUnresolvedPreds") _toUnresolvedPreds;
 
+  Folder!(CstPredicate, "predGuards") _predGuards;
+
   // Folder!(CstPredicate, "resolvedDistPreds") _resolvedDistPreds;
   Folder!(CstPredicate, "resolvedMonoPreds") _resolvedMonoPreds;
 
@@ -725,6 +727,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     // reset all bins
     _newPreds.reset();
     _toNewPreds.reset();
+    _predGuards.reset();
     // _unrolledPreds.reset();
     // _toUnrolledPreds.reset();
     _rolledPreds.reset();
@@ -857,9 +860,9 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       }
 
       foreach (pred; _unresolvedPreds) {
-	if (pred.predDepsAreResolved()) {
-	  procResolved(pred);
+	if (pred.checkResolved()) {
 	  _solvedSome = true;
+	  _toResolvedPreds ~= pred;
 	}
 	else {
 	  _toUnresolvedPreds ~= pred;
@@ -1008,28 +1011,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   //   return distDom;
   // }
 
-  void procResolved(CstPredicate pred) {
-    // assert (pred._unresolvedRnds.length > 0 || pred._unresolvedRndArrs.length > 0 || pred.isGuard(),
-    // 	    pred.describe());
-    // if (pred.isDist()) {
-    //   _resolvedDistPreds ~= pred;
-    // }
-    // // else if (pred._unresolvedRnds.length == 1 &&
-    // // 	     pred._unresolvedRndArrs.length == 0 &&
-    // // 	     pred._unresolvedRnds[0]._type <= DomType.LAZYMONO//  &&
-    // // 	     // pred._unresolvedRnds[0]._esdl__parentIsConstrained() is false
-    // // 	     ) {
-    // //   _resolvedMonoPreds ~= pred;
-    // //   // procMonoDomain(pred._unresolvedRnds[0], pred);
-    // // }
-    // else
-    if (pred.isGuard()) pred.procResolvedGuard();
-    else {
-      pred.processResolved();
-      _toResolvedPreds ~= pred;
-    }
-  }
-
   void addNewPredicate(CstPredicate pred) {
     // import std.stdio;
     // writeln("Adding: ", pred.describe());
@@ -1073,12 +1054,16 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   // }
 
   void procNewPredicate(CstPredicate pred) {
-    pred.tryResolveDeps(this);
+    bool resolved = pred.tryResolveDeps(this);
     if (pred._iters.length == 0) {
-      if (pred.predDepsAreResolved(true)) {
-	// import std.stdio;
-	// writeln("Predicate marked as resolved: ", pred.name());
-	procResolved(pred);
+      if (pred.isGuard()) {
+	if (resolved) pred.procResolvedGuard();
+	else _predGuards ~= pred;
+      }
+      // else if (pred.checkResolved(true)) _toResolvedPreds ~= pred;
+      else if (resolved) {
+	pred.processResolved();
+	_toResolvedPreds ~= pred;
       }
       else {
 	_toUnresolvedPreds ~= pred;
