@@ -564,18 +564,43 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return false;
   }
 
-  void visit(CstSolver solver, bool inv=false) {
+  bool visit(CstSolver solver, bool inv=false) {
+    // import std.stdio;
+    // writeln ("Visiting: ", fullName());
+    assert (_state !is State.BLOCKED);
     if (_guard is null) {
-      _expr.visit(solver);
-      if (inv) solver.processEvalStack(CstLogicOp.LOGICNOT);
+      if (this.isGuard() && _state == State.SOLVED) {
+	assert (inv ^ _exprVal, this.fullName());
+	return false;
+	// import std.stdio;
+	// writeln (_exprVal, ": ", inv);
+      }
+      else {
+	_expr.visit(solver);
+	if (inv) solver.processEvalStack(CstLogicOp.LOGICNOT);
+	return true;
+      }
     }
     else {
       assert (this.isGuard() || inv is false);
-      _guard.visit(solver, _guardInv);
-      _expr.visit(solver);
-      if (inv) solver.processEvalStack(CstLogicOp.LOGICNOT);
-      if (this.isGuard()) solver.processEvalStack(CstLogicOp.LOGICAND);
-      else                solver.processEvalStack(CstLogicOp.LOGICIMP);
+      bool implication = _guard.visit(solver, _guardInv);
+      if (this.isGuard()) {
+	if (_state == State.SOLVED) {
+	  assert (inv ^ _exprVal);
+	  return implication;
+	}
+	else {
+	  _expr.visit(solver);
+	  if (inv) solver.processEvalStack(CstLogicOp.LOGICNOT);
+	  solver.processEvalStack(CstLogicOp.LOGICAND);
+	  return true;
+	}
+      }
+      else {
+	_expr.visit(solver);
+	if (implication) solver.processEvalStack(CstLogicOp.LOGICIMP);
+	return true;
+      }
     }
   }
   // alias _expr this;
@@ -626,9 +651,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   bool _guardInv;
   bool guardInv() { return _guardInv; }
 
-  enum GuardState: ubyte {UNRESOLVED, ENABLED, DISABLED}
-  GuardState _guardState;
-
   
   // List of dependent predicates that this guard may block
   // This can be set once in the setDomainContext
@@ -641,8 +663,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   bool isGuardEnabled() {
     if (_guard is null) return true;
     else {
-      auto gv = _guard._expr.eval();
-      return gv ^ _guardInv;
+      assert (_guard._state == State.SOLVED);
+      return _guard._exprVal ^ _guardInv;
     }
   }
   
@@ -688,7 +710,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   void initialize() {
     _state = State.INIT;
-    _guardState = GuardState.UNRESOLVED;
     _depCbs.reset();
     _resolvedDepsCount = 0;
   }
@@ -775,6 +796,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
 
   void doUnroll() {
+    if (_state == State.BLOCKED) return;
     import std.conv: to;
     bool guardUnrolled = false;
     if (_unrollCycle == _proxy._cycle) { // already executed
@@ -1115,8 +1137,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   // }
 
   final bool isRolled() {
-    if (this._iters.length > 0 &&
-	_unrollCycle != _proxy._cycle) {
+    if (_unrollCycle != _proxy._cycle && _state != State.BLOCKED) {
+      assert (this._iters.length > 0 && _state == State.INIT);
       return true;
     }
     return false;
@@ -1344,6 +1366,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
   
   void block() {
+    // import std.stdio;
+    // writeln ("Blocking: ", fullName());
     this._state = State.BLOCKED;
     foreach (pred; _depPreds) pred.block();
   }
@@ -1577,9 +1601,14 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       str ~= ':';
     }
     if (_guard !is null) {
-      if (_guardInv) str ~= " ! ";
-      _guard.writeSignature(str, handler);
-      str ~= " >> ";
+      if (_guard._state is State.SOLVED) {
+	assert (_guard._exprVal ^ _guardInv);
+      }
+      else {
+	if (_guardInv) str ~= " ! ";
+	_guard.writeSignature(str, handler);
+	str ~= " >> ";
+      }
     }
     _expr.writeExprString(str, handler);
   }
