@@ -14,7 +14,7 @@ import esdl.rand.misc: rand, writeHexString, isVecSigned, CstVectorOp,
   CstInsideOp, CstCompareOp, CstLogicOp, DomainContextEnum, GetVecType,
   CstVecType;
 import esdl.rand.proxy: _esdl__Proxy;
-import esdl.rand.pred: CstPredicate, Hash;
+import esdl.rand.pred: CstPredicate, CstPredHandler, Hash;
 import esdl.rand.expr: CstNotLogicExpr, CstLogic2LogicExpr;
 
 import esdl.solver.base: CstSolver, CstDistSolverBase;
@@ -232,7 +232,8 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
     }
   }
 
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str, CstPredHandler handler) {
+    annotate(handler);
     if (this.isSolved()) {
       // import std.stdio;
       // writeln(fullName(), " has a value of: ", value());
@@ -596,7 +597,7 @@ class CstArrIterator(RV): CstIterator
   }
 
 
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str, CstPredHandler handler) {
     // assert(false);
   }
   void calcHash(ref Hash hash) { }
@@ -1211,7 +1212,7 @@ class CstLogicValue: CstValue, CstLogicTerm
     pred.addVal(this, context);
   }
 
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str, CstPredHandler handler) {
     // VSxxxxx or VUxxxxx
     str ~= 'V';
     _val.writeHexString(str);
@@ -1345,7 +1346,7 @@ class CstVecValue(T): CstVecValueBase
     pred.addVal(this, context);
   }
 
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str, CstPredHandler handler) {
     // VSxxxxx or VUxxxxx
     str ~= 'V';
     static if (isBoolean!T) {

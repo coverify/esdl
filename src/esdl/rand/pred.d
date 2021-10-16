@@ -24,17 +24,17 @@ import esdl.rand.domain: CstArrLength;
 
 struct Hash
 {
-  size_t hash;
+  ulong hash;
   
-  this (size_t h) nothrow {
+  this (ulong h) nothrow {
     hash = h;
   }
   
   enum uint m = 0x5bd1e995;
   enum uint r = 24;
 
-  void modify (size_t c){
-    size_t k = c * m;
+  void modify (ulong c){
+    ulong k = c * m;
     k ^= k >> r;
     hash = (hash * m) ^ (k * m);
   }
@@ -123,6 +123,9 @@ class CstPredHandler			// handler of related predicates
   bool _hasUniqueConstraints;
   bool _hasDistConstraints;
 
+  bool _isMono;
+  CstDomBase _monoDom;
+
   bool hasSoftConstraints() {
     return _hasSoftConstraints;
   }
@@ -160,6 +163,9 @@ class CstPredHandler			// handler of related predicates
     _distPred = null;
     _solver = null;
     _state = State.INIT;
+
+    _isMono = true;
+    _monoDom = null;
   }
   
   Folder!(CstPredicate, "preds") _preds;
@@ -257,6 +263,31 @@ class CstPredHandler			// handler of related predicates
       if (pred._vectorOp != CstVectorOp.NONE) _hasVectorConstraints = true;
       if (pred._uniqueFlag is true) _hasUniqueConstraints = true;
       _preds ~= pred;
+
+      if (_isMono) {
+	foreach (dom; pred._resolvedRnds) {
+	  if (dom.isSolved()) continue;
+	  if (_monoDom is null) _monoDom = dom;
+	  else if (_monoDom !is dom) {
+	    _isMono = false;
+	    break;
+	  }
+	}
+      }
+
+      if (_isMono) {
+	foreach (domArr; pred._resolvedRndArrs) {
+	  foreach (dom; domArr[]) {
+	    if (dom.isSolved()) continue;
+	    if (_monoDom is null) _monoDom = dom;
+	    else if (_monoDom !is dom) {
+	      _isMono = false;
+	      break;
+	    }
+	  }
+	}
+      }
+
     }
 
     // for the next cycle
@@ -279,7 +310,7 @@ class CstPredHandler			// handler of related predicates
     foreach (pred; _preds) {
       assert (! pred.isBlocked());
       if (! hasDistConstraints)
-	pred.writeSignature(_sig);
+	pred.writeSignature(_sig, this);
     }
     return _sig.toString();
   }
@@ -293,7 +324,7 @@ class CstPredHandler			// handler of related predicates
   
   Hash _hash;
   
-  size_t getHash(){
+  ulong getHash(){
     if (_hasHashBeenCalculated){
       return _hash.hash;
     }
@@ -344,16 +375,20 @@ class CstPredHandler			// handler of related predicates
     }
 
     if (_distPred is null || (! _distPred.distDomain().isRand())) {
-      annotate();
+      _doms.reset();
+      _vars.reset();
+
       // string sig1 = signature();
       bool monoFlag = false;
       if (!(_hasSoftConstraints || _hasVectorConstraints)) {
 	if (_preds.length == 1 && _preds[0].isVisitor()) {
 	  _preds[0]._state = CstPredicate.State.SOLVED;
-	  _proxy.addSolvedDomain(_preds[0]._dom);
+	  _proxy.addSolvedDomain(_preds[0]._domain);
 	  monoFlag = true;
 	}
-	else if (_doms.length == 1 && (! _doms[0].isBool())) {
+	// else if (_doms.length == 1 && (! _doms[0].isBool())) {
+	else if (_isMono && (! _monoDom.isBool())) {
+	  annotate();
 	  if (_doms[0].bitcount() < 32) {
 	    _solver = intMono;
 	  }
@@ -845,9 +880,9 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
 
   // Excl. Conds -- The special case of mono and dist preds
-  CstDomBase _dom;	    	// would be null if multiple domains
+  CstDomBase _domain;	    	// would be null if multiple domains
   CstDomBase getDom() {
-    return _dom;
+    return _domain;
   }
   
   Folder!(CstDomBase, "unresolvedRnds") _unresolvedRnds;
@@ -1143,7 +1178,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       
 
     if (pred is this && _unresolvedRnds.length == 1 && _unresolvedRndArrs.length == 0)
-      _dom = _unresolvedRnds[0];
+      _domain = _unresolvedRnds[0];
 
     // if (this is pred && this.isDist()) {
     //   assert (_unresolvedRnds.length == 1 && _unresolvedRndArrs.length == 0);
@@ -1153,10 +1188,10 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     if (_guard !is null) {
       if (pred is this) _guard.addDepPred(this);
       if (_distDomain !is null && pred is this) { // processing a dist predicate
-	assert (_dom !is null && _dom == _distDomain);
+	assert (_domain !is null && _domain == _distDomain);
 	pred._deps ~= _guard;
       }
-      else if (_dom !is null && _dom.isDist()) {
+      else if (_domain !is null && _domain.isDist()) {
 	pred._deps ~= _guard;
       }
       else {
@@ -1533,7 +1568,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
 
-  void writeSignature(ref Charbuf str) {
+  void writeSignature(ref Charbuf str, CstPredHandler handler) {
     import std.format: sformat;
     if (_soft != 0) {
       char[16] buff;
@@ -1543,10 +1578,10 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
     if (_guard !is null) {
       if (_guardInv) str ~= " ! ";
-      _guard.writeSignature(str);
+      _guard.writeSignature(str, handler);
       str ~= " >> ";
     }
-    _expr.writeExprString(str);
+    _expr.writeExprString(str, handler);
   }
 
   void calcHash(ref Hash hash){
@@ -1562,7 +1597,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
   
   Hash _hash;
-  size_t hashValue() {
+  ulong hashValue() {
     return _hash.hash;
   }
   void makeHash(){

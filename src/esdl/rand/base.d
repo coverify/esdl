@@ -564,8 +564,8 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     _domN = n;
   }
   
-  final void annotate(CstPredHandler handler) {
-    import std.conv: to;
+  final uint annotate(CstPredHandler handler) {
+    // import std.conv: to;
     // import std.stdio;
     // writeln("annotate: ", this.name());
     if (_domN == uint.max) {
@@ -573,6 +573,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
       if (this.isSolved()) setAnnotation(handler.addVariable(this));
       else setAnnotation(handler.addDomain(this));
     }
+    return _domN;
     // writeln("annotate: ", _varN.to!string());
     // writeln("annotate: ", _domN.to!string());
   }
@@ -937,10 +938,10 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
 
   abstract void setDomainArrContext(CstPredicate pred, DomainContextEnum context);
 
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref Charbuf str, CstPredHandler handler) {
     assert (isResolved());
     foreach (dom; this[]) {
-      dom.writeExprString(str);
+      dom.writeExprString(str, handler);
       str ~= ' ';
     }
   }
@@ -1145,7 +1146,7 @@ interface CstTerm
   void visit(CstSolver solver);
   void visit(CstDistSolverBase dist);
 
-  void writeExprString(ref Charbuf str);
+  void writeExprString(ref Charbuf str, CstPredHandler handler);
   void calcHash(ref Hash hash);
   void makeHash();
   size_t hashValue();
