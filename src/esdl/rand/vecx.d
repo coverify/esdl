@@ -385,7 +385,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	  }
 	  else {
 	    static if (isAssociativeArray!V) {
-	      _resolvedVec = _nodeIsMapped ? parent[_pindex] :
+	      _resolvedVec = _nodeIsMapped ? parent.getElem(_pindex) :
 		parent.getElem(_parent.mapIndex(_pindex));
 	    }
 	    else {
@@ -1150,7 +1150,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	  }
 	  else {
 	    static if (isAssociativeArray!P) {
-	      _resolvedVec = _nodeIsMapped ? parent[_pindex] :
+	      _resolvedVec = _nodeIsMapped ? parent.getElem(_pindex) :
 		parent.getElem(_parent.mapIndex(_pindex));
 	    }
 	    else {
@@ -1158,7 +1158,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 		_resolvedVec = parent.getElem(_parent.mapIndex(_pindex));
 	      }
 	      else {
-		_resolvedVec = parent[_pindex];
+		_resolvedVec = parent.getElem(_pindex);
 	      }
 	    }
 	  }
