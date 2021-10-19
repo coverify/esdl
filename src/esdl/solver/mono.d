@@ -948,7 +948,7 @@ class CstMonoSolver (S): CstSolver
   //   return false;
   // }
   override bool solve(CstPredHandler handler) {
-    CstDomBase [] doms = handler.domains();
+    CstDomBase [] doms = handler.annotatedDoms();
     assert (doms.length == 1);
 
     

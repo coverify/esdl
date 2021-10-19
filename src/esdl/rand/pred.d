@@ -155,6 +155,11 @@ class CstPredHandler			// handler of related predicates
     _vars.reset();
     _varArrs.reset();
 
+    _annotatedDoms.reset();
+    _annotatedDomArrs.reset();
+    _annotatedVars.reset();
+    _annotatedVarArrs.reset();
+
     _hasSoftConstraints = false;
     _hasVectorConstraints = false;
     _hasUniqueConstraints = false;
@@ -214,6 +219,19 @@ class CstPredHandler			// handler of related predicates
     return _doms[];
   }
   
+  Folder!(CstDomBase, "annotatedDoms") _annotatedDoms;
+  uint addAnnotatedDom(CstDomBase dom) {
+    // import std.stdio;
+    // writeln(annotatedDom.describe());
+    uint index = cast (uint) _annotatedDoms.length;
+    _annotatedDoms ~= dom;
+    return index;
+  }
+
+  CstDomBase[] annotatedDoms() {
+    return _annotatedDoms[];
+  }
+  
   Folder!(CstDomSet, "domArrs") _domArrs;
   void addDomainArr(CstDomSet domArr) {
     _domArrs ~= domArr;
@@ -221,6 +239,17 @@ class CstPredHandler			// handler of related predicates
 
   CstDomSet[] domainArrs() {
     return _domArrs[];
+  }
+  
+  Folder!(CstDomSet, "annotatedDomArrs") _annotatedDomArrs;
+  uint addAnnotatedDomArr(CstDomSet domArr) {
+    uint index = cast (uint) _annotatedDomArrs.length;
+    _annotatedDomArrs ~= domArr;
+    return index;
+  }
+
+  CstDomSet[] annotatedDomArrs() {
+    return _annotatedDomArrs[];
   }
   
   Folder!(CstDomBase, "vars") _vars;
@@ -234,9 +263,31 @@ class CstPredHandler			// handler of related predicates
     return _vars[];
   }
 
+  Folder!(CstDomBase, "annotatedVars") _annotatedVars;
+  uint addAnnotatedVar(CstDomBase var) {
+    uint index = cast (uint) _annotatedVars.length;
+    _annotatedVars ~= var;
+    return index;
+  }
+
+  CstDomBase[] annotatedVars() {
+    return _annotatedVars[];
+  }
+
   Folder!(CstDomSet, "varArrs") _varArrs;
   void addVariableArr(CstDomSet varArr) {
     _varArrs ~= varArr;
+  }
+
+  Folder!(CstDomSet, "annotatedVarArrs") _annotatedVarArrs;
+  uint addAnnotatedVarArr(CstDomSet varArr) {
+    uint index = cast (uint) _annotatedVarArrs.length;
+    _annotatedVarArrs ~= varArr;
+    return index;
+  }
+
+  CstDomSet[] annotatedVarArrs() {
+    return _annotatedVarArrs[];
   }
 
   void setBatchContext(CstPredicate solvablePred, uint level) {
@@ -294,12 +345,22 @@ class CstPredHandler			// handler of related predicates
     _predList.reset();
   }
 
-  void annotate() {
-    _doms.reset();
-    _vars.reset();
+  // void annotate() {
+  //   _annotatedDoms.reset();
+  //   _annotatedVars.reset();
 
-    if (_distPred !is null) _distPred.annotate(this);
-    foreach (pred; _preds) pred.annotate(this);
+  //   if (_distPred !is null) _distPred.annotate(this);
+  //   foreach (pred; _preds) pred.annotate(this);
+  // }
+
+  void annotate() {
+    foreach (pred; _preds) {
+      // import std.stdio;
+      // writeln("Annotating: ", pred.fullName());
+      assert (! pred.isBlocked());
+      if (! hasDistConstraints)
+	pred.annotate(this);
+    }
   }
 
   Charbuf _sig;
@@ -375,10 +436,7 @@ class CstPredHandler			// handler of related predicates
     }
 
     if (_distPred is null || (! _distPred.distDomain().isRand())) {
-      _doms.reset();
-      _vars.reset();
-
-      // string sig1 = signature();
+      annotate();
       bool monoFlag = false;
       if (!(_hasSoftConstraints || _hasVectorConstraints)) {
 	if (_preds.length == 1 && _preds[0].isVisitor()) {
@@ -386,25 +444,24 @@ class CstPredHandler			// handler of related predicates
 	  _proxy.addSolvedDomain(_preds[0]._domain);
 	  monoFlag = true;
 	}
-	// else if (_doms.length == 1 && (! _doms[0].isBool())) {
+	// else if (_annotatedDoms.length == 1 && (! _annotatedDoms[0].isBool())) {
 	else if (_isMono && (! _monoDom.isBool())) {
-	  annotate();
-	  if (_doms[0].bitcount() < 32) {
+	  if (_annotatedDoms[0].bitcount() < 32) {
 	    _solver = intMono;
 	  }
-	  else if (_doms[0].bitcount == 32) {
-	    if(_doms[0].signed()) {
+	  else if (_annotatedDoms[0].bitcount == 32) {
+	    if(_annotatedDoms[0].signed()) {
 	      _solver = intMono;
 	    }
 	    else{
 	      _solver = uintMono;
 	    }
 	  }
-	  else if (_doms[0].bitcount < 64) {
+	  else if (_annotatedDoms[0].bitcount < 64) {
 	    _solver = longMono;
 	  }
-	  else if (_doms[0].bitcount == 64) {
-	    if(_doms[0].signed()) {
+	  else if (_annotatedDoms[0].bitcount == 64) {
+	    if(_annotatedDoms[0].signed()) {
 	      _solver = longMono;
 	    }
 	    else {
@@ -412,12 +469,13 @@ class CstPredHandler			// handler of related predicates
 	    }
 	  }
 	  if ( _solver !is null ) {
+	    // import std.stdio;
 	    monoFlag = _solver.solve(this);
+	    // writeln("here mono. ", monoFlag);
 	  }
 	}
       }
       if (!monoFlag){
-      
 	string sig = signature();
 	// assert(sig1 == sig);
 
@@ -451,13 +509,13 @@ class CstPredHandler			// handler of related predicates
 	  else {
 	    uint totalBits;
 	    uint domBits;
-	    foreach (dom; _doms) {
+	    foreach (dom; _annotatedDoms) {
 	      // assert (! dom.isProperDist());
 	      uint domBC = dom.bitcount();
 	      totalBits += domBC;
 	      domBits += domBC;
 	    }
-	    foreach (var; _vars) totalBits += var.bitcount();
+	    foreach (var; _annotatedVars) totalBits += var.bitcount();
 	    if (totalBits > 32 || _hasUniqueConstraints) {
 	      if (_proxy._esdl__debugSolver()) {
 		import std.stdio;
@@ -512,8 +570,10 @@ class CstPredHandler			// handler of related predicates
 
     this.markSolved();
 
-    foreach (dom; _doms) dom.setAnnotation(uint.max);
-    foreach (dom; _vars) dom.setAnnotation(uint.max);
+    foreach (dom; _annotatedDoms) dom.setAnnotation(uint.max);
+    foreach (dom; _annotatedVars) dom.setAnnotation(uint.max);
+    foreach (dom; _annotatedDomArrs) dom.setAnnotation(uint.max);
+    foreach (dom; _annotatedVarArrs) dom.setAnnotation(uint.max);
     
   }
       
@@ -1566,11 +1626,11 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     
   }
 
-  void annotate(CstPredHandler handler, bool recurse=false) {
+  void doAnnotate(CstPredHandler handler, bool recurse=false) {
     // import std.stdio;
     // writeln("Annotating: ", this.describe());
     assert ((! this.isGuard()) || recurse);
-    if (_guard !is null) _guard.annotate(handler, true);
+    if (_guard !is null) _guard.doAnnotate(handler, true);
 
     foreach (rnd; this._resolvedRnds) {
       rnd.annotate(handler);
@@ -1592,6 +1652,18 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
 
+  void annotate(CstPredHandler handler) {
+    if (_guard !is null) {
+      if (_guard._state is State.SOLVED) {
+	assert (_guard._exprVal ^ _guardInv);
+      }
+      else {
+	_guard.annotate(handler);
+      }
+    }
+    _expr.annotate(handler);
+  }
+
   void writeSignature(ref Charbuf str, CstPredHandler handler) {
     import std.format: sformat;
     if (_soft != 0) {
@@ -1610,7 +1682,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	str ~= " >> ";
       }
     }
-    _expr.writeExprString(str, handler);
+    _expr.writeExprString(str);
   }
 
   void calcHash(ref Hash hash){

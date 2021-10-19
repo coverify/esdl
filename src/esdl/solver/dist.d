@@ -433,7 +433,3 @@ class CstLogicDistSolver(T): CstDistSolverBase
     return var;
   }
 }
-
-
-
-

@@ -1107,8 +1107,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	  handler.setBatchContext(pred, level);
 
 	  handler.solve();
-	  _solvedDomains ~= handler.domains();
-	  _solvedDomainArrs ~= handler.domainArrs();
+	  _solvedDomains ~= handler.annotatedDoms();
+	  _solvedDomainArrs ~= handler.annotatedDomArrs();
 	  handler.reset();
 	  // _solvedHandlers ~= handler;
 	  _solvedSome = true;
@@ -1166,8 +1166,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     }
     handler.setOrderAndBools();
     handler.solve();
-    _solvedDomains ~= handler.domains();
-    _solvedDomainArrs ~= handler.domainArrs();
+    _solvedDomains ~= handler.annotatedDoms();
+    _solvedDomainArrs ~= handler.annotatedDomArrs();
     handler.reset();
     // _solvedHandlers ~= handler;
   }

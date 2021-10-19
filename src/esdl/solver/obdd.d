@@ -21,6 +21,8 @@ import std.string: format;
 // import core.memory: GC;
 import core.stdc.string: memset;
 
+import esdl.data.bvec: ubvec;
+
 import core.memory: pureMalloc, pureRealloc, pureFree;
 alias malloc = pureMalloc;
 alias free = pureFree;
@@ -30,6 +32,8 @@ alias bdd = int;
 
 enum uint BddTrue = 1;		// kernel.c:66
 enum uint BddFalse = 0;		// kernel.c: 76
+
+enum uint MAXBDDLEVELS = 64;
 
 enum BddOp : ubyte {		// bdd.h:50
     AND = 0,
@@ -2098,6 +2102,13 @@ struct BDD
   {
     return makeBdd(buddy.bdd_randsatone(rand, dist, _index));
   }
+
+  int getRandSat(ref ubvec!MAXBDDLEVELS vec, double rand, double[uint] dist)
+  {
+    return buddy.bdd_getrandsat(vec, rand, dist, _index);
+  }
+
+
 
   BDD fullSatOne()
   {
@@ -5225,6 +5236,66 @@ class Buddy
 
   }
 
+  int bdd_getrandsat(ref ubvec!MAXBDDLEVELS vec, double rnd, double[uint] dist, int index)
+  {
+    CHECKa(index, BddFalse);
+    if (index == 0)
+      return false;
+
+    int res;
+
+    bdd_disable_reorder();
+
+    INITREF();
+    res = getrandsat_rec(vec, rnd, dist, index);
+
+    bdd_enable_reorder();
+
+    checkresize();
+    return res;
+  }
+
+  int getrandsat_rec(ref ubvec!MAXBDDLEVELS vec, double rnd, ref double[uint] dist, int r)
+  {
+    if(r < 2)
+      return r;
+
+    double limit = dist[r];
+    uint level = LEVEL(r);
+    assert (level < MAXBDDLEVELS);
+    
+    if (rnd < limit)
+      {
+	if (LOW(r) != 0)
+	  {
+	    // writeln("LL r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", level);
+	    vec[level] = false;
+	    int res = getrandsat_rec(vec, rnd/limit, dist, LOW(r));
+	    return res;
+	  }
+	else
+	  {
+	    writeln("-- r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", level);
+	    assert(false, "dist table gives wrong path");
+	  }
+      }
+    else
+      {
+	if (HIGH(r) != 0)
+	  {
+	    // writeln("HH r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", level);
+	    vec[level] = true;
+	    int res = getrandsat_rec(vec, (rnd - limit)/(1.0 - limit), dist, HIGH(r));
+	    return res;
+	  }
+	else
+	  {
+	    writeln("++ r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", level);
+	    assert(false, "dist table gives wrong path");
+	  }
+      }
+  }
+
   // 
   int bdd_randsatone(double rnd, ref double[uint] dist, int r)
   {
@@ -5259,13 +5330,13 @@ class Buddy
       {
 	if(LOW(r) != 0)
 	  {
-	    // writeln("LL r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd);
+	    // writeln("LL r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", LEVEL(r));
 	    int res = randsatone_rec(rnd/limit, dist, LOW(r));
 	    return PUSHREF(bdd_makenode(LEVEL(r), res, 0));
 	  }
 	else
 	  {
-	    writeln("-- r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd);
+	    writeln("-- r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", LEVEL(r));
 	    assert(false, "dist table gives wrong path");
 	  }
       }
@@ -5273,15 +5344,14 @@ class Buddy
       {
 	if(HIGH(r) != 0)
 	  {
-
-	    // writeln("HH r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd);
+	    // writeln("HH r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", LEVEL(r));
 	    int res = randsatone_rec((rnd - limit)/(1.0 - limit),
 				     dist, HIGH(r));
 	    return PUSHREF(bdd_makenode(LEVEL(r), 0, res));
 	  }
 	else
 	  {
-	    writeln("++ r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd);
+	    writeln("++ r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", LEVEL(r));
 	    assert(false, "dist table gives wrong path");
 	  }
       }

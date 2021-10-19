@@ -12,6 +12,8 @@ import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.misc;
 import esdl.solver.obdd;
 
+import esdl.data.bvec: ubvec;
+
 import std.algorithm.searching: canFind;
 
 private import std.typetuple: staticIndexOf, TypeTuple;
@@ -475,7 +477,7 @@ class CstBuddySolver: CstSolver
 
     _context = new BuddyContext(_esdl__buddy);
 
-    CstDomBase[] doms = handler.domains();
+    CstDomBase[] doms = handler.annotatedDoms();
 
     _domains.length = doms.length;
 
@@ -492,7 +494,7 @@ class CstBuddySolver: CstSolver
       }
     }
 
-    CstDomBase[] vars = handler.variables();
+    CstDomBase[] vars = handler.annotatedVars();
     _variables.length = vars.length;
 
     foreach (i, ref var; _variables) {
@@ -556,56 +558,65 @@ class CstBuddySolver: CstSolver
     _context.pop();
   }
 
-  ulong[] _solveValue;
-  
   override bool solve(CstPredHandler handler) {
     Buddy.enableBddGC();
     
-    CstDomBase[] doms = handler.domains();
+    CstDomBase[] doms = handler.annotatedDoms();
     updateVars(handler);
     _context.updateDist();
 
-    BDD solution = _context.getBDD().randSatOne(_proxy._esdl__rGen.get(),
-						_context._bddDist);
-    byte[][] solVecs = solution.toVector();
+    ubvec!MAXBDDLEVELS vec;
 
-    byte[] bits;
-    if (solVecs.length != 0) {
-      bits = solVecs[0];
-    }
+    vec = _proxy._esdl__rGen.gen!(ubvec!MAXBDDLEVELS);
+
+    uint sol = _context.getBDD().getRandSat(vec, _proxy._esdl__rGen.get(),
+					    _context._bddDist);
+    // import std.stdio;
+    // writeln (vec);
+
+    // BDD solution = _context.getBDD().randSatOne(_proxy._esdl__rGen.get(),
+    // 						_context._bddDist);
+    // byte[][] solVecs = solution.toVector();
+
+    // byte[] bits;
+    // if (solVecs.length != 0) {
+    //   bits = solVecs[0];
+    // }
     
     foreach (n, ref dom; doms) {
       auto bitindices = _context.getBDD().getIndices(cast(uint) n);
 
       if (dom.isBool()) {
-	int index = bitindices[0];
 	assert (bitindices.length == 1);
-	if (bits.length == 0 || bits[index] == -1) {
-	  dom.setBool(_proxy._esdl__rGen.flip());
-	}
-	else {
-	  dom.setBool(bits[index] == 1);
-	}
+	int index = bitindices[0];
+	dom.setBool(vec[index]);
+	// if (bits.length == 0 || bits[index] == -1) {
+	//   dom.setBool(_proxy._esdl__rGen.flip());
+	// }
+	// else {
+	//   dom.setBool(bits[index] == 1);
+	// }
       }
       else {
 	ulong v;
+	ulong[MAXBDDLEVELS/64] _solveValue;	// max bdd level MAXBDDLEVELS
+  
+
 	enum WORDSIZE = 8 * v.sizeof;
 
 	auto NUMWORDS = (bitindices.length+WORDSIZE-1)/WORDSIZE;
-
-	if (_solveValue.length < NUMWORDS) {
-	  _solveValue.length = NUMWORDS;
-	}
+	assert (NUMWORDS <= 2);
       
 	foreach (i, ref j; bitindices) {
 	  uint pos = (cast(uint) i) % WORDSIZE;
 	  uint word = (cast(uint) i) / WORDSIZE;
-	  if (bits.length == 0 || bits[j] == -1) {
-	    v = v + ((cast(size_t) _proxy._esdl__rGen.flip()) << pos);
-	  }
-	  else if (bits[j] == 1) {
-	    v = v + ((cast(ulong) 1) << pos);
-	  }
+	  v = v + ((vec[j] ? 1UL : 0UL) << pos);
+	  // if (bits.length == 0 || bits[j] == -1) {
+	  //   v = v + ((cast(size_t) _proxy._esdl__rGen.flip()) << pos);
+	  // }
+	  // else if (bits[j] == 1) {
+	  //   v = v + ((cast(ulong) 1) << pos);
+	  // }
 	  if (pos == WORDSIZE - 1 || i == bitindices.length - 1) {
 	    _solveValue[word] = v;
 	    v = 0;
@@ -622,7 +633,7 @@ class CstBuddySolver: CstSolver
   }
   
   void updateVars(CstPredHandler handler) {
-    CstDomBase[] vars = handler.variables();
+    CstDomBase[] vars = handler.annotatedVars();
     _refreshVar = false;
     uint pcount0 = _count0;
     uint pcount1 = _count1;

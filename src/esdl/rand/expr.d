@@ -142,13 +142,17 @@ class CstVecArrExpr: CstVecExpr
     return false;
   }
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
+  void annotate(CstPredHandler handler) {
+    _arr.annotate(handler);
+  }
+  
+  void writeExprString(ref Charbuf str) {
     import std.format: sformat;
     char[16] buff;
     str ~= '(';
     str ~= sformat(buff[], "%s", _op);
     str ~= ' ';
-    _arr.writeExprString(str, handler);
+    _arr.writeExprString(str);
     str ~= ')';
   }
   
@@ -284,15 +288,20 @@ class CstVec2VecExpr: CstVecExpr
     return _lhs.isSolved() && _rhs.isSolved();
   }
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
+  void annotate(CstPredHandler handler) {
+    _lhs.annotate(handler);
+    _rhs.annotate(handler);
+  }
+  
+  void writeExprString(ref Charbuf str) {
     import std.format: sformat;
     char[16] buff;
     str ~= '(';
     str ~= sformat(buff[], "%s", _op);
     str ~= ' ';
-    _lhs.writeExprString(str, handler);
+    _lhs.writeExprString(str);
     str ~= ' ';
-    _rhs.writeExprString(str, handler);
+    _rhs.writeExprString(str);
     str ~= ')';
   }
   
@@ -431,12 +440,19 @@ class CstRangeExpr
     return _lhs.isSolved() && (_rhs is null || _rhs.isSolved());
   }
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
-    _lhs.writeExprString(str, handler);
+  void annotate(CstPredHandler handler) {
+    _lhs.annotate(handler);
+    if (_rhs !is null) {
+      _rhs.annotate(handler);
+    }
+  }
+
+  void writeExprString(ref Charbuf str) {
+    _lhs.writeExprString(str);
     if (_rhs !is null) {
       if (_inclusive) str ~= " : ";
       else str ~= " .. ";
-      _rhs.writeExprString(str, handler);
+      _rhs.writeExprString(str);
     }
   }
   
@@ -522,12 +538,19 @@ class CstVecDistSetElem
     return _lhs.isSolved() && (_rhs is null || _rhs.isSolved());
   }
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
-    _lhs.writeExprString(str, handler);
+  void annotate(CstPredHandler handler) {
+    _lhs.annotate(handler);
+    if (_rhs !is null) {
+      _rhs.annotate(handler);
+    }
+  }
+  
+  void writeExprString(ref Charbuf str) {
+    _lhs.writeExprString(str);
     if (_rhs !is null) {
       if (_inclusive) str ~= " : ";
       else str ~= " .. ";
-      _rhs.writeExprString(str, handler);
+      _rhs.writeExprString(str);
     }
   }
   
@@ -644,14 +667,19 @@ class CstUniqueSetElem
     return false;
   }
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
+  void annotate(CstPredHandler handler) {
+    if (_arr !is null) _arr.annotate(handler);
+    else               _vec.annotate(handler);
+  }
+  
+  void writeExprString(ref Charbuf str) {
     if (_arr !is null) {
       str ~= "[ ";
-      _arr.writeExprString(str, handler);
+      _arr.writeExprString(str);
       str ~= " ]";
     }
     else {
-      _vec.writeExprString(str, handler);
+      _vec.writeExprString(str);
     }
   }
   
@@ -853,18 +881,26 @@ class CstInsideSetElem
     return false;
   }
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
+  void annotate(CstPredHandler handler) {
+    if (_arr !is null) _arr.annotate(handler);
+    else {
+      _lhs.annotate(handler);
+      if (_rhs !is null) _rhs.annotate(handler);
+    }
+  }
+  
+  void writeExprString(ref Charbuf str) {
     if (_arr !is null) {
       str ~= "[ ";
-      _arr.writeExprString(str, handler);
+      _arr.writeExprString(str);
       str ~= " ]";
     }
     else {
-      _lhs.writeExprString(str, handler);
+      _lhs.writeExprString(str);
       if (_rhs !is null) {
 	if (_inclusive) str ~= " : ";
 	else str ~= " .. ";
-	_rhs.writeExprString(str, handler);
+	_rhs.writeExprString(str);
       }
     }
   }
@@ -1059,9 +1095,13 @@ class CstLogicWeightedDistSetElem
     return _term.isSolved() && _weight.isSolved();
   }
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
+  void annotate(CstPredHandler handler) {
+    _term.annotate(handler);
+  }
+
+  void writeExprString(ref Charbuf str) {
     import std.conv: to;
-    _term.writeExprString(str, handler);
+    _term.writeExprString(str);
     if (_perItem) str ~= " := ";
     else str ~= " :/ ";
     str ~= _weight.evaluate().to!string;
@@ -1133,13 +1173,18 @@ class CstVecWeightedDistSetElem
     return _range.isSolved() && _weight.isSolved();
   }
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
+  void annotate(CstPredHandler handler) {
+    _range.annotate(handler);
+  }
+
+  void writeExprString(ref Charbuf str) {
     import std.conv: to;
-    _range.writeExprString(str, handler);
+    _range.writeExprString(str);
     if (_perItem) str ~= " := ";
     else str ~= " :/ ";
     str ~= _weight.evaluate().to!string;
   }
+
   void calcHash(ref Hash hash){
     _range.calcHash(hash);
     if (_perItem) hash.modify(64);
@@ -1244,11 +1289,16 @@ class CstLogicDistExpr(T): CstLogicExpr
     return _vec.isSolved();
   }
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
+  void annotate(CstPredHandler handler) {
+    _vec.annotate(handler);
+    foreach (dist; _dists) dist.annotate(handler);
+  }
+
+  void writeExprString(ref Charbuf str) {
     str ~= "DIST ";
-    _vec.writeExprString(str, handler);
+    _vec.writeExprString(str);
     foreach (dist; _dists) {
-      dist.writeExprString(str, handler);
+      dist.writeExprString(str);
     }
   }
   
@@ -1380,11 +1430,16 @@ class CstVecDistExpr(T): CstLogicExpr
     return _vec.isSolved();
   }
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
+  void annotate(CstPredHandler handler) {
+    _vec.annotate(handler);
+    foreach (dist; _dists) dist.annotate(handler);
+  }
+  
+  void writeExprString(ref Charbuf str) {
     str ~= "DIST ";
-    _vec.writeExprString(str, handler);
+    _vec.writeExprString(str);
     foreach (dist; _dists) {
-      dist.writeExprString(str, handler);
+      dist.writeExprString(str);
     }
   }
   
@@ -1490,13 +1545,13 @@ class CstVecDistExpr(T): CstLogicExpr
 //     else return _lhs.isSolved() && _rhs.isSolved() && _vec.isSolved();
 //   }
   
-//   override void writeExprString(ref Charbuf str, CstPredHandler handler) {
-//     _vec.writeExprString(str, handler);
+//   override void writeExprString(ref Charbuf str) {
+//     _vec.writeExprString(str);
 //     str ~= '[';
-//     _lhs.writeExprString(str, handler);
+//     _lhs.writeExprString(str);
 //     if (_rhs !is null) {
 //       str ~= "..";
-//       _rhs.writeExprString(str, handler);
+//       _rhs.writeExprString(str);
 //     }
 //     str ~= ']';
 //   }
@@ -1586,10 +1641,15 @@ class CstVecSliceExpr: CstVecExpr
     return _range.isSolved() && _vec.isSolved();
   }
   
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
-    _vec.writeExprString(str, handler);
+  void annotate(CstPredHandler handler) {
+    _vec.annotate(handler);
+    _range.annotate(handler);
+  }
+
+  void writeExprString(ref Charbuf str) {
+    _vec.writeExprString(str);
     str ~= '[';
-    _range.writeExprString(str, handler);
+    _range.writeExprString(str);
     str ~= ']';
   }
 
@@ -1671,10 +1731,10 @@ class CstVecSliceExpr: CstVecExpr
 //     return _index.isSolved() && _vec.isSolved();
 //   }
   
-//   override void writeExprString(ref Charbuf str, CstPredHandler handler) {
-//     _vec.writeExprString(str, handler);
+//   override void writeExprString(ref Charbuf str) {
+//     _vec.writeExprString(str);
 //     str ~= '[';
-//     _index.writeExprString(str, handler);
+//     _index.writeExprString(str);
 //     str ~= ']';
 //   }
 // }
@@ -1748,9 +1808,13 @@ class CstNotVecExpr: CstVecExpr
     return _expr.isSolved();
   }
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
+  void annotate(CstPredHandler handler) {
+    _expr.annotate(handler);
+  }
+  
+  void writeExprString(ref Charbuf str) {
     str ~= "(NOT ";
-    _expr.writeExprString(str, handler);
+    _expr.writeExprString(str);
     str ~= ')';
   }
   
@@ -1850,9 +1914,13 @@ class CstNegVecExpr: CstVecExpr
     return _expr.isSolved();
   }
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
+  void annotate(CstPredHandler handler) {
+    _expr.annotate(handler);
+  }
+  
+  void writeExprString(ref Charbuf str) {
     str ~= "(NEG ";
-    _expr.writeExprString(str, handler);
+    _expr.writeExprString(str);
     str ~= ')';
   }
   
@@ -1922,15 +1990,20 @@ class CstLogic2LogicExpr: CstLogicExpr
   
   bool isSolved() { return _lhs.isSolved && _rhs.isSolved(); }
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
+  void annotate(CstPredHandler handler) {
+    _lhs.annotate(handler);
+    _rhs.annotate(handler);
+  }
+
+  void writeExprString(ref Charbuf str) {
     import std.format: sformat;
     char[16] buff;
     str ~= '(';
     str ~= sformat(buff[], "%s", _op);
     str ~= ' ';
-    _lhs.writeExprString(str, handler);
+    _lhs.writeExprString(str);
     str ~= ' ';
-    _rhs.writeExprString(str, handler);
+    _rhs.writeExprString(str);
     str ~= ")\n";
   }
 
@@ -2133,13 +2206,18 @@ class CstInsideArrExpr: CstLogicExpr
   
   bool isSolved() { return false; }
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
+  void annotate(CstPredHandler handler) {
+    _term.annotate(handler);
+    foreach (elem; _elems) elem.annotate(handler);
+  }
+  
+  void writeExprString(ref Charbuf str) {
     if (_notinside) str ~= "(! INSIDE ";
     else            str ~= "(INSIDE ";
-    _term.writeExprString(str, handler);
+    _term.writeExprString(str);
     str ~= " [ ";
     foreach (elem; _elems) {
-      elem.writeExprString(str, handler);
+      elem.writeExprString(str);
       str ~= ' ';
     }
     str ~= "])\n";
@@ -2249,11 +2327,15 @@ class CstUniqueArrExpr: CstLogicExpr
   
   bool isSolved() { return false; }
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
+  void annotate(CstPredHandler handler) {
+    foreach (elem; _elems) elem.annotate(handler);
+  }
+  
+  void writeExprString(ref Charbuf str) {
     str ~= "(UNIQUE ";
     str ~= " [";
     foreach (elem; _elems)
-      elem.writeExprString(str, handler);
+      elem.writeExprString(str);
     str ~= "])\n";
   }
   
@@ -2349,7 +2431,11 @@ class CstIteLogicExpr: CstLogicExpr
 
   CstDistSolverBase getDist() { assert (false); }
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
+  void annotate(CstPredHandler handler) {
+    assert (false, "TBD");
+  }
+
+  void writeExprString(ref Charbuf str) {
     assert (false, "TBD");
   }
 
@@ -2481,15 +2567,20 @@ class CstVec2LogicExpr: CstLogicExpr
     return _lhs.isSolved && _rhs.isSolved();
   }
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
+  void annotate(CstPredHandler handler) {
+    _lhs.annotate(handler);
+    _rhs.annotate(handler);
+  }
+
+  void writeExprString(ref Charbuf str) {
     import std.format: sformat;
     char[16] buff;
     str ~= '(';
     str ~= sformat(buff[], "%s", _op);
     str ~= ' ';
-    _lhs.writeExprString(str, handler);
+    _lhs.writeExprString(str);
     str ~= ' ';
-    _rhs.writeExprString(str, handler);
+    _rhs.writeExprString(str);
     str ~= ")\n";
   }
 
@@ -2682,9 +2773,13 @@ class CstNotLogicExpr: CstLogicExpr
     return _expr.isSolved();
   }
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
+  void annotate(CstPredHandler handler) {
+    _expr.annotate(handler);
+  }
+
+  void writeExprString(ref Charbuf str) {
     str ~= "(NOT ";
-    _expr.writeExprString(str, handler);
+    _expr.writeExprString(str);
     str ~= ")\n";
   }
 
@@ -2759,7 +2854,9 @@ class CstVarVisitorExpr: CstLogicExpr
     return false;
   }
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
+  void annotate(CstPredHandler handler) { }
+
+  void writeExprString(ref Charbuf str) {
     str ~= this.describe(true);
   }
 

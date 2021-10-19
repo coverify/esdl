@@ -265,12 +265,17 @@ class CstZ3Solver: CstSolver
 
     setParam("auto_config", false);
     setParam("smt.phase_selection", 5);
+    // setParam("smt.auto_config", false);
+    // setParam("relevancy", 0);
     Config cfg = new Config();
+    // cfg.set("auto_config", false);
+    // cfg.set("smt.relevancy", 0);
+    // cfg.set("phase_selection", 5);
     _context = new Context(cfg);
 
     // _vector = BvExprVector(_context);
     
-    CstDomBase[] doms = handler.domains();
+    CstDomBase[] doms = handler.annotatedDoms();
     _domains.length = doms.length;
 
     foreach (i, ref dom; _domains) {
@@ -287,7 +292,7 @@ class CstZ3Solver: CstSolver
       }
     }
 
-    CstDomBase[] vars = handler.variables();
+    CstDomBase[] vars = handler.annotatedVars();
     _variables.length = vars.length;
 
     foreach (i, ref var; _variables) {
@@ -305,6 +310,9 @@ class CstZ3Solver: CstSolver
 	var = d;
       }
     }
+
+    // Tactic tactic = and(Tactic(_context, "simplify"), Tactic(_context, "smtfd"));
+    // Solver solver = tactic.mkSolver();
 
     Solver solver = Solver(_context);
     _solver = solver;
@@ -514,7 +522,7 @@ class CstZ3Solver: CstSolver
 	      " _pushOptimizeCount: " ~ _pushSolverCount.to!string());
     }
     
-    CstDomBase[] doms = handler.domains();
+    CstDomBase[] doms = handler.annotatedDoms();
 
     if (_proxy._esdl__debugSolver()) {
       import std.stdio;
@@ -560,7 +568,7 @@ class CstZ3Solver: CstSolver
   
   void updateVars(CstPredHandler handler) {
     
-    CstDomBase[] vars = handler.variables();
+    CstDomBase[] vars = handler.annotatedVars();
     _refreshVar = false;
     uint pcountStable = _countStable;
     uint pcountVariable = _countVariable;

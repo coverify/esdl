@@ -564,16 +564,20 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     _domN = n;
   }
   
-  final uint annotate(CstPredHandler handler) {
+  final void annotate(CstPredHandler handler) {
+    this.getResolvedNode().annotateResolved(handler);
+  }
+
+  final void annotateResolved(CstPredHandler handler) {
+    assert (this is this.getResolvedNode());
     // import std.conv: to;
     // import std.stdio;
     // writeln("annotate: ", this.name());
     if (_domN == uint.max) {
       if (_varN == uint.max) _varN = _root.indexVar();
-      if (this.isSolved()) setAnnotation(handler.addVariable(this));
-      else setAnnotation(handler.addDomain(this));
+      if (this.isSolved()) setAnnotation(handler.addAnnotatedVar(this));
+      else setAnnotation(handler.addAnnotatedDom(this));
     }
-    return _domN;
     // writeln("annotate: ", _varN.to!string());
     // writeln("annotate: ", _domN.to!string());
   }
@@ -938,10 +942,43 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
 
   abstract void setDomainArrContext(CstPredicate pred, DomainContextEnum context);
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler) {
+  uint         _domSetN = uint.max;
+  uint         _varSetN = uint.max;
+
+  uint annotation() {
+    return _domSetN;
+  }
+
+  void setAnnotation(uint n) {
+    // import std.stdio;
+    // writeln("Domain: ", name(), " setAnnotation: ", n);
+    _domSetN = n;
+  }
+  
+  final void annotate(CstPredHandler handler) {
+    assert (isResolved());
+    CstDomSet resolved = this.getResolvedNode();
+    if (resolved !is this) resolved.annotate(handler);
+    else {
+      foreach (dom; this[]) dom.annotate(handler);
+      // import std.conv: to;
+      // import std.stdio;
+      // writeln("annotate: ", this.name());
+      if (_domSetN == uint.max) {
+	if (_varSetN == uint.max) _varSetN = _root.indexVar();
+	if (this.isSolved()) setAnnotation(handler.addAnnotatedVarArr(this));
+	else setAnnotation(handler.addAnnotatedDomArr(this));
+      }
+      // writeln("annotate: ", _varSetN.to!string());
+      // writeln("annotate: ", _domSetN.to!string());
+    }
+  }
+
+  
+  void writeExprString(ref Charbuf str) {
     assert (isResolved());
     foreach (dom; this[]) {
-      dom.writeExprString(str, handler);
+      dom.writeExprString(str);
       str ~= ' ';
     }
   }
@@ -1146,7 +1183,8 @@ interface CstTerm
   void visit(CstSolver solver);
   void visit(CstDistSolverBase dist);
 
-  void writeExprString(ref Charbuf str, CstPredHandler handler);
+  void annotate(CstPredHandler handler);
+  void writeExprString(ref Charbuf str);
   void calcHash(ref Hash hash);
   void makeHash();
   size_t hashValue();
