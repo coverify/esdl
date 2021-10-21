@@ -21,20 +21,28 @@ alias realloc = pureRealloc;
 enum MINCAP = 4;
 
 struct Folder(T, string NAME="")
-     if (is (T == class) || is (T == interface) || isSomeChar!T || isBoolean!T || isIntegral!T)
+     if (is (T == class) || is (T == interface) || is (T ==  struct) ||
+	 isSomeChar!T || isBoolean!T || isIntegral!T)
 {
   // total capacity of memory allocate
   size_t _capacity;
   // current size
   size_t _size;
 
-  T *_load;
+  static if (is (T == struct)) {
+    T[] _load;
+  }
+  else {
+    T *_load;
+  }
 
   ~this() {
     static if (is (T == class) || is (T == interface)) {
       GC.removeRange(_load);
     }
-    free(_load);
+    static if (! is (T == struct)) {
+      free(_load);
+    }
   }
 
   @disable this(this);
@@ -50,42 +58,49 @@ struct Folder(T, string NAME="")
 
   // grow minimum to size
   void growCapacity(size_t cap) {
-    import core.checkedint : mulu;
-
-    // import std.stdio;
-    // if (cap > 1000) {
-    //   writeln("Folder ", NAME, ": ", cap);
-    // }
-
-    size_t newcap = cap;
-    if (newcap < MINCAP) newcap = MINCAP;
-    else if (newcap < _capacity * 2) newcap = _capacity * 2;
-    
-    bool overflow;
-    const nbytes = mulu(newcap, T.sizeof, overflow);
-    if (overflow) assert(0);
-
-    if (_capacity == 0) {
-      _load = cast(T*) malloc(nbytes);
-      memset(_load, 0, newcap * T.sizeof);
-      static if (is (T == class) || is (T == interface)) {
-	GC.addRange(_load, nbytes);
-      }
+    static if (is (T == struct)) {
+      _load.reserve(cap);
+      _load.length = cap;
+      _capacity = cap;
     }
     else {
-      auto newload = cast(T*) malloc(nbytes);
-      memcpy(newload, _load, _capacity * T.sizeof);
-      memset(newload + _capacity, 0,
-	     (newcap - _capacity) * T.sizeof);
-      static if (is (T == class) || is (T == interface)) {
-	GC.addRange(newload, nbytes);
-	GC.removeRange(_load);
-      }
-      free(_load);
-      _load = newload;
-    }
+      import core.checkedint : mulu;
+
+      // import std.stdio;
+      // if (cap > 1000) {
+      //   writeln("Folder ", NAME, ": ", cap);
+      // }
+
+      size_t newcap = cap;
+      if (newcap < MINCAP) newcap = MINCAP;
+      else if (newcap < _capacity * 2) newcap = _capacity * 2;
     
-    _capacity = newcap;
+      bool overflow;
+      const nbytes = mulu(newcap, T.sizeof, overflow);
+      if (overflow) assert(0);
+
+      if (_capacity == 0) {
+	_load = cast(T*) malloc(nbytes);
+	memset(_load, 0, newcap * T.sizeof);
+	static if (is (T == class) || is (T == interface)) {
+	  GC.addRange(_load, nbytes);
+	}
+      }
+      else {
+	auto newload = cast(T*) malloc(nbytes);
+	memcpy(newload, _load, _capacity * T.sizeof);
+	memset(newload + _capacity, 0,
+	       (newcap - _capacity) * T.sizeof);
+	static if (is (T == class) || is (T == interface)) {
+	  GC.addRange(newload, nbytes);
+	  GC.removeRange(_load);
+	}
+	free(_load);
+	_load = newload;
+      }
+    
+      _capacity = newcap;
+    }
   }
   
   void opOpAssign(string op)(T elem) if (op == "~") {
@@ -178,14 +193,18 @@ struct Folder(T, string NAME="")
     return 0;
   }
 
-  void clear() {
-    for (size_t i=0; i != _size; ++i) {
-      _load[i] = T.init;
-    }
+  void reset() {
     _size = 0;
   }
 
-  void reset() {
+  void clear() {
+    _size = 0;
+  }
+
+  void scrub() {		// scrub and make length zero
+    for (size_t i=0; i != _size; ++i) {
+      _load[i] = T.init;
+    }
     _size = 0;
   }
 
