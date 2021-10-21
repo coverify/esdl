@@ -23,9 +23,7 @@ extern (C) {
 
     :return: New Boolector instance.
   */
-   @weak Btor *boolector_new () {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak Btor *boolector_new ();
 
   /*!
     Clone an instance of Boolector.
@@ -44,9 +42,7 @@ extern (C) {
     that do not support cloning, Boolector can only be cloned prior to the
     first boolector_sat call.
   */
-   @weak Btor *boolector_clone (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak Btor *boolector_clone (Btor *btor);
 
   /*!
     Delete a boolector instance and free its resources.
@@ -59,9 +55,7 @@ extern (C) {
     counting. You can also set option ``auto_cleanup`` via
     boolector_set_opt in order to do the cleanup automatically.
   */
-   @weak void boolector_delete (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_delete (Btor *btor);
 
   /*!
     Set a termination callback.
@@ -73,9 +67,7 @@ extern (C) {
     .. seealso::
     boolector_terminate
   */
-   @weak void boolector_set_term (Btor *btor, int32_t function (void *), void *state) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_set_term (Btor *btor, int32_t function (void *), void *state);
 
   /*!
     Determine if a given Boolector instance has been terminated (and or
@@ -88,9 +80,7 @@ extern (C) {
     .. seealso::
     boolector_set_term
   */
-   @weak int32_t boolector_terminate (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak int32_t boolector_terminate (Btor *btor);
 
   /*!
     Set an abort callback that is called instead of exit on abort conditions.
@@ -105,9 +95,7 @@ extern (C) {
     :param fun: The abort callback function.
     :param msg: The abort error message.
   */
-   @weak void boolector_set_abort (void function (const char* msg)) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_set_abort (void function (const char* msg));
 
   /*!
     Set a verbosity message prefix.
@@ -115,9 +103,7 @@ extern (C) {
     :param btor: Boolector instance.
     :param prefix: Prefix string.
   */
-   @weak void boolector_set_msg_prefix (Btor *btor, const char *prefix) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_set_msg_prefix (Btor *btor, const char *prefix);
 
   /*!
     Get the number of external references to the boolector library.
@@ -129,36 +115,28 @@ extern (C) {
     :param btor: Boolector instance.
     :return: Number of external references owned by the user.
   */
-   @weak uint32_t boolector_get_refs (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak uint32_t boolector_get_refs (Btor *btor);
 
   /*!
     Reset time statistics.
 
     :param btor: Boolector instance.
   */
-   @weak void boolector_reset_time (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_reset_time (Btor *btor);
 
   /*!
     Reset statistics (time statistics not included).
 
     :param btor: Boolector instance.
   */
-   @weak void boolector_reset_stats (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_reset_stats (Btor *btor);
 
   /*!
     Print statistics.
 
     :param btor: Boolector instance.
   */
-   @weak void boolector_print_stats (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_print_stats (Btor *btor);
 
   /*!
     Set the output API trace file and enable API tracing.
@@ -170,9 +148,7 @@ extern (C) {
     The API trace output file can also be set via the environment variable
     BTORAPITRACE=<filename>.
   */
-   @weak void boolector_set_trapi (Btor *btor, FILE *apitrace) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_set_trapi (Btor *btor, FILE *apitrace);
 
   /*!
     Return API trace file.
@@ -180,9 +156,7 @@ extern (C) {
     :param btor: Boolector instance.
     :return: API trace output file.
   */
-   @weak FILE *boolector_get_trapi (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak FILE *boolector_get_trapi (Btor *btor);
 
   /*------------------------------------------------------------------------*/
 
@@ -200,9 +174,7 @@ extern (C) {
     .. seealso::
     boolector_assume
   */
-   @weak void boolector_push (Btor *btor, uint32_t level) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_push (Btor *btor, uint32_t level);
 
   /*!
     Pop context levels.
@@ -218,9 +190,7 @@ extern (C) {
     .. seealso::
     boolector_assume
   */
-   @weak void boolector_pop (Btor *btor, uint32_t level) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_pop (Btor *btor, uint32_t level);
 
   /*------------------------------------------------------------------------*/
 
@@ -234,9 +204,7 @@ extern (C) {
     :param btor: Boolector instance.
     :param node: Bit-vector expression with bit width one.
   */
-   @weak void boolector_assert (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_assert (Btor *btor, BoolectorNode *node);
 
   /*!
     Add an assumption.
@@ -251,9 +219,7 @@ extern (C) {
     :param btor: Boolector instance.
     :param node: Bit-vector expression with bit width one.
   */
-   @weak void boolector_assume (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_assume (Btor *btor, BoolectorNode *node);
 
   /*!
     Determine if assumption ``node`` is a failed assumption.
@@ -269,9 +235,7 @@ extern (C) {
     .. seealso::
     boolector_assume
   */
-   @weak bool boolector_failed (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak bool boolector_failed (Btor *btor, BoolectorNode *node);
 
   /*!
     Get all failed assumptions (see boolector_failed).
@@ -288,9 +252,7 @@ extern (C) {
     boolector_assume
     boolector_failed
   */
-   @weak BoolectorNode **boolector_get_failed_assumptions (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode **boolector_get_failed_assumptions (Btor *btor);
 
   /*!
     Add all assumptions as assertions.
@@ -300,9 +262,7 @@ extern (C) {
     .. seealso::
     boolector_assume
   */
-   @weak void boolector_fixate_assumptions (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_fixate_assumptions (Btor *btor);
 
   /*!
     Resets all added assumptions.
@@ -312,9 +272,7 @@ extern (C) {
     .. seealso::
     boolector_assume
   */
-   @weak void boolector_reset_assumptions (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_reset_assumptions (Btor *btor);
 
   /*------------------------------------------------------------------------*/
 
@@ -337,9 +295,7 @@ extern (C) {
     .. seealso::
     boolector_bv_assignment, boolector_array_assignment
   */
-   @weak int32_t boolector_sat (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak int32_t boolector_sat (Btor *btor);
 
   /*!
     Solve an input formula and limit the search by the number of lemmas
@@ -367,9 +323,7 @@ extern (C) {
   */
   int32_t boolector_limited_sat (Btor *btor,
 				 int32_t lod_limit,
-				 int32_t sat_limit) {
-    assert (false, NO_BOOLECTOR);
-  }
+				 int32_t sat_limit);
 
   /*------------------------------------------------------------------------*/
 
@@ -385,9 +339,7 @@ extern (C) {
     Each call to boolector_sat simplifies the input formula as a preprocessing
     step.
   */
-   @weak int32_t boolector_simplify (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak int32_t boolector_simplify (Btor *btor);
 
   /*------------------------------------------------------------------------*/
 
@@ -402,9 +354,7 @@ extern (C) {
     :param btor: Boolector instance
     :param solver: Solver identifier string.
   */
-   @weak void boolector_set_sat_solver (Btor *btor, const char *solver) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_set_sat_solver (Btor *btor, const char *solver);
 
   /*------------------------------------------------------------------------*/
 
@@ -428,9 +378,7 @@ extern (C) {
     :param opt: Option opt.
     :param val:  Option value.
   */
-   @weak void boolector_set_opt (Btor *btor, BtorOption opt, uint32_t val) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_set_opt (Btor *btor, BtorOption opt, uint32_t val);
 
   /*!
     Get the current value of an option.
@@ -439,9 +387,7 @@ extern (C) {
     :param opt: Option opt.
     :return: Current value of ``opt``.
   */
-   @weak uint32_t boolector_get_opt (Btor *btor, BtorOption opt) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak uint32_t boolector_get_opt (Btor *btor, BtorOption opt);
 
   /*!
     Get the min value of an option.
@@ -450,9 +396,7 @@ extern (C) {
     :param opt: Option opt.
     :return: Min value of ``opt``.
   */
-   @weak uint32_t boolector_get_opt_min (Btor *btor, BtorOption opt) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak uint32_t boolector_get_opt_min (Btor *btor, BtorOption opt);
 
   /*!
     Get the max value of an option.
@@ -461,9 +405,7 @@ extern (C) {
     :param opt: Option opt.
     :return: Max value of ``opt``.
   */
-   @weak uint32_t boolector_get_opt_max (Btor *btor, BtorOption opt) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak uint32_t boolector_get_opt_max (Btor *btor, BtorOption opt);
 
   /*!
     Get the default value of an option.
@@ -472,9 +414,7 @@ extern (C) {
     :param opt: Option opt.
     :return: Default value of ``opt``.
   */
-   @weak uint32_t boolector_get_opt_dflt (Btor *btor, BtorOption opt) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak uint32_t boolector_get_opt_dflt (Btor *btor, BtorOption opt);
 
   /*!
     Get the long name of an option.
@@ -483,9 +423,7 @@ extern (C) {
     :param opt: Option opt.
     :return: Short opt of ``opt``.
   */
-   @weak const (char *) boolector_get_opt_lng (Btor *btor, BtorOption opt) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak const (char *) boolector_get_opt_lng (Btor *btor, BtorOption opt);
 
   /*!
     Get the short name of an option.
@@ -494,9 +432,7 @@ extern (C) {
     :param opt: Option opt.
     :return: Short opt of ``opt``.
   */
-   @weak const (char *) boolector_get_opt_shrt (Btor *btor, BtorOption opt) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak const (char *) boolector_get_opt_shrt (Btor *btor, BtorOption opt);
 
   /*!
     Get the description of an option.
@@ -505,9 +441,7 @@ extern (C) {
     :param opt: Option opt.
     :return: Description of ``opt``.
   */
-   @weak const (char *) boolector_get_opt_desc (Btor *btor, BtorOption opt) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak const (char *) boolector_get_opt_desc (Btor *btor, BtorOption opt);
 
   /*!
     Check if Boolector has a given option.
@@ -527,9 +461,7 @@ extern (C) {
     :param opt: Option opt.
     :return: True if Boolector has the given option, and false otherwise.
   */
-   @weak bool boolector_has_opt (Btor *Btor, BtorOption opt) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak bool boolector_has_opt (Btor *Btor, BtorOption opt);
 
   /*!
     Get the opt of the first option in Boolector's option list.
@@ -548,9 +480,7 @@ extern (C) {
     :param btor: Btor instance.
     :return: opt of the first option in Boolector's option list.
   */
-   @weak BtorOption boolector_first_opt (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BtorOption boolector_first_opt (Btor *btor);
 
   /*!
     Given current option ``opt``, get the opt of the next option in Boolector's
@@ -572,9 +502,7 @@ extern (C) {
     :return: opt of the next option in Boolector's option list, or 0 if no such
     next option does exist.
   */
-   @weak BtorOption boolector_next_opt (Btor *btor, BtorOption opt) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BtorOption boolector_next_opt (Btor *btor, BtorOption opt);
 
   /*------------------------------------------------------------------------*/
 
@@ -585,9 +513,7 @@ extern (C) {
     :param node: Boolector node to be copied.
     :return: Node ``node`` with reference counter incremented.
   */
-   @weak BoolectorNode *boolector_copy (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_copy (Btor *btor, BoolectorNode *node);
 
   /*!
     Release expression (decrements reference counter).
@@ -595,9 +521,7 @@ extern (C) {
     :param btor: Boolector instance.
     :param node: Boolector node to be released.
   */
-   @weak void boolector_release (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_release (Btor *btor, BoolectorNode *node);
 
   /*!
     Release all expressions and sorts.
@@ -607,9 +531,7 @@ extern (C) {
     .. seealso::
     boolector_release, boolector_release_sort
   */
-   @weak void boolector_release_all (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_release_all (Btor *btor);
 
   /*------------------------------------------------------------------------*/
 
@@ -620,9 +542,7 @@ extern (C) {
     :param btor: Boolector instance.
     :return: Bit-vector constant one with bit width one.
   */
-   @weak BoolectorNode *boolector_true (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_true (Btor *btor);
 
   /*!
     Create bit-vector constant zero with bit width one.
@@ -630,9 +550,7 @@ extern (C) {
     :param btor: Boolector instance.
     :return: Bit-vector constant zero with bit width one.
   */
-   @weak BoolectorNode *boolector_false (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_false (Btor *btor);
 
   /*!
     Create boolean implication.
@@ -646,9 +564,7 @@ extern (C) {
   */
   BoolectorNode *boolector_implies (Btor *btor,
 				    BoolectorNode *n0,
-				    BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				    BoolectorNode *n1);
 
   /*!
     Create Boolean equivalence.
@@ -660,9 +576,7 @@ extern (C) {
     :param n1: Second bit-vector operand.
     :return: Equivalence n0 <=> n1 with bit width one.
   */
-   @weak BoolectorNode *boolector_iff (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_iff (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*------------------------------------------------------------------------*/
 
@@ -677,9 +591,7 @@ extern (C) {
     :param n1: Second operand.
     :return: Bit-vector with bit width one.
   */
-   @weak BoolectorNode *boolector_eq (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_eq (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*!
     Create bit-vector or array inequality.
@@ -692,9 +604,7 @@ extern (C) {
     :param n1: Second operand.
     :return: Bit-vector with bit width one.
   */
-   @weak BoolectorNode *boolector_ne (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_ne (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*------------------------------------------------------------------------*/
 
@@ -706,9 +616,7 @@ extern (C) {
     :return: True if ``node`` is a bit-vector constant representing zero, and
     false otherwise.
   */
-   @weak bool boolector_is_bv_const_zero (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak bool boolector_is_bv_const_zero (Btor *btor, BoolectorNode *node);
 
   /*!
     Determine if given node is a bit-vector constant representing one.
@@ -718,9 +626,7 @@ extern (C) {
     :return: True if ``node`` is a bit-vector constant representing one, and
     false otherwise.
   */
-   @weak bool boolector_is_bv_const_one (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak bool boolector_is_bv_const_one (Btor *btor, BoolectorNode *node);
 
   /*!
     Determine if given node is a bit-vector constant representing the maximum
@@ -731,9 +637,7 @@ extern (C) {
     :return: True if ``node`` is a bit-vector constant with all ones, and false
     otherwise.
   */
-   @weak bool boolector_is_bv_const_ones (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak bool boolector_is_bv_const_ones (Btor *btor, BoolectorNode *node);
 
   /*!
     Determine if given node is a bit-vector constant representing the maximum
@@ -744,9 +648,7 @@ extern (C) {
     :return: True if ``node`` is a bit-vector constant representing the maximum
     signed value, and false otherwise.
   */
-   @weak bool boolector_is_bv_const_max_signed (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak bool boolector_is_bv_const_max_signed (Btor *btor, BoolectorNode *node);
 
   /*!
     Determine if given node is a bit-vector constant representing the minimum
@@ -757,9 +659,7 @@ extern (C) {
     :return: True if ``node`` is a bit-vector constant representing the minimum
     signed value, and false otherwise.
   */
-   @weak bool boolector_is_bv_const_min_signed (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak bool boolector_is_bv_const_min_signed (Btor *btor, BoolectorNode *node);
 
   /*------------------------------------------------------------------------*/
 
@@ -771,9 +671,7 @@ extern (C) {
     representing the bit-vector constant specified by ``bits``.
     :return: Bit-vector constant with bit width ``strlen (bits)``.
   */
-   @weak BoolectorNode *boolector_const (Btor *btor, const char *bits) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_const (Btor *btor, const char *bits);
 
   /*!
     Create bit-vector constant representing the decimal number ``str``.
@@ -786,9 +684,7 @@ extern (C) {
   */
   BoolectorNode *boolector_constd (Btor *btor,
 				   BoolectorSort sort,
-				   const char *str) {
-    assert (false, NO_BOOLECTOR);
-  }
+				   const char *str);
 
   /*!
     Create bit-vector constant representing the hexadecimal number ``str``.
@@ -801,9 +697,7 @@ extern (C) {
   */
   BoolectorNode *boolector_consth (Btor *btor,
 				   BoolectorSort sort,
-				   const char *str) {
-    assert (false, NO_BOOLECTOR);
-  }
+				   const char *str);
 
   /*!
     Create bit-vector constant zero of sort ``sort``.
@@ -812,9 +706,7 @@ extern (C) {
     :param sort: Sort of bit-vector constant.
     :return: Bit-vector constant zero of sort ``sort``.
   */
-   @weak BoolectorNode *boolector_zero (Btor *btor, BoolectorSort sort) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_zero (Btor *btor, BoolectorSort sort);
 
   /*!
     Create bit-vector constant of sort ``sort``, where each bit is set to one.
@@ -823,9 +715,7 @@ extern (C) {
     :param sort: Sort of constant.
     :return: Bit-vector constant -1 of sort ``sort``.
   */
-   @weak BoolectorNode *boolector_ones (Btor *btor, BoolectorSort sort) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_ones (Btor *btor, BoolectorSort sort);
 
   /*!
     Create bit-vector constant one of sort ``sort``.
@@ -834,9 +724,7 @@ extern (C) {
     :param sort: Sort of constant.
     :return: Bit-vector constant one of sort ``sort``.
   */
-   @weak BoolectorNode *boolector_one (Btor *btor, BoolectorSort sort) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_one (Btor *btor, BoolectorSort sort);
 
   /*!
     Create bit-vector minimum signed value constant of sort ``sort``.
@@ -846,9 +734,7 @@ extern (C) {
     :return: Bit-vector constant representing the minimum signed value
     of sort ``sort``.
   */
-   @weak BoolectorNode *boolector_min_signed (Btor *btor, BoolectorSort sort) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_min_signed (Btor *btor, BoolectorSort sort);
 
   /*!
     Create bit-vector maximum signed value constant of sort ``sort``.
@@ -858,9 +744,7 @@ extern (C) {
     :return: Bit-vector constant representing the minimum signed value
     of sort ``sort``.
   */
-   @weak BoolectorNode *boolector_max_signed (Btor *btor, BoolectorSort sort) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_max_signed (Btor *btor, BoolectorSort sort);
 
   /*!
     Create bit-vector constant representing the unsigned integer ``u`` of sort
@@ -876,9 +760,7 @@ extern (C) {
   */
   BoolectorNode *boolector_unsigned_int (Btor *btor,
 					 uint32_t u,
-					 BoolectorSort sort) {
-    assert (false, NO_BOOLECTOR);
-  }
+					 BoolectorSort sort);
 
   /*!
     Create bit-vector constant representing the signed integer ``i`` of sort
@@ -892,9 +774,7 @@ extern (C) {
     :param sort: Sort of constant.
     :return: Bit-vector constant of sort ``sort``.
   */
-   @weak BoolectorNode *boolector_int (Btor *btor, int32_t i, BoolectorSort sort) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_int (Btor *btor, int32_t i, BoolectorSort sort);
 
   /*------------------------------------------------------------------------*/
 
@@ -918,9 +798,7 @@ extern (C) {
   */
   BoolectorNode *boolector_var (Btor *btor,
 				BoolectorSort sort,
-				const char *symbol) {
-    assert (false, NO_BOOLECTOR);
-  }
+				const char *symbol);
 
   /*!
     Create a one-dimensional bit-vector array with sort ``sort``.
@@ -944,9 +822,7 @@ extern (C) {
   */
   BoolectorNode *boolector_array (Btor *btor,
 				  BoolectorSort sort,
-				  const char *symbol) {
-    assert (false, NO_BOOLECTOR);
-  }
+				  const char *symbol);
 
   /*!
     Create a one-dimensional constant bit-vector array with sort ``sort``
@@ -962,9 +838,7 @@ extern (C) {
   */
   BoolectorNode *boolector_const_array (Btor *btor,
 					BoolectorSort sort,
-					BoolectorNode *value) {
-    assert (false, NO_BOOLECTOR);
-  }
+					BoolectorNode *value);
 
   /*!
     Create an uninterpreted function with sort ``sort`` and with symbol
@@ -992,9 +866,7 @@ extern (C) {
   */
   BoolectorNode *boolector_uf (Btor *btor,
 			       BoolectorSort sort,
-			       const char *symbol) {
-    assert (false, NO_BOOLECTOR);
-  }
+			       const char *symbol);
 
   /*------------------------------------------------------------------------*/
 
@@ -1006,9 +878,7 @@ extern (C) {
     :return: Bit-vector representing the one's complement of ``node`` with the
     same bit width as ``node``.
   */
-   @weak BoolectorNode *boolector_not (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_not (Btor *btor, BoolectorNode *node);
 
   /*!
     Create the two's complement of bit-vector ``node``.
@@ -1018,9 +888,7 @@ extern (C) {
     :return: Bit-vector representing the two's complement of ``node`` with the
     same bit width as ``node``.
   */
-   @weak BoolectorNode *boolector_neg (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_neg (Btor *btor, BoolectorNode *node);
 
   /*!
     Create *or* reduction of node ``node``.
@@ -1031,9 +899,7 @@ extern (C) {
     :param node: Bit-vector node.
     :return: Bit-vector with bit width one.
   */
-   @weak BoolectorNode *boolector_redor (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_redor (Btor *btor, BoolectorNode *node);
 
   /*!
     Create *xor* reduction of node ``node``.
@@ -1044,9 +910,7 @@ extern (C) {
     :param node: Bit-vector node.
     :return: Bit-vector with bit width one.
   */
-   @weak BoolectorNode *boolector_redxor (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_redxor (Btor *btor, BoolectorNode *node);
 
   /*!
     Create *and* reduction of node ``node``.
@@ -1057,9 +921,7 @@ extern (C) {
     :param node: Bit-vector node.
     :return: Bit-vector with bit width one.
   */
-   @weak BoolectorNode *boolector_redand (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_redand (Btor *btor, BoolectorNode *node);
 
   /*!
     Create a bit-vector slice of ``node`` from index ``upper`` to index
@@ -1076,9 +938,7 @@ extern (C) {
   BoolectorNode *boolector_slice (Btor *btor,
 				  BoolectorNode *node,
 				  uint32_t upper,
-				  uint32_t lower) {
-    assert (false, NO_BOOLECTOR);
-  }
+				  uint32_t lower);
 
   /*!
     Create unsigned extension.
@@ -1090,9 +950,7 @@ extern (C) {
     :param width: Number of zeroes to pad.
     :return: A bit-vector extended by ``width`` zeroes.
   */
-   @weak BoolectorNode *boolector_uext (Btor *btor, BoolectorNode *node, uint32_t width) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_uext (Btor *btor, BoolectorNode *node, uint32_t width);
 
   /*!
     Create signed extension.
@@ -1105,9 +963,7 @@ extern (C) {
     :param width: Number of bits to pad.
     :return: A bit-vector extended by ``width`` bits.
   */
-   @weak BoolectorNode *boolector_sext (Btor *btor, BoolectorNode *node, uint32_t width) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_sext (Btor *btor, BoolectorNode *node, uint32_t width);
   /*!
     Create a bit-vector *xor*.
 
@@ -1118,9 +974,7 @@ extern (C) {
     :param n1: Second bit-vector operand.
     :return: Bit-vector with the same bit width as the operands.
   */
-   @weak BoolectorNode *boolector_xor (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_xor (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*!
     Create a bit-vector *xnor*.
@@ -1134,9 +988,7 @@ extern (C) {
   */
   BoolectorNode *boolector_xnor (Btor *btor,
 				 BoolectorNode *n0,
-				 BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				 BoolectorNode *n1);
 
   /*!
     Create a bit-vector *and*.
@@ -1148,9 +1000,7 @@ extern (C) {
     :param n1: Second bit-vector operand.
     :return: Bit-vector with the same bit width as the operands.
   */
-   @weak BoolectorNode *boolector_and (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_and (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*!
     Create a bit-vector *nand*.
@@ -1164,9 +1014,7 @@ extern (C) {
   */
   BoolectorNode *boolector_nand (Btor *btor,
 				 BoolectorNode *n0,
-				 BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				 BoolectorNode *n1);
 
   /*!
     Create a bit-vector *or*.
@@ -1178,9 +1026,7 @@ extern (C) {
     :param n1: Second bit-vector operand.
     :return: Bit-vector with the same bit width as the operands.
   */
-   @weak BoolectorNode *boolector_or (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_or (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*!
     Create a bit-vector *nor*.
@@ -1192,9 +1038,7 @@ extern (C) {
     :param n1: Second bit-vector operand.
     :return: Bit-vector with the same bit width as the operands.
   */
-   @weak BoolectorNode *boolector_nor (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_nor (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*!
     Create bit-vector addition.
@@ -1206,9 +1050,7 @@ extern (C) {
     :param n1: Second bit-vector operand.
     :return: Bit-vector addition with the same bit width as the operands.
   */
-   @weak BoolectorNode *boolector_add (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_add (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*!
     Create an unsigned bit-vector addition overflow detection.
@@ -1224,9 +1066,7 @@ extern (C) {
   */
   BoolectorNode *boolector_uaddo (Btor *btor,
 				  BoolectorNode *n0,
-				  BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				  BoolectorNode *n1);
 
   /*!
     Create a signed bit-vector addition overflow detection.
@@ -1242,9 +1082,7 @@ extern (C) {
   */
   BoolectorNode *boolector_saddo (Btor *btor,
 				  BoolectorNode *n0,
-				  BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				  BoolectorNode *n1);
 
   /*!
     Create a bit-vector multiplication.
@@ -1256,9 +1094,7 @@ extern (C) {
     :param n1: Second bit-vector operand.
     :return: Bit-vector multiplication with the same bit width as the operands.
   */
-   @weak BoolectorNode *boolector_mul (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_mul (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*!
     Create an unsigned bit-vector multiplication overflow detection.
@@ -1274,9 +1110,7 @@ extern (C) {
   */
   BoolectorNode *boolector_umulo (Btor *btor,
 				  BoolectorNode *n0,
-				  BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				  BoolectorNode *n1);
 
   /*!
     Create signed multiplication overflow detection.
@@ -1292,9 +1126,7 @@ extern (C) {
   */
   BoolectorNode *boolector_smulo (Btor *btor,
 				  BoolectorNode *n0,
-				  BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				  BoolectorNode *n1);
 
   /*!
     Create an unsigned less than.
@@ -1306,9 +1138,7 @@ extern (C) {
     :param n1: Second bit-vector operand.
     :return: Bit-vector with bit width one.
   */
-   @weak BoolectorNode *boolector_ult (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_ult (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*!
     Create a signed less than.
@@ -1320,9 +1150,7 @@ extern (C) {
     :param n1: Second bit-vector operand.
     :return: Bit-vector with bit width one.
   */
-   @weak BoolectorNode *boolector_slt (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_slt (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*!
     Create an unsigned less than or equal.
@@ -1336,9 +1164,7 @@ extern (C) {
   */
   BoolectorNode *boolector_ulte (Btor *btor,
 				 BoolectorNode *n0,
-				 BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				 BoolectorNode *n1);
 
   /*!
     Create a signed less than or equal.
@@ -1352,9 +1178,7 @@ extern (C) {
   */
   BoolectorNode *boolector_slte (Btor *btor,
 				 BoolectorNode *n0,
-				 BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				 BoolectorNode *n1);
 
   /*!
     Create an unsigned greater than.
@@ -1366,9 +1190,7 @@ extern (C) {
     :param n1: Second bit-vector operand.
     :return: Bit-vector with bit width one.
   */
-   @weak BoolectorNode *boolector_ugt (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_ugt (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*!
     Create a signed greater than.
@@ -1380,9 +1202,7 @@ extern (C) {
     :param n1: Second bit-vector operand.
     :return: Bit-vector with bit width one.
   */
-   @weak BoolectorNode *boolector_sgt (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_sgt (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*!
     Create an unsigned greater than or equal.
@@ -1396,9 +1216,7 @@ extern (C) {
   */
   BoolectorNode *boolector_ugte (Btor *btor,
 				 BoolectorNode *n0,
-				 BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				 BoolectorNode *n1);
 
   /*!
     Create a signed greater than or equal.
@@ -1412,9 +1230,7 @@ extern (C) {
   */
   BoolectorNode *boolector_sgte (Btor *btor,
 				 BoolectorNode *n0,
-				 BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				 BoolectorNode *n1);
 
   /*!
     Create a logical shift left.
@@ -1428,9 +1244,7 @@ extern (C) {
     :param n1: Second bit-vector operand.
     :return: Bit-vector with the same bit width as ``n0``.
   */
-   @weak BoolectorNode *boolector_sll (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_sll (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*!
     Create a logical shift right.
@@ -1444,9 +1258,7 @@ extern (C) {
     :param n1: Second bit-vector operand.
     :return: Bit-vector with the same bit width as ``n0``.
   */
-   @weak BoolectorNode *boolector_srl (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_srl (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*!
     Create an arithmetic shift right.
@@ -1460,9 +1272,7 @@ extern (C) {
     :param n1: Second bit-vector operand.
     :return: Bit-vector with the same bit width as ``n0``.
   */
-   @weak BoolectorNode *boolector_sra (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_sra (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*!
     Create a rotate left, with the number of bits to rotate by given as a
@@ -1477,9 +1287,7 @@ extern (C) {
     :param n1: Second bit-vector operand.
     :return: Bit-vector with the same bit width as ``n0``.
   */
-   @weak BoolectorNode *boolector_rol (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_rol (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*!
     Create a rotate right, with the number of bits to rotate by given as a
@@ -1494,9 +1302,7 @@ extern (C) {
     :param n1: Second bit-vector operand.
     :return: Bit-vector with the same bit width as ``n0``.
   */
-   @weak BoolectorNode *boolector_ror (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_ror (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*!
     Create a rotate left, with the number of bits to rotate by given as a
@@ -1507,9 +1313,7 @@ extern (C) {
     :param nbits: Number of bits to rotate by.
     :return: Bit-vector with the same bit width as ``n``.
   */
-   @weak BoolectorNode *boolector_roli (Btor *btor, BoolectorNode *n, uint32_t nbits) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_roli (Btor *btor, BoolectorNode *n, uint32_t nbits);
 
   /*!
     Create a rotate right, with the number of bits to rotate by given as a
@@ -1520,9 +1324,7 @@ extern (C) {
     :param nbits: Number of bits to rotate by.
     :return: Bit-vector with the same bit width as ``n``.
   */
-   @weak BoolectorNode *boolector_rori (Btor *btor, BoolectorNode *n, uint32_t nbits) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_rori (Btor *btor, BoolectorNode *n, uint32_t nbits);
 
   /*!
     Create a bit-vector subtraction.
@@ -1534,9 +1336,7 @@ extern (C) {
     :param n1: Second bit-vector operand.
     :return: Bit-vector with the same bit width as the operands.
   */
-   @weak BoolectorNode *boolector_sub (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_sub (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*!
     Create an unsigned bit-vector subtraction overflow detection.
@@ -1552,9 +1352,7 @@ extern (C) {
   */
   BoolectorNode *boolector_usubo (Btor *btor,
 				  BoolectorNode *n0,
-				  BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				  BoolectorNode *n1);
 
   /*!
     Create a signed bit-vector subtraction overflow detection.
@@ -1570,9 +1368,7 @@ extern (C) {
   */
   BoolectorNode *boolector_ssubo (Btor *btor,
 				  BoolectorNode *n0,
-				  BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				  BoolectorNode *n1);
 
   /*!
     Create unsigned division.
@@ -1594,9 +1390,7 @@ extern (C) {
   */
   BoolectorNode *boolector_udiv (Btor *btor,
 				 BoolectorNode *n0,
-				 BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				 BoolectorNode *n1);
 
   /*!
     Create signed division.
@@ -1618,9 +1412,7 @@ extern (C) {
   */
   BoolectorNode *boolector_sdiv (Btor *btor,
 				 BoolectorNode *n0,
-				 BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				 BoolectorNode *n1);
 
   /*!
     Create a signed bit-vector division overflow detection.
@@ -1640,9 +1432,7 @@ extern (C) {
   */
   BoolectorNode *boolector_sdivo (Btor *btor,
 				  BoolectorNode *n0,
-				  BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				  BoolectorNode *n1);
 
   /*!
     Create an unsigned remainder.
@@ -1663,9 +1453,7 @@ extern (C) {
   */
   BoolectorNode *boolector_urem (Btor *btor,
 				 BoolectorNode *n0,
-				 BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				 BoolectorNode *n1);
 
   /*!
     Create a signed remainder.
@@ -1686,9 +1474,7 @@ extern (C) {
   */
   BoolectorNode *boolector_srem (Btor *btor,
 				 BoolectorNode *n0,
-				 BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				 BoolectorNode *n1);
 
   /*!
     Create a, signed remainder where its sign matches the sign of the divisor.
@@ -1705,9 +1491,7 @@ extern (C) {
   */
   BoolectorNode *boolector_smod (Btor *btor,
 				 BoolectorNode *n0,
-				 BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				 BoolectorNode *n1);
 
   /*!
     Create the concatenation of two bit-vectors.
@@ -1719,9 +1503,7 @@ extern (C) {
   */
   BoolectorNode *boolector_concat (Btor *btor,
 				   BoolectorNode *n0,
-				   BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+				   BoolectorNode *n1);
 
   /*!
     Create ``n`` concatenations of a given node ``node``.
@@ -1731,9 +1513,7 @@ extern (C) {
     :param n: Number of times to repeat the given node.
     :return: A node representing ``n`` concatenations of node ``node``.
   */
-   @weak BoolectorNode *boolector_repeat (Btor *btor, BoolectorNode *node, uint32_t n) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_repeat (Btor *btor, BoolectorNode *node, uint32_t n);
 
   /*------------------------------------------------------------------------*/
 
@@ -1748,9 +1528,7 @@ extern (C) {
   */
   BoolectorNode *boolector_read (Btor *btor,
 				 BoolectorNode *n_array,
-				 BoolectorNode *n_index) {
-    assert (false, NO_BOOLECTOR);
-  }
+				 BoolectorNode *n_index);
 
   /*!
     Create a write on array ``n_array`` at position ``n_index`` with value
@@ -1771,9 +1549,7 @@ extern (C) {
   BoolectorNode *boolector_write (Btor *btor,
 				  BoolectorNode *n_array,
 				  BoolectorNode *n_index,
-				  BoolectorNode *n_value) {
-    assert (false, NO_BOOLECTOR);
-  }
+				  BoolectorNode *n_value);
 
   /*------------------------------------------------------------------------*/
 
@@ -1794,9 +1570,7 @@ extern (C) {
   BoolectorNode *boolector_cond (Btor *btor,
 				 BoolectorNode *n_cond,
 				 BoolectorNode *n_then,
-				 BoolectorNode *n_else) {
-    assert (false, NO_BOOLECTOR);
-  }
+				 BoolectorNode *n_else);
 
   /*------------------------------------------------------------------------*/
 
@@ -1817,9 +1591,7 @@ extern (C) {
   */
   BoolectorNode *boolector_param (Btor *btor,
 				  BoolectorSort sort,
-				  const char *symbol) {
-    assert (false, NO_BOOLECTOR);
-  }
+				  const char *symbol);
 
   /*!
     Create a function with body ``node`` parameterized over parameters
@@ -1842,9 +1614,7 @@ extern (C) {
   BoolectorNode *boolector_fun (Btor *btor,
 				BoolectorNode **param_nodes,
 				uint32_t paramc,
-				BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+				BoolectorNode *node);
 
   /*!
     Create a function application on function ``n_fun`` with arguments
@@ -1863,9 +1633,7 @@ extern (C) {
   BoolectorNode *boolector_apply (Btor *btor,
 				  BoolectorNode **arg_nodes,
 				  uint32_t argc,
-				  BoolectorNode *n_fun) {
-    assert (false, NO_BOOLECTOR);
-  }
+				  BoolectorNode *n_fun);
 
   /*------------------------------------------------------------------------*/
 
@@ -1876,9 +1644,7 @@ extern (C) {
     :param node: Bit-vector operand.
     :return: Bit-vector with the same bit width as ``node`` incremented by one.
   */
-   @weak BoolectorNode *boolector_inc (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_inc (Btor *btor, BoolectorNode *node);
 
   /*!
     Create bit-vector expression that decrements bit-vector ``node`` by one.
@@ -1887,9 +1653,7 @@ extern (C) {
     :param node: Bit-vector operand.
     :return: Bit-vector with the same bit width as ``node`` decremented by one.
   */
-   @weak BoolectorNode *boolector_dec (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_dec (Btor *btor, BoolectorNode *node);
 
   /*------------------------------------------------------------------------*/
 
@@ -1907,9 +1671,7 @@ extern (C) {
   BoolectorNode *boolector_forall (Btor *btor,
 				   BoolectorNode **params,
 				   uint32_t paramc,
-				   BoolectorNode *body) {
-    assert (false, NO_BOOLECTOR);
-  }
+				   BoolectorNode *body);
 
   /*!
     Create an existentially quantifed formula.
@@ -1925,9 +1687,7 @@ extern (C) {
   BoolectorNode *boolector_exists (Btor *btor,
 				   BoolectorNode **param,
 				   uint32_t paramc,
-				   BoolectorNode *body) {
-    assert (false, NO_BOOLECTOR);
-  }
+				   BoolectorNode *body);
 
   /*------------------------------------------------------------------------*/
 
@@ -1937,9 +1697,7 @@ extern (C) {
     :param node: Boolector node.
     :return: Boolector instance.
   */
-   @weak Btor *boolector_get_btor (BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak Btor *boolector_get_btor (BoolectorNode *node);
 
   /*!
     Get the id of a given node.
@@ -1948,9 +1706,7 @@ extern (C) {
     :param node: Boolector node.
     :return: Id of ``node``.
   */
-   @weak int32_t boolector_get_node_id (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak int32_t boolector_get_node_id (Btor *btor, BoolectorNode *node);
 
   /*!
     Get the sort of given ``node``. The result does not have to be released.
@@ -1959,9 +1715,7 @@ extern (C) {
     :param node: Boolector node.
     :return: Sort of ``node``.
   */
-   @weak BoolectorSort boolector_get_sort (Btor *btor, const BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorSort boolector_get_sort (Btor *btor, const BoolectorNode *node);
 
   /*!
     Get the domain sort of given function node ``node``.
@@ -1972,9 +1726,7 @@ extern (C) {
     :return: Domain sort of function ``node``.
   */
   BoolectorSort boolector_fun_get_domain_sort (Btor *btor,
-					       const BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+					       const BoolectorNode *node);
 
   /*!
     Get the codomain sort of given function node ``node``.
@@ -1985,9 +1737,7 @@ extern (C) {
     :return: Codomain sort of function ``node``.
   */
   BoolectorSort boolector_fun_get_codomain_sort (Btor *btor,
-						 const BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+						 const BoolectorNode *node);
 
   /*------------------------------------------------------------------------*/
 
@@ -2007,9 +1757,7 @@ extern (C) {
     (boolector_release).
     Only nodes created before a boolector_clone call can be matched.
   */
-   @weak BoolectorNode *boolector_match_node_by_id (Btor *btor, int32_t id) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_match_node_by_id (Btor *btor, int32_t id);
 
   /*!
     Retrieve the node belonging to Boolector instance ``btor`` that matches
@@ -2027,9 +1775,7 @@ extern (C) {
     (boolector_release).
     Only nodes created before a boolector_clone call can be matched.
   */
-   @weak BoolectorNode *boolector_match_node_by_symbol (Btor *btor, const char *symbol) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_match_node_by_symbol (Btor *btor, const char *symbol);
 
   /*!
     Retrieve the node belonging to Boolector instance ``btor`` that matches
@@ -2048,9 +1794,7 @@ extern (C) {
     (boolector_release).
     Only nodes created before a boolector_clone call can be matched.
   */
-   @weak BoolectorNode *boolector_match_node (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_match_node (Btor *btor, BoolectorNode *node);
 
   /*------------------------------------------------------------------------*/
 
@@ -2064,9 +1808,7 @@ extern (C) {
     .. seealso::
     boolector_var, boolector_array, boolector_uf, boolector_param
   */
-   @weak const (char *) boolector_get_symbol (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak const (char *) boolector_get_symbol (Btor *btor, BoolectorNode *node);
 
   /*!
     Set the symbol of an expression.
@@ -2078,9 +1820,7 @@ extern (C) {
     .. seealso::
     boolector_var, boolector_array, boolector_uf, boolector_param
   */
-   @weak void boolector_set_symbol (Btor *btor, BoolectorNode *node, const char *symbol) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_set_symbol (Btor *btor, BoolectorNode *node, const char *symbol);
 
   /*!
     Get the bit width of an expression.
@@ -2094,9 +1834,7 @@ extern (C) {
     :param node: Boolector node.
     :return: Bit width of ``node``.
   */
-   @weak uint32_t boolector_get_width (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak uint32_t boolector_get_width (Btor *btor, BoolectorNode *node);
 
   /*!
     Get the bit width of indices of ``n_array``.
@@ -2105,9 +1843,7 @@ extern (C) {
     :param n_array: Array operand.
     :return: Bit width of indices of ``n_array``
   */
-   @weak uint32_t boolector_get_index_width (Btor *btor, BoolectorNode *n_array) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak uint32_t boolector_get_index_width (Btor *btor, BoolectorNode *n_array);
 
   /*!
     Get the bit-vector of a constant node represented as a bit string.
@@ -2120,9 +1856,7 @@ extern (C) {
     .. seealso::
     boolector_free_bits
   */
-   @weak const (char *) boolector_get_bits (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak const (char *) boolector_get_bits (Btor *btor, BoolectorNode *node);
 
   /*!
     Free a bits string retrieved via boolector_get_bits.
@@ -2133,9 +1867,7 @@ extern (C) {
     .. seealso::
     boolector_get_bits
   */
-   @weak void boolector_free_bits (Btor *btor, const char *bits) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_free_bits (Btor *btor, const char *bits);
 
   /*!
     Get the arity of function ``node``.
@@ -2144,9 +1876,7 @@ extern (C) {
     :param node: Function node.
     :return: Arity of ``node``.
   */
-   @weak uint32_t boolector_get_fun_arity (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak uint32_t boolector_get_fun_arity (Btor *btor, BoolectorNode *node);
 
   /*------------------------------------------------------------------------*/
 
@@ -2157,9 +1887,7 @@ extern (C) {
     :param node: Boolector node.
     :return: True if ``node`` is a constant, and false otherwise.
   */
-   @weak bool boolector_is_const (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak bool boolector_is_const (Btor *btor, BoolectorNode *node);
 
   /*!
     Determine if given node is a bit-vector variable.
@@ -2168,9 +1896,7 @@ extern (C) {
     :param node: Boolector node.
     :return: True if ``node`` is a bit-vector variable, and false otherwise.
   */
-   @weak bool boolector_is_var (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak bool boolector_is_var (Btor *btor, BoolectorNode *node);
 
   /*!
     Determine if given node is an array node.
@@ -2179,9 +1905,7 @@ extern (C) {
     :param node: Boolector node.
     :return: True if ``node`` is an array, and false otherwise.
   */
-   @weak bool boolector_is_array (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak bool boolector_is_array (Btor *btor, BoolectorNode *node);
 
   /*!
     Determine if given node is an array variable.
@@ -2190,9 +1914,7 @@ extern (C) {
     :param node: Boolector node.
     :return: True if ``node`` is an array variable, and false otherwise.
   */
-   @weak bool boolector_is_array_var (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak bool boolector_is_array_var (Btor *btor, BoolectorNode *node);
 
   /*!
     Determine if given node is a parameter node.
@@ -2201,9 +1923,7 @@ extern (C) {
     :param node: Boolector node.
     :return: True if ``node`` is a parameter, and false otherwise.
   */
-   @weak bool boolector_is_param (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak bool boolector_is_param (Btor *btor, BoolectorNode *node);
 
   /*!
     Determine if given parameter node is bound by a function.
@@ -2212,9 +1932,7 @@ extern (C) {
     :param node: Parameter node.
     :return: True if ``node`` is bound, and false otherwise.
   */
-   @weak bool boolector_is_bound_param (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak bool boolector_is_bound_param (Btor *btor, BoolectorNode *node);
 
   /*!
     Determine if given node is an uninterpreted function node.
@@ -2223,9 +1941,7 @@ extern (C) {
     :param node: Boolector node.
     :return: True if ``node`` is an uninterpreted function, and false otherwise.
   */
-   @weak bool boolector_is_uf (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak bool boolector_is_uf (Btor *btor, BoolectorNode *node);
 
   /*!
     Determine if given node is a function node.
@@ -2234,9 +1950,7 @@ extern (C) {
     :param node: Boolector node.
     :return: True if ``node`` is a function, and false otherwise.
   */
-   @weak bool boolector_is_fun (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak bool boolector_is_fun (Btor *btor, BoolectorNode *node);
 
   /*------------------------------------------------------------------------*/
 
@@ -2253,9 +1967,7 @@ extern (C) {
   int32_t boolector_fun_sort_check (Btor *btor,
 				    BoolectorNode **arg_nodes,
 				    uint32_t argc,
-				    BoolectorNode *n_fun) {
-    assert (false, NO_BOOLECTOR);
-  }
+				    BoolectorNode *n_fun);
 
   /*------------------------------------------------------------------------*/
 
@@ -2269,9 +1981,7 @@ extern (C) {
     .. seealso::
     boolector_set_opt for enabling model generation.
   */
-   @weak BoolectorNode *boolector_get_value (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorNode *boolector_get_value (Btor *btor, BoolectorNode *node);
 
   /*!
     Generate an assignment string for bit-vector expression if
@@ -2293,9 +2003,7 @@ extern (C) {
     .. seealso::
     boolector_set_opt for enabling model generation.
   */
-   @weak const (char *) boolector_bv_assignment (Btor *btor, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak const (char *) boolector_bv_assignment (Btor *btor, BoolectorNode *node);
 
   /*!
     Free an assignment string for bit-vectors.
@@ -2306,9 +2014,7 @@ extern (C) {
     .. seealso::
     boolector_bv_assignment
   */
-   @weak void boolector_free_bv_assignment (Btor *btor, const char *assignment) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_free_bv_assignment (Btor *btor, const char *assignment);
 
   /*!
     Generate a model for an array expression.
@@ -2346,9 +2052,7 @@ extern (C) {
 				   BoolectorNode *n_array,
 				   char ***indices,
 				   char ***values,
-				   uint32_t *size) {
-    assert (false, NO_BOOLECTOR);
-  }
+				   uint32_t *size);
 
   /*!
     Free an assignment string for arrays of bit-vectors.
@@ -2364,9 +2068,7 @@ extern (C) {
   void boolector_free_array_assignment (Btor *btor,
 					char **indices,
 					char **values,
-					uint32_t size) {
-    assert (false, NO_BOOLECTOR);
-  }
+					uint32_t size);
 
   /*!
     Generate a model for an uninterpreted function.
@@ -2395,9 +2097,7 @@ extern (C) {
 				BoolectorNode *n_uf,
 				char ***args,
 				char ***values,
-				uint32_t *size) {
-    assert (false, NO_BOOLECTOR);
-  }
+				uint32_t *size);
 
   /*!
     Free assignment strings for uninterpreted functions.
@@ -2413,9 +2113,7 @@ extern (C) {
   void boolector_free_uf_assignment (Btor *btor,
 				     char **args,
 				     char **values,
-				     uint32_t size) {
-    assert (false, NO_BOOLECTOR);
-  }
+				     uint32_t size);
 
   /*!
     Print model to output file. This function prints the model for all inputs
@@ -2465,9 +2163,7 @@ extern (C) {
     :param format: A string identifying the output format.
     :param file: Output file.
   */
-   @weak void boolector_print_model (Btor *btor, char *format, FILE *file) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_print_model (Btor *btor, char *format, FILE *file);
 
   /*------------------------------------------------------------------------*/
 
@@ -2480,9 +2176,7 @@ extern (C) {
     .. seealso::
     boolector_var, boolector_param
   */
-   @weak BoolectorSort boolector_bool_sort (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorSort boolector_bool_sort (Btor *btor);
 
   /*!
     Create bit-vector sort of bit width ``width``.
@@ -2494,9 +2188,7 @@ extern (C) {
     .. seealso::
     boolector_var, boolector_param
   */
-   @weak BoolectorSort boolector_bitvec_sort (Btor *btor, uint32_t width) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorSort boolector_bitvec_sort (Btor *btor, uint32_t width);
 
   /*!
     Create function sort.
@@ -2513,9 +2205,7 @@ extern (C) {
   BoolectorSort boolector_fun_sort (Btor *btor,
 				    BoolectorSort *domain,
 				    uint32_t arity,
-				    BoolectorSort codomain) {
-    assert (false, NO_BOOLECTOR);
-  }
+				    BoolectorSort codomain);
 
   /*!
     Create array sort.
@@ -2530,9 +2220,7 @@ extern (C) {
   */
   BoolectorSort boolector_array_sort (Btor *btor,
 				      BoolectorSort index,
-				      BoolectorSort element) {
-    assert (false, NO_BOOLECTOR);
-  }
+				      BoolectorSort element);
 
   /*!
     Copy sort (increments reference counter).
@@ -2541,9 +2229,7 @@ extern (C) {
     :param sort: Sort to be copied.
     :return: Sort ``sort`` with reference counter incremented.
   */
-   @weak BoolectorSort boolector_copy_sort (Btor *btor, BoolectorSort sort) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak BoolectorSort boolector_copy_sort (Btor *btor, BoolectorSort sort);
 
   /*!
     Release sort (decrements reference counter).
@@ -2551,9 +2237,7 @@ extern (C) {
     :param btor: Boolector instance.
     :param sort: Sort to be released.
   */
-   @weak void boolector_release_sort (Btor *btor, BoolectorSort sort) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_release_sort (Btor *btor, BoolectorSort sort);
 
   /*!
     Determine if ``n0`` and ``n1`` have the same sort or not.
@@ -2563,9 +2247,7 @@ extern (C) {
     :param n1: Second operand.
     :return: True if ``n0`` and ``n1`` have the same sort, and false otherwise.
   */
-   @weak bool boolector_is_equal_sort (Btor *btor, BoolectorNode *n0, BoolectorNode *n1) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak bool boolector_is_equal_sort (Btor *btor, BoolectorNode *n0, BoolectorNode *n1);
 
   /*!
     Determine if ``sort`` is an array sort.
@@ -2574,9 +2256,7 @@ extern (C) {
     :param sort: Sort.
     :return: True if ``sort`` is an array sort, and false otherwise.
   */
-   @weak bool boolector_is_array_sort (Btor *btor, BoolectorSort sort) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak bool boolector_is_array_sort (Btor *btor, BoolectorSort sort);
 
   /*!
     Determine if ``sort`` is a bit-vector sort.
@@ -2585,9 +2265,7 @@ extern (C) {
     :param sort: Sort.
     :return: True if ``sort`` is a bit-vector sort, and false otherwise.
   */
-   @weak bool boolector_is_bitvec_sort (Btor *btor, BoolectorSort sort) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak bool boolector_is_bitvec_sort (Btor *btor, BoolectorSort sort);
 
   /*!
     Determine if ``sort`` is a function sort.
@@ -2596,9 +2274,7 @@ extern (C) {
     :param sort: Sort.
     :return: True if ``sort`` is a function sort, and false otherwise.
   */
-   @weak bool boolector_is_fun_sort (Btor *btor, BoolectorSort sort) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak bool boolector_is_fun_sort (Btor *btor, BoolectorSort sort);
 
   /*!
     Get the bit width of a bit-vector sort.
@@ -2607,9 +2283,7 @@ extern (C) {
     :param node: Boolector sort.
     :return: Bit width of ``sort``.
   */
-   @weak uint32_t boolector_bitvec_sort_get_width (Btor *btor, BoolectorSort sort) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak uint32_t boolector_bitvec_sort_get_width (Btor *btor, BoolectorSort sort);
 
   /*------------------------------------------------------------------------*/
 
@@ -2642,9 +2316,7 @@ extern (C) {
 			   FILE *outfile,
 			   char **error_msg,
 			   int32_t *status,
-			   bool *parsed_smt2) {
-    assert (false, NO_BOOLECTOR);
-  }
+			   bool *parsed_smt2);
 
   /*!
     Parse input file in BTOR format.
@@ -2665,9 +2337,7 @@ extern (C) {
 				const char *infile_name,
 				FILE *outfile,
 				char **error_msg,
-				int32_t *status) {
-    assert (false, NO_BOOLECTOR);
-  }
+				int32_t *status);
 
   /*!
     Parse input file in BTOR2 format.
@@ -2688,9 +2358,7 @@ extern (C) {
 				 const char *infile_name,
 				 FILE *outfile,
 				 char **error_msg,
-				 int32_t *status) {
-    assert (false, NO_BOOLECTOR);
-  }
+				 int32_t *status);
 
   /*!
     Parse input file in `SMT-LIB v1`_ format.
@@ -2713,9 +2381,7 @@ extern (C) {
 				const char *infile_name,
 				FILE *outfile,
 				char **error_msg,
-				int32_t *status) {
-    assert (false, NO_BOOLECTOR);
-  }
+				int32_t *status);
 
   /*!
     Parse input file in `SMT-LIB v2`_ format. See boolector_parse.
@@ -2735,9 +2401,7 @@ extern (C) {
 				const char *infile_name,
 				FILE *outfile,
 				char **error_msg,
-				int32_t *status) {
-    assert (false, NO_BOOLECTOR);
-  }
+				int32_t *status);
 
   /*------------------------------------------------------------------------*/
 
@@ -2749,9 +2413,7 @@ extern (C) {
     have been opened by the user before.
     :param node: The expression which should be dumped.
   */
-   @weak void boolector_dump_btor_node (Btor *btor, FILE *file, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_dump_btor_node (Btor *btor, FILE *file, BoolectorNode *node);
 
   /*!
     Dump formula to file in BTOR_ format.
@@ -2760,9 +2422,7 @@ extern (C) {
     :param file: File to which the formula should be dumped. The file must be
     have been opened by the user before.
   */
-   @weak void boolector_dump_btor (Btor *btor, FILE *file) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_dump_btor (Btor *btor, FILE *file);
 
   /*!
     Recursively dump ``node`` to file in `SMT-LIB v2`_ format.
@@ -2772,9 +2432,7 @@ extern (C) {
     have been opened by the user before.
     :param node: The expression which should be dumped.
   */
-   @weak void boolector_dump_smt2_node (Btor *btor, FILE *file, BoolectorNode *node) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_dump_smt2_node (Btor *btor, FILE *file, BoolectorNode *node);
 
   /*!
     Dumps formula to file in `SMT-LIB v2`_ format.
@@ -2782,9 +2440,7 @@ extern (C) {
     :param btor: Boolector instance
     :param file: Output file.
   */
-   @weak void boolector_dump_smt2 (Btor *btor, FILE *file) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_dump_smt2 (Btor *btor, FILE *file);
 
   /*!
     Dumps bit-vector formula to file in ascii AIGER format.
@@ -2793,9 +2449,7 @@ extern (C) {
     :param file: Output file.
     :param merge_roots: Merge all roots of AIG.
   */
-   @weak void boolector_dump_aiger_ascii (Btor *btor, FILE *file, bool merge_roots) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_dump_aiger_ascii (Btor *btor, FILE *file, bool merge_roots);
 
   /*!
     Dumps bit-vector formula to file in ascii AIGER format.
@@ -2804,9 +2458,7 @@ extern (C) {
     :param file: Output file.
     :param merge_roots: Merge all roots of AIG.
   */
-   @weak void boolector_dump_aiger_binary (Btor *btor, FILE *file, bool merge_roots) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak void boolector_dump_aiger_binary (Btor *btor, FILE *file, bool merge_roots);
 
   /*------------------------------------------------------------------------*/
 
@@ -2816,9 +2468,7 @@ extern (C) {
     :param btor: Boolector instance
     :return: A string with Boolector's copyright notice.
   */
-   @weak const (char *) boolector_copyright (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak const (char *) boolector_copyright (Btor *btor);
 
   /*!
     Get Boolector's version string.
@@ -2826,9 +2476,7 @@ extern (C) {
     :param btor: Boolector instance.
     :return: A string with Boolector's version.
   */
-   @weak const (char *) boolector_version (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak const (char *) boolector_version (Btor *btor);
 
   /*!
     Get Boolector's git id string.
@@ -2836,9 +2484,7 @@ extern (C) {
     :param btor: Boolector instance.
     :return: A string with Boolector's git id.
   */
-   @weak const (char *) boolector_git_id (Btor *btor) {
-    assert (false, NO_BOOLECTOR);
-  }
+   @weak const (char *) boolector_git_id (Btor *btor);
 
   /*------------------------------------------------------------------------*/
 }
