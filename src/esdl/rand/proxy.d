@@ -7,7 +7,6 @@ import esdl.rand.base: CstVecPrim, CstScope, CstDomBase,
 import esdl.rand.pred: CstPredicate, CstPredHandler;
 import esdl.rand.misc;
 import esdl.data.folder;
-import esdl.data.charbuf;
 
 import std.container: Array;
 import std.algorithm.searching: canFind;

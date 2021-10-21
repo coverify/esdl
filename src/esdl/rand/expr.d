@@ -14,7 +14,7 @@ import esdl.rand.pred: CstPredicate, CstPredHandler, Hash;
 import esdl.rand.func;
 
 import esdl.data.bvec: isBitVector, toBitVec;
-import esdl.data.charbuf;
+import esdl.data.folder: Charbuf;
 import std.traits: isIntegral, isBoolean, isStaticArray,
   isSomeChar, EnumMembers, isSigned, OriginalType;
 import std.algorithm: canFind;

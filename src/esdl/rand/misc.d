@@ -1,7 +1,7 @@
 module esdl.rand.misc;
 
 import esdl.data.queue;
-import esdl.data.charbuf;
+import esdl.data.folder: Charbuf;
 import std.traits: isIntegral, isBoolean, isArray, EnumMembers, isSigned,
   isSomeChar, isAssociativeArray, ValueType, KeyType, OriginalType;
 import std.range: ElementType;

@@ -12,13 +12,16 @@ module esdl.data.folder;
 
 import core.stdc.string : memcpy, memmove, memset;
 import core.memory: pureMalloc, pureRealloc, pureFree, GC;
+import std.traits: isSomeChar, isBoolean, isIntegral;
+
 alias malloc = pureMalloc;
 alias free = pureFree;
 alias realloc = pureRealloc;
 
 enum MINCAP = 4;
 
-struct Folder(T, string NAME="") if (is (T == class) || is (T == interface))
+struct Folder(T, string NAME="")
+     if (is (T == class) || is (T == interface) || isSomeChar!T || isBoolean!T || isIntegral!T)
 {
   // total capacity of memory allocate
   size_t _capacity;
@@ -28,7 +31,9 @@ struct Folder(T, string NAME="") if (is (T == class) || is (T == interface))
   T *_load;
 
   ~this() {
-    GC.removeRange(_load);
+    static if (is (T == class) || is (T == interface)) {
+      GC.removeRange(_load);
+    }
     free(_load);
   }
 
@@ -63,15 +68,19 @@ struct Folder(T, string NAME="") if (is (T == class) || is (T == interface))
     if (_capacity == 0) {
       _load = cast(T*) malloc(nbytes);
       memset(_load, 0, newcap * T.sizeof);
-      GC.addRange(_load, nbytes);
+      static if (is (T == class) || is (T == interface)) {
+	GC.addRange(_load, nbytes);
+      }
     }
     else {
       auto newload = cast(T*) malloc(nbytes);
       memcpy(newload, _load, _capacity * T.sizeof);
       memset(newload + _capacity, 0,
 	     (newcap - _capacity) * T.sizeof);
-      GC.addRange(newload, nbytes);
-      GC.removeRange(_load);
+      static if (is (T == class) || is (T == interface)) {
+	GC.addRange(newload, nbytes);
+	GC.removeRange(_load);
+      }
       free(_load);
       _load = newload;
     }
@@ -85,6 +94,19 @@ struct Folder(T, string NAME="") if (is (T == class) || is (T == interface))
     }
     _load[_size] = elem;
     _size += 1;
+  }
+
+  static if (is (T == char)) {
+    void opOpAssign(string op)(string elems) if (op == "~") {
+	if (_size + elems.length >= _capacity) {
+	  growCapacity(_size + elems.length);
+	}
+
+	foreach (ref elem; elems) {
+	  _load[_size] = elem;
+	  _size += 1;
+	}
+      }
   }
 
   void opOpAssign(string op)(T[] elems) if (op == "~") {
@@ -102,7 +124,7 @@ struct Folder(T, string NAME="") if (is (T == class) || is (T == interface))
     if (_size <= index) {
       growCapacity(index + 1);
       for (size_t i=_size; i<=index; ++i) {
-	_load[i] = null;
+	_load[i] = T.init;
       }
     }
     return _load[index];
@@ -205,3 +227,5 @@ struct Folder(T, string NAME="") if (is (T == class) || is (T == interface))
     growCapacity(cap);
   }
 }
+
+alias Charbuf = Folder!(char, "");

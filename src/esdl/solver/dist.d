@@ -179,7 +179,7 @@ class CstVecDistSolver(T): CstDistSolverBase
   import esdl.base.rand: _esdl__RandGen;
   import std.random: uniform, rndGen, Random;
 
-  CstVecDistRange!T [] _set;
+  CstVecDistRange!T[] _set;
   CstDomBase _dom;
 
   this(CstDomBase dom) { _dom = dom; }

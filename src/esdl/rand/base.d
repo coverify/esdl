@@ -20,7 +20,6 @@ import esdl.base.rand: _esdl__RandGen, getRandGen;
 
 import esdl.data.bvec: isBitVector;
 import esdl.data.folder;
-import esdl.data.charbuf;
 
 interface CstVarNodeIntf {
   bool isRand();

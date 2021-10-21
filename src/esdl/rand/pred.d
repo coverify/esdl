@@ -7,7 +7,6 @@ import std.array;
 import std.container.array;
 
 import esdl.data.folder;
-import esdl.data.charbuf;
 import esdl.rand.proxy: _esdl__Proxy, _esdl__ConstraintBase;
 import esdl.rand.misc;
 import esdl.rand.base: CstDomBase, CstDomSet, CstIterCallback, DomType,

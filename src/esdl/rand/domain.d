@@ -5,7 +5,7 @@ import std.traits: isIntegral, isBoolean, isSigned, Unconst,
 import std.algorithm: canFind;
 
 import esdl.data.bvec: isBitVector;
-import esdl.data.charbuf: Charbuf;
+import esdl.data.folder: Charbuf;
 
 import esdl.rand.base: CstValue, CstDomBase, CstDomSet, CstIterator,
   CstVecNodeIntf, CstVarNodeIntf, CstVecPrim, DomType, CstLogicTerm,
