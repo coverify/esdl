@@ -49,8 +49,8 @@ interface CstDepIntf {
 
   abstract void registerIdxPred(CstDepCallback idxCb);
   abstract void registerDepPred(CstDepCallback depCb);
-  abstract bool isResolved();
-  abstract bool tryResolve(_esdl__Proxy proxy);
+  abstract bool isDepResolved();
+  abstract bool tryResolveDep(_esdl__Proxy proxy);
 
   abstract CstDomBase getDomain();
 }
@@ -366,16 +366,15 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   final CstIterator _esdl__iter() {return null;}
   final CstVarNodeIntf _esdl__getChild(ulong n) {assert (false);}
 
-  bool _dist;
-  final bool isDist() { return _dist; }
+  // normally null, unless the domain has a dist constraint
+  CstPredicate _distPredicate;
 
-  final void isDist(bool d) {
-    _dist = d;
-  }
+  final CstPredicate getDistPred() { return _distPredicate; }
+  final void setDistPred(CstPredicate pred) { _distPredicate = pred; }
   
   abstract long value();
   
-  bool tryResolve(_esdl__Proxy proxy) {
+  bool tryResolveDep(_esdl__Proxy proxy) {
     //
     // import std.stdio;
     // writeln("Trying to Resolve: ", this.fullName());
@@ -386,7 +385,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     }
     else { // deps are resolved, so getResolvedNode will not fail
       auto resolved = this.getResolvedNode();
-      if (resolved.isResolved()) {
+      if (resolved.isDepResolved()) {
 	// if (resolved !is this) resolved.execCbs();
 	// this.markSolved();
 	return true;
@@ -449,7 +448,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     return _state == State.SOLVED;
   }
   
-  final override bool isResolved() {
+  final override bool isDepResolved() {
     return isSolved();
   }
 
@@ -578,8 +577,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     // _handler = handler;
     if (this.isRand()) {
       foreach (pred; _resolvedDomainPreds) {
-	if (pred.isEnabled() &&
-	    pred._state is CstPredicate.State.INIT//  &&
+	if (pred.isEnabled() && pred.isResolved() //  &&
 	    // ! pred.hasUnrolled() // now taken care of in _state (UNROLLED)
 	    ) {
 	  pred.setProxyContext(proxy);
@@ -738,11 +736,11 @@ abstract class CstObjSet: CstObjArrVoid, CstObjArrIntf
   uint _esdl__domsetLeafElemsCount = 0;
 
   final uint _esdl__leafsCount() {
-    assert (isResolved());
+    assert (isDepResolved());
     return _esdl__domsetLeafElemsCount;
   }
   
-  final bool isResolved() {
+  final bool isDepResolved() {
     return _esdl__domsetUnresolvedArrLen == 0;
   }
 
@@ -868,13 +866,13 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   // }
   
   final uint _esdl__leafsCount() {
-    assert (isResolved());
+    assert (isDepResolved());
     return _esdl__domsetLeafElemsCount;
   }
   
   abstract bool isRand();
 
-  override bool isResolved() {
+  override bool isDepResolved() {
     return _esdl__domsetUnresolvedArrLen == 0;
   }
 
@@ -902,7 +900,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     assert (false);
   }
 
-  bool tryResolve(_esdl__Proxy proxy) { return false; }
+  bool tryResolveDep(_esdl__Proxy proxy) { return false; }
 	
   void visit(CstSolver solver) {
     foreach (dom; this[]) {
@@ -937,7 +935,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   }
   
   final void annotate(CstPredHandler handler) {
-    assert (isResolved());
+    assert (isDepResolved());
     CstDomSet resolved = this.getResolvedNode();
     if (resolved !is this) resolved.annotate(handler);
     else {
@@ -957,7 +955,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
 
   
   void writeExprString(ref Charbuf str) {
-    assert (isResolved());
+    assert (isDepResolved());
     foreach (dom; this[]) {
       dom.writeExprString(str);
       str ~= ' ';
@@ -1064,12 +1062,11 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   void setProxyContext(_esdl__Proxy proxy) {
     // import std.stdio;
     // writeln("setProxyContext on: ", this.name());
-    assert (this.isResolved(), this.name() ~ " is unresolved");
+    assert (this.isDepResolved(), this.name() ~ " is unresolved");
     assert (_state is State.INIT);
     foreach (pred; _resolvedDomainPreds[]) {
       if (! pred.isGuard()) {
-	if (pred.isEnabled() &&
-	    pred._state is CstPredicate.State.INIT) {
+	if (pred.isEnabled() && pred.isResolved()) {
 	  pred.setProxyContext(proxy);
 	}
       }
@@ -1093,7 +1090,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   
   void setBatchContext(CstPredHandler handler, uint level) {
     assert (_state is State.COLLATED || _state is State.INIT);
-    assert (this.isResolved(), this.name() ~ " is unresolved");
+    assert (this.isDepResolved(), this.name() ~ " is unresolved");
     foreach (pred; _resolvedDomainPreds[]) {
       if (! pred.isGuard()) {
   	if (pred.isEnabled() &&

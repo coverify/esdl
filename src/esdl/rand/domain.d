@@ -89,7 +89,7 @@ abstract class CstDomain(T, rand RAND_ATTR) if (!is (T == bool)):
 
       final override void setBool(bool val) {assert (false);}
 
-      final override bool isDistVar() { return isDist(); }
+      final override bool isDistVar() { return getDistPred() !is null; }
 
       override long evaluate() {
 	static if (HAS_RAND_ATTRIB) {
@@ -653,17 +653,17 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     return _parent.getProxyRoot();
   }
 
-  override bool tryResolve(_esdl__Proxy proxy) {
+  override bool tryResolveDep(_esdl__Proxy proxy) {
     import std.algorithm.iteration: filter;
     debug (CSTSOLVER) {
       import std.stdio;
-      writeln("tryResolve: ", fullName());
+      writeln("tryResolveDep: ", fullName());
     }
     if (! this.depsAreResolved()) return false;
     if (isMarkedSolved()) {
       debug (CSTSOLVER) {
 	import std.stdio;
-	writeln("tryResolve: Already marked solved: ", fullName());
+	writeln("tryResolveDep: Already marked solved: ", fullName());
       }
       // execCbs();
       return true;
@@ -675,7 +675,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 	   _lambdaDomainPreds[].filter!(pred => ! (pred.isGuard() || pred.isVisitor())).empty())) {
 	debug (CSTSOLVER) {
 	  import std.stdio;
-	  writeln("tryResolve: Resolving: ", fullName());
+	  writeln("tryResolveDep: Resolving: ", fullName());
 	}
 	randomizeWithoutConstraints(proxy);
 	return true;
@@ -943,19 +943,19 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
     return _parent.getProxyRoot();
   }
 
-  override bool tryResolve(_esdl__Proxy proxy) {
+  override bool tryResolveDep(_esdl__Proxy proxy) {
     // import std.stdio;
-    // writeln("Invoking tryResolve on: ", fullName());
+    // writeln("Invoking tryResolveDep on: ", fullName());
     if (isMarkedSolved()) {
       debug (CSTSOLVER) {
 	import std.stdio;
-	writeln("tryResolve: Already marked solved: ", fullName());
+	writeln("tryResolveDep: Already marked solved: ", fullName());
       }
       // execCbs();
       return true;
     }
     else {
-      // writeln("Invoking tryResolve on: ", false);
+      // writeln("Invoking tryResolveDep on: ", false);
       return false;
     }
   }
@@ -1046,7 +1046,7 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
   //   // _parent.markArrLen(value());
   // }
 
-  // override bool isResolved() {
+  // override bool isDepResolved() {
   //   if (_state == State.SOLVED) return true;
   //   else return false;
   // }

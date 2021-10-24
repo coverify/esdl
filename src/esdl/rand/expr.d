@@ -1270,7 +1270,7 @@ class CstLogicDistExpr(T): CstLogicExpr
 
   override void setDistPredContext(CstPredicate pred) {
     pred.distDomain(_vec);
-    _vec.isDist(true);
+    _vec.setDistPred(pred);
   }
 
   void setDomainContext(CstPredicate pred, DomainContextEnum context) {
@@ -1278,7 +1278,7 @@ class CstLogicDistExpr(T): CstLogicExpr
     size_t rndLen = pred._unresolvedRnds.length;
     size_t rndArrLen = pred._unresolvedRndArrs.length;
     size_t distLen = pred._dists.length;
-    foreach (dist; _dists)
+    foreach (dist; _dists)	// CstLogicWeightedDistSetElem
       dist.setDomainContext(pred, context);
     assert (pred._unresolvedRnds.length == rndLen &&
 	    pred._dists.length == distLen &&
@@ -1411,14 +1411,14 @@ class CstVecDistExpr(T): CstLogicExpr
 
   override void setDistPredContext(CstPredicate pred) {
     pred.distDomain(_vec);
-    _vec.isDist(true);
+    _vec.setDistPred(pred);
   }
 
   void setDomainContext(CstPredicate pred, DomainContextEnum context) {
     size_t rndLen = pred._unresolvedRnds.length;
     size_t rndArrLen = pred._unresolvedRndArrs.length;
     size_t distLen = pred._dists.length;
-    foreach (dist; _dists)
+    foreach (dist; _dists)	// CstVecWeightedDistSetElem
       dist.setDomainContext(pred, context);
     assert (pred._unresolvedRnds.length == rndLen &&
 	    pred._dists.length == distLen &&
@@ -2174,24 +2174,22 @@ class CstInsideArrExpr: CstLogicExpr
   }
 
   void setDomainContext(CstPredicate pred, DomainContextEnum context) {
-    if (_notinside) {
-      // special processing for dist domains
-      CstDomBase tdom = _term.getDomain();
-      if (tdom !is null && tdom.isDist()) {
-	pred.addUnresolvedRnd(tdom, context);
-	foreach (elem; _elems) {
-	  elem.setDomainContext(pred, DomainContextEnum.DIST);
-	}
-	if (pred._distRnds.length > 0) {
-	  foreach (rnd; pred._distRnds) {
-	    pred.addDep(rnd, context);
-	    pred.addVar(rnd, context);
-	  }
-	  pred._distRnds.reset();
-	}
-	return;
-      }
-    }
+    // if (_notinside) {
+    //   // special processing for dist domains
+    //   CstDomBase tdom = _term.getDomain();
+    //   if (tdom !is null && tdom.getDistPred() !is null) {
+    // 	CstPredicate distPred = tdom.getDistPred();
+    // 	foreach (elem; _elems) {
+    // 	  elem.setDomainContext(pred, DomainContextEnum.DIST);
+    // 	}
+    // 	if (pred._distRnds.length > 0) {
+    // 	  foreach (rnd; pred._distRnds)
+    // 	    distPred.addDep(rnd, context);
+    // 	  pred._distRnds.reset();
+    // 	}
+    //   }
+    // }
+
     _term.setDomainContext(pred, context);
     foreach (elem; _elems) {
       elem.setDomainContext(pred, context);
@@ -2490,68 +2488,47 @@ class CstVec2LogicExpr: CstLogicExpr
   }
 
   void setDomainContext(CstPredicate pred, DomainContextEnum context) {
-    if (_op == CstCompareOp.NEQ) {
-      // special processing for dist domains
-      CstDomBase ldom = _lhs.getDomain();
-      if (ldom !is null && ldom.isDist()) {
-	// find if RHS is also a dist domain
-	CstDomBase rdom = _rhs.getDomain();
-	if (rdom !is null && rdom.isDist()) {
-	  pred.addDep(rdom, context);
-	  pred.addVar(rdom, context);
-	  pred.addUnresolvedRnd(ldom, context);
-	  return;
-	}
-	else {
-	  _rhs.setDomainContext(pred, DomainContextEnum.DIST);
-	  if (pred._distRnds.length > 0) {
-	    foreach (rnd; pred._distRnds) {
-	      pred.addUnresolvedRnd(rnd, context);
-	    }
-	    pred.addDep(ldom, context);
-	    pred.addVar(ldom, context);
-	    pred._distRnds.reset();
-	    return;
-	  }
-	  else {
-	    pred.addUnresolvedRnd(ldom, context);
-	    return;
-	  }
-	}
-      }
-    }
-    if (_op == CstCompareOp.NEQ) {
-      assert (_rhs !is null);
-      CstDomBase rdom = _rhs.getDomain();
-      if (rdom !is null && rdom.isDist()) {
-	_lhs.setDomainContext(pred, DomainContextEnum.DIST);
-	if (pred._distRnds.length > 0) {
-	  foreach (rnd; pred._distRnds) {
-	    pred.addUnresolvedRnd(rnd, context);
-	  }
-	  pred.addDep(rdom, context);
-	  pred.addVar(rdom, context);
-	  pred._distRnds.reset();
-	  return;
-	}
-	else {
-	  assert (false, "Domain: " ~ rdom.fullName());
-	}
-      }
-    }
+    // if (_op == CstCompareOp.NEQ) {
+    //   // special processing for dist domains
+    //   CstDomBase ldom = _lhs.getDomain();
+    //   if (ldom !is null && ldom.getDistPred() !is null) {
+    // 	CstPredicate distPred = ldom.getDistPred();
+    // 	// find if RHS is also a dist domain
+    // 	CstDomBase rdom = _rhs.getDomain();
+    // 	if (rdom !is null && rdom.getDistPred() !is null) {
+    // 	  distPred.addDep(rdom, context);
+    // 	}
+    // 	else {
+    // 	  _rhs.setDomainContext(pred, DomainContextEnum.DIST);
+    // 	  if (pred._distRnds.length > 0) {
+    // 	    foreach (rnd; pred._distRnds) distPred.addDep(rnd, context);
+    // 	    pred._distRnds.reset();
+    // 	  }
+    // 	}
+    //   }
+    //   else {
+    // 	assert (_rhs !is null);
+    // 	CstDomBase rdom = _rhs.getDomain();
+    // 	if (rdom !is null && rdom.getDistPred() !is null) {
+    // 	  CstPredicate distPred = rdom.getDistPred();
+    // 	  _lhs.setDomainContext(pred, DomainContextEnum.DIST);
+    // 	  if (pred._distRnds.length > 0) {
+    // 	    foreach (rnd; pred._distRnds) distPred.addDep(rnd, context);
+    // 	    pred._distRnds.reset();
+    // 	  }
+    // 	}
+    //   }
+    // }
     _lhs.setDomainContext(pred, context);
     _rhs.setDomainContext(pred, context);
   }
   
   bool isCompatWithDist(CstDomBase dom) {
     if (_op is CstCompareOp.NEQ) {
-      CstTerm lhs = _lhs;
-      CstTerm dom_ = dom;
-      if (lhs != dom_) {
-	assert(false, "Constraint " ~ describe() ~ " not allowed since " ~ dom.name()
-	       ~ " is dist");
-      }
-      return true;
+      CstDomBase ldom = _lhs.getDomain();
+      if (ldom !is null && ldom is dom) return true;
+      // CstDomBase rdom = _rhs.getDomain();
+      // if (rdom !is null && rdom is dom) return true;
     }
     return false;
   }

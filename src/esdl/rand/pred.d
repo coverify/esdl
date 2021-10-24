@@ -443,8 +443,8 @@ class CstPredHandler			// handler of related predicates
 	  _proxy.addSolvedDomain(_preds[0]._domain);
 	  monoFlag = true;
 	}
-	// else if (_annotatedDoms.length == 1 && (! _annotatedDoms[0].isBool())) {
-	else if (_isMono && (! _monoDom.isBool())) {
+	else if (_annotatedDoms.length == 1 && (! _annotatedDoms[0].isBool())) {
+	// else if (_isMono && (! _monoDom.isBool())) {
 	  if (_annotatedDoms[0].bitcount() < 32) {
 	    _solver = intMono;
 	  }
@@ -553,7 +553,7 @@ class CstPredHandler			// handler of related predicates
 	  // import std.stdio;
 	  // writeln(wp.describe());
 	  bool compat = wp._expr.isCompatWithDist(distDomain);
-	  if (compat is false) assert (false, "can only use != operator on distributed domains");
+	  if (compat is false) assert (false, "can only use != or !inside operator on distributed domains");
 	  wp._expr.visit(dist);
 	  wp.markPredSolved();
 	}
@@ -662,7 +662,20 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
   // alias _expr this;
 
-  enum State: byte { NONE, INIT, UNROLLED, COLLATED, BLOCKED, GROUPED, SOLVED }
+  enum State: byte { NONE, INIT, RESOLVED, UNROLLED, BLOCKED, COLLATED, GROUPED, SOLVED }
+
+  bool isResolved() {
+    return _state == State.RESOLVED;
+  }
+
+  void markResolved() {
+    import std.conv: to;
+    assert (_state == State.BLOCKED || _state == State.UNROLLED ||
+	    _state == State.INIT, _state.to!string());
+    if (_state == State.INIT) {
+      _state = State.RESOLVED;
+    }
+  }
 
   bool isUnrolled() {
     return _state == State.UNROLLED;
@@ -671,9 +684,24 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   // returns true if the only domain for this predicate
   // is a dist domain
   bool hasOnlyDistDomain() {
-    return _distDomain !is null || (_domain !is null && _domain.isDist());
+    return _distDomain !is null || (_domain !is null && _domain.getDistPred() !is null);
   }
 
+  bool isCompatWithDist(CstDomBase distDom) {
+    if (isBlocked()) return false;
+    foreach (rnd; _resolvedRnds) {
+      if (rnd.isSolved() || rnd is distDom) continue;
+      else return false;
+    }
+    foreach (rndArr; _resolvedRndArrs) {
+      foreach (rnd; rndArr[]) {
+	if (rnd.isSolved()) continue;
+	else return false;
+      }
+    }
+    return _expr.isCompatWithDist(distDom);
+  }
+  
   _esdl__ConstraintBase _constraint;
   uint _statement;
   bool _domainContextSet;
@@ -929,7 +957,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       _markResolve = false;
       bool resolved = true;
       foreach (dep; _deps) {
-	if (! dep.isResolved()) {
+	if (! dep.isDepResolved()) {
 	  resolved = false;
 	  break;
 	}
@@ -1028,6 +1056,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     if (! _resolvedVarArrs[].canFind(rdn)) _resolvedVarArrs ~= rdn;
   }
 
+  // all the dist domains that this predicate is associated with
+  // There could be multiple such domains
   Folder!(CstDomBase, "dists") _dists;
   void addDist(CstDomBase dist,
 	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
@@ -1238,7 +1268,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	// we are either dealing with a dist predicate itself or
 	// we have ancountered a predicate of the form a != b or a !inside []
 	// where a is a dist domain
-	assert (pred._dists[0].isDist());
+	assert (pred._dists[0].getDistPred() !is null);
 	pred.addUnresolvedRnd(pred._dists[0]);
       }
       else {
@@ -1334,13 +1364,13 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return _expr;
   }
 
-  bool tryResolveDeps(_esdl__Proxy proxy) {
+  bool tryResolveAllDeps(_esdl__Proxy proxy) {
     bool resolved = true;
     // import std.stdio;
     // writeln("pred: ", fullName());
     foreach (dep; _deps) {
       // writeln("dep: ", dep.fullName());
-      if (dep.tryResolve(proxy)) {
+      if (dep.tryResolveDep(proxy)) {
 	// writeln("resolved: ", dep.fullName());
 	_resolvedDepsCount += 1;
       }
@@ -1680,17 +1710,17 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   bool tryResolveFixed(_esdl__Proxy proxy) {
     assert (isGuard());
     if (_unresolvedRnds.length > 0 || _unresolvedVars.length > 0) return false;
-    else return tryResolve(proxy);
+    else return tryResolveDep(proxy);
   }
   
-  bool tryResolve(_esdl__Proxy proxy) {
+  bool tryResolveDep(_esdl__Proxy proxy) {
     assert (isGuard());
     if (_unresolvedVarArrs.length > 0 ||
 	_unresolvedRndArrs.length > 0) return false;
     else {
       bool success = true;
       foreach (rnd; _unresolvedRnds) {
-	if (! rnd.tryResolve(proxy)) {
+	if (! rnd.tryResolveDep(proxy)) {
 	  success = false;
 	}
       }
@@ -1702,7 +1732,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
   
-  bool isResolved() {
+  bool isDepResolved() {
     return isSolved();
   }
 

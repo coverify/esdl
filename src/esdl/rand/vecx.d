@@ -251,7 +251,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 	// dynamic rand_mode information is handled later
 	// do not use isRand here
 	static if (HAS_RAND_ATTRIB) {
-	  if (this.isDist()) {
+	  if (this.getDistPred() !is null) {
 	    pred.addDist(this, context);
 	  }
 	  else {
@@ -431,7 +431,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	// dynamic rand_mode information is handled later
 	// do not use isRand here
 	static if (HAS_RAND_ATTRIB) {
-	  if (this.isDist()) {
+	  if (this.getDistPred() !is null) {
 	    pred.addDist(this, context);
 	  }
 	  else {
