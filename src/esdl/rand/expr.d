@@ -2535,7 +2535,7 @@ class CstVec2LogicExpr: CstLogicExpr
 	  return;
 	}
 	else {
-	  assert (false);
+	  assert (false, "Domain: " ~ rdom.fullName());
 	}
       }
     }

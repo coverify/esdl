@@ -247,9 +247,9 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
       str ~= 'V';
       if (_domN < 256) (cast(ubyte) _domN).writeHexString(str);
       else (cast(ushort) _domN).writeHexString(str);
-      str ~= '#';
-      if (_varN < 256) (cast(ubyte) _varN).writeHexString(str);
-      else (cast(ushort) _varN).writeHexString(str);
+      // str ~= '#';
+      // if (_varN < 256) (cast(ubyte) _varN).writeHexString(str);
+      // else (cast(ushort) _varN).writeHexString(str);
     }
     else {
       str ~= 'R';

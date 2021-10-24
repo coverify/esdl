@@ -4,7 +4,7 @@ import std.conv: to;
 
 
 import std.container: Array;
-// import std.array;
+import std.array: array;
 
 import esdl.solver.base;
 import esdl.solver.z3expr;
@@ -13,11 +13,12 @@ import esdl.rand.base;
 import esdl.rand.pred;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.misc;
+import esdl.data.folder: Folder;
 import esdl.intf.z3.z3;
 import esdl.intf.z3.api.z3_types: Z3_ast;
 import esdl.intf.z3.api.z3_api: Z3_mk_int64, Z3_mk_unsigned_int64, Z3_mk_true, Z3_mk_false;
 
-import std.algorithm.searching: canFind;
+import std.algorithm.sorting: sort;
 
 private import std.typetuple: staticIndexOf, TypeTuple;
 private import std.traits: BaseClassesTuple; // required for staticIndexOf
@@ -227,7 +228,7 @@ struct Z3Var
 class CstZ3Solver: CstSolver
 {
   
-  Z3Term[] _evalStack;
+  Folder!(Z3Term, "evalStack") _evalStack;
 
   Z3Term _term;
 
@@ -252,7 +253,8 @@ class CstZ3Solver: CstSolver
 
   uint _seed;
 
-  Z3_ast[] _vector;
+  Folder!(Z3_ast, "vector") _vector;
+  CstPredicate[] _softPreds;
 
   CstVectorOp _state;
   // the handler is used only for the purpose of constructing the Z3 solver
@@ -317,7 +319,8 @@ class CstZ3Solver: CstSolver
     Solver solver = Solver(_context);
     _solver = solver;
 
-    if (handler.hasSoftConstraints()) {
+    // if (handler.softPredicateCount() > 2) { // very slow
+    if (handler.softPredicateCount() > 0) {
       _needOptimize = true;
       Optimize optimize = Optimize(_context);
       _optimize = optimize;
@@ -340,21 +343,33 @@ class CstZ3Solver: CstSolver
 	// import std.stdio;
 	// writeln(pred.describe());
 
-	pred.visit(this);
-      
-	assert(_evalStack.length == 1);
+	// assert(_evalStack.length == 0);
 	uint softWeight = pred.getSoftWeight();
 	if (softWeight == 0) {
+	  pred.visit(this);
+	  assert(_evalStack.length == 1);
 	  addRule(_solver, _evalStack[0].toBool());
 	  if (_needOptimize) addRule(_optimize, _evalStack[0].toBool());
 	}
 	else {
 	  // ignore the soft constraint
-	  assert (_needOptimize);
-	  addRule(_optimize, _evalStack[0].toBool(), softWeight, "@soft");
+	  if (_needOptimize) {
+	    pred.visit(this);
+	    assert(_evalStack.length == 1);
+	    addRule(_optimize, _evalStack[0].toBool(), softWeight, "@soft");
+	  }
+	  else {
+	    _softPreds ~= pred;
+	  }
 	}
 	_evalStack.length = 0;
       }
+    }
+
+    if (_softPreds.length > 0) {
+      _softPreds = _softPreds.sort!((x, y) =>
+				    x.getSoftWeight() > y.getSoftWeight())
+	.array();
     }
 
     _seed = _proxy._esdl__rGen.gen!uint();
@@ -424,13 +439,17 @@ class CstZ3Solver: CstSolver
     _solver.pop();
   }
 
-  bool[] _assumptionFlags;
+  Folder!(bool, "assumptionFlags") _assumptionFlags;
 
   bool _optimizeInit = false;
 
-  Expr[] optimize() {
-    Expr[] assumptions;
-    bool[] assumptionFlags;
+  Folder!(bool, "newAssumptionFlags") _newAssumptionFlags;
+  Folder!(Expr, "assumptions") _assumptions;
+  
+  void optimize() {
+    _newAssumptionFlags.reset();
+    _assumptions.reset();
+
     Model model = _optimize.getModel();
     assert (_optimize.objectives.size() == 1);
     auto objective = _optimize.objectives[0];
@@ -443,13 +462,13 @@ class CstZ3Solver: CstSolver
 	// writeln("Objective: ", subObjective.arg(0)._ast.toString());
 	// writeln(model.eval(subObjective)._ast.toString());
 	if (model.eval(subObjective).getNumeralDouble() < 0.01) { // == 0.0
-	  assumptionFlags ~= true;
+	  _newAssumptionFlags ~= true;
 	  Expr assumption = subObjective.arg(0);
 	  // writeln("Objective: ", assumption._ast.toString());
-	  assumptions ~= subObjective.arg(0);
+	  _assumptions ~= assumption;
 	}
 	else {
-	  assumptionFlags ~= false;
+	  _newAssumptionFlags ~= false;
 	}
       }
     }
@@ -460,29 +479,28 @@ class CstZ3Solver: CstSolver
       // writeln("Objective: ", subObjective.arg(0)._ast.toString());
       // writeln(model.eval(subObjective)._ast.toString());
       if (model.eval(objective).getNumeralDouble() < 0.01) { // == 0.0
-	assumptionFlags ~= true;
+	_newAssumptionFlags ~= true;
 	Expr assumption = objective.arg(0);
 	// writeln("Objective: ", assumption._ast.toString());
-	assumptions ~= objective.arg(0);
+	_assumptions ~= assumption;
       }
       else {
-	assumptionFlags ~= false;
+	_newAssumptionFlags ~= false;
       }
     }
 
-    if (_assumptionFlags != assumptionFlags) {
+    if (_assumptionFlags[] != _newAssumptionFlags[]) {
       if (_assumptionFlags.length == 0) {
 	_assumptionState = State.INIT;
       }
       else {
 	_assumptionState = State.PROD;
       }
-      _assumptionFlags = assumptionFlags;
+      _assumptionFlags.swap(_newAssumptionFlags);
     }
     else {
       _assumptionState = State.NONE;
     }
-    return assumptions[];
   }
   
   override bool solve(CstPredHandler handler) {
@@ -494,12 +512,13 @@ class CstZ3Solver: CstSolver
 	  writeln(_optimize);
 	}
 	_optimize.check();
-	Expr[] assumptions = optimize();
+	optimize();
 	_optimizeInit = true;
-	updateSolver(assumptions);
+	updateSolver();
       }
     }
     else {
+      _assumptions.reset();
       updateSolver();
     }
     
@@ -514,6 +533,8 @@ class CstZ3Solver: CstSolver
 	    " _assumptionState: " ~ _assumptionState.to!string() ~
 	    " _pushSolverCount: " ~ _pushSolverCount.to!string());
     
+    uint pushSolverCount = _pushSolverCount;
+
     if (_needOptimize) {
       assert (pushLevel(_variableState) +
 	      pushLevel(_stableState) == _pushOptimizeCount,
@@ -521,17 +542,35 @@ class CstZ3Solver: CstSolver
 	      " _stableState: " ~ _stableState.to!string() ~
 	      " _pushOptimizeCount: " ~ _pushSolverCount.to!string());
     }
-    
-    CstDomBase[] doms = handler.annotatedDoms();
+    else { // if there are <= 2 soft constraints
+
+      if (_softPreds.length > 0) {
+	foreach (pred; _softPreds) {
+	  pushSolver();
+	  pred.visit(this);
+	  assert(_evalStack.length == 1);
+	  addRule(_solver, _evalStack[0].toBool());
+	  _evalStack.length = 0;
+	  CheckResult result = _solver.check();
+	  if (result != CheckResult.SAT) popSolver();
+	}
+      }
+    }
 
     if (_proxy._esdl__debugSolver()) {
       import std.stdio;
       writeln(_solver);
     }
-    _solver.check();
+
+    CheckResult result = _solver.check();
+
+    if (result != CheckResult.SAT)
+      assert (false, "constraints do not converge");
+
     // writeln(_solver.check());
     // writeln(_solver.getModel());
     auto model = _solver.getModel();
+    CstDomBase[] doms = handler.annotatedDoms();
     foreach (i, ref dom; _domains) {
       // import std.string: format;
       // string value;
@@ -545,12 +584,15 @@ class CstZ3Solver: CstSolver
 	ulong val = vdom.getNumeralUint64();
 	doms[i].setVal(val);
       }
+
       // writeln("Value for Domain ", doms[i].name(), ": ",
       // 	      vdom.getNumeralInt64());
       // writeln(vdom.getNumeralInt64());
       // vdom.isNumeral(value);
       // writeln(value);
     }
+
+    while (_pushSolverCount > pushSolverCount) popSolver();
 
     return true;
   }
@@ -646,7 +688,7 @@ class CstZ3Solver: CstSolver
     return hasUpdated;
   }
 
-  void updateSolver(Expr[] assumptions=[]) {
+  void updateSolver() {
     if (_variableState == State.PROD) {
       this.popSolver();		// for variables
     }
@@ -678,7 +720,7 @@ class CstZ3Solver: CstSolver
 	_stableState == State.INIT) {
       if (_assumptionState != State.NULL) {
 	this.pushSolver();
-	foreach (assumption; assumptions) {
+	foreach (assumption; _assumptions) {
 	  _solver.add(assumption);
 	}
       }
@@ -686,7 +728,7 @@ class CstZ3Solver: CstSolver
     else {
       if (_assumptionState == State.PROD || _assumptionState == State.INIT) {
 	this.pushSolver();
-	foreach (assumption; assumptions) {
+	foreach (assumption; _assumptions) {
 	  _solver.add(assumption);
 	}
       }
@@ -1025,7 +1067,7 @@ class CstZ3Solver: CstSolver
 	pushToEvalStack(true);
       }
       else {
-	Z3_ast r = Z3_mk_distinct(_context, cast(uint) _vector.length, _vector.ptr);
+	Z3_ast r = Z3_mk_distinct(_context, cast(uint) _vector[].length, _vector[].ptr);
 	_context.checkError();
 	BoolExpr be = BoolExpr(_context, r);
 	pushToEvalStack(be);

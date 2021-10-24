@@ -117,7 +117,7 @@ class CstPredHandler			// handler of related predicates
   CstMonoSolver!long longMono;
   CstMonoSolver!ulong ulongMono;
 
-  bool _hasSoftConstraints;
+  uint _softPredicateCount;
   bool _hasVectorConstraints;
   bool _hasUniqueConstraints;
   bool _hasDistConstraints;
@@ -125,8 +125,8 @@ class CstPredHandler			// handler of related predicates
   bool _isMono;
   CstDomBase _monoDom;
 
-  bool hasSoftConstraints() {
-    return _hasSoftConstraints;
+  uint softPredicateCount() {
+    return _softPredicateCount;
   }
 
   bool hasVectorConstraints() {
@@ -159,7 +159,7 @@ class CstPredHandler			// handler of related predicates
     _annotatedVars.reset();
     _annotatedVarArrs.reset();
 
-    _hasSoftConstraints = false;
+    _softPredicateCount = 0;
     _hasVectorConstraints = false;
     _hasUniqueConstraints = false;
     _hasDistConstraints = false;
@@ -299,7 +299,7 @@ class CstPredHandler			// handler of related predicates
     
     import std.algorithm.sorting: sort; 
     
-    _hasSoftConstraints = false;
+    _softPredicateCount = 0;
     _hasVectorConstraints = false;
     _hasUniqueConstraints = false;
     _hasDistConstraints = false;
@@ -309,7 +309,7 @@ class CstPredHandler			// handler of related predicates
     foreach (pred; sort!((x, y) => x.hashValue() < y.hashValue())(_predList[])) {
       if (pred.withDist()) this.markDist();
       // pred._handler = this;
-      if (pred._soft != 0) _hasSoftConstraints = true;
+      if (pred._soft != 0) _softPredicateCount += 1;
       if (pred._vectorOp != CstVectorOp.NONE) _hasVectorConstraints = true;
       if (pred._uniqueFlag is true) _hasUniqueConstraints = true;
       _preds ~= pred;
@@ -437,7 +437,7 @@ class CstPredHandler			// handler of related predicates
     if (_distPred is null || (! _distPred.distDomain().isRand())) {
       annotate();
       bool monoFlag = false;
-      if (!(_hasSoftConstraints || _hasVectorConstraints)) {
+      if (!(_softPredicateCount != 0 || _hasVectorConstraints)) {
 	if (_preds.length == 1 && _preds[0].isVisitor()) {
 	  _preds[0]._state = CstPredicate.State.SOLVED;
 	  _proxy.addSolvedDomain(_preds[0]._domain);
@@ -492,7 +492,7 @@ class CstPredHandler			// handler of related predicates
 	  _solver.solve(this);
 	}
 	else {
-	  if (_hasSoftConstraints || _hasVectorConstraints) {
+	  if (_softPredicateCount != 0 || _hasVectorConstraints) {
 	    if (_proxy._esdl__debugSolver()) {
 	      import std.stdio;
 	      writeln("Invoking Z3 because of Soft/Vector Constraints");
@@ -590,11 +590,9 @@ class CstPredHandler			// handler of related predicates
       description ~= "  Dist Predicate:\n";
       description ~= "    " ~ _distPred.name() ~ '\n';
     }
-    if (_hasSoftConstraints) {
-      description ~= "  Has Soft Constraints: True\n";
-    }
-    else {
-      description ~= "  Has Soft Constraints: False\n";
+    if (_softPredicateCount != 0) {
+      description ~= "  Soft Predicates Count: " ~
+	_softPredicateCount.to!string() ~ "\n";
     }
     return description;
   }
@@ -973,11 +971,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     // A guard should on store its own rands as deps
     // should ignore the nested guards
     if (this.isGuard()) {
-      if (this !is this._predContext) return;
-      else {
-	this.addDep(rnd);
-	return;
-      }
+      if (this._isCurrentContext) this.addDep(rnd);
+      return;
     }
 
     final switch (context) {
@@ -1001,11 +996,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   void addUnresolvedRndArr(CstDomSet rndArr,
 		 DomainContextEnum context=DomainContextEnum.DEFAULT) {
     if (this.isGuard()) {
-      if (this !is this._predContext) return;
-      else {
-	this.addDep(rndArr);
-	return;
-      }
+      if (this._isCurrentContext) this.addDep(rndArr);
+      return;
     }
     assert (context == DomainContextEnum.DEFAULT);
     if (! _unresolvedRndArrs[].canFind(rndArr)) _unresolvedRndArrs ~= rndArr;
@@ -1229,7 +1221,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   // A temporary context useful only for setDomainContext
   // it is either null or points to the guard predicate that is
   // currently being processed
-  CstPredicate _predContext;
+  bool _isCurrentContext;
 
   final void doSetDomainContext(CstPredicate pred) {
     if (pred is this) {
@@ -1237,8 +1229,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       else _domainContextSet = true;
     }
 
-    _predContext = this;
-    scope (exit) _predContext = null;
+    _isCurrentContext = true;
+    scope (exit) _isCurrentContext = false;
     
     _expr.setDomainContext(pred, DomainContextEnum.DEFAULT);
 

@@ -22,14 +22,14 @@ enum MINCAP = 4;
 
 struct Folder(T, string NAME="")
      if (is (T == class) || is (T == interface) || is (T ==  struct) ||
-	 isSomeChar!T || isBoolean!T || isIntegral!T)
+	 is ( T == P*, P) || isSomeChar!T || isBoolean!T || isIntegral!T)
 {
   // total capacity of memory allocate
   size_t _capacity;
   // current size
   size_t _size;
 
-  static if (is (T == struct)) {
+  static if (is (T == struct) || is (T == P*, P)) {
     T[] _load;
   }
   else {
@@ -40,7 +40,7 @@ struct Folder(T, string NAME="")
     static if (is (T == class) || is (T == interface)) {
       GC.removeRange(_load);
     }
-    static if (! is (T == struct)) {
+    static if (! (is (T == struct) || is (T == P*, P))) {
       free(_load);
     }
   }
@@ -58,7 +58,7 @@ struct Folder(T, string NAME="")
 
   // grow minimum to size
   void growCapacity(size_t cap) {
-    static if (is (T == struct)) {
+    static if (is (T == struct) || is (T == P*, P)) {
       _load.reserve(cap);
       _load.length = cap;
       _capacity = cap;
@@ -105,7 +105,7 @@ struct Folder(T, string NAME="")
   
   void opOpAssign(string op)(T elem) if (op == "~") {
     if (_size + 1 >= _capacity) {
-      growCapacity(_size + 1);
+      growCapacity((_size + 1) * 2);
     }
     _load[_size] = elem;
     _size += 1;
@@ -114,7 +114,7 @@ struct Folder(T, string NAME="")
   static if (is (T == char)) {
     void opOpAssign(string op)(string elems) if (op == "~") {
 	if (_size + elems.length >= _capacity) {
-	  growCapacity(_size + elems.length);
+	  growCapacity((_size + elems.length) * 2);
 	}
 
 	foreach (ref elem; elems) {
@@ -126,7 +126,7 @@ struct Folder(T, string NAME="")
 
   void opOpAssign(string op)(T[] elems) if (op == "~") {
     if (_size + elems.length >= _capacity) {
-      growCapacity(_size + elems.length);
+      growCapacity((_size + elems.length) * 2);
     }
 
     foreach (ref elem; elems) {
@@ -137,9 +137,10 @@ struct Folder(T, string NAME="")
 
   ref T opIndex(size_t index) {
     if (_size <= index) {
-      growCapacity(index + 1);
+      growCapacity((index + 1) * 2);
       for (size_t i=_size; i<=index; ++i) {
-	_load[i] = T.init;
+	T l = T.init;
+	_load[i] = l;
       }
     }
     return _load[index];
@@ -203,7 +204,8 @@ struct Folder(T, string NAME="")
 
   void scrub() {		// scrub and make length zero
     for (size_t i=0; i != _size; ++i) {
-      _load[i] = T.init;
+      T l = T.init;
+      _load[i] = l;
     }
     _size = 0;
   }
@@ -219,7 +221,8 @@ struct Folder(T, string NAME="")
 
     if (newsize > _size) {
       for (size_t i=_size; i!=newsize; ++i) {
-	_load[i] = T.init;
+	T l = T.init;
+	_load[i] = l;
       }
     }
 
