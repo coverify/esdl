@@ -524,16 +524,15 @@ class CstBuddySolver: CstSolver
       // if (pred.handler() !is handler) {
       // 	assert (false, "Handler Violation " ~ pred.name());
       // }
-      if (! pred.isGuard() && ! pred.withDist()) {
-	// import std.stdio;
-	// writeln(pred.describe());
-	pred.visit(this);
-	_context.addRule(_evalStack[0].toBool());
-	popEvalStack();
-	assert(_evalStack.length == 0);
-	// writeln("We are here too");
-	// _evalStack.length = 0;
-      }
+      assert (! pred.isGuard());
+      // import std.stdio;
+      // writeln(pred.describe());
+      pred.visit(this);
+      _context.addRule(_evalStack[0].toBool());
+      popEvalStack();
+      assert(_evalStack.length == 0);
+      // writeln("We are here too");
+      // _evalStack.length = 0;
     }
 
     this.push();

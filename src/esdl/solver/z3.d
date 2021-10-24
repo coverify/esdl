@@ -339,31 +339,30 @@ class CstZ3Solver: CstSolver
       // import std.stdio;
       // writeln("Z3 Working on: ", pred.name());
 
-      if (! pred.isGuard() && ! pred.withDist()) {
-	// import std.stdio;
-	// writeln(pred.describe());
+      assert (! pred.isGuard());
+      // import std.stdio;
+      // writeln(pred.describe());
 
-	// assert(_evalStack.length == 0);
-	uint softWeight = pred.getSoftWeight();
-	if (softWeight == 0) {
+      // assert(_evalStack.length == 0);
+      uint softWeight = pred.getSoftWeight();
+      if (softWeight == 0) {
+	pred.visit(this);
+	assert(_evalStack.length == 1);
+	addRule(_solver, _evalStack[0].toBool());
+	if (_needOptimize) addRule(_optimize, _evalStack[0].toBool());
+      }
+      else {
+	// ignore the soft constraint
+	if (_needOptimize) {
 	  pred.visit(this);
 	  assert(_evalStack.length == 1);
-	  addRule(_solver, _evalStack[0].toBool());
-	  if (_needOptimize) addRule(_optimize, _evalStack[0].toBool());
+	  addRule(_optimize, _evalStack[0].toBool(), softWeight, "@soft");
 	}
 	else {
-	  // ignore the soft constraint
-	  if (_needOptimize) {
-	    pred.visit(this);
-	    assert(_evalStack.length == 1);
-	    addRule(_optimize, _evalStack[0].toBool(), softWeight, "@soft");
-	  }
-	  else {
-	    _softPreds ~= pred;
-	  }
+	  _softPreds ~= pred;
 	}
-	_evalStack.length = 0;
       }
+      _evalStack.length = 0;
     }
 
     if (_softPreds.length > 0) {

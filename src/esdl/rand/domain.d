@@ -8,7 +8,7 @@ import esdl.data.bvec: isBitVector;
 import esdl.data.folder: Charbuf;
 
 import esdl.rand.base: CstValue, CstDomBase, CstDomSet, CstIterator,
-  CstVecNodeIntf, CstVarNodeIntf, CstVecPrim, DomType, CstLogicTerm,
+  CstVecNodeIntf, CstVarNodeIntf, CstVecPrim, CstLogicTerm,
   CstVecTerm, CstVecValueBase, CstDepIntf;
 import esdl.rand.misc: rand, writeHexString, isVecSigned, CstVectorOp,
   CstInsideOp, CstCompareOp, CstLogicOp, DomainContextEnum, GetVecType,
@@ -813,11 +813,6 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
       pred.addUnresolvedRnd(this, context);
     else
       pred.addVar(this, context);
-    static if (HAS_RAND_ATTRIB) {
-      if (! this.isStatic()) {
-	if (_type <= DomType.LAZYMONO) _type = DomType.MAYBEMONO;
-      }
-    }
     _parent.setDomainContext(pred, context);
   }
 
@@ -1091,11 +1086,6 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
       pred.addUnresolvedRnd(this, context);
     else
       pred.addVar(this, context);
-    static if (HAS_RAND_ATTRIB) {
-      if (! this.isStatic()) {
-	if (_type <= DomType.LAZYMONO) _type = DomType.MAYBEMONO;
-      }
-    }
     _parent.setDomainContext(pred, context);
   }
 

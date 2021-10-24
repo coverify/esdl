@@ -7,7 +7,7 @@ import std.traits: isIntegral, isBoolean, isArray, KeyType,
   isStaticArray, isDynamicArray, isSigned, isAssociativeArray;
 
 import esdl.rand.misc;
-import esdl.rand.base: CstVecPrim, CstVecTerm, CstIterator, DomType, CstDomBase,
+import esdl.rand.base: CstVecPrim, CstVecTerm, CstIterator, CstDomBase,
   CstDomSet, CstVarNodeIntf, CstVecNodeIntf, CstVarGlobIntf, CstValue,
   CstLogicTerm, CstDepIntf;
 import esdl.rand.pred: CstPredicate;
@@ -431,9 +431,6 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	// dynamic rand_mode information is handled later
 	// do not use isRand here
 	static if (HAS_RAND_ATTRIB) {
-	  if (! this.isStatic()) {
-	    if (_type <= DomType.LAZYMONO) _type = DomType.MAYBEMONO;
-	  }
 	  if (this.isDist()) {
 	    pred.addDist(this, context);
 	  }

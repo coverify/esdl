@@ -7,7 +7,7 @@ import std.traits: isIntegral, isBoolean, isArray, KeyType,
   isStaticArray, isDynamicArray, isAssociativeArray;
 
 import esdl.rand.misc;
-import esdl.rand.base: CstValue, CstVecTerm, CstIterator, DomType,
+import esdl.rand.base: CstValue, CstVecTerm, CstIterator,
   CstDomBase, CstDomSet, CstObjSet, CstVarNodeIntf, CstVecNodeIntf,
   CstObjArrIntf, CstVarGlobIntf, CstObjectVoid, CstObjArrVoid,
   CstDepIntf, CstObjectIntf;

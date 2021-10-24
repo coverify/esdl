@@ -2,7 +2,7 @@ module esdl.rand.proxy;
 
 import esdl.solver.base: CstSolver, CstDistSolverBase;
 import esdl.rand.base: CstVecPrim, CstScope, CstDomBase,
-  DomType, CstObjectVoid, CstVarNodeIntf, CstObjectIntf,
+  CstObjectVoid, CstVarNodeIntf, CstObjectIntf,
   CstIterator, CstDomSet, CstVarGlobIntf, CstVecNodeIntf;
 import esdl.rand.pred: CstPredicate, CstPredHandler;
 import esdl.rand.misc;
@@ -162,6 +162,7 @@ abstract class _esdl__Constraint(string CONSTRAINT, string FILE=__FILE__, size_t
   }
 
   final override void doSetDomainContext() {
+    // guards should always be processed before the usual predicates
     foreach (pred; _guards) pred.doSetDomainContext(pred);
     foreach (pred; _preds)  pred.doSetDomainContext(pred);
   }
@@ -999,7 +1000,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   //     CstVecTerm ex = predicate._expr.isCompatWithDist(distDom);
   //     // isCompatWithDist returns rhs if the predicate is of != type,
   //     // otherwise it returns null
-  //     if (predicate.getUnresolvedRnds().length == 1 && ! predicate.isDist()) {
+  //     if (predicate.getUnresolvedRnds().length == 1 && ! predicate.isDistPredicate()) {
   // 	if (ex is null) {
   // 	  assert (false, "can only use != operator on distributed domains");
   // 	}
@@ -1099,7 +1100,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	  //   import std.stdio;
 	  //   writeln("Reuse handler ", handler._id, " for predicate: ", pred.describe());
 	  // }
-	  if (pred.withDist()) handler.markDist();
+	  if (pred.isDistPredicate()) handler.markDist();
 	  assert (! handler.isSolved(),
 		  "Handler can not be solved when the predicate is still not solved; handler: " ~
 		  handler.describe() ~ " predicate: " ~ pred.describe());
@@ -1153,7 +1154,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     //   import std.stdio;
     //   writeln("Reuse handler ", handler._id, " for predicate: ", pred1.describe());
     // }
-    if (pred1.withDist()) handler.markDist();
+    if (pred1.isDistPredicate()) handler.markDist();
     assert (! handler.isSolved(),
 	    "Handler can not be solved when the predicate is still not solved; handler: " ~
 	    handler.describe() ~ " predicate: " ~ pred1.describe());

@@ -183,15 +183,6 @@ abstract class CstObjVoid: CstVarVoid { }
 abstract class CstVecVoid: CstVarVoid { }
 abstract class CstVarVoid { }
 
-
-enum DomType: ubyte
-{   TRUEMONO = 1,
-    LAZYMONO = 2,		// like TRUEMONO with only some vals that need runtime eval
-    MAYBEMONO = 3,
-    INDEXEDMONO = 4,
-    MULTI = 5
-    }
-
 class CstScope {
   this(CstScope parent, CstIterator iter) {
     _parent = parent;
@@ -375,17 +366,10 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   final CstIterator _esdl__iter() {return null;}
   final CstVarNodeIntf _esdl__getChild(ulong n) {assert (false);}
 
-  DomDistEnum _dist;
-  final bool isDist() { return _dist >= DomDistEnum.DETECT; }
+  bool _dist;
+  final bool isDist() { return _dist; }
 
-  final void isDist(bool b) {
-    if (b) {
-      if (_dist == DomDistEnum.NONE) _dist = DomDistEnum.DETECT;
-    }
-    else 
-      _dist = DomDistEnum.NONE;
-  }
-  final void isDist(DomDistEnum d) {
+  final void isDist(bool d) {
     _dist = d;
   }
   
@@ -642,8 +626,6 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   uint _cycle = -1;
   State _state;
 
-  DomType _type = DomType.TRUEMONO;
-  
   uint _unresolveLap;
 
   override void reset() {

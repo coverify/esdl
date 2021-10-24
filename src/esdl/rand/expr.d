@@ -9,7 +9,7 @@ import esdl.rand.misc: rand, isVecSigned, Unconst, CstVecType,
 
 import esdl.rand.base: DomDistEnum, CstTerm, CstDomBase, CstDomSet,
   CstIterator, CstVecNodeIntf, CstVarNodeIntf, CstVecArrIntf,
-  CstVecPrim, DomType,  CstValue, CstVecTerm, CstLogicTerm, CstDepIntf;
+  CstVecPrim, CstValue, CstVecTerm, CstLogicTerm, CstDepIntf;
 import esdl.rand.pred: CstPredicate, CstPredHandler, Hash;
 import esdl.rand.func;
 
@@ -1270,7 +1270,7 @@ class CstLogicDistExpr(T): CstLogicExpr
 
   override void setDistPredContext(CstPredicate pred) {
     pred.distDomain(_vec);
-    _vec.isDist(DomDistEnum.DETECT);
+    _vec.isDist(true);
   }
 
   void setDomainContext(CstPredicate pred, DomainContextEnum context) {
@@ -1411,7 +1411,7 @@ class CstVecDistExpr(T): CstLogicExpr
 
   override void setDistPredContext(CstPredicate pred) {
     pred.distDomain(_vec);
-    _vec.isDist(DomDistEnum.DETECT);
+    _vec.isDist(true);
   }
 
   void setDomainContext(CstPredicate pred, DomainContextEnum context) {

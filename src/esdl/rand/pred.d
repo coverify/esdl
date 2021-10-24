@@ -9,7 +9,7 @@ import std.container.array;
 import esdl.data.folder;
 import esdl.rand.proxy: _esdl__Proxy, _esdl__ConstraintBase;
 import esdl.rand.misc;
-import esdl.rand.base: CstDomBase, CstDomSet, CstIterCallback, DomType,
+import esdl.rand.base: CstDomBase, CstDomSet, CstIterCallback,
   CstDepCallback, CstScope, CstIterator, CstVecNodeIntf,
   CstVecTerm, CstLogicTerm, CstDepIntf;
 import esdl.rand.base: CstValue, CstVarNodeIntf;
@@ -307,7 +307,7 @@ class CstPredHandler			// handler of related predicates
     // foreach (pred; _preds) pred._handler = null;
     _preds.reset();
     foreach (pred; sort!((x, y) => x.hashValue() < y.hashValue())(_predList[])) {
-      if (pred.withDist()) this.markDist();
+      if (pred.isDistPredicate()) this.markDist();
       // pred._handler = this;
       if (pred._soft != 0) _softPredicateCount += 1;
       if (pred._vectorOp != CstVectorOp.NONE) _hasVectorConstraints = true;
@@ -668,25 +668,14 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return _state == State.UNROLLED;
   }
   
-
-  void hasDistDomain(bool v) {
-    _hasDistDomain = v;
-  }
-  bool hasDistDomain() {
-    return _hasDistDomain;
+  // returns true if the only domain for this predicate
+  // is a dist domain
+  bool hasOnlyDistDomain() {
+    return _distDomain !is null || (_domain !is null && _domain.isDist());
   }
 
-  bool withDist() {
-    if (getDom() is null) return false;
-    // else {
-    //   getDom().isProperDist();
-    // }
-    return _hasDistDomain || isDist();
-  }
-  
   _esdl__ConstraintBase _constraint;
   uint _statement;
-  bool _hasDistDomain;
   bool _domainContextSet;
 
   immutable bool _isLambdaPred = false;
@@ -824,7 +813,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       }
     }
       
-    this.setDistPredContext();
+    _expr.setDistPredContext(this);
     
     // doDetDomainContext is now being called on the newly unrolled predicates
     // using procUnrolledNewPredicates method in the proxy
@@ -1214,10 +1203,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return _deps.length == 0 && _iters.length == 0;
   }
   
-  final void setDistPredContext() {
-    _expr.setDistPredContext(this);
-  }
-
   // A temporary context useful only for setDomainContext
   // it is either null or points to the guard predicate that is
   // currently being processed
@@ -1232,11 +1217,27 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     _isCurrentContext = true;
     scope (exit) _isCurrentContext = false;
     
-    _expr.setDomainContext(pred, DomainContextEnum.DEFAULT);
+    // make sure that the doSetDomainContext has already
+    // processed the guards, if any
+    assert (_guard is null || _guard._domainContextSet is true);
+
+    if (pred is this)
+      _expr.setDomainContext(pred, DomainContextEnum.DEFAULT);
+    else {
+      // When looking at guards of predicates involving dist domains
+      // we just need to add the guard in the dependency list
+      if (pred.hasOnlyDistDomain()) pred.addDep(this);
+      // otherwise for normal predicates, process the guard expression
+      // normally
+      else _expr.setDomainContext(pred, DomainContextEnum.DEFAULT);
+    }
 
     if (pred._dists.length > 0) {
       if (pred is this && pred._dists.length == 1 &&
 	  _unresolvedRnds.length == 0 && _unresolvedRndArrs.length == 0) {
+	// we are either dealing with a dist predicate itself or
+	// we have ancountered a predicate of the form a != b or a !inside []
+	// where a is a dist domain
 	assert (pred._dists[0].isDist());
 	pred.addUnresolvedRnd(pred._dists[0]);
       }
@@ -1250,71 +1251,21 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
       
 
-    if (pred is this && _unresolvedRnds.length == 1 && _unresolvedRndArrs.length == 0)
+    if (pred is this && _unresolvedRnds.length == 1 &&
+	_unresolvedRndArrs.length == 0)
       _domain = _unresolvedRnds[0];
 
-    // if (this is pred && this.isDist()) {
-    //   assert (_unresolvedRnds.length == 1 && _unresolvedRndArrs.length == 0);
-    // }
-
-    
     if (_guard !is null) {
+      // guard will enroll the predicate and will block or enable it
+      // when triggered
       if (pred is this) _guard.addDepPred(this);
-      if (_distDomain !is null && pred is this) { // processing a dist predicate
-	assert (_domain !is null && _domain == _distDomain);
-	pred._deps ~= _guard;
-      }
-      else if (_domain !is null && _domain.isDist()) {
-	pred._deps ~= _guard;
-      }
-      else {
-	_guard.doSetDomainContext(pred);
-      }
+      _guard.doSetDomainContext(pred);
     }
 
     if (pred is this) {
     
-      // foreach (varIter; varIters) {
-      //   import std.stdio;
-      //   stdout.writeln("Found Iterator: ", varIter.name());
-      // }
-      // if (_iters.length > 0) {
-      //   _len = _iters[0].getLenVec();
-      // }
-    
       foreach (rnd; _unresolvedRnds) rnd.registerRndPred(this);
       foreach (rnd; _unresolvedRndArrs) rnd.registerRndPred(this);
-
-      // foreach (var; _unresolvedVars) var.registerVarPred(this);
-
-      if ((! this.isVisitor()) && (! this.isGuard()) && _unresolvedRndArrs.length == 0) {
-	// assert (_unresolvedRnds.length != 0, this.describe());
-	if (_unresolvedRnds.length > 1) {
-	  foreach (rnd; _unresolvedRnds) {
-	    rnd._type = DomType.MULTI;
-	  }
-	}
-	else if (! this.isDist()) {
-	  if (_unresolvedRnds.length == 1) {
-	    auto rnd = _unresolvedRnds[0];
-	    if (rnd._type == DomType.TRUEMONO) {
-	      if (_unresolvedVars.length > 0) {
-		rnd._type = DomType.LAZYMONO;
-	      }
-	      if (_idxs.length > 0) {
-		assert(! rnd.isStatic());
-		rnd._type = DomType.INDEXEDMONO;
-	      }
-	    }
-	  }
-	}
-      }
-
-      // When the parent unrolls, its dependencies would already be take care of
-      // if (_parent !is null) {
-      //   CstDomBase[] _foundDeps = _deps ~ _idxs;
-      //   _deps = _foundDeps.filter!(dep => (! canFind(_parent._deps, dep))).array;
-      // }
 
       foreach (idx; _idxs) // if (! idx.isSolved())
 	addDep(idx);
@@ -1597,7 +1548,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   void sendPredToHandler(CstPredHandler handler){
     _state = State.GROUPED;
     
-    if (this.isDist()) {
+    if (this.isDistPredicate()) {
       assert (handler.hasDistConstraints());
       if (this.isGuardEnabled()) {
   	if (handler._distPred !is null) {
@@ -1704,7 +1655,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     _hash.modify(_expr.hashValue());
   }
   
-  bool isDist() { return _distDomain !is null; }
+  bool isDistPredicate() { return _distDomain !is null; }
   CstDomBase _distDomain;
   void distDomain(CstDomBase vec) {
     assert (_distDomain is null);
