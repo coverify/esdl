@@ -122,8 +122,8 @@ class CstPredHandler			// handler of related predicates
   bool _hasUniqueConstraints;
   bool _hasDistConstraints;
 
-  bool _isMono;
-  CstDomBase _monoDom;
+  // bool _isMono;
+  // CstDomBase _monoDom;
 
   uint softPredicateCount() {
     return _softPredicateCount;
@@ -149,10 +149,6 @@ class CstPredHandler			// handler of related predicates
     _proxy = proxy;
     _preds.reset();
     _predList.reset();
-    _doms.reset();
-    _domArrs.reset();
-    _vars.reset();
-    _varArrs.reset();
 
     _annotatedDoms.reset();
     _annotatedDomArrs.reset();
@@ -168,8 +164,6 @@ class CstPredHandler			// handler of related predicates
     _solver = null;
     _state = State.INIT;
 
-    _isMono = true;
-    _monoDom = null;
   }
   
   Folder!(CstPredicate, "preds") _preds;
@@ -191,10 +185,6 @@ class CstPredHandler			// handler of related predicates
     ulongMono = new CstMonoSolver!ulong("");
   }
 
-  // this(_esdl__Proxy proxy) {
-  //   _proxy = proxy;
-  // }
-
   _esdl__Proxy getProxy() {
     return _proxy;
   }
@@ -205,19 +195,6 @@ class CstPredHandler			// handler of related predicates
     _predList ~= pred;
   }
 
-  Folder!(CstDomBase, "doms") _doms;
-  uint addDomain(CstDomBase dom) {
-    // import std.stdio;
-    // writeln(dom.describe());
-    uint index = cast (uint) _doms.length;
-    _doms ~= dom;
-    return index;
-  }
-
-  CstDomBase[] domains() {
-    return _doms[];
-  }
-  
   Folder!(CstDomBase, "annotatedDoms") _annotatedDoms;
   uint addAnnotatedDom(CstDomBase dom) {
     // import std.stdio;
@@ -231,15 +208,6 @@ class CstPredHandler			// handler of related predicates
     return _annotatedDoms[];
   }
   
-  Folder!(CstDomSet, "domArrs") _domArrs;
-  void addDomainArr(CstDomSet domArr) {
-    _domArrs ~= domArr;
-  }
-
-  CstDomSet[] domainArrs() {
-    return _domArrs[];
-  }
-  
   Folder!(CstDomSet, "annotatedDomArrs") _annotatedDomArrs;
   uint addAnnotatedDomArr(CstDomSet domArr) {
     uint index = cast (uint) _annotatedDomArrs.length;
@@ -251,17 +219,6 @@ class CstPredHandler			// handler of related predicates
     return _annotatedDomArrs[];
   }
   
-  Folder!(CstDomBase, "vars") _vars;
-  uint addVariable(CstDomBase var) {
-    uint index = cast (uint) _vars.length;
-    _vars ~= var;
-    return index;
-  }
-
-  CstDomBase[] variables() {
-    return _vars[];
-  }
-
   Folder!(CstDomBase, "annotatedVars") _annotatedVars;
   uint addAnnotatedVar(CstDomBase var) {
     uint index = cast (uint) _annotatedVars.length;
@@ -271,11 +228,6 @@ class CstPredHandler			// handler of related predicates
 
   CstDomBase[] annotatedVars() {
     return _annotatedVars[];
-  }
-
-  Folder!(CstDomSet, "varArrs") _varArrs;
-  void addVariableArr(CstDomSet varArr) {
-    _varArrs ~= varArr;
   }
 
   Folder!(CstDomSet, "annotatedVarArrs") _annotatedVarArrs;
@@ -314,43 +266,11 @@ class CstPredHandler			// handler of related predicates
       if (pred._uniqueFlag is true) _hasUniqueConstraints = true;
       _preds ~= pred;
 
-      if (_isMono) {
-	foreach (dom; pred._resolvedRnds) {
-	  if (dom.isSolved()) continue;
-	  if (_monoDom is null) _monoDom = dom;
-	  else if (_monoDom !is dom) {
-	    _isMono = false;
-	    break;
-	  }
-	}
-      }
-
-      if (_isMono) {
-	foreach (domArr; pred._resolvedRndArrs) {
-	  foreach (dom; domArr[]) {
-	    if (dom.isSolved()) continue;
-	    if (_monoDom is null) _monoDom = dom;
-	    else if (_monoDom !is dom) {
-	      _isMono = false;
-	      break;
-	    }
-	  }
-	}
-      }
-
     }
 
     // for the next cycle
     _predList.reset();
   }
-
-  // void annotate() {
-  //   _annotatedDoms.reset();
-  //   _annotatedVars.reset();
-
-  //   if (_distPred !is null) _distPred.annotate(this);
-  //   foreach (pred; _preds) pred.annotate(this);
-  // }
 
   void annotate() {
     foreach (pred; _preds) {
@@ -398,9 +318,9 @@ class CstPredHandler			// handler of related predicates
   }
 
   public enum State: ubyte
-  {   INIT,
-      SOLVED
-      }
+    {   INIT,
+	SOLVED
+    }
 
   State _state;
   
@@ -434,138 +354,114 @@ class CstPredHandler			// handler of related predicates
       writeln(describe());
     }
 
-    if (_distPred is null || (! _distPred.distDomain().isRand())) {
-      annotate();
-      bool monoFlag = false;
-      if (!(_softPredicateCount != 0 || _hasVectorConstraints)) {
-	if (_preds.length == 1 && _preds[0].isVisitor()) {
-	  _preds[0]._state = CstPredicate.State.SOLVED;
-	  _proxy.addSolvedDomain(_preds[0]._domain);
-	  monoFlag = true;
-	}
-	else if (_annotatedDoms.length == 1 && (! _annotatedDoms[0].isBool())) {
+    assert (_distPred is null || (! _distPred.distDomain().isRand()));
+    annotate();
+    bool monoFlag = false;
+    if (!(_softPredicateCount != 0 || _hasVectorConstraints)) {
+      if (_preds.length == 1 && _preds[0].isVisitor()) {
+	_preds[0]._state = CstPredicate.State.SOLVED;
+	_proxy.addSolvedDomain(_preds[0]._domain);
+	monoFlag = true;
+      }
+      else if (_annotatedDoms.length == 1 && (! _annotatedDoms[0].isBool())) {
 	// else if (_isMono && (! _monoDom.isBool())) {
-	  if (_annotatedDoms[0].bitcount() < 32) {
+	if (_annotatedDoms[0].bitcount() < 32) {
+	  _solver = intMono;
+	}
+	else if (_annotatedDoms[0].bitcount == 32) {
+	  if(_annotatedDoms[0].signed()) {
 	    _solver = intMono;
 	  }
-	  else if (_annotatedDoms[0].bitcount == 32) {
-	    if(_annotatedDoms[0].signed()) {
-	      _solver = intMono;
-	    }
-	    else{
-	      _solver = uintMono;
-	    }
+	  else{
+	    _solver = uintMono;
 	  }
-	  else if (_annotatedDoms[0].bitcount < 64) {
+	}
+	else if (_annotatedDoms[0].bitcount < 64) {
+	  _solver = longMono;
+	}
+	else if (_annotatedDoms[0].bitcount == 64) {
+	  if(_annotatedDoms[0].signed()) {
 	    _solver = longMono;
 	  }
-	  else if (_annotatedDoms[0].bitcount == 64) {
-	    if(_annotatedDoms[0].signed()) {
-	      _solver = longMono;
-	    }
-	    else {
-	      _solver = ulongMono;
-	    }
+	  else {
+	    _solver = ulongMono;
 	  }
-	  if ( _solver !is null ) {
-	    // import std.stdio;
-	    monoFlag = _solver.solve(this);
-	    // writeln("here mono. ", monoFlag);
-	  }
+	}
+	if ( _solver !is null ) {
+	  // import std.stdio;
+	  monoFlag = _solver.solve(this);
+	  // writeln("here mono. ", monoFlag);
 	}
       }
-      if (!monoFlag){
-	string sig = signature();
-	// assert(sig1 == sig);
+    }
+    if (!monoFlag){
+      string sig = signature();
+      // assert(sig1 == sig);
 
-	if (_proxy._esdl__debugSolver()) {
-	  import std.stdio;
-	  writeln(sig);
-	}
+      if (_proxy._esdl__debugSolver()) {
+	import std.stdio;
+	writeln(sig);
+      }
 
-	CstSolver* solverp = sig in _proxy._solvers;
-	// _hasHashBeenCalculated = false;
-	// CstSolver* solverp = this in _proxy._solvers;
+      CstSolver* solverp = sig in _proxy._solvers;
+      // _hasHashBeenCalculated = false;
+      // CstSolver* solverp = this in _proxy._solvers;
 
-	if (solverp !is null) {
-	  _solver = *solverp;
+      if (solverp !is null) {
+	_solver = *solverp;
+	_solver.solve(this);
+      }
+      else {
+	if (_softPredicateCount != 0 || _hasVectorConstraints) {
+	  if (_proxy._esdl__debugSolver()) {
+	    import std.stdio;
+	    writeln("Invoking Z3 because of Soft/Vector Constraints");
+	    writeln("_preds: ", _preds[]);
+	    foreach (pred; _preds) {
+	      writeln(pred.describe());
+	    }
+	    writeln(describe());
+	  }
+	  _solver = new CstZ3Solver(sig, this);
 	  _solver.solve(this);
 	}
 	else {
-	  if (_softPredicateCount != 0 || _hasVectorConstraints) {
+	  uint totalBits;
+	  uint domBits;
+	  foreach (dom; _annotatedDoms) {
+	    // assert (! dom.isProperDist());
+	    uint domBC = dom.bitcount();
+	    totalBits += domBC;
+	    domBits += domBC;
+	  }
+	  foreach (var; _annotatedVars) totalBits += var.bitcount();
+	  if (totalBits > 32 || _hasUniqueConstraints) {
 	    if (_proxy._esdl__debugSolver()) {
 	      import std.stdio;
-	      writeln("Invoking Z3 because of Soft/Vector Constraints");
-	      writeln("_preds: ", _preds[]);
-	      foreach (pred; _preds) {
-		writeln(pred.describe());
-	      }
+	      writeln("Invoking Z3 because of > 32 bits");
 	      writeln(describe());
 	    }
 	    _solver = new CstZ3Solver(sig, this);
 	    _solver.solve(this);
 	  }
 	  else {
-	    uint totalBits;
-	    uint domBits;
-	    foreach (dom; _annotatedDoms) {
-	      // assert (! dom.isProperDist());
-	      uint domBC = dom.bitcount();
-	      totalBits += domBC;
-	      domBits += domBC;
-	    }
-	    foreach (var; _annotatedVars) totalBits += var.bitcount();
-	    if (totalBits > 32 || _hasUniqueConstraints) {
-	      if (_proxy._esdl__debugSolver()) {
-		import std.stdio;
-		writeln("Invoking Z3 because of > 32 bits");
-		writeln(describe());
-	      }
-	      _solver = new CstZ3Solver(sig, this);
-	      _solver.solve(this);
-	    }
-	    else {
-	      _solver = new CstBuddySolver(sig, this);
-	      _solver.solve(this);
-	    }
+	    _solver = new CstBuddySolver(sig, this);
+	    _solver.solve(this);
 	  }
-	  // _hasHashBeenCalculated = true;
-	  // if (_solver !is null) _proxy._solvers[this] = _solver;
-	  if (_solver !is null) _proxy._solvers[sig] = _solver;
 	}
+	// _hasHashBeenCalculated = true;
+	// if (_solver !is null) _proxy._solvers[this] = _solver;
+	if (_solver !is null) _proxy._solvers[sig] = _solver;
       }
+    }
+    // import std.stdio;
+    // writeln(_solver.describe());
+    // _solver.solve(this);
+    foreach (pred; _preds) {
       // import std.stdio;
-      // writeln(_solver.describe());
-      // _solver.solve(this);
-      foreach (pred; _preds) {
-	// import std.stdio;
-	// writeln("Marking Solved: ", pred.name());
-	pred.markPredSolved();
-      }
+      // writeln("Marking Solved: ", pred.name());
+      pred.markPredSolved();
     }
-    else {
-      assert (_distPred.isGuardEnabled());
-      CstDistSolverBase dist = _distPred._expr.getDist();
-      CstDomBase distDomain = _distPred.distDomain();
-      dist.reset();
-      foreach (wp; _preds) {
-	if (wp.isGuardEnabled()) {
-	  // import std.stdio;
-	  // writeln(wp.describe());
-	  bool compat = wp._expr.isCompatWithDist(distDomain);
-	  if (compat is false) assert (false, "can only use != or !inside operator on distributed domains");
-	  wp._expr.visit(dist);
-	  wp.markPredSolved();
-	}
-	else {
-	  wp.markPredSolved();
-	}
-      }
-      dist.uniform(distDomain, _proxy._esdl__getRandGen());
-      _proxy.addSolvedDomain(distDomain);
-      _distPred.markPredSolved();
-    }
-
 
     this.markSolved();
 
@@ -585,10 +481,6 @@ class CstPredHandler			// handler of related predicates
       foreach (pred; _preds) {
 	description ~= "    " ~ pred.name() ~ '\n';
       }
-    }
-    if (_distPred !is null) {
-      description ~= "  Dist Predicate:\n";
-      description ~= "    " ~ _distPred.name() ~ '\n';
     }
     if (_softPredicateCount != 0) {
       description ~= "  Soft Predicates Count: " ~
@@ -1709,32 +1601,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       handler.addPredicate(this);
     }
     
-  }
-
-  void doAnnotate(CstPredHandler handler, bool recurse=false) {
-    // import std.stdio;
-    // writeln("Annotating: ", this.describe());
-    assert ((! this.isGuard()) || recurse);
-    if (_guard !is null) _guard.doAnnotate(handler, true);
-
-    foreach (rnd; this._resolvedRnds) {
-      rnd.annotate(handler);
-    }
-    foreach (rndArr; this._resolvedRndArrs) {
-      handler.addDomainArr(rndArr);
-      foreach (rnd; rndArr[]) {
-	rnd.annotate(handler);
-      }
-    }
-    foreach (var; this._resolvedVars) {
-      var.annotate(handler);
-    }
-    foreach (varArr; this._resolvedVarArrs) {
-      handler.addVariableArr(varArr);
-      foreach (var; varArr[]) {
-	var.annotate(handler);
-      }
-    }
   }
 
   void annotate(CstPredHandler handler) {
