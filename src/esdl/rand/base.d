@@ -577,9 +577,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     // _handler = handler;
     if (this.isRand()) {
       foreach (pred; _resolvedDomainPreds) {
-	if (pred.isEnabled() && pred.isResolved() //  &&
-	    // ! pred.hasUnrolled() // now taken care of in _state (UNROLLED)
-	    ) {
+	if (pred.isEnabled() && pred.isResolved() && ! pred.isBlocked()) {
 	  pred.setProxyContext(proxy);
 	}
       }
@@ -1066,7 +1064,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     assert (_state is State.INIT);
     foreach (pred; _resolvedDomainPreds[]) {
       if (! pred.isGuard()) {
-	if (pred.isEnabled() && pred.isResolved()) {
+	if (pred.isEnabled() && pred.isResolved() && ! pred.isBlocked()) {
 	  pred.setProxyContext(proxy);
 	}
       }

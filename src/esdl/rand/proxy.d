@@ -4,7 +4,7 @@ import esdl.solver.base: CstSolver, CstDistSolverBase;
 import esdl.rand.base: CstVecPrim, CstScope, CstDomBase,
   CstObjectVoid, CstVarNodeIntf, CstObjectIntf,
   CstIterator, CstDomSet, CstVarGlobIntf, CstVecNodeIntf;
-import esdl.rand.pred: CstPredicate, CstPredHandler;
+import esdl.rand.pred: CstPredicate, CstPredHandler, CstDistPredHandler;
 import esdl.rand.misc;
 import esdl.data.folder;
 
@@ -317,10 +317,16 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
 
   static CstPredHandler _predHandler;
+  static CstDistPredHandler _distPredHandler;
 
   static getPredHandler() {
     if (_predHandler is null) _predHandler = new CstPredHandler();
     return _predHandler;
+  }
+
+  static getDistPredHandler() {
+    if (_distPredHandler is null) _distPredHandler = new CstDistPredHandler();
+    return _distPredHandler;
   }
 
   static CstSolver[string] _solvers;
@@ -868,11 +874,13 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       foreach (pred; _unresolvedPreds) {
 	if (pred.checkResolved()) {
 	  _solvedSome = true;
-	  pred.markResolved();
-	  if (pred.isDistPredicate())
-	    _toResolvedDistPreds ~= pred;
-	  else
-	    _toResolvedPreds ~= pred;
+	  if (! pred.isBlocked()) {
+	    pred.markResolved();
+	    if (pred.isDistPredicate())
+	      _toResolvedDistPreds ~= pred;
+	    else
+	      _toResolvedPreds ~= pred;
+	  }
 	}
 	else {
 	  _toUnresolvedPreds ~= pred;
@@ -891,15 +899,24 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       // irrespective of whether a related predicate
       // is still not resolved
       foreach (distPred; _resolvedDistPreds) {
+	_solvedSome = true;
+	assert (! distPred.isBlocked());
+	CstDistPredHandler handler = getDistPredHandler();
+	handler.initialize(this);
 	CstDomBase distDom = distPred._distDomain;
 	assert (distDom !is null && ! distDom.isSolved());
-	_solvePreds ~= distPred;
+	handler.distPred(distPred);
 	foreach (pred; distDom._resolvedDomainPreds) {
-	  assert (pred.isResolved() || pred.isBlocked(), pred.fullName());
-	  if (pred.isCompatWithDist(distDom))
-	    _solvePreds ~= pred;
+	  if (pred.isGrouped()) assert (pred.isDistPredicate());
+	  else {
+	    assert (pred.isResolved() || pred.isBlocked(), pred.fullName());
+	    if (pred.isEnabled() && pred.isResolved() && ! pred.isBlocked()) {
+	      if (pred.isCompatWithDist(distDom))
+		handler.addPredicate(pred);
+	    }
+	  }
 	}
-	solvePreds();
+	handler.solve();
       }
 
       _resolvedDistPreds.reset();
@@ -948,6 +965,14 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	if (_resolvedPreds.length > 0) {
 	  stdout.writeln("_resolvedPreds: ");
 	  foreach (predicate; _resolvedPreds) stdout.writeln(predicate.describe());
+	}
+	if (_toResolvedDistPreds.length > 0) {
+	  stdout.writeln("_toResolvedDistPreds: ");
+	  foreach (predicate; _toResolvedDistPreds) stdout.writeln(predicate.describe());
+	}
+	if (_resolvedDistPreds.length > 0) {
+	  stdout.writeln("_resolvedDistPreds: ");
+	  foreach (predicate; _resolvedDistPreds) stdout.writeln(predicate.describe());
 	}
 	if (_toUnresolvedPreds.length > 0) {
 	  stdout.writeln("_toUresolvedPreds: ");
@@ -1095,11 +1120,13 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       // else if (pred.checkResolved(true)) _toResolvedPreds ~= pred;
       else if (resolved) {
 	pred.processResolved();
-	pred.markResolved();
-	if (pred.isDistPredicate())
-	  _toResolvedDistPreds ~= pred;
-	else 
-	  _toResolvedPreds ~= pred;
+	if (! pred.isBlocked()) {
+	  pred.markResolved();
+	  if (pred.isDistPredicate())
+	    _toResolvedDistPreds ~= pred;
+	  else 
+	    _toResolvedPreds ~= pred;
+	}
       }
       else {
 	_toUnresolvedPreds ~= pred;

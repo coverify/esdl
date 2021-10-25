@@ -598,6 +598,115 @@ class CstPredHandler			// handler of related predicates
   }
 }
 
+class CstDistPredHandler	// handler of dist and related predicates
+{
+  void initialize(_esdl__Proxy proxy) {
+    _proxy = proxy;
+    _preds.reset();
+
+    _distPred = null;
+    _state = State.INIT;
+  }
+  
+  Folder!(CstPredicate, "preds") _preds;
+  CstPredicate _distPred;
+
+  CstPredicate[] predicates() {
+    return _preds[];
+  }
+
+  _esdl__Proxy _proxy;
+
+  _esdl__Proxy getProxy() {
+    return _proxy;
+  }
+
+  void distPred(CstPredicate pred) {
+    pred._state = CstPredicate.State.GROUPED;
+    _distPred = pred;
+  }
+
+  void addPredicate(CstPredicate pred) {
+    // import std.stdio;
+    // writeln(pred.describe());
+    pred._state = CstPredicate.State.GROUPED;
+    _preds ~= pred;
+  }
+
+  public enum State: ubyte
+  {   INIT,
+      SOLVED
+      }
+
+  State _state;
+  
+  void reset() {
+    _state = State.INIT;
+    if (_distPred !is null) {
+      _distPred = null;
+    }
+  }
+
+  void markSolved() {
+    _state = State.SOLVED;
+  }
+
+  bool isSolved() {
+    return _state == State.SOLVED;
+  }
+
+  void solve() {
+    if (_proxy._esdl__debugSolver()) {
+      import std.stdio;
+      writeln(describe());
+    }
+
+    assert (_distPred.isGuardEnabled());
+    CstDistSolverBase dist = _distPred._expr.getDist();
+    CstDomBase distDomain = _distPred.distDomain();
+    dist.reset();
+    foreach (wp; _preds) {
+      assert (wp.isGuardEnabled());
+      if (wp.isGuardEnabled()) {
+	// import std.stdio;
+	// writeln(wp.describe());
+	bool compat = wp._expr.isCompatWithDist(distDomain);
+	if (compat is false)
+	  assert (false, "can only use != or !inside operator on distributed domains");
+	wp._expr.visit(dist);
+	wp.markPredSolved();
+      }
+      else {
+	wp.markPredSolved();
+      }
+    }
+    dist.uniform(distDomain, _proxy._esdl__getRandGen());
+    _proxy.addSolvedDomain(distDomain);
+    _distPred.markPredSolved();
+
+
+    this.markSolved();
+
+  }
+      
+
+  string describe() {
+    import std.conv: to;
+    string description = "CstDistPredHandler -- \n";
+    if (_preds.length > 0) {
+      description ~= "  Predicates:\n";
+      foreach (pred; _preds) {
+	description ~= "    " ~ pred.name() ~ '\n';
+      }
+    }
+    if (_distPred !is null) {
+      description ~= "  Dist Predicate:\n";
+      description ~= "    " ~ _distPred.name() ~ '\n';
+    }
+    return description;
+  }
+}
+
 class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 {
   string name() {
@@ -677,8 +786,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
 
-  bool isUnrolled() {
+  final bool isUnrolled() {
     return _state == State.UNROLLED;
+  }
+  
+  final bool isGrouped() {
+    return _state == State.GROUPED;
   }
   
   // returns true if the only domain for this predicate
