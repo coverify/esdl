@@ -1439,16 +1439,10 @@ interface ParContext
     // Implementation of the parallelize UDP functionality
     //////////////////////////////////////////////////////
 
-    // Lock to inhibit parallel threads in the same Entity
-    // This valriable is set in elaboration phase and in the later
-    // phases it is only accessed. Therefor this variable can be
-    // treated as effectively immutable.
+    // When set (!= -1), this index overrides the _esdl__multicoreConfig
+    // settings to allow the user to forcibly set the pool thread index
+    long _esdl__poolIndex = -1;
 
-    // In practice, the end-user does not need to bother about
-    // this Lock. It is automatically picked up by the simulator
-    // when a process wakes up and subsequently, when the process
-    // deactivates (starts waiting for an event), the simulator
-    // gives away the Lock
     MulticoreConfig _esdl__multicoreConfig;
     MulticoreConfig _esdl__getHierMulticoreConfig() {
       // of the ParContext does not have a MulticoreConfig Object, get it
@@ -1464,6 +1458,17 @@ interface ParContext
       // from the enclosing ParContext
       return _esdl__multicoreConfig;
     }
+
+    // Lock to inhibit parallel threads in the same Entity
+    // This valriable is set in elaboration phase and in the later
+    // phases it is only accessed. Therefor this variable can be
+    // treated as effectively immutable.
+
+    // In practice, the end-user does not need to bother about
+    // this Lock. It is automatically picked up by the simulator
+    // when a process wakes up and subsequently, when the process
+    // deactivates (starts waiting for an event), the simulator
+    // gives away the Lock
     static if(!__traits(compiles, _esdl__parLock)) {
       import core.sync.semaphore: CoreSemaphore = Semaphore;
       CoreSemaphore _esdl__parLock;
@@ -7288,6 +7293,13 @@ class Fork
       proc._esdl__multicoreConfig = pconf;
     }
   }
+
+  final void setAffinity(size_t poolIdx) {
+    foreach (proc; _procs) {
+      assert(proc.state() == ProcState.STARTING);
+      proc._esdl__poolIndex = poolIdx;
+    }
+  }
 }
 
 interface ChannelIF
@@ -7873,7 +7885,14 @@ class EsdlExecutor: EsdlExecutorIf
 	  }
 	  if (proc.isRunnableTask) {
 	    this._executableTasks ~= proc;
-	    this._runnableTasksGroups[proc._esdl__multicoreConfig.getPoolThreadIndex()] ~= proc;
+	    // determine the pool index -- _esdl__poolIndex if set overrides
+	    if (proc._esdl__poolIndex != -1) {
+	      this._runnableTasksGroups[proc._esdl__poolIndex %
+					_simulator.getRoot().getThreadCoreList().length] ~= proc;
+	    }
+	    else {
+	      this._runnableTasksGroups[proc._esdl__multicoreConfig.getPoolThreadIndex()] ~= proc;
+	    }
 	  }
 	}
       }
@@ -7882,23 +7901,29 @@ class EsdlExecutor: EsdlExecutorIf
     _registeredProcesses[_stageIndex].length = 0;
   }
 
-  final void addRunnableProcess(Process p) {
-    if(p.isRunnableWork) {
-      this._runnableWorks ~= p;
+  final void addRunnableProcess(Process proc) {
+    if(proc.isRunnableWork) {
+      this._runnableWorks ~= proc;
     }
-    if(p.isRunnableTask) {
-      this._executableTasks ~= p;
-      this._runnableTasksGroups[p._esdl__multicoreConfig.getPoolThreadIndex()] ~= p;
+    if(proc.isRunnableTask) {
+      this._executableTasks ~= proc;
+      if (proc._esdl__poolIndex != -1) {
+	this._runnableTasksGroups[proc._esdl__poolIndex %
+				  _simulator.getRoot().getThreadCoreList().length] ~= proc;
+      }
+      else {
+	this._runnableTasksGroups[proc._esdl__multicoreConfig.getPoolThreadIndex()] ~= proc;
+      }
     }
   }
 
-  final void addTerminalProcess(Process p) {
-    if(p.isTerminalWork) {
-      this._terminalWorks ~= p;
+  final void addTerminalProcess(Process proc) {
+    if(proc.isTerminalWork) {
+      this._terminalWorks ~= proc;
     }
-    if(p.isTerminalTask) {
-      this._executableTasks ~= p;
-      this._terminalTasksGroups[p._esdl__multicoreConfig.getPoolThreadIndex()] ~= p;
+    if(proc.isTerminalTask) {
+      this._executableTasks ~= proc;
+      this._terminalTasksGroups[proc._esdl__multicoreConfig.getPoolThreadIndex()] ~= proc;
     }
   }
 
