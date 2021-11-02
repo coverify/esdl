@@ -2527,17 +2527,24 @@ class CstVec2LogicExpr: CstLogicExpr
     if (_op is CstCompareOp.NEQ) {
       CstDomBase ldom = _lhs.getDomain();
       if (ldom !is null && ldom is dom) return true;
-      // CstDomBase rdom = _rhs.getDomain();
-      // if (rdom !is null && rdom is dom) return true;
+      CstDomBase rdom = _rhs.getDomain();
+      if (rdom !is null && rdom is dom) return true;
     }
     return false;
   }
 
   void visit (CstDistSolverBase solver) {
-    CstTerm lhs = _lhs;
-    CstTerm dom = solver.getDomain();
-    assert (lhs == dom);
-    solver.purge(_rhs.evaluate());
+    assert (_op is CstCompareOp.NEQ);
+    // try considering LHS as dom
+    CstDomBase ldom = _lhs.getDomain();
+    CstDomBase rdom = _rhs.getDomain();
+    assert (ldom !is null || rdom !is null);
+    if (ldom !is null && ldom is solver.getDomain()) {
+      solver.purge(_rhs.evaluate());
+    }
+    if (rdom !is null && rdom is solver.getDomain()) {
+      solver.purge(_lhs.evaluate());
+    }
   }
     
   bool isSolved() {
