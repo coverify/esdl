@@ -177,7 +177,7 @@ struct CstVecDistRange(T)
 class CstVecDistSolver(T): CstDistSolverBase
 {
   import esdl.base.rand: _esdl__RandGen;
-  import std.random: uniform, rndGen, Random;
+  import std.random: uniform;
 
   CstVecDistRange!T [] _set;
   CstDomBase _dom;
@@ -248,15 +248,15 @@ class CstVecDistSolver(T): CstDistSolverBase
     return uniform(getRandGen());
   }
 
-  T uniform(ref Random gen = rndGen()) {
-    double select = getTotalWeight() * uniform(0.0, 1.0, gen);
-    T var;
-    foreach (ref dist; _set) {
-      if (dist.setVal(var, select)) break;
-    }
-    assert(select <  0);
-    return var;
-  }
+  // T uniform(ref Random gen) {
+  //   double select = getTotalWeight() * uniform(0.0, 1.0, gen);
+  //   T var;
+  //   foreach (ref dist; _set) {
+  //     if (dist.setVal(var, select)) break;
+  //   }
+  //   assert(select <  0);
+  //   return var;
+  // }
 
   T uniform(_esdl__RandGen rgen) {
     double select = getTotalWeight() * rgen.get();
@@ -375,7 +375,7 @@ struct CstLogicDistRange(T)
 class CstLogicDistSolver(T): CstDistSolverBase
 {
   import esdl.base.rand: _esdl__RandGen;
-  import std.random: uniform, rndGen, Random;
+  import std.random: uniform;
 
   CstLogicDistRange!T [] _set;
   CstDomBase _dom;
@@ -413,15 +413,15 @@ class CstLogicDistSolver(T): CstDistSolverBase
     }
   }
 
-  T uniform(ref Random gen = rndGen()) {
-    double select = getTotalWeight() * uniform(0.0, 1.0, gen);
-    T var;
-    foreach (ref dist; _set) {
-      if (dist.setVal(var, select)) break;
-    }
-    assert(select <  0);
-    return var;
-  }
+  // T uniform(ref Random gen) {
+  //   double select = getTotalWeight() * uniform(0.0, 1.0, gen);
+  //   T var;
+  //   foreach (ref dist; _set) {
+  //     if (dist.setVal(var, select)) break;
+  //   }
+  //   assert(select <  0);
+  //   return var;
+  // }
 
   T uniform(_esdl__RandGen rgen) {
     double select = getTotalWeight() * rgen.get();

@@ -1,10 +1,13 @@
 module esdl.base.rand;
 
 import std.traits: isIntegral, isBoolean, EnumMembers;
-import std.random;
+import std.random: MinstdRand, Random;
 
 import esdl.data.bvec: isBitVector;
 
+
+// alias RandomGen = MinstdRand;
+alias RandomGen = Random;
 
 T urandom(T=uint)() if (isIntegral!T || isBitVector!T) {
   static if(isBitVector!T) {
@@ -38,13 +41,17 @@ R shuffle(R)(ref R range) {
 T urandom(string BOUNDARY="[)", T=uint)(T min, T max)
   if (isIntegral!T || isBitVector!T) {
     import std.random: uniform;
+    static if (BOUNDARY == "[)") {
+      if (min == max) {
+	import std.conv: to;
+	assert (false, "invalid bounding interval ["
+		~ min.to!string ~ ", " ~ max.to!string() ~ ")");
+      }
+    }
     return uniform!(BOUNDARY, T)(min, max, getRandGen().getGen());
   }
 
-T urandom_range(string BOUNDARY="[)", T=uint)(T min, T max) {
-  import std.random: uniform;
-  return uniform!(BOUNDARY, T)(min, max, getRandGen().getGen());
-}
+alias urandom_range = urandom;
 
 void srandom(uint _seed) {
   getRandGen().seed(_seed);
@@ -58,7 +65,7 @@ class _esdl__RandGen
 {
   import std.random;
 
-  private Random _gen;
+  private RandomGen _gen;
 
   private uint _seed;
 
@@ -85,16 +92,16 @@ class _esdl__RandGen
     }
   }
 
-  ref Random getGen() {
+  ref RandomGen getGen() {
     return _gen;
   }
 
   this(uint seed) {
     _seed = seed;
-    _gen = Random(seed);
+    _gen = RandomGen(seed);
   }
 
-  void setState(ref Random state) {
+  void setState(ref RandomGen state) {
     _gen = state;
   }
   

@@ -2,7 +2,7 @@ module esdl.rand.base;
 
 import std.traits: isIntegral, isBoolean;
 import std.algorithm: canFind;
-import std.random: Random, uniform;
+import std.random: uniform;
 import std.range: isRandomAccessRange;
 
 import esdl.solver.base;
