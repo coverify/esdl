@@ -46,6 +46,12 @@ public struct Queue(T) {
   private size_t head = 0; /// insert first than move
   private size_t size = 0; /// move first than insert
 
+  public void assimilate(T[] values) {
+    data = values;
+    head = 0;
+    size = values.length;
+  }
+
   /** Through this constructor a Queue is constructed from a array.
 
       Params:
@@ -545,9 +551,10 @@ public struct Queue(T) {
    */
   private void growCapacity() @trusted {
     T[] ndata;
-    if(data.length == 0) {
+    if (data.length == 0) {
       ndata = new T[8];
-    } else {
+    }
+    else {
       ndata = new T[this.data.length*2];
     }
     assert(ndata !is null);
