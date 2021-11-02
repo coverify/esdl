@@ -416,9 +416,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   Folder!(CstPredicate, "predGuards") _predGuards;
 
-  // Folder!(CstPredicate, "resolvedDistPreds") _resolvedDistPreds;
-  Folder!(CstPredicate, "resolvedMonoPreds") _resolvedMonoPreds;
-
   Folder!(CstDomBase, "solvedDomains") _solvedDomains;
   Folder!(CstDomSet, "solvedDomainArrs") _solvedDomainArrs;
   
@@ -690,7 +687,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   this(_esdl__Proxy parent, CstObjectIntf obj) {
     _esdl__objIntf = obj;
-    import std.random: Random, uniform;
+    import std.random: uniform;
     debug(NOCONSTRAINTS) {
       assert(false, "Constraint engine started");
     }
@@ -746,8 +743,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _resolvedDistPreds.reset();
     _unresolvedPreds.reset();
     _toUnresolvedPreds.reset();
-    // _resolvedDistPreds.reset();
-    _resolvedMonoPreds.reset();
     _solvedDomains.reset();
     _solvedDomainArrs.reset();
     updateValDomains();
@@ -763,7 +758,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	   _toNewPreds.length > 0 ||
 	   // _unrolledPreds.length > 0 ||
 	   // _toUnrolledPreds.length > 0 ||
-	   // _resolvedMonoPreds.length > 0 ||
 	   _toResolvedPreds.length > 0 ||
 	   _toResolvedDistPreds.length > 0 ||
 	   _toUnresolvedPreds.length > 0 ||
@@ -876,8 +870,14 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	  _solvedSome = true;
 	  if (! pred.isBlocked()) {
 	    pred.markResolved();
-	    if (pred.isDistPredicate())
-	      _toResolvedDistPreds ~= pred;
+	    if (pred.isDistPredicate()) {
+	      // make sure that the domain is rand
+	      assert (pred._distDomain !is null);
+	      if (pred._distDomain.isRand())
+		_toResolvedDistPreds ~= pred;
+	      else
+		_toResolvedPreds ~= pred;
+	    }
 	    else
 	      _toResolvedPreds ~= pred;
 	  }
@@ -950,14 +950,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       
       if (_solvedSome is false) {
 	import std.stdio;
-	// if (_resolvedDistPreds.length > 0) {
-	//   stdout.writeln("_resolvedDistPreds: ");
-	//   foreach (predicate; _resolvedDistPreds) stdout.writeln(predicate.describe());
-	// }
-	// if (_resolvedMonoPreds.length > 0) {
-	//   stdout.writeln("_resolvedMonoPreds: ");
-	//   foreach (predicate; _resolvedMonoPreds) stdout.writeln(predicate.describe());
-	// }
 	if (_toResolvedPreds.length > 0) {
 	  stdout.writeln("_toResolvedPreds: ");
 	  foreach (predicate; _toResolvedPreds) stdout.writeln(predicate.describe());
@@ -1122,8 +1114,13 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	pred.processResolved();
 	if (! pred.isBlocked()) {
 	  pred.markResolved();
-	  if (pred.isDistPredicate())
-	    _toResolvedDistPreds ~= pred;
+	  if (pred.isDistPredicate()) {
+	    assert (pred._distDomain !is null);
+	    if (pred._distDomain.isRand())
+	      _toResolvedDistPreds ~= pred;
+	    else
+	      _toResolvedPreds ~= pred;
+	  }
 	  else 
 	    _toResolvedPreds ~= pred;
 	}
