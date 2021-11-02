@@ -76,7 +76,7 @@ class CstVectorGlobEnum(V, rand RAND_ATTR, int N)
 
 }
 
-class CstVectorIdx(V, rand RAND_ATTR, int N, int IDX,
+class CstVectorIdx(V, rand RAND_ATTR, int N, VT, int IDX,
 		   P, int PIDX): CstVector!(V, RAND_ATTR, N)
 {
   alias RV = typeof(this);
@@ -523,7 +523,7 @@ class CstVecArrGlobEnum(V, rand RAND_ATTR, int N)
 }
 
 // Arrays (Multidimensional arrays as well)
-class CstVecArrIdx(V, rand RAND_ATTR, int N, int IDX,
+class CstVecArrIdx(V, rand RAND_ATTR, int N, VT, int IDX,
 		   P, int PIDX): CstVecArr!(V, RAND_ATTR, N)
 {
   // static assert (is (typeof(this) == P.tupleof[PIDX]));

@@ -8,8 +8,9 @@
 
 module esdl.rand.meta;
 
-import std.traits: isIntegral, isBoolean, isArray, isSomeChar,
-  PointerTarget, OriginalType, isAssociativeArray, ValueType, KeyType;
+import std.traits: isIntegral, isBoolean, isArray, isSomeChar, isPointer,
+  PointerTarget, OriginalType, isAssociativeArray, ValueType, KeyType,
+  isSomeString;
 import esdl.data.bvec: isBitVector;
 import esdl.data.queue: isQueue, Queue;
 import esdl.data.bstr;
@@ -69,18 +70,34 @@ template _esdl__RandProxyType(T, int I, P, int PI)
     alias _esdl__RandProxyType = _esdl__NotMappedForRandomization;
   }
   else static if (isRandomizable!L) {
-    alias _esdl__RandProxyType = CstVectorIdx!(L, RAND, 0, I, P, PI);
-  }  
+    alias _esdl__RandProxyType = CstVectorIdx!(L, RAND, 0, L, I, P, PI);
+  }
+  else static if (isPointer!L && isRandomizable!(PointerTarget!L)) {
+    alias LT = PointerTarget!L;
+    alias _esdl__RandProxyType = CstVectorIdx!(LT, RAND, 0, L, I, P, PI);
+  }
   else static if (isRandVectorSet!L) {
-    alias _esdl__RandProxyType = CstVecArrIdx!(L, RAND, 0, I, P, PI);
+    alias _esdl__RandProxyType = CstVecArrIdx!(L, RAND, 0, L, I, P, PI);
+  }
+  else static if (isPointer!L && isRandVectorSet!(PointerTarget!L)) {
+    alias LT = PointerTarget!L;
+    alias _esdl__RandProxyType = CstVecArrIdx!(LT, RAND, 0, L, I, P, PI);
   }
   // Exclude class/struct* elements that have not been rand tagged
   // or are excluded  because of rand.disable or rand.barrier
   else static if (isRandObject!L) {
-    alias _esdl__RandProxyType = CstObjectIdx!(L, RAND, 0, I, P, PI);
+    alias _esdl__RandProxyType = CstObjectIdx!(L, RAND, 0, L, I, P, PI);
+  }
+  else static if (isPointer!L && isRandObject!(PointerTarget!L)) {
+    alias LT = PointerTarget!L;
+    alias _esdl__RandProxyType = CstObjectIdx!(LT, RAND, 0, L, I, P, PI);
   }
   else static if (isRandObjectSet!L) {
-    alias _esdl__RandProxyType = CstObjArrIdx!(L, RAND, 0, I, P, PI);
+    alias _esdl__RandProxyType = CstObjArrIdx!(L, RAND, 0, L, I, P, PI);
+  }
+  else static if (isPointer!L && isRandObjectSet!(PointerTarget!L)) {
+    alias LT = PointerTarget!L;
+    alias _esdl__RandProxyType = CstObjArrIdx!(LT, RAND, 0, L, I, P, PI);
   }
   else {
     alias _esdl__RandProxyType = _esdl__NotMappedForRandomization;
@@ -206,6 +223,9 @@ void _esdl__doInitRandObjectElems(P, int I=0)(P p) {
 		   (is (M == U*, U) && is (U == struct))) { // class or struct*
 	  p.tupleof[I] = new Q(NAME, p, t.tupleof[Q._esdl__INDEX]);
 	}
+	else static if (isPointer!M) {
+	  p.tupleof[I] = new Q(NAME, p, t.tupleof[Q._esdl__INDEX]);
+	}
 	else {
 	  p.tupleof[I] = new Q(NAME, p, &(t.tupleof[Q._esdl__INDEX]));
 	}
@@ -290,33 +310,56 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
   }
   else {
     alias Q = typeof (P.tupleof[I]);
-    static if (is (Q == CstVectorIdx!(L, RAND, N, IDX, P, PIDX),
-		   L, rand RAND, int N, int IDX, P, int PIDX)) {
+    static if (is (Q == CstVectorIdx!(L, RAND, N, LL, IDX, P, PIDX),
+		   L, rand RAND, int N, LL, int IDX, P, int PIDX)) {
       if (p.tupleof[I] !is null) {
-	p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
+	static if (isPointer!LL) {
+	  // assert (p._esdl__outer.tupleof[IDX] !is null,
+	  // 	  p._esdl__outer.tupleof[IDX].stringof ~ " is null");
+	  p.tupleof[I]._esdl__setValRef(p._esdl__outer.tupleof[IDX]);
+	}
+	else {
+	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
+	}
       }
     }
-    static if (is (Q == CstObjectIdx!(L, RAND, N, IDX, P, PIDX),
-		   L, rand RAND, int N, int IDX, P, int PIDX)) {
+    static if (is (Q == CstObjectIdx!(L, RAND, N, LL, IDX, P, PIDX),
+		   L, rand RAND, int N, LL, int IDX, P, int PIDX)) {
       if (p.tupleof[I] !is null) {
 	static if (is (L == struct) && !isQueue!L) {
 	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
 	}
 	else {
+	  // assert (p._esdl__outer.tupleof[IDX] !is null,
+	  // 	  p._esdl__outer.tupleof[IDX].stringof ~ " is null");
 	  p.tupleof[I]._esdl__setValRef(p._esdl__outer.tupleof[IDX]);
 	}
       }
     }
-    static if (is (Q == CstVecArrIdx!(L, RAND, N, IDX, P, PIDX),
-		   L, rand RAND, int N, int IDX, P, int PIDX)) {
+    static if (is (Q == CstVecArrIdx!(L, RAND, N, LL, IDX, P, PIDX),
+		   L, rand RAND, int N, LL, int IDX, P, int PIDX)) {
       if (p.tupleof[I] !is null) {
-	p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
+	static if (isPointer!LL) {
+	  // assert (p._esdl__outer.tupleof[IDX] !is null,
+	  // 	  p._esdl__outer.tupleof[IDX].stringof ~ " is null");
+	  p.tupleof[I]._esdl__setValRef(p._esdl__outer.tupleof[IDX]);
+	}
+	else {
+	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
+	}
       }
     }
-    static if (is (Q == CstObjArrIdx!(L, RAND, N, IDX, P, PIDX),
-		   L, rand RAND, int N, int IDX, P, int PIDX)) {
+    static if (is (Q == CstObjArrIdx!(L, RAND, N, LL, IDX, P, PIDX),
+		   L, rand RAND, int N, LL, int IDX, P, int PIDX)) {
       if (p.tupleof[I] !is null) {
-	p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
+	static if (isPointer!LL) {
+	  // assert (p._esdl__outer.tupleof[IDX] !is null,
+	  // 	  p._esdl__outer.tupleof[IDX].stringof ~ " is null");
+	  p.tupleof[I]._esdl__setValRef(p._esdl__outer.tupleof[IDX]);
+	}
+	else {
+	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
+	}
       }
     }
     _esdl__doSetOuterElems!(P, I+1)(p, changed);
@@ -1086,10 +1129,10 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       else {
 	alias L = typeof(_lambdaArgs[I]);
 	static if (isRandomizable!L) {
-	  alias TYPE = CstVectorIdx!(L, rand(true, true), 0, -1, _esdl__ARG, -1);
+	  alias TYPE = CstVectorIdx!(L, rand(true, true), 0, L, -1, _esdl__ARG, -1);
 	}
 	else static if (isRandVectorSet!L) {
-	  alias TYPE = CstVecArrIdx!(L, rand(true, true), 0, -1, _esdl__ARG, -1);
+	  alias TYPE = CstVecArrIdx!(L, rand(true, true), 0, L, -1, _esdl__ARG, -1);
 	}
 	auto vvar = cast (TYPE) (_proxyLambdaArgs[I]);
 	vvar._esdl__setValRef(& _lambdaArgs[I]);
@@ -1279,6 +1322,9 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
 		   (is (M == U*, U) && is (U == struct))) {
 	  V = new L(name, parent, p._esdl__outer.tupleof[L._esdl__INDEX]);
 	}
+	else static if (isPointer!M) {
+	  V = new L(name, parent, p._esdl__outer.tupleof[L._esdl__INDEX]);
+	}
 	else {
 	  V = new L(name, parent, &(p._esdl__outer.tupleof[L._esdl__INDEX]));
 	}
@@ -1406,7 +1452,7 @@ auto _esdl__arg_proxy(L, X, P)(size_t idx, string name, ref L arg, X proxy, P pa
   static if (isRandomizable!L) {
     // import std.stdio;
     // writeln("Creating VarVec, ", name);
-    alias CstVectorType = CstVectorIdx!(L, rand(true, true), 0, -1, _esdl__ARG, -1);
+    alias CstVectorType = CstVectorIdx!(L, rand(true, true), 0, L, -1, _esdl__ARG, -1);
     CstVarNodeIntf var = proxy._proxyLambdaArgs[idx];
     if (var is null) {
       CstVectorType vvar = new CstVectorType(name, parent, &arg);
@@ -1420,7 +1466,7 @@ auto _esdl__arg_proxy(L, X, P)(size_t idx, string name, ref L arg, X proxy, P pa
     }
   }
   else static if (isRandVectorSet!L) {
-    alias CstVecArrType = CstVecArrIdx!(L, rand(true, true), 0, -1, _esdl__ARG, -1);
+    alias CstVecArrType = CstVecArrIdx!(L, rand(true, true), 0, L, -1, _esdl__ARG, -1);
     CstVarNodeIntf var = proxy._proxyLambdaArgs[idx];
     if (var is null) {
       CstVecArrType vvar = new CstVecArrType(name, parent, &arg);
@@ -1531,6 +1577,87 @@ void randomizeWith(string C, string FILE=__FILE__, size_t LINE=__LINE__, T, ARGS
 
     t._esdl__virtualRandomizeWith(proxyInst, proxyInst._esdl__lambdaCst);
   }
+
+auto randomize(AA...)() {
+  alias SS = _esdl__InlineRandomize!AA;
+  SS _esdl__inline;
+  _esdl__inline._esdl__init!0();
+  return _esdl__inline;
+}
+
+struct _esdl__InlineRandomize(AA...)
+{
+  mixin _esdl__ListRandsMixin!(0, AA);
+
+  void _esdl__init(int N = 0)() {
+    static if (N == AA.length) { }
+    else {
+      alias T = typeof(AA[N]);
+      static if (isPointer!T) {
+	this.tupleof[N] = AA[N];
+      }
+      else {
+	this.tupleof[N] = & AA[N];
+      }
+      _esdl__init!(N+1)();
+    }
+  }
+
+  void using(string C, string FILE=__FILE__, size_t LINE=__LINE__, ARGS...)(ARGS values) {
+    randomizeWith!(C, FILE, LINE, typeof(this), ARGS)(this, values);
+  }
+
+  mixin Randomization;
+}
+
+mixin template _esdl__ListRandsMixin(int N, AA...)
+{
+  static if (AA.length == N) { }
+  else {
+    mixin (_esdl__ListRandMixin!(N, AA[N]));
+    mixin _esdl__ListRandsMixin!(N+1, AA);
+  }
+}
+
+template _esdl__ListRandMixin(int N, alias A) {
+  enum string var = A.stringof;
+  alias T = typeof(A);
+  enum string TS = T.stringof;
+  static if (isPointer!T) {
+    enum string _esdl__ListRandMixin =
+      "@rand typeof(AA[" ~ N.stringof ~ "]) " ~ var ~ ";\n";
+  }
+  else {
+    enum string _esdl__ListRandMixin =
+      "@rand typeof(AA[" ~ N.stringof ~ "]) *" ~ var ~ ";\n";
+  }
+}
+
+// mixin template _esdl__ListRandMixin(alias A)
+// {
+//   static if (isPointer!(typeof(A))) {
+//     typeof(A) A.stringof = A;
+//   }
+//   else {
+//     typeof(A)* A.stringof = &A;
+//   }
+// }
+
+// string _esdl__ListRandsMixinString(AA...)() {
+//   static if (AA.length == 0) {return "";}
+//   else {
+//     alias A = AA[0];
+//     alias T = typeof(A);
+
+//     static if (isPointer!T) {
+//       string mix = T.stringof ~ " " ~ A.stringof ~ = 
+//     }
+    
+//     alias TP = typeof(AA[0]);
+//     TP* AA[0].stringof = & AA[0];
+//     mixin _esdl__ListRands!(AA[1..$]);
+//   }
+// }
 
 // FIXME add bitvectors to this template filter
 template allIntengral(ARGS...) {

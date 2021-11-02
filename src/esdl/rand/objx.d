@@ -82,7 +82,7 @@ class CstObjectGlobEnum(V, rand RAND_ATTR, int N)
   }
 }
 
-class CstObjectIdx(V, rand RAND_ATTR, int N, int IDX,
+class CstObjectIdx(V, rand RAND_ATTR, int N, VT, int IDX,
 		   P, int PIDX): CstObject!(V, RAND_ATTR, N)
 {
   enum _esdl__ISRAND = RAND_ATTR.isRand();
@@ -578,7 +578,7 @@ class CstObjArrGlobEnum(V, rand RAND_ATTR, int N)
 
 
 // Arrays (Multidimensional arrays as well)
-class CstObjArrIdx(V, rand RAND_ATTR, int N, int IDX,
+class CstObjArrIdx(V, rand RAND_ATTR, int N, VT, int IDX,
 		   P, int PIDX): CstObjArr!(V, RAND_ATTR, N)
 {
   enum _esdl__ISRAND = RAND_ATTR.isRand();
