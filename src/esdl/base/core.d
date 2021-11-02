@@ -17,6 +17,7 @@ import core.thread: Thread, Fiber, ThreadGroup;
 
 public import esdl.data.time;
 public import esdl.base.comm;
+public import esdl.base.rand: RandomGen;
 import esdl.data.bvec: isBitVector;
 
 // use atomicStore and atomicLoad
@@ -24,7 +25,7 @@ import esdl.data.bvec: isBitVector;
 // in the D compiler.
 
 import std.traits: isArray, isIntegral, isBoolean;
-import std.random: Random, uniform;
+import std.random: uniform;
 
 import esdl.sys.sched: stickToCpuCore, CPU_COUNT, CPU_COUNT_AFFINITY, CPU_LIST;
 version(WEAKREF) {
@@ -4527,11 +4528,11 @@ interface Procedure: NamedComp
     getRandGen().seed(seed);
   }
 
-  final void getRandState(ref Random rstate) {
+  final void getRandState(ref RandomGen rstate) {
     rstate = getRandGen.getGen().save();
   }
 
-  final void setRandState(ref Random state) {
+  final void setRandState(ref RandomGen state) {
     getRandGen().getGen() = state;
   }
 
@@ -7285,7 +7286,7 @@ class Fork
     }
   }
 
-  final void setAffinity(ParContext context) {
+  final void setThreadAffinity(ParContext context) {
     foreach(proc; _procs) {
       assert(proc.state() == ProcState.STARTING);
       auto pconf = context._esdl__getHierMulticoreConfig();
@@ -7294,12 +7295,14 @@ class Fork
     }
   }
 
-  final void setAffinity(size_t poolIdx) {
+  final void setThreadAffinity(size_t poolIdx) {
     foreach (proc; _procs) {
       assert(proc.state() == ProcState.STARTING);
       proc._esdl__poolIndex = poolIdx;
     }
   }
+
+  alias set_thread_affinity = setThreadAffinity;
 }
 
 interface ChannelIF
@@ -9456,22 +9459,27 @@ abstract class RootEntity: RootEntityIntf
     return this._simulator.getMode();
   }
 
+  alias set_async_mode = setAsyncMode;
   void setAsyncMode() {
     this._simulator.setMode(SchedMode.ASYNC);
   }
 
+  alias set_vpi_mode = setVpiMode;
   void setVpiMode() {
     this._simulator.setMode(SchedMode.VPI);
   }
 
+  alias set_vhpi_mode = setVhpiMode;
   void setVhpiMode() {
     this._simulator.setMode(SchedMode.VHPI);
   }
 
+  alias set_fli_mode = setFliMode;
   void setFliMode() {
     this._simulator.setMode(SchedMode.FLI);
   }
 
+  alias set_master_mode = setMasterMode;
   void setMasterMode() {
     this._simulator.setMode(SchedMode.MASTER);
   }
