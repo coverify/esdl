@@ -74,7 +74,13 @@ struct Queue(T) {
     _size = size;
   }
   
-  public this(this) @safe  { }
+  public this(const Queue!T q, size_t head, size_t tail) const {
+    _array = q._array;
+    _head = head;
+    _size = tail - head;
+  }
+  
+ public this(this) @safe { }	// postblit
 
   public this(R)(R values) @safe
   if (isIterable!R && is(RangeElementType!R: T) && !(isArray!R)) {
@@ -137,12 +143,22 @@ struct Queue(T) {
 
   alias dup = clone;
 
+  unittest {
+    int[] a = [0, 1, 2, 3, 4, 5];
+    Queue!(int) tmp = a;
+    Queue!(int) q = tmp.dup;
+
+    assert (a.length = q.length);
+    foreach (size_t i, int e; q) {
+      assert (a[i] == e, format("%d[%d]", i, e));
+    }
+  }
+
   public bool opEquals(R)(R r) const @trusted
     if (isIterable!R && is (RangeElementType!R: T) && hasLength!R)
   {
-    if (this.length() != r.length) {
-      return false;
-    }
+    if (this.length() != r.length) return false;
+
     foreach (idx, it; r) {
       static if (is (T == class)) {
   	if (this[idx] is null && it is null) continue;
@@ -151,6 +167,20 @@ struct Queue(T) {
       if (this[idx] != it) return false;
     }
     return true;
+  }
+
+  unittest {
+    int[] a = [0, 1, 2, 3, 4, 5];
+    Queue!(int) tmp = a;
+    Queue!(int) q = tmp.dup;
+
+    assert (q == a);
+    assert (q == tmp);
+
+    q ~= 42;
+
+    assert (q != a);
+    assert (q != tmp);
   }
 
   public T[] toArray() const @trusted {
@@ -166,6 +196,14 @@ struct Queue(T) {
       }
     }
     return ret;
+  }
+
+  unittest {
+    int[] a = [0, 1, 2, 3, 4, 5];
+    Queue!(int) q = a;
+    int[] arr = q.toArray;
+
+    assert (arr == a);
   }
 
   string toString() {
@@ -186,6 +224,11 @@ struct Queue(T) {
     sink(buff);
   }
 
+  unittest {
+    Queue!(int) q = [0, 1, 2, 3, 4, 5];
+    assert (q.to!string == "[0, 1, 2, 3, 4, 5]", q.to!string);
+  }
+
   public size_t length() const @safe nothrow { return _size; }
   public void length(size_t nsize) { 
     if (nsize > _size) while (nsize >= _array.length) _growCapacity();
@@ -193,10 +236,16 @@ struct Queue(T) {
   }
   public size_t opDollar() const @safe nothrow { return this.length(); }
 
-  public void growCapacity() @safe {
-    _growCapacity();
+  unittest {
+    Queue!(int) q;
+    assert (q.length == 0);
+    q = [0, 1, 2, 3, 4, 5];
+    assert (q.length == 6);
+    for (size_t i=0; i!=10; ++i) q._growCapacity();
+    assert (q.length == 6);
   }
 
+  
   private void _growCapacity() @trusted { // does not change _size
     T[] arr;
     if (_array.length == 0) {
@@ -304,9 +353,22 @@ struct Queue(T) {
       }
     }
   }
+
+  unittest {
+    Queue!(int) q = [0, 1, 2, 3, 4, 5];
+    Queue!(int) p = q.dup;
+
+    p <<= 4;
+    p >>= 2;
+    p >>= 2;
+
+    assert(q == p);
+  }
+
   
-  public void _insert(ptrdiff_t idx, size_t count) @trusted {
-    while (count + _size >= _array.length) growCapacity();
+  
+  private void _insert(ptrdiff_t idx, size_t count) @trusted {
+    while (count + _size >= _array.length) _growCapacity();
 
     if (idx < 0) idx = this._size + idx;
     assert (idx >= 0);
@@ -316,7 +378,7 @@ struct Queue(T) {
     auto tail = _tail;
 
     if (idx >= _size / 2) {
-      if (fidx < tail) {
+      if (fidx <= tail) {
 	if (tail + count <= len || fidx + count >= len) {
 	  _move((fidx+count)%len, fidx, tail-fidx);
 	}
@@ -341,7 +403,7 @@ struct Queue(T) {
       }
     }
     else {
-      if (_head < fidx) {
+      if (_head <= fidx) {
 	if (_head >= count || fidx <= count) {
 	  _move((len+_head-count)%len, _head, idx);
 	}
@@ -370,7 +432,7 @@ struct Queue(T) {
   }
 
 
-  public void _remove(ptrdiff_t idx, size_t count)  {
+  private void _remove(ptrdiff_t idx, size_t count) {
     if (idx < 0) idx = this._size + idx;
     assert (idx >= 0);
     
@@ -405,7 +467,7 @@ struct Queue(T) {
     }
     else {
       size_t fidx = (idx + _head) % len;
-      if (_head < fidx) {
+      if (_head <= fidx) {
 	if (fidx + count <= len || _head + count >= len) {
 	  _move((_head+count)%len, _head, idx);
 	}
@@ -442,12 +504,37 @@ struct Queue(T) {
     return slice;
   }
 
+  public const (Queue!(T)) opSlice(size_t low, size_t high) const @safe {
+    assert(high <= this.length);
+    const (Queue!(T)) slice = const (Queue!(T)) (this, low, high);
+
+    return slice;
+  }
+
+  unittest {
+    Queue!(int) q = [0, 1, 2, 3, 4, 5];
+    immutable Queue!(int) r = [0, 1, 2, 3, 4, 5];
+    q._growCapacity();
+
+    assert (q[0..2] == [0, 1]);
+    assert (r[0..2] == [0, 1]);
+    q <<= 3;
+    assert (q[0..2] == [3, 4]);
+  }
+
   public Range!(Queue!T, T) opSlice() @safe {
     return Range!(Queue!T, T)(this, 0, this.length());
   }
 
-  public Range!(const Queue!T, const(T)) opSlice() const @safe {
-    return Range!(const Queue!T, const T)(this, 0, this.length());
+  unittest {
+    Queue!(int) q = [0, 1, 2, 3, 4, 5];
+    q._growCapacity();
+
+    assert (q[] == [0, 1, 2, 3, 4, 5]);
+  }
+
+  public const(Range!(Queue!T, T)) opSlice() const @safe {
+    return const(Range!(Queue!T, T))(this, 0, this.length());
   }
 
   struct Range(Q, E) {
@@ -455,6 +542,14 @@ struct Queue(T) {
 
     private size_t _head;	// offset from _queue._head
     private size_t _size;
+
+    private E[] _array() {
+      return _queue._array;
+    }
+
+    private const(E[]) _array() const {
+      return _queue._array;
+    }
 
     package this(ref Q queue,
 		 const size_t head,
@@ -465,34 +560,129 @@ struct Queue(T) {
       _size = size;
     }
 
+    package this(ref const(Q) queue,
+		 const size_t head,
+		 const size_t size) const @trusted {
+      assert (head + size <= queue.length);
+      _queue = &queue;
+      _head = head;
+      _size = size;
+    }
+
     public size_t length() const @safe nothrow { return _size; }
+
+    unittest {
+      Queue!(int) q = [0, 1, 2, 3, 4, 5];
+      q._growCapacity();
+
+      assert (q[].length == 6);
+      assert (q.length == 6);
+
+      q ~= 42;
+      
+      assert (q[].length == 7);
+      assert (q.length == 7);
+
+      auto r = q[].save();
+      q ~= [42, 100];
+
+      assert (r.length == 7);
+      assert (q.length == 9);
+    }
+
     public size_t opDollar() const @safe nothrow { return _size; }
+
     public ref E opIndex(const size_t i) @safe { return (*_queue)[_head+i]; }
-    public ref const(E) opIndex(const size_t i) const @safe { return (*_queue)[_head+i]; }
+
+    public ref const(E) opIndex(const size_t i) const @safe {
+      return (*_queue)[_head+i];
+    }
+
+    public const(Range!(Q, E)) opSlice(size_t head, size_t tail) const @safe {
+      assert (head >= 0 && tail > head && tail <= _size);
+      return const(Range!(Q, E))(*_queue, _head+head, tail-head);
+    }
+
     public Range!(Q, E) opSlice(size_t head, size_t tail) @safe {
       assert (head >= 0 && tail > head && tail <= _size);
       return Range!(Q, E)(*_queue, _head+head, tail-head);
     }
 
+    unittest {
+      Queue!(int) q = [0, 1, 2, 3, 4, 5];
+      immutable Queue!(int) r = [0, 1, 2, 3, 4, 5];
+      q._growCapacity();
+
+      assert (q[][2] == 2);
+      assert (q[][$-1] == 5);
+      assert (q[][0..2] == [0, 1]);
+
+      assert (r[][0] == 0);
+      assert (r[][0..2] == [0, 1]);
+    }
+    
     public ref E front() @safe { return (*_queue)[_head]; }
     public ref E back() @safe { return (*_queue)[_head+_size-1]; }
     public bool empty() const @safe nothrow { return _size == 0; }
+    unittest {
+      Queue!(int) q = [0, 1, 2, 3, 4, 5];
+      immutable Queue!(int) r = [0, 1, 2, 3, 4, 5];
+
+      assert (q.front() == 0);
+      assert (r.front() == 0);
+
+      assert (q.back() == 5);
+      assert (r.back() == 5);
+
+      assert (! q.empty());
+      assert (! r.empty());
+
+      assert (Queue!int([]).empty());
+      q.length = 0;
+      assert (q.empty());
+    }
+
     public Range!(Q, E) save() @safe nothrow {
       return Range!(Q, E)(*_queue, _head, _size);
     }
+
+    unittest {
+      Queue!int q = [0, 1, 2, 3, 4, 5];
+      auto r = q[].save();
+
+      assert (r == q[]);
+    }
+    
     public void popFront() @safe nothrow {
       assert (! empty());
       _head += 1;
       _size -= 1;
     }
+    unittest {
+      Queue!int q = [0, 1, 2, 3, 4, 5];
+      auto r = q[].save();
+      r.popFront();
+
+      assert (r == [1, 2, 3, 4, 5]);
+    }
+    
+
     public void popBack() @safe nothrow {
       assert (! empty());
       _size -= 1;
     }
-    public void opAssign(R)(R values)
+    unittest {
+      Queue!int q = [0, 1, 2, 3, 4, 5];
+      auto r = q[].save();
+      r.popBack();
+
+      assert (r == [0, 1, 2, 3, 4]);
+    }
+    
+
+    public void opAssign(R)(R values) @trusted
       if (isIterable!R && is (RangeElementType!R: T) && hasLength!R)
     {
-      import std.stdio;
       static if (isArray!R) {
 	size_t head = (_head + _queue._head) % _queue._array.length;
 	if (head + values.length <= _queue._array.length) {
@@ -511,7 +701,104 @@ struct Queue(T) {
       }
     }
       
-  }
+    unittest {
+      Queue!int q = [0, 1, 2, 3, 4, 5];
+      auto r = q[].save();
+      r = [42, 43, 44, 45, 46, 47];
+
+      assert (r == [42, 43, 44, 45, 46, 47]);
+      assert (q == [42, 43, 44, 45, 46, 47]);
+    }
+    
+    public bool opEquals(R)(R r) const @trusted
+      if (isIterable!R && is (RangeElementType!R: T) && hasLength!R)
+    {
+      if (this.length() != r.length) return false;
+
+      foreach (idx, it; r) {
+	static if (is (T == class)) {
+	  if (this[idx] is null && it is null) continue;
+	  if (this[idx] is null || it is null) return false;
+	}
+	if (this[idx] != it) return false;
+      }
+      return true;
+    }
+
+
+    public int opApply(int delegate(ref size_t, ref const T) dg) const {
+      for (size_t idx = 0; idx < this._size; ++idx) {
+	if (int r = dg(idx, this._array[(this._head+idx)%this._array.length])) {
+	  return r;
+	}
+      }
+      return 0;
+    }
+
+    public int opApplyReverse(int delegate(ref const size_t, ref const T) dg) const {
+      for (size_t idx = this._size-1; idx < ptrdiff_t.max; --idx) {
+	if (int r = dg(idx, this._array[(this._head+idx)%this._array.length])) {
+	  return r;
+	}
+      }
+      return 0;
+    }
+
+    public int opApply(int delegate(ref size_t, ref T) dg) {
+      for (size_t idx = 0; idx < this._size; ++idx) {
+	if (int r = dg(idx, this._array[(this._head+idx)%this._array.length])) {
+	  return r;
+	}
+      }
+      return 0;
+    }
+
+    public int opApplyReverse(int delegate(ref size_t, ref T) dg) {
+      for (size_t idx = this._size-1; idx < ptrdiff_t.max; --idx) {
+	if (int r = dg(idx, this._array[(this._head+idx)%this._array.length])) {
+	  return r;
+	}
+      }
+      return 0;
+    }
+
+    public int opApply(int delegate(const ref T) dg) const {
+      for (size_t idx = 0; idx < this._size; ++idx) {
+	if (int r = dg(this._array[(this._head+idx)%this._array.length])) {
+	  return r;
+	}
+      }
+      return 0;
+    }
+
+    public int opApplyReverse(int delegate(const ref T) dg) const {
+      for (size_t idx = this._size-1; idx < ptrdiff_t.max; --idx) {
+	if (int r = dg(this._array[(this._head+idx)%this._array.length])) {
+	  return r;
+	}
+      }
+      return 0;
+    }
+
+    public int opApply(int delegate(ref T) dg) {
+      for (size_t idx = 0; idx < this._size; ++idx) {
+	if (int r = dg(this._array[(this._head+idx)%this._array.length])) {
+	  return r;
+	}
+      }
+      return 0;
+    }
+
+    public int opApplyReverse(int delegate(ref T) dg) {
+      for (size_t idx = this._size-1; idx < ptrdiff_t.max; --idx) {
+	if (int r = dg(this._array[(this._head+idx)%this._array.length])) {
+	  return r;
+	}
+      }
+      return 0;
+    }
+
+  } // struct Range ends here
 
   public ref T opIndex(const ptrdiff_t idx) @trusted {
     if (idx >= 0) {	
@@ -541,6 +828,18 @@ struct Queue(T) {
     }
   }
 
+  unittest {
+    Queue!int q = [0, 1, 2, 3, 4, 5];
+
+    for (size_t i=0; i != q.length; ++i)  {
+      assert (q[i] == i);
+    }
+
+    for (ptrdiff_t i=1; i != q.length; ++i)  {
+      assert (q[-i] == 5 - i + 1);
+    }
+  }
+
   public void removeFront(const size_t count = 1) @safe {
     assert (count <= _size);
     _head = (_head + count) % _array.length;
@@ -550,6 +849,18 @@ struct Queue(T) {
   public void removeBack(const size_t count = 1) @safe {
     assert (count <= _size);
     _size -= count;
+  }
+  
+  unittest {
+    Queue!int q = [0, 1, 2, 3, 4, 5];
+    q.removeFront(2);
+
+    assert (q == [2, 3, 4, 5]);
+
+    q = [0, 1, 2, 3, 4, 5];
+    q.removeBack(2);
+
+    assert (q == [0, 1, 2, 3]);
   }
   
   public void pushFront(T value) @safe {
@@ -565,7 +876,7 @@ struct Queue(T) {
     static if (hasLength!R) {
       size_t len = values.length;
       while (_size+len >= _array.length) _growCapacity();
-      _head = (_array.length + _head - len) % _array.len;
+      _head = (_array.length + _head - len) % _array.length;
       _size += len;
       this[][0..len] = values;
     }
@@ -574,10 +885,20 @@ struct Queue(T) {
     }
   }
 
+  unittest {
+    Queue!int q = [0, 1, 2, 3, 4, 5];
+    q.removeFront(2);
+    q.pushFront([42, 41, 40, 39, 38]);
+
+    assert (q == [42, 41, 40, 39, 38, 2, 3, 4, 5]);
+    q.pushFront(42);
+    assert (q == [42, 42, 41, 40, 39, 38, 2, 3, 4, 5]);
+  }
+  
   public void pushBack(T value) @safe {
     if (_size+1 >= _array.length) _growCapacity();
     _size += 1;
-    _array[_tail] = value;
+    _array[_tail-1] = value;
   }
 
   public void pushBack(R)(R values) @safe
@@ -594,16 +915,36 @@ struct Queue(T) {
     }
   }
 
+  unittest {
+    Queue!int q = [0, 1, 2, 3, 4, 5];
+    q.removeBack(2);
+    q.pushBack([42, 41, 40, 39, 38]);
+
+    assert (q == [0, 1, 2, 3, 42, 41, 40, 39, 38]);
+    q.pushBack(42);
+    assert (q == [0, 1, 2, 3, 42, 41, 40, 39, 38, 42], q.to!string);
+  }
+  
   public void opOpAssign(string op, R)(R values) @trusted
        if (op == "~" && isIterable!R && is (RangeElementType!R: T))
   {
     this.pushBack(values);
   }
 
-  public void opOpAssign(string op, R)(R value) @safe
-    if (op == "~" && is (R unused: T))
+  public void opOpAssign(string op, V)(V value) @safe
+    if (op == "~" && is (V unused: T))
   {
     this.pushBack(value);
+  }
+
+  unittest {
+    Queue!int q = [0, 1, 2, 3, 4, 5];
+    q.removeBack(2);
+    q ~= [42, 41, 40, 39, 38];
+
+    assert (q == [0, 1, 2, 3, 42, 41, 40, 39, 38]);
+    q ~= 42;
+    assert (q == [0, 1, 2, 3, 42, 41, 40, 39, 38, 42], q.to!string);
   }
 
   public Queue!T opBinary(string op, R)(R values) @safe
@@ -614,14 +955,21 @@ struct Queue(T) {
     return ret;
   }
 
-  public Queue!T opBinary(string op, R)(R value) @safe
-    if (op == "~" && is(R unused: T))
+  public Queue!T opBinary(string op, V)(V value) @safe
+    if (op == "~" && is(V unused: T))
   {
     Queue!T ret = this;
     ret ~= value;
     return ret;
   }
 
+  unittest {
+    Queue!int q = [0, 1, 2, 3, 4, 5];
+    Queue!int r = q ~ [42, 43, 44, 45, 46];
+
+    assert (r == [0, 1, 2, 3, 4, 5, 42, 43, 44, 45, 46]);
+  }
+  
   public Queue!T opBinaryRight(string op, R)(R values) @safe
     if (op == "~" && isIterable!R && is(RangeElementType!R: T))
   {
@@ -631,13 +979,24 @@ struct Queue(T) {
     return ret;
   }
 
-  public Queue!T opBinaryRight(string op, R)(R value) @safe
-    if (op == "~" && is(R unused: T))
+  public Queue!T opBinaryRight(string op, V)(V value) @safe
+    if (op == "~" && is(V unused: T))
   {
     Queue!T ret;
     ret ~= value;
     ret ~= this;
     return ret;
+  }
+
+  unittest {
+    Queue!int q = [0, 1, 2, 3, 4, 5];
+    Queue!int r = [42, 43, 44, 45, 46] ~ q;
+
+    assert (r == [42, 43, 44, 45, 46, 0, 1, 2, 3, 4, 5]);
+  }
+  
+  public void remove(ptrdiff_t idx, size_t count) {
+    _remove(idx, count);
   }
 
   public void insert(size_t idx, T value) @safe {
@@ -658,6 +1017,18 @@ struct Queue(T) {
     }
   }
 
+  unittest {
+    Queue!int q = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    q.remove(4, 4);
+    assert (q == [0, 1, 2, 3, 8, 9]);
+    q.remove(0, 2);
+    assert (q == [2, 3, 8, 9], q.to!string);
+    q.insert(0, [0, 1]);
+    assert (q == [0, 1, 2, 3, 8, 9], q.to!string);
+    q.insert(6, [0, 1]);
+    assert (q == [0, 1, 2, 3, 8, 9, 0, 1], q.to!string);
+  }
+  
   public int opApply(int delegate(ref size_t, ref const T) dg) const {
     for (size_t idx = 0; idx < this._size; ++idx) {
       if (int r = dg(idx, this._array[(this._head+idx)%this._array.length])) {
@@ -734,6 +1105,13 @@ struct Queue(T) {
     return _size == 0;
   }
 
+  unittest {
+    Queue!int q = [];
+    assert (q.empty());
+    q = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    assert (! q.empty());
+  }
+  
   public ref T front() @safe {
     assert (! this.empty);
     return _array[_head];
@@ -744,9 +1122,30 @@ struct Queue(T) {
     return _array[_head];
   }
 
+  unittest {
+    Queue!int q = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    assert (q.front() == 0);
+  }
+  
   public void popFront(ref T f) {
     f = front();
     removeFront();
+  }
+  
+  public void popFront() {
+    removeFront();
+  }
+  
+  unittest {
+    Queue!int q = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    int foo;
+    q.popFront(foo);
+    assert (foo == 0);
+    q.popFront(foo);
+    assert (foo == 1);
+    q.popFront();
+    q.popFront(foo);
+    assert (foo == 3);
   }
   
   public ref T back() @safe {
@@ -764,4 +1163,19 @@ struct Queue(T) {
     this.removeBack();
   }
 
+  public void popBack() {
+    removeBack();
+  }
+  
+  unittest {
+    Queue!int q = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    int foo;
+    q.popBack(foo);
+    assert (foo == 9);
+    q.popBack(foo);
+    assert (foo == 8);
+    q.popBack();
+    q.popBack(foo);
+    assert (foo == 6);
+  }
 }
