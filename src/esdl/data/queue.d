@@ -59,6 +59,10 @@ struct Queue(T) {
     memset(_array.ptr+idx, 0, (count)*T.sizeof);
   }
 
+  final public void clear() @safe nothrow {
+    _head = _size = 0;
+  }
+
   final public size_t getCapacity() const @safe nothrow { return _array.length; }
 
   unittest {
@@ -88,10 +92,6 @@ struct Queue(T) {
     this._assimilateArray(arr);
   }
 
-  public this(const T[] values) @safe {
-    this._assimilateArray(values.dup);
-  }
-
   public this(T[] values) @safe {
     this._assimilateArray(values);
   }
@@ -103,11 +103,6 @@ struct Queue(T) {
     return this;
   }
 
-  public Queue!T opAssign(const T[] values) @safe {
-    this._assimilateArray(values.dup);
-    return this;
-  }
-    
   public Queue!T opAssign(Queue!T q) @safe {
     this._head = q._head;
     this._size = q._size;
@@ -115,6 +110,11 @@ struct Queue(T) {
     return this;
   }
 
+  public Queue!T opAssign(T[] values) @safe {
+    this._assimilateArray(values);
+    return this;
+  }
+    
   unittest {
     int[] a = [0, 1, 2, 3, 4, 5];
     Queue!(int) q = a;
@@ -125,12 +125,23 @@ struct Queue(T) {
     }
   }
 
-  public Queue!T clone() const @safe {
-    Queue!T q;
-    q._array = this._array.dup;
-    q._head = this._head;
-    q._size = this._size;
-    return q;
+  static if (! (is (T == class) || is (T == struct))) {
+    public this(const T[] values) @safe {
+      this._assimilateArray(values.dup);
+    }
+
+    public Queue!T opAssign(const T[] values) @safe {
+      this._assimilateArray(values.dup);
+      return this;
+    }
+    
+    public Queue!T clone() const @safe {
+      Queue!T q;
+      q._array = this._array.dup;
+      q._head = this._head;
+      q._size = this._size;
+      return q;
+    }
   }
 
   public Queue!T clone() @safe {
@@ -185,14 +196,14 @@ struct Queue(T) {
 
   public T[] toArray() const @trusted {
     T[] ret = new T[_size];
-    if (_head == 0) ret[] = _array[0.._size];
+    if (_head == 0) ret[] = cast (T[]) _array[0.._size];
     else {
       if (_size + _head > _array.length) {
-	ret[0.._array.length-_head] = _array[_head..$];
-	ret[_array.length-_head.._size] = _array[0.._size+_head-_array.length];
+	ret[0.._array.length-_head] = cast (T[]) _array[_head..$];
+	ret[_array.length-_head.._size] = cast (T[]) _array[0.._size+_head-_array.length];
       }
       else {
-	ret[0.._size] = _array[_head.._head+_size];
+	ret[0.._size] = cast (T[]) _array[_head.._head+_size];
       }
     }
     return ret;
@@ -204,6 +215,11 @@ struct Queue(T) {
     int[] arr = q.toArray;
 
     assert (arr == a);
+  }
+
+  V to(V)() if(is(V == string) || is(V == char[])) {
+    V v = cast(V) this.toArray.to!string;
+    return v;
   }
 
   string toString() {
@@ -231,7 +247,7 @@ struct Queue(T) {
 
   public size_t length() const @safe nothrow { return _size; }
   public void length(size_t nsize) { 
-    if (nsize > _size) while (nsize >= _array.length) _growCapacity();
+    if (nsize > _size) while (nsize >= _array.length) _resize();
     _size = nsize;
   }
   public size_t opDollar() const @safe nothrow { return this.length(); }
@@ -241,12 +257,12 @@ struct Queue(T) {
     assert (q.length == 0);
     q = [0, 1, 2, 3, 4, 5];
     assert (q.length == 6);
-    for (size_t i=0; i!=10; ++i) q._growCapacity();
+    for (size_t i=0; i!=10; ++i) q._resize();
     assert (q.length == 6);
   }
 
   
-  private void _growCapacity() @trusted { // does not change _size
+  private void _resize() @trusted { // does not change _size
     T[] arr;
     if (_array.length == 0) {
       arr = new T[8];
@@ -368,7 +384,7 @@ struct Queue(T) {
   
   
   private void _insert(ptrdiff_t idx, size_t count) @trusted {
-    while (count + _size >= _array.length) _growCapacity();
+    while (count + _size >= _array.length) _resize();
 
     if (idx < 0) idx = this._size + idx;
     assert (idx >= 0);
@@ -441,7 +457,7 @@ struct Queue(T) {
 
     if (idx >= (_size - count) / 2) {
       size_t fidx = (idx + _head + count) % len;
-      if (fidx < tail) {
+      if (fidx <= tail) {
 	if (tail <= count || fidx >= count) {
 	  _move((len+fidx-count)%len, fidx, tail-fidx);
 	}
@@ -514,7 +530,7 @@ struct Queue(T) {
   unittest {
     Queue!(int) q = [0, 1, 2, 3, 4, 5];
     immutable Queue!(int) r = [0, 1, 2, 3, 4, 5];
-    q._growCapacity();
+    q._resize();
 
     assert (q[0..2] == [0, 1]);
     assert (r[0..2] == [0, 1]);
@@ -528,7 +544,7 @@ struct Queue(T) {
 
   unittest {
     Queue!(int) q = [0, 1, 2, 3, 4, 5];
-    q._growCapacity();
+    q._resize();
 
     assert (q[] == [0, 1, 2, 3, 4, 5]);
   }
@@ -573,7 +589,7 @@ struct Queue(T) {
 
     unittest {
       Queue!(int) q = [0, 1, 2, 3, 4, 5];
-      q._growCapacity();
+      q._resize();
 
       assert (q[].length == 6);
       assert (q.length == 6);
@@ -611,7 +627,7 @@ struct Queue(T) {
     unittest {
       Queue!(int) q = [0, 1, 2, 3, 4, 5];
       immutable Queue!(int) r = [0, 1, 2, 3, 4, 5];
-      q._growCapacity();
+      q._resize();
 
       assert (q[][2] == 2);
       assert (q[][$-1] == 5);
@@ -864,7 +880,7 @@ struct Queue(T) {
   }
   
   public void pushFront(T value) @safe {
-    if (_size+1 >= _array.length) _growCapacity();
+    if (_size+1 >= _array.length) _resize();
     _head = _head == 0 ? _array.length-1 : _head-1;
     _size += 1;
     _array[_head] = value;
@@ -875,7 +891,7 @@ struct Queue(T) {
   {
     static if (hasLength!R) {
       size_t len = values.length;
-      while (_size+len >= _array.length) _growCapacity();
+      while (_size+len >= _array.length) _resize();
       _head = (_array.length + _head - len) % _array.length;
       _size += len;
       this[][0..len] = values;
@@ -896,9 +912,11 @@ struct Queue(T) {
   }
   
   public void pushBack(T value) @safe {
-    if (_size+1 >= _array.length) _growCapacity();
+    if (_size+1 >= _array.length) _resize();
     _size += 1;
-    _array[_tail-1] = value;
+    auto tail = _tail();
+    if (tail == 0) _array[$-1] = value;
+    else _array[tail-1] = value;
   }
 
   public void pushBack(R)(R values) @safe
@@ -906,7 +924,7 @@ struct Queue(T) {
   {
     static if (hasLength!R) {
       size_t len = values.length;
-      while (_size+len >= _array.length) _growCapacity();
+      while (_size+len >= _array.length) _resize();
       _size += len;
       this[][$-len..$] = values;
     }
@@ -995,7 +1013,7 @@ struct Queue(T) {
     assert (r == [42, 43, 44, 45, 46, 0, 1, 2, 3, 4, 5]);
   }
   
-  public void remove(ptrdiff_t idx, size_t count) {
+  public void remove(ptrdiff_t idx, size_t count = 1) {
     _remove(idx, count);
   }
 
@@ -1177,5 +1195,10 @@ struct Queue(T) {
     q.popBack();
     q.popBack(foo);
     assert (foo == 6);
+  }
+
+  void print() {
+    import std.stdio;
+    writeln("_array: ", _array, "\n_head: ", _head, ", _size: ", _size);
   }
 }
