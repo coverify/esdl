@@ -24,6 +24,10 @@ abstract class CstSolver
     // writeln(this.describe());
   }
 
+  final string signature() {
+    return _signature;
+  }
+  
   string describe() {
     import std.conv: to;
     return "\nID: " ~ _id.to!string ~ "\nSignature: " ~ _signature;
