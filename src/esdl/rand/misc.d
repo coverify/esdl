@@ -8,6 +8,8 @@ import std.range: ElementType;
 import std.meta: AliasSeq;
 import esdl.data.bvec: isBitVector;
 
+alias _esdl__Sigbuf = Charbuf!("Signature", 0);
+
 public enum SolveOrder: ubyte { UNDECIDED, NOW, LATER }
 
 // https://stackoverflow.com/questions/46073295/implicit-type-promotion-rules
@@ -61,7 +63,7 @@ CstVecType getCommonVecType(CstVecType lhs, CstVecType rhs) {
 public enum DomainContextEnum: ubyte { DEFAULT, INDEX, BITINDEX, DIST }
 
 // write in Hex form for all the bytes of data
-size_t writeHexString(T)(T val, ref Charbuf str) {
+size_t writeHexString(T)(T val, ref _esdl__Sigbuf str) {
   import esdl.data.bvec: isBitVector;
   static if (isBitVector!T) {
     enum size_t NIBBLES = 2 * (T.SIZE + 7)/8;

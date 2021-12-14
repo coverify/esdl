@@ -20,7 +20,7 @@ alias realloc = pureRealloc;
 
 enum MINCAP = 4;
 
-struct Folder(T, string NAME="")
+struct Folder(T, string NAME, uint MAXCAP=1024)
      if (is (T == class) || is (T == interface) || is (T ==  struct) ||
 	 is ( T == P*, P) || isSomeChar!T || isBoolean!T || isIntegral!T)
 {
@@ -49,15 +49,19 @@ struct Folder(T, string NAME="")
   
 
   void swap(F)(ref F other) if (is (F: Folder!(T, S), string S)) {
-    ubyte[(Folder!T).sizeof] temp;
+    enum SIZE = Folder!(T, "Temp").sizeof;
+    ubyte[SIZE] temp;
     
-    memcpy(cast(void*) temp.ptr, cast(void*) &other, (Folder!T).sizeof);
-    memcpy(cast(void*) &other, cast(void*) &this, (Folder!T).sizeof);
-    memcpy(cast(void*) &this, cast(void*) temp.ptr, (Folder!T).sizeof);
+    memcpy(cast(void*) temp.ptr, cast(void*) &other, SIZE);
+    memcpy(cast(void*) &other, cast(void*) &this, SIZE);
+    memcpy(cast(void*) &this, cast(void*) temp.ptr, SIZE);
   }
 
   // grow minimum to size
   void growCapacity(size_t cap) {
+    import std.conv: to;
+    assert (cap <= MAXCAP || MAXCAP == 0,
+	    "Large size: " ~ NAME ~ " Size: " ~ cap.to!string());
     static if (is (T == struct) || is (T == P*, P)) {
       _load.reserve(cap);
       _load.length = cap;
@@ -231,14 +235,14 @@ struct Folder(T, string NAME="")
 
   alias length = size;
 
-  V to(V)() if(is(V == string) || is(V == char[])) {
-    V v = cast(V) this.opSlice.to!string;
-    return v;
+  V to(V)() if (is (V == string)) {
+    import std.conv: to;
+    return this.opSlice().to!string();
   }
 
   string toString() {
     import std.conv: to;
-    return this.opSlice().to!string;
+    return this.opSlice().to!string();
   }
 
   size_t capacity() {
@@ -250,4 +254,4 @@ struct Folder(T, string NAME="")
   }
 }
 
-alias Charbuf = Folder!(char, "");
+alias Charbuf(string NAME, uint MAXCAP=1024) = Folder!(char, NAME, MAXCAP);

@@ -14,7 +14,7 @@ import esdl.rand.expr: CstVecArrExpr, CstVecSliceExpr, CstRangeExpr,
 import esdl.rand.pred: CstPredHandler, CstPredicate, Hash;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.misc: CstVectorOp, CstLogicOp, CstCompareOp,
-  CstBinaryOp, SolveOrder, DomainContextEnum, CstVecType;
+  CstBinaryOp, SolveOrder, DomainContextEnum, CstVecType, _esdl__Sigbuf;
 
 import esdl.base.rand: _esdl__RandGen, getRandGen;
 
@@ -492,6 +492,18 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   Folder!(CstPredicate, "unresolvedDomainPreds") _unresolvedDomainPreds;
   Folder!(CstPredicate, "lambdaDomainPreds") _lambdaDomainPreds;
 
+  final void addResolvedPred(CstPredicate pred) {
+    _resolvedDomainPreds ~= pred;
+  }
+  
+  final void addUnresolvedPred(CstPredicate pred) {
+    _unresolvedDomainPreds ~= pred;
+  }
+  
+  final void addLambdaPred(CstPredicate pred) {
+    _lambdaDomainPreds ~= pred;
+  }
+  
   override void registerRndPred(CstPredicate rndPred) {
     if (rndPred.isLambdaPred()) {
       if (! _lambdaDomainPreds[].canFind(rndPred)) {
@@ -952,7 +964,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   }
 
   
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     assert (isDepResolved());
     foreach (dom; this[]) {
       dom.writeExprString(str);
@@ -991,6 +1003,18 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   Folder!(CstPredicate, "unresolvedDomainPreds") _unresolvedDomainPreds;
   Folder!(CstPredicate, "lambdaDomainPreds") _lambdaDomainPreds;
 
+  final void addResolvedPred(CstPredicate pred) {
+    _resolvedDomainPreds ~= pred;
+  }
+  
+  final void addUnresolvedPred(CstPredicate pred) {
+    _unresolvedDomainPreds ~= pred;
+  }
+  
+  final void addLambdaPred(CstPredicate pred) {
+    _lambdaDomainPreds ~= pred;
+  }
+  
   override void registerRndPred(CstPredicate rndPred) {
     if (rndPred.isLambdaPred()) {
       if (! _lambdaDomainPreds[].canFind(rndPred)) {
@@ -1160,7 +1184,7 @@ interface CstTerm
   void visit(CstDistSolverBase dist);
 
   void annotate(CstPredHandler handler);
-  void writeExprString(ref Charbuf str);
+  void writeExprString(ref _esdl__Sigbuf str);
   void calcHash(ref Hash hash);
   void makeHash();
   size_t hashValue();

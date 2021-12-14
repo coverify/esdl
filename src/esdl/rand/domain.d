@@ -12,7 +12,7 @@ import esdl.rand.base: CstValue, CstDomBase, CstDomSet, CstIterator,
   CstVecTerm, CstVecValueBase, CstDepIntf;
 import esdl.rand.misc: rand, writeHexString, isVecSigned, CstVectorOp,
   CstInsideOp, CstCompareOp, CstLogicOp, DomainContextEnum, GetVecType,
-  CstVecType;
+  CstVecType, _esdl__Sigbuf;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.pred: CstPredicate, CstPredHandler, Hash;
 import esdl.rand.expr: CstNotLogicExpr, CstLogic2LogicExpr;
@@ -233,13 +233,13 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
     }
   }
 
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     alias TYPE = typeof(this);
     TYPE resolved = _esdl__staticCast!TYPE(this.getResolvedNode());
     resolved.writeExprStringResolved(str);
   }
 
-  void writeExprStringResolved(ref Charbuf str) {
+  void writeExprStringResolved(ref _esdl__Sigbuf str) {
     assert (this is this.getResolvedNode());
     if (this.isSolved()) {
       // import std.stdio;
@@ -604,7 +604,7 @@ class CstArrIterator(RV): CstIterator
   }
 
   void annotate(CstPredHandler handler) { }
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     // assert(false);
   }
   void calcHash(ref Hash hash) { }
@@ -1211,7 +1211,7 @@ class CstLogicValue: CstValue, CstLogicTerm
 
   void annotate(CstPredHandler handler) { }
 
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     // VSxxxxx or VUxxxxx
     str ~= 'V';
     _val.writeHexString(str);
@@ -1347,7 +1347,7 @@ class CstVecValue(T): CstVecValueBase
 
   void annotate(CstPredHandler handler) { }
 
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     // VSxxxxx or VUxxxxx
     str ~= 'V';
     static if (isBoolean!T) {

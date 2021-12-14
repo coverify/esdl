@@ -5,7 +5,7 @@ import esdl.solver.base: CstSolver, CstDistSolverBase;
 import esdl.rand.misc: rand, isVecSigned, Unconst, CstVecType,
   CstVectorOp, CstInsideOp, CstBinaryOp, CstCompareOp, CstLogicOp,
   CstUnaryOp, CstSliceOp, writeHexString, CstUniqueOp, DomainContextEnum,
-  getCommonVecType;
+  getCommonVecType, _esdl__Sigbuf;
 
 import esdl.rand.base: DomDistEnum, CstTerm, CstDomBase, CstDomSet,
   CstIterator, CstVecNodeIntf, CstVarNodeIntf, CstVecArrIntf,
@@ -146,7 +146,7 @@ class CstVecArrExpr: CstVecExpr
     _arr.annotate(handler);
   }
   
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     import std.format: sformat;
     char[16] buff;
     str ~= '(';
@@ -293,7 +293,7 @@ class CstVec2VecExpr: CstVecExpr
     _rhs.annotate(handler);
   }
   
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     import std.format: sformat;
     char[16] buff;
     str ~= '(';
@@ -447,7 +447,7 @@ class CstRangeExpr
     }
   }
 
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     _lhs.writeExprString(str);
     if (_rhs !is null) {
       if (_inclusive) str ~= " : ";
@@ -545,7 +545,7 @@ class CstVecDistSetElem
     }
   }
   
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     _lhs.writeExprString(str);
     if (_rhs !is null) {
       if (_inclusive) str ~= " : ";
@@ -672,7 +672,7 @@ class CstUniqueSetElem
     else               _vec.annotate(handler);
   }
   
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     if (_arr !is null) {
       str ~= "[ ";
       _arr.writeExprString(str);
@@ -889,7 +889,7 @@ class CstInsideSetElem
     }
   }
   
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     if (_arr !is null) {
       str ~= "[ ";
       _arr.writeExprString(str);
@@ -1099,7 +1099,7 @@ class CstLogicWeightedDistSetElem
     _term.annotate(handler);
   }
 
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     import std.conv: to;
     _term.writeExprString(str);
     if (_perItem) str ~= " := ";
@@ -1177,7 +1177,7 @@ class CstVecWeightedDistSetElem
     _range.annotate(handler);
   }
 
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     import std.conv: to;
     _range.writeExprString(str);
     if (_perItem) str ~= " := ";
@@ -1294,7 +1294,7 @@ class CstLogicDistExpr(T): CstLogicExpr
     foreach (dist; _dists) dist.annotate(handler);
   }
 
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     str ~= "DIST ";
     _vec.writeExprString(str);
     foreach (dist; _dists) {
@@ -1435,7 +1435,7 @@ class CstVecDistExpr(T): CstLogicExpr
     foreach (dist; _dists) dist.annotate(handler);
   }
   
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     str ~= "DIST ";
     _vec.writeExprString(str);
     foreach (dist; _dists) {
@@ -1545,7 +1545,7 @@ class CstVecDistExpr(T): CstLogicExpr
 //     else return _lhs.isSolved() && _rhs.isSolved() && _vec.isSolved();
 //   }
   
-//   override void writeExprString(ref Charbuf str) {
+//   override void writeExprString(ref _esdl__Sigbuf str) {
 //     _vec.writeExprString(str);
 //     str ~= '[';
 //     _lhs.writeExprString(str);
@@ -1646,7 +1646,7 @@ class CstVecSliceExpr: CstVecExpr
     _range.annotate(handler);
   }
 
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     _vec.writeExprString(str);
     str ~= '[';
     _range.writeExprString(str);
@@ -1731,7 +1731,7 @@ class CstVecSliceExpr: CstVecExpr
 //     return _index.isSolved() && _vec.isSolved();
 //   }
   
-//   override void writeExprString(ref Charbuf str) {
+//   override void writeExprString(ref _esdl__Sigbuf str) {
 //     _vec.writeExprString(str);
 //     str ~= '[';
 //     _index.writeExprString(str);
@@ -1812,7 +1812,7 @@ class CstNotVecExpr: CstVecExpr
     _expr.annotate(handler);
   }
   
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     str ~= "(NOT ";
     _expr.writeExprString(str);
     str ~= ')';
@@ -1918,7 +1918,7 @@ class CstNegVecExpr: CstVecExpr
     _expr.annotate(handler);
   }
   
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     str ~= "(NEG ";
     _expr.writeExprString(str);
     str ~= ')';
@@ -1995,7 +1995,7 @@ class CstLogic2LogicExpr: CstLogicExpr
     _rhs.annotate(handler);
   }
 
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     import std.format: sformat;
     char[16] buff;
     str ~= '(';
@@ -2209,7 +2209,7 @@ class CstInsideArrExpr: CstLogicExpr
     foreach (elem; _elems) elem.annotate(handler);
   }
   
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     if (_notinside) str ~= "(! INSIDE ";
     else            str ~= "(INSIDE ";
     _term.writeExprString(str);
@@ -2329,7 +2329,7 @@ class CstUniqueArrExpr: CstLogicExpr
     foreach (elem; _elems) elem.annotate(handler);
   }
   
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     str ~= "(UNIQUE ";
     str ~= " [";
     foreach (elem; _elems)
@@ -2433,7 +2433,7 @@ class CstIteLogicExpr: CstLogicExpr
     assert (false, "TBD");
   }
 
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     assert (false, "TBD");
   }
 
@@ -2556,7 +2556,7 @@ class CstVec2LogicExpr: CstLogicExpr
     _rhs.annotate(handler);
   }
 
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     import std.format: sformat;
     char[16] buff;
     str ~= '(';
@@ -2761,7 +2761,7 @@ class CstNotLogicExpr: CstLogicExpr
     _expr.annotate(handler);
   }
 
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     str ~= "(NOT ";
     _expr.writeExprString(str);
     str ~= ")\n";
@@ -2840,7 +2840,7 @@ class CstVarVisitorExpr: CstLogicExpr
 
   void annotate(CstPredHandler handler) { }
 
-  void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     str ~= this.describe(true);
   }
 
