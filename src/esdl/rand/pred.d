@@ -108,8 +108,6 @@ struct Hash
 // S -> 83
 // bool -> 0
 
-
-
 class CstPredHandler			// handler of related predicates
 {
   CstMonoSolver!int intMono;
@@ -282,9 +280,9 @@ class CstPredHandler			// handler of related predicates
     }
   }
 
-  Charbuf _sig;
+  _esdl__Sigbuf _sig;
   
-  string signature() {
+  char[] signature() {
     _sig.reset();
     _sig ~= "HANDLER:\n";
     foreach (pred; _preds) {
@@ -292,7 +290,7 @@ class CstPredHandler			// handler of related predicates
       if (! hasDistConstraints)
 	pred.writeSignature(_sig, this);
     }
-    return _sig.toString();
+    return _sig[];
   }
 
   override size_t toHash() @trusted nothrow {
@@ -395,15 +393,16 @@ class CstPredHandler			// handler of related predicates
       }
     }
     if (!monoFlag){
-      string sig = signature();
-      // assert(sig1 == sig);
+      char[] mutableSig = signature();
+      // assert(sig1 == mutableSig);
 
       if (_proxy._esdl__debugSolver()) {
 	import std.stdio;
-	writeln(sig);
+	writeln(mutableSig);
       }
-
-      CstSolver* solverp = sig in _proxy._solvers;
+      // do not use mutableSig.to!string since we do not want to allocate mem
+      // for now
+      CstSolver* solverp = (cast(string) mutableSig) in _proxy._solvers;
       // _hasHashBeenCalculated = false;
       // CstSolver* solverp = this in _proxy._solvers;
 
@@ -412,6 +411,10 @@ class CstPredHandler			// handler of related predicates
 	_solver.solve(this);
       }
       else {
+	import std.conv: to;
+	// do not use cast(string) mutableSig since it will
+	// cast and use the same char buffer memory
+	string immutableSig = mutableSig.to!string();
 	if (_softPredicateCount != 0 || _hasVectorConstraints) {
 	  if (_proxy._esdl__debugSolver()) {
 	    import std.stdio;
@@ -422,7 +425,7 @@ class CstPredHandler			// handler of related predicates
 	    }
 	    writeln(describe());
 	  }
-	  _solver = new CstZ3Solver(sig, this);
+	  _solver = new CstZ3Solver(immutableSig, this);
 	  _solver.solve(this);
 	}
 	else {
@@ -441,17 +444,17 @@ class CstPredHandler			// handler of related predicates
 	      writeln("Invoking Z3 because of > 32 bits");
 	      writeln(describe());
 	    }
-	    _solver = new CstZ3Solver(sig, this);
+	    _solver = new CstZ3Solver(immutableSig, this);
 	    _solver.solve(this);
 	  }
 	  else {
-	    _solver = new CstBuddySolver(sig, this);
+	    _solver = new CstBuddySolver(immutableSig, this);
 	    _solver.solve(this);
 	  }
 	}
 	// _hasHashBeenCalculated = true;
 	// if (_solver !is null) _proxy._solvers[this] = _solver;
-	if (_solver !is null) _proxy._solvers[sig] = _solver;
+	if (_solver !is null) _proxy._solvers[immutableSig] = _solver;
       }
     }
     // import std.stdio;
@@ -869,8 +872,9 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     if (_iters.length == 0) {
       _resolvedDepsCount += 1;
       _markResolve = true;
-      if (this.isGuard() && this.checkResolved())
-	this.procResolvedGuard();
+      checkResolved();
+      // if (this.isGuard() && this.checkResolved())
+      // 	this.procResolvedGuard();
     }
   }
 
@@ -1162,7 +1166,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       CstDomBase resolved = rnd.getResolvedNode();
       if (resolved.isRand()) {
 	addResolvedRnd(resolved);
-	resolved._resolvedDomainPreds ~= this;
+	resolved.addResolvedPred(this);
       }
       else addResolvedVar(resolved);
     }
@@ -1171,7 +1175,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       CstDomSet resolved = rnd.getResolvedNode();
       if (resolved.isRand()) {
 	addResolvedRndArr(resolved);
-	resolved._resolvedDomainPreds ~= this;
+	resolved.addResolvedPred(this);
       }
       else addResolvedVarArr(resolved);
     }
@@ -1615,7 +1619,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     _expr.annotate(handler);
   }
 
-  void writeSignature(ref Charbuf str, CstPredHandler handler) {
+  void writeSignature(ref _esdl__Sigbuf str, CstPredHandler handler) {
     import std.format: sformat;
     if (_soft != 0) {
       char[16] buff;
