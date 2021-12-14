@@ -464,12 +464,12 @@ class CstBuddySolver: CstSolver
   }
 
 
-  this(string signature, CstPredHandler handler) {
+  this(string signature, CstSolverAgent agent) {
     Buddy.enableBddGC();
 
     super(signature);
 
-    _proxy = handler.getProxy();
+    _proxy = agent.getProxy();
 
     if (_esdl__buddy is null) {
       _esdl__buddy = new Buddy(1000, 1000);
@@ -477,7 +477,7 @@ class CstBuddySolver: CstSolver
 
     _context = new BuddyContext(_esdl__buddy);
 
-    CstDomBase[] doms = handler.annotatedDoms();
+    CstDomBase[] doms = agent.annotatedDoms();
 
     _domains.length = doms.length;
 
@@ -494,7 +494,7 @@ class CstBuddySolver: CstSolver
       }
     }
 
-    CstDomBase[] vars = handler.annotatedVars();
+    CstDomBase[] vars = agent.annotatedVars();
     _variables.length = vars.length;
 
     foreach (i, ref var; _variables) {
@@ -518,11 +518,11 @@ class CstBuddySolver: CstSolver
       }
     }
 
-    foreach (pred; handler.predicates()) {
+    foreach (pred; agent.predicates()) {
       // import std.stdio;
       // writeln("Buddy Working on: ", pred.name());
-      // if (pred.handler() !is handler) {
-      // 	assert (false, "Handler Violation " ~ pred.name());
+      // if (pred.agent() !is agent) {
+      // 	assert (false, "Solver Violation " ~ pred.name());
       // }
       assert (! pred.isGuard());
       // import std.stdio;
@@ -557,11 +557,11 @@ class CstBuddySolver: CstSolver
     _context.pop();
   }
 
-  override bool solve(CstPredHandler handler) {
+  override bool solve(CstSolverAgent agent) {
     Buddy.enableBddGC();
     
-    CstDomBase[] doms = handler.annotatedDoms();
-    updateVars(handler);
+    CstDomBase[] doms = agent.annotatedDoms();
+    updateVars(agent);
     _context.updateDist();
 
     ubvec!MAXBDDLEVELS vec;
@@ -631,8 +631,8 @@ class CstBuddySolver: CstSolver
     return true;
   }
   
-  void updateVars(CstPredHandler handler) {
-    CstDomBase[] vars = handler.annotatedVars();
+  void updateVars(CstSolverAgent agent) {
+    CstDomBase[] vars = agent.annotatedVars();
     _refreshVar = false;
     uint pcount0 = _count0;
     uint pcount1 = _count1;

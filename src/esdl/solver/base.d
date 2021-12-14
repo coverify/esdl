@@ -4,7 +4,7 @@ module esdl.solver.base;
 
 import esdl.rand.misc;
 import esdl.base.rand: _esdl__RandGen;
-import esdl.rand.pred: CstPredHandler;
+import esdl.rand.pred: CstSolverAgent;
 import esdl.rand.base: CstDomBase, CstVecValueBase;
 
 abstract class CstSolver
@@ -36,7 +36,7 @@ abstract class CstSolver
   // abstract void registerDomain(CstDomBase domain);
   // abstract void registerValue(CstVecValueBase value);
 
-  abstract bool solve(CstPredHandler handler);
+  abstract bool solve(CstSolverAgent agent);
 
   // abstract void pushToEvalStack();
   abstract void pushToEvalStack(CstDomBase domain);

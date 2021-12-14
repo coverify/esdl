@@ -10,7 +10,7 @@ import esdl.rand.misc: rand, isVecSigned, Unconst, CstVecType,
 import esdl.rand.base: DomDistEnum, CstTerm, CstDomBase, CstDomSet,
   CstIterator, CstVecNodeIntf, CstVarNodeIntf, CstVecArrIntf,
   CstVecPrim, CstValue, CstVecTerm, CstLogicTerm, CstDepIntf;
-import esdl.rand.pred: CstPredicate, CstPredHandler, Hash;
+import esdl.rand.pred: CstPredicate, CstSolverAgent, Hash;
 import esdl.rand.func;
 
 import esdl.data.bvec: isBitVector, toBitVec;
@@ -142,8 +142,8 @@ class CstVecArrExpr: CstVecExpr
     return false;
   }
 
-  void annotate(CstPredHandler handler) {
-    _arr.annotate(handler);
+  void annotate(CstSolverAgent agent) {
+    _arr.annotate(agent);
   }
   
   void writeExprString(ref _esdl__Sigbuf str) {
@@ -288,9 +288,9 @@ class CstVec2VecExpr: CstVecExpr
     return _lhs.isSolved() && _rhs.isSolved();
   }
 
-  void annotate(CstPredHandler handler) {
-    _lhs.annotate(handler);
-    _rhs.annotate(handler);
+  void annotate(CstSolverAgent agent) {
+    _lhs.annotate(agent);
+    _rhs.annotate(agent);
   }
   
   void writeExprString(ref _esdl__Sigbuf str) {
@@ -440,10 +440,10 @@ class CstRangeExpr
     return _lhs.isSolved() && (_rhs is null || _rhs.isSolved());
   }
 
-  void annotate(CstPredHandler handler) {
-    _lhs.annotate(handler);
+  void annotate(CstSolverAgent agent) {
+    _lhs.annotate(agent);
     if (_rhs !is null) {
-      _rhs.annotate(handler);
+      _rhs.annotate(agent);
     }
   }
 
@@ -538,10 +538,10 @@ class CstVecDistSetElem
     return _lhs.isSolved() && (_rhs is null || _rhs.isSolved());
   }
 
-  void annotate(CstPredHandler handler) {
-    _lhs.annotate(handler);
+  void annotate(CstSolverAgent agent) {
+    _lhs.annotate(agent);
     if (_rhs !is null) {
-      _rhs.annotate(handler);
+      _rhs.annotate(agent);
     }
   }
   
@@ -667,9 +667,9 @@ class CstUniqueSetElem
     return false;
   }
 
-  void annotate(CstPredHandler handler) {
-    if (_arr !is null) _arr.annotate(handler);
-    else               _vec.annotate(handler);
+  void annotate(CstSolverAgent agent) {
+    if (_arr !is null) _arr.annotate(agent);
+    else               _vec.annotate(agent);
   }
   
   void writeExprString(ref _esdl__Sigbuf str) {
@@ -881,11 +881,11 @@ class CstInsideSetElem
     return false;
   }
 
-  void annotate(CstPredHandler handler) {
-    if (_arr !is null) _arr.annotate(handler);
+  void annotate(CstSolverAgent agent) {
+    if (_arr !is null) _arr.annotate(agent);
     else {
-      _lhs.annotate(handler);
-      if (_rhs !is null) _rhs.annotate(handler);
+      _lhs.annotate(agent);
+      if (_rhs !is null) _rhs.annotate(agent);
     }
   }
   
@@ -1095,8 +1095,8 @@ class CstLogicWeightedDistSetElem
     return _term.isSolved() && _weight.isSolved();
   }
 
-  void annotate(CstPredHandler handler) {
-    _term.annotate(handler);
+  void annotate(CstSolverAgent agent) {
+    _term.annotate(agent);
   }
 
   void writeExprString(ref _esdl__Sigbuf str) {
@@ -1173,8 +1173,8 @@ class CstVecWeightedDistSetElem
     return _range.isSolved() && _weight.isSolved();
   }
 
-  void annotate(CstPredHandler handler) {
-    _range.annotate(handler);
+  void annotate(CstSolverAgent agent) {
+    _range.annotate(agent);
   }
 
   void writeExprString(ref _esdl__Sigbuf str) {
@@ -1289,9 +1289,9 @@ class CstLogicDistExpr(T): CstLogicExpr
     return _vec.isSolved();
   }
 
-  void annotate(CstPredHandler handler) {
-    _vec.annotate(handler);
-    foreach (dist; _dists) dist.annotate(handler);
+  void annotate(CstSolverAgent agent) {
+    _vec.annotate(agent);
+    foreach (dist; _dists) dist.annotate(agent);
   }
 
   void writeExprString(ref _esdl__Sigbuf str) {
@@ -1430,9 +1430,9 @@ class CstVecDistExpr(T): CstLogicExpr
     return _vec.isSolved();
   }
 
-  void annotate(CstPredHandler handler) {
-    _vec.annotate(handler);
-    foreach (dist; _dists) dist.annotate(handler);
+  void annotate(CstSolverAgent agent) {
+    _vec.annotate(agent);
+    foreach (dist; _dists) dist.annotate(agent);
   }
   
   void writeExprString(ref _esdl__Sigbuf str) {
@@ -1641,9 +1641,9 @@ class CstVecSliceExpr: CstVecExpr
     return _range.isSolved() && _vec.isSolved();
   }
   
-  void annotate(CstPredHandler handler) {
-    _vec.annotate(handler);
-    _range.annotate(handler);
+  void annotate(CstSolverAgent agent) {
+    _vec.annotate(agent);
+    _range.annotate(agent);
   }
 
   void writeExprString(ref _esdl__Sigbuf str) {
@@ -1808,8 +1808,8 @@ class CstNotVecExpr: CstVecExpr
     return _expr.isSolved();
   }
 
-  void annotate(CstPredHandler handler) {
-    _expr.annotate(handler);
+  void annotate(CstSolverAgent agent) {
+    _expr.annotate(agent);
   }
   
   void writeExprString(ref _esdl__Sigbuf str) {
@@ -1914,8 +1914,8 @@ class CstNegVecExpr: CstVecExpr
     return _expr.isSolved();
   }
 
-  void annotate(CstPredHandler handler) {
-    _expr.annotate(handler);
+  void annotate(CstSolverAgent agent) {
+    _expr.annotate(agent);
   }
   
   void writeExprString(ref _esdl__Sigbuf str) {
@@ -1990,9 +1990,9 @@ class CstLogic2LogicExpr: CstLogicExpr
   
   bool isSolved() { return _lhs.isSolved && _rhs.isSolved(); }
 
-  void annotate(CstPredHandler handler) {
-    _lhs.annotate(handler);
-    _rhs.annotate(handler);
+  void annotate(CstSolverAgent agent) {
+    _lhs.annotate(agent);
+    _rhs.annotate(agent);
   }
 
   void writeExprString(ref _esdl__Sigbuf str) {
@@ -2204,9 +2204,9 @@ class CstInsideArrExpr: CstLogicExpr
   
   bool isSolved() { return false; }
 
-  void annotate(CstPredHandler handler) {
-    _term.annotate(handler);
-    foreach (elem; _elems) elem.annotate(handler);
+  void annotate(CstSolverAgent agent) {
+    _term.annotate(agent);
+    foreach (elem; _elems) elem.annotate(agent);
   }
   
   void writeExprString(ref _esdl__Sigbuf str) {
@@ -2325,8 +2325,8 @@ class CstUniqueArrExpr: CstLogicExpr
   
   bool isSolved() { return false; }
 
-  void annotate(CstPredHandler handler) {
-    foreach (elem; _elems) elem.annotate(handler);
+  void annotate(CstSolverAgent agent) {
+    foreach (elem; _elems) elem.annotate(agent);
   }
   
   void writeExprString(ref _esdl__Sigbuf str) {
@@ -2429,7 +2429,7 @@ class CstIteLogicExpr: CstLogicExpr
 
   CstDistSolverBase getDist() { assert (false); }
 
-  void annotate(CstPredHandler handler) {
+  void annotate(CstSolverAgent agent) {
     assert (false, "TBD");
   }
 
@@ -2551,9 +2551,9 @@ class CstVec2LogicExpr: CstLogicExpr
     return _lhs.isSolved && _rhs.isSolved();
   }
 
-  void annotate(CstPredHandler handler) {
-    _lhs.annotate(handler);
-    _rhs.annotate(handler);
+  void annotate(CstSolverAgent agent) {
+    _lhs.annotate(agent);
+    _rhs.annotate(agent);
   }
 
   void writeExprString(ref _esdl__Sigbuf str) {
@@ -2757,8 +2757,8 @@ class CstNotLogicExpr: CstLogicExpr
     return _expr.isSolved();
   }
 
-  void annotate(CstPredHandler handler) {
-    _expr.annotate(handler);
+  void annotate(CstSolverAgent agent) {
+    _expr.annotate(agent);
   }
 
   void writeExprString(ref _esdl__Sigbuf str) {
@@ -2838,7 +2838,7 @@ class CstVarVisitorExpr: CstLogicExpr
     return false;
   }
 
-  void annotate(CstPredHandler handler) { }
+  void annotate(CstSolverAgent agent) { }
 
   void writeExprString(ref _esdl__Sigbuf str) {
     str ~= this.describe(true);

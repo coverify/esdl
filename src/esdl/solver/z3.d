@@ -257,13 +257,13 @@ class CstZ3Solver: CstSolver
   CstPredicate[] _softPreds;
 
   CstVectorOp _state;
-  // the handler is used only for the purpose of constructing the Z3 solver
+  // the agent is used only for the purpose of constructing the Z3 solver
   // otherwise the solver identifies with the signature only
-  this(string signature, CstPredHandler handler) {
+  this(string signature, CstSolverAgent agent) {
     import std.stdio;
     super(signature);
 
-    _proxy = handler.getProxy();
+    _proxy = agent.getProxy();
 
     setParam("auto_config", false);
     setParam("smt.phase_selection", 5);
@@ -277,7 +277,7 @@ class CstZ3Solver: CstSolver
 
     // _vector = BvExprVector(_context);
     
-    CstDomBase[] doms = handler.annotatedDoms();
+    CstDomBase[] doms = agent.annotatedDoms();
     _domains.length = doms.length;
 
     foreach (i, ref dom; _domains) {
@@ -294,7 +294,7 @@ class CstZ3Solver: CstSolver
       }
     }
 
-    CstDomBase[] vars = handler.annotatedVars();
+    CstDomBase[] vars = agent.annotatedVars();
     _variables.length = vars.length;
 
     foreach (i, ref var; _variables) {
@@ -319,8 +319,8 @@ class CstZ3Solver: CstSolver
     Solver solver = Solver(_context);
     _solver = solver;
 
-    // if (handler.softPredicateCount() > 2) { // very slow
-    if (handler.softPredicateCount() > 0) {
+    // if (agent.softPredicateCount() > 2) { // very slow
+    if (agent.softPredicateCount() > 0) {
       _needOptimize = true;
       Optimize optimize = Optimize(_context);
       _optimize = optimize;
@@ -335,7 +335,7 @@ class CstZ3Solver: CstSolver
       }
     }
     
-    foreach (pred; handler.predicates()) {
+    foreach (pred; agent.predicates()) {
       // import std.stdio;
       // writeln("Z3 Working on: ", pred.name());
 
@@ -502,8 +502,8 @@ class CstZ3Solver: CstSolver
     }
   }
   
-  override bool solve(CstPredHandler handler) {
-    updateVars(handler);
+  override bool solve(CstSolverAgent agent) {
+    updateVars(agent);
     if (_needOptimize) {
       if (updateOptimize() || (_optimizeInit is false)) {
 	if (_proxy._esdl__debugSolver()) {
@@ -569,7 +569,7 @@ class CstZ3Solver: CstSolver
     // writeln(_solver.check());
     // writeln(_solver.getModel());
     auto model = _solver.getModel();
-    CstDomBase[] doms = handler.annotatedDoms();
+    CstDomBase[] doms = agent.annotatedDoms();
     foreach (i, ref dom; _domains) {
       // import std.string: format;
       // string value;
@@ -607,9 +607,9 @@ class CstZ3Solver: CstSolver
     }
   }
   
-  void updateVars(CstPredHandler handler) {
+  void updateVars(CstSolverAgent agent) {
     
-    CstDomBase[] vars = handler.annotatedVars();
+    CstDomBase[] vars = agent.annotatedVars();
     _refreshVar = false;
     uint pcountStable = _countStable;
     uint pcountVariable = _countVariable;

@@ -11,7 +11,7 @@ import esdl.rand.domain: CstVecValue;
 import esdl.rand.expr: CstVecArrExpr, CstVecSliceExpr, CstRangeExpr,
   CstInsideSetElem, CstVec2LogicExpr, CstLogic2LogicExpr, CstVec2VecExpr,
   CstNotLogicExpr, CstNegVecExpr, CstInsideArrExpr;
-import esdl.rand.pred: CstPredHandler, CstPredicate, Hash;
+import esdl.rand.pred: CstSolverAgent, CstPredicate, Hash;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.misc: CstVectorOp, CstLogicOp, CstCompareOp,
   CstBinaryOp, SolveOrder, DomainContextEnum, CstVecType, _esdl__Sigbuf;
@@ -62,7 +62,7 @@ interface CstVecNodeIntf: CstVarNodeIntf, CstDepIntf {
   // constrains
   abstract void registerRndPred(CstPredicate rndPred);  
 
-  abstract void setBatchContext(CstPredHandler handler);
+  abstract void setSolverContext(CstSolverAgent agent);
   abstract void setProxyContext(_esdl__Proxy proxy);
   abstract void reset();
 
@@ -542,10 +542,10 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     _lambdaDomainPreds.reset();
   }
 
-  // CstPredHandler _handler;
+  // CstSolverAgent _agent;
 
-  // CstPredHandler handler() {
-  //   return _handler;
+  // CstSolverAgent agent() {
+  //   return _agent;
   // }
 
   uint annotation() {
@@ -558,19 +558,19 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     _domN = n;
   }
   
-  final void annotate(CstPredHandler handler) {
-    this.getResolvedNode().annotateResolved(handler);
+  final void annotate(CstSolverAgent agent) {
+    this.getResolvedNode().annotateResolved(agent);
   }
 
-  final void annotateResolved(CstPredHandler handler) {
+  final void annotateResolved(CstSolverAgent agent) {
     assert (this is this.getResolvedNode());
     // import std.conv: to;
     // import std.stdio;
     // writeln("annotate: ", this.name());
     if (_domN == uint.max) {
       if (_varN == uint.max) _varN = _root.indexVar();
-      if (this.isSolved()) setAnnotation(handler.addAnnotatedVar(this));
-      else setAnnotation(handler.addAnnotatedDom(this));
+      if (this.isSolved()) setAnnotation(agent.addAnnotatedVar(this));
+      else setAnnotation(agent.addAnnotatedDom(this));
     }
     // writeln("annotate: ", _varN.to!string());
     // writeln("annotate: ", _domN.to!string());
@@ -585,8 +585,8 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     // writeln("setProxyContext on: ", this.name());
     assert (_state is State.INIT && (! this.isSolved()));
     proxy.collateDomain(this);
-    // assert (_handler is null && (! this.isSolved()));
-    // _handler = handler;
+    // assert (_agent is null && (! this.isSolved()));
+    // _agent = agent;
     if (this.isRand()) {
       foreach (pred; _resolvedDomainPreds) {
 	if (pred.isEnabled() && pred.isResolved() && ! pred.isBlocked()) {
@@ -604,7 +604,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     }
   }
   
-  void setBatchContext(CstPredHandler handler, uint level) {
+  void setSolverContext(CstSolverAgent agent, uint level) {
     assert (_state is State.COLLATED &&
 	    (! this.isSolved()) && getOrderLevel() == level - 1);
     _state = State.GROUPED;
@@ -613,7 +613,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   	if (pred.isEnabled() &&
 	    pred.isCollated() &&
 	    pred.getOrderLevel == level - 1) {
-  	  pred.setBatchContext(handler, level);
+  	  pred.setSolverContext(agent, level);
   	}
       }
       if (_esdl__parentIsConstrained()) {
@@ -621,13 +621,13 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   	assert (parent !is null);
   	if (parent._state is CstDomSet.State.INIT ||
 	    parent._state is CstDomSet.State.COLLATED) {
-  	  parent.setBatchContext(handler, level);
+  	  parent.setSolverContext(agent, level);
   	}
       }
     }
   }
 
-  // abstract void annotate(CstPredHandler handler);
+  // abstract void annotate(CstSolverAgent agent);
   abstract bool visitDomain(CstSolver solver);
   
   // init value has to be different from proxy._cycle init value
@@ -944,19 +944,19 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     _domSetN = n;
   }
   
-  final void annotate(CstPredHandler handler) {
+  final void annotate(CstSolverAgent agent) {
     assert (isDepResolved());
     CstDomSet resolved = this.getResolvedNode();
-    if (resolved !is this) resolved.annotate(handler);
+    if (resolved !is this) resolved.annotate(agent);
     else {
-      foreach (dom; this[]) dom.annotate(handler);
+      foreach (dom; this[]) dom.annotate(agent);
       // import std.conv: to;
       // import std.stdio;
       // writeln("annotate: ", this.name());
       if (_domSetN == uint.max) {
 	if (_varSetN == uint.max) _varSetN = _root.indexVar();
-	if (this.isSolved()) setAnnotation(handler.addAnnotatedVarArr(this));
-	else setAnnotation(handler.addAnnotatedDomArr(this));
+	if (this.isSolved()) setAnnotation(agent.addAnnotatedVarArr(this));
+	else setAnnotation(agent.addAnnotatedDomArr(this));
       }
       // writeln("annotate: ", _varSetN.to!string());
       // writeln("annotate: ", _domSetN.to!string());
@@ -1110,7 +1110,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     }
   }
   
-  void setBatchContext(CstPredHandler handler, uint level) {
+  void setSolverContext(CstSolverAgent agent, uint level) {
     assert (_state is State.COLLATED || _state is State.INIT);
     assert (this.isDepResolved(), this.name() ~ " is unresolved");
     foreach (pred; _resolvedDomainPreds[]) {
@@ -1118,14 +1118,14 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   	if (pred.isEnabled() &&
 	    pred.isCollated() &&
 	    pred.getOrderLevel() == level - 1) {
-  	  pred.setBatchContext(handler, level);
+  	  pred.setSolverContext(agent, level);
   	}
       }
     }
     if (_esdl__parentIsConstrained()) {
       CstDomSet parent = getParentDomSet();
       assert (parent !is null);
-      parent.setBatchContext(handler, level);
+      parent.setSolverContext(agent, level);
     }
     else {			// only for the top arr
       _state = State.GROUPED;
@@ -1133,7 +1133,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   	if (dom._state is CstDomBase.State.COLLATED &&
 	    (! dom.isSolved()) &&
 	    dom.getOrderLevel() == level - 1) {
-  	  dom.setBatchContext(handler, level);
+  	  dom.setSolverContext(agent, level);
   	}
       }
     }
@@ -1183,7 +1183,7 @@ interface CstTerm
   void visit(CstSolver solver);
   void visit(CstDistSolverBase dist);
 
-  void annotate(CstPredHandler handler);
+  void annotate(CstSolverAgent agent);
   void writeExprString(ref _esdl__Sigbuf str);
   void calcHash(ref Hash hash);
   void makeHash();

@@ -4,7 +4,7 @@ import esdl.solver.base: CstSolver, CstDistSolverBase;
 import esdl.rand.base: CstVecPrim, CstScope, CstDomBase,
   CstObjectVoid, CstVarNodeIntf, CstObjectIntf,
   CstIterator, CstDomSet, CstVarGlobIntf, CstVecNodeIntf;
-import esdl.rand.pred: CstPredicate, CstPredHandler, CstDistPredHandler;
+import esdl.rand.pred: CstPredicate, CstSolverAgent, CstDistPredSolver;
 import esdl.rand.cstr: _esdl__ConstraintBase;
 import esdl.rand.misc;
 import esdl.data.folder;
@@ -123,17 +123,17 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   void scan() { }		// when an object is unrolled
 
 
-  static CstPredHandler _predHandler;
-  static CstDistPredHandler _distPredHandler;
+  static CstSolverAgent _agent;
+  static CstDistPredSolver _distPredSolver;
 
-  static getPredHandler() {
-    if (_predHandler is null) _predHandler = new CstPredHandler();
-    return _predHandler;
+  static getPredSolver() {
+    if (_agent is null) _agent = new CstSolverAgent();
+    return _agent;
   }
 
-  static getDistPredHandler() {
-    if (_distPredHandler is null) _distPredHandler = new CstDistPredHandler();
-    return _distPredHandler;
+  static getDistPredSolver() {
+    if (_distPredSolver is null) _distPredSolver = new CstDistPredSolver();
+    return _distPredSolver;
   }
 
   static CstSolver[string] _solvers;
@@ -226,7 +226,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   Folder!(CstDomBase, "solvedDomains") _solvedDomains;
   Folder!(CstDomSet, "solvedDomainArrs") _solvedDomainArrs;
   
-  // Folder!(CstPredHandler, "solvedHandlers") _solvedHandlers;
+  // Folder!(CstSolverAgent, "solvedSolvers") _solvedSolvers;
 
   
   Folder!(CstPredicate, "collatedPredicates") _collatedPredicates;
@@ -269,7 +269,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   Folder!(CstIterator, "itersWithCbs") _itersWithCbs;
 
-  void printHandler (){
+  void printSolver (){
     import std.stdio;
     writeln("\nPreds: ");
     foreach (pred; _collatedPredicates){
@@ -708,22 +708,22 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       foreach (distPred; _resolvedDistPreds) {
 	_solvedSome = true;
 	assert (! distPred.isBlocked());
-	CstDistPredHandler handler = getDistPredHandler();
-	handler.initialize(this);
+	CstDistPredSolver agent = getDistPredSolver();
+	agent.initialize(this);
 	CstDomBase distDom = distPred._distDomain;
 	assert (distDom !is null && ! distDom.isSolved());
-	handler.distPred(distPred);
+	agent.distPred(distPred);
 	foreach (pred; distDom._resolvedDomainPreds) {
 	  if (pred.isGrouped()) assert (pred.isDistPredicate());
 	  else {
 	    assert (pred.isResolved() || pred.isBlocked(), pred.fullName());
 	    if (pred.isEnabled() && pred.isResolved() && ! pred.isBlocked()) {
 	      if (pred.isCompatWithDist(distDom))
-		handler.addPredicate(pred);
+		agent.addPredicate(pred);
 	    }
 	  }
 	}
-	handler.solve();
+	agent.solve();
       }
 
       _resolvedDistPreds.reset();
@@ -789,12 +789,12 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     foreach (iter; _itersWithCbs) iter.reset();
     _itersWithCbs.reset();
 
-    // foreach (handler; _solvedHandlers) {
-    //   handler.reset();
-    //   _solvedDomains ~= handler.domains();
-    //   _solvedDomainArrs ~= handler.domainArrs();
+    // foreach (agent; _solvedSolvers) {
+    //   agent.reset();
+    //   _solvedDomains ~= agent.domains();
+    //   _solvedDomainArrs ~= agent.domainArrs();
     // }
-    // _solvedHandlers.reset();
+    // _solvedSolvers.reset();
 
     // foreach (pred; _predsThatUnrolled) {
     //   pred.reset();
@@ -813,16 +813,16 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       }
       pred.setProxyContext(this);
 	  
-      // makeHandlerDomains();
+      // makeSolverDomains();
       uint level = 0;
       while (markDependents(++level)){
 	if (_esdl__debugSolver) {
-	  printHandler();
+	  printSolver();
 	}
 	solveMarkedPreds(level);
       }
       if (_esdl__debugSolver) {
-	printHandler();
+	printSolver();
       }
       if (level == 1) {
 	solveAll();
@@ -958,30 +958,30 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     foreach (pred; _collatedPredicates) {
       if (! pred.isGuard() && pred.isCollated()) {
 	if (pred.getOrderLevel() == level - 1 && ! (pred.isSolved)) {
-	  CstPredHandler handler = null;
-	  if (handler is null) {
-	    handler = getPredHandler();
-	    handler.initialize(this);
+	  CstSolverAgent agent = null;
+	  if (agent is null) {
+	    agent = getPredSolver();
+	    agent.initialize(this);
 	    // if (_esdl__debugSolver) {
 	    //   import std.stdio;
-	    //   writeln("Created new handler ", handler._id, " for predicate: ", pred.describe());
+	    //   writeln("Created new agent ", agent._id, " for predicate: ", pred.describe());
 	    // }
 	  }
 	  // else if (_esdl__debugSolver) {
 	  //   import std.stdio;
-	  //   writeln("Reuse handler ", handler._id, " for predicate: ", pred.describe());
+	  //   writeln("Reuse agent ", agent._id, " for predicate: ", pred.describe());
 	  // }
-	  if (pred.isDistPredicate()) handler.markDist();
-	  assert (! handler.isSolved(),
-		  "Handler can not be solved when the predicate is still not solved; handler: " ~
-		  handler.describe() ~ " predicate: " ~ pred.describe());
-	  handler.setBatchContext(pred, level);
+	  if (pred.isDistPredicate()) agent.markDist();
+	  assert (! agent.isSolved(),
+		  "Solver can not be solved when the predicate is still not solved; agent: " ~
+		  agent.describe() ~ " predicate: " ~ pred.describe());
+	  agent.setSolverContext(pred, level);
 
-	  handler.solve();
-	  _solvedDomains ~= handler.annotatedDoms();
-	  _solvedDomainArrs ~= handler.annotatedDomArrs();
-	  handler.reset();
-	  // _solvedHandlers ~= handler;
+	  agent.solve();
+	  _solvedDomains ~= agent.annotatedDoms();
+	  _solvedDomainArrs ~= agent.annotatedDomArrs();
+	  agent.reset();
+	  // _solvedSolvers ~= agent;
 	  _solvedSome = true;
 	}
 	else if (pred.getOrderLevel() == level){
@@ -1012,35 +1012,35 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       return;
     }
     auto pred1 = _collatedPredicates[0];
-    CstPredHandler handler = null;
-    if (handler is null) {
-      handler = getPredHandler();
-      handler.initialize(this);
+    CstSolverAgent agent = null;
+    if (agent is null) {
+      agent = getPredSolver();
+      agent.initialize(this);
       // if (_esdl__debugSolver) {
       // 	import std.stdio;
-      // 	writeln("Created new handler ", handler._id, " for predicate: ", pred1.describe());
+      // 	writeln("Created new agent ", agent._id, " for predicate: ", pred1.describe());
       // }
     }
     // else if (_esdl__debugSolver) {
     //   import std.stdio;
-    //   writeln("Reuse handler ", handler._id, " for predicate: ", pred1.describe());
+    //   writeln("Reuse agent ", agent._id, " for predicate: ", pred1.describe());
     // }
-    if (pred1.isDistPredicate()) handler.markDist();
-    assert (! handler.isSolved(),
-	    "Handler can not be solved when the predicate is still not solved; handler: " ~
-	    handler.describe() ~ " predicate: " ~ pred1.describe());
+    if (pred1.isDistPredicate()) agent.markDist();
+    assert (! agent.isSolved(),
+	    "Solver can not be solved when the predicate is still not solved; agent: " ~
+	    agent.describe() ~ " predicate: " ~ pred1.describe());
      
     foreach (pred; _collatedPredicates) {
       if (pred.isCollated()) {
-	pred.sendPredToHandler(handler);
+	pred.sendPredToSolver(agent);
       }
     }
-    handler.setOrderAndBools();
-    handler.solve();
-    _solvedDomains ~= handler.annotatedDoms();
-    _solvedDomainArrs ~= handler.annotatedDomArrs();
-    handler.reset();
-    // _solvedHandlers ~= handler;
+    agent.setOrderAndBools();
+    agent.solve();
+    _solvedDomains ~= agent.annotatedDoms();
+    _solvedDomainArrs ~= agent.annotatedDomArrs();
+    agent.reset();
+    // _solvedSolvers ~= agent;
   }
   // void resetLevels(){
   //   foreach (elem: _collatedDomains[]){

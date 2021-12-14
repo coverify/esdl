@@ -109,7 +109,7 @@ struct Hash
 // S -> 83
 // bool -> 0
 
-class CstPredHandler			// handler of related predicates
+class CstSolverAgent			// agent of related predicates
 {
   CstMonoSolver!int intMono;
   CstMonoSolver!uint uintMono;
@@ -240,8 +240,8 @@ class CstPredHandler			// handler of related predicates
     return _annotatedVarArrs[];
   }
 
-  void setBatchContext(CstPredicate solvablePred, uint level) {
-    solvablePred.setBatchContext(this, level);
+  void setSolverContext(CstPredicate solvablePred, uint level) {
+    solvablePred.setSolverContext(this, level);
 
     setOrderAndBools();
   }
@@ -255,11 +255,11 @@ class CstPredHandler			// handler of related predicates
     _hasUniqueConstraints = false;
     _hasDistConstraints = false;
 
-    // foreach (pred; _preds) pred._handler = null;
+    // foreach (pred; _preds) pred._agent = null;
     _preds.reset();
     foreach (pred; sort!((x, y) => x.hashValue() < y.hashValue())(_predList[])) {
       if (pred.isDistPredicate()) this.markDist();
-      // pred._handler = this;
+      // pred._agent = this;
       if (pred._soft != 0) _softPredicateCount += 1;
       if (pred._vectorOp != CstVectorOp.NONE) _hasVectorConstraints = true;
       if (pred._uniqueFlag is true) _hasUniqueConstraints = true;
@@ -479,7 +479,7 @@ class CstPredHandler			// handler of related predicates
 
   string describe() {
     import std.conv: to;
-    string description = "CstPredHandler -- \n";
+    string description = "CstSolverAgent -- \n";
     if (_preds.length > 0) {
       description ~= "  Predicates:\n";
       foreach (pred; _preds) {
@@ -494,7 +494,7 @@ class CstPredHandler			// handler of related predicates
   }
 }
 
-class CstDistPredHandler	// handler of dist and related predicates
+class CstDistPredSolver	// agent of dist and related predicates
 {
   void initialize(_esdl__Proxy proxy) {
     _proxy = proxy;
@@ -588,7 +588,7 @@ class CstDistPredHandler	// handler of dist and related predicates
 
   string describe() {
     import std.conv: to;
-    string description = "CstDistPredHandler -- \n";
+    string description = "CstDistPredSolver -- \n";
     if (_preds.length > 0) {
       description ~= "  Predicates:\n";
       foreach (pred; _preds) {
@@ -1225,7 +1225,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
 
   // No longer required -- Taken care of by _state (UNROLLED)
-  // used by setBatchContext to find if the predicate has been unrolled and
+  // used by setSolverContext to find if the predicate has been unrolled and
   // therefor it should not be considered for grouping
   // final bool hasUnrolled() {
   //   if (this._iters.length == 0 ||
@@ -1509,10 +1509,10 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return description;
   }
 
-  // CstPredHandler _handler;
+  // CstSolverAgent _agent;
 
-  // CstPredHandler handler() {
-  //   return _handler;
+  // CstSolverAgent agent() {
+  //   return _agent;
   // }
 
   void setProxyContext(_esdl__Proxy proxy){
@@ -1558,7 +1558,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
 
-  void setBatchContext(CstPredHandler handler, uint level) {
+  void setSolverContext(CstSolverAgent agent, uint level) {
     if (this.isBlocked()) return;
     
     assert(getOrderLevel() == level - 1, "unexpected error in solving before constraints");
@@ -1570,57 +1570,57 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       }
     } 
     
-    sendPredToHandler(handler);
+    sendPredToSolver(agent);
     
     foreach (dom; _resolvedRnds) {
       if (dom._state is CstDomBase.State.COLLATED && (! dom.isSolved())) {
-	dom.setBatchContext(handler, level);
+	dom.setSolverContext(agent, level);
       }
     }
     foreach (arr; _resolvedRndArrs) {
       if (arr._state is CstDomSet.State.COLLATED // && (! arr.isSolved())
 	  ) {
-	arr.setBatchContext(handler, level);
+	arr.setSolverContext(agent, level);
       }
     }
   }
 
-  void sendPredToHandler(CstPredHandler handler){
+  void sendPredToSolver(CstSolverAgent agent){
     _state = State.GROUPED;
     
     if (this.isDistPredicate()) {
-      assert (handler.hasDistConstraints());
+      assert (agent.hasDistConstraints());
       if (this.isGuardEnabled()) {
-  	if (handler._distPred !is null) {
+  	if (agent._distPred !is null) {
   	  assert (false,
   		  "It is illegal to have more than one dist predicate active on the same domain");
   	}
-  	handler._distPred = this;
+  	agent._distPred = this;
       }
       else {
-  	handler.addPredicate(this);
+  	agent.addPredicate(this);
       }
     }
     else {
       assert (! this.isGuard());
-      handler.addPredicate(this);
+      agent.addPredicate(this);
     }
     
   }
 
-  void annotate(CstPredHandler handler) {
+  void annotate(CstSolverAgent agent) {
     if (_guard !is null) {
       if (_guard._state is State.SOLVED) {
 	assert (_guard._exprVal ^ _guardInv);
       }
       else {
-	_guard.annotate(handler);
+	_guard.annotate(agent);
       }
     }
-    _expr.annotate(handler);
+    _expr.annotate(agent);
   }
 
-  void writeSignature(ref _esdl__Sigbuf str, CstPredHandler handler) {
+  void writeSignature(ref _esdl__Sigbuf str, CstSolverAgent agent) {
     import std.format: sformat;
     if (_soft != 0) {
       char[16] buff;
@@ -1634,7 +1634,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       }
       else {
 	if (_guardInv) str ~= " ! ";
-	_guard.writeSignature(str, handler);
+	_guard.writeSignature(str, agent);
 	str ~= " >> ";
       }
     }
