@@ -29,6 +29,7 @@ import esdl.rand.vecx: CstVectorIdx, CstVecArrIdx,
 import esdl.rand.objx: CstObjectIdx, CstObjArrIdx, CstObjectGlob;
 import esdl.rand.domain: CstVecValue, CstLogicValue;
 import esdl.rand.proxy;
+import esdl.rand.cstr;
 import esdl.rand.func;
 
 import esdl.base.rand: _esdl__RandGen, getRandGen;
