@@ -11,7 +11,8 @@ import esdl.rand.domain: CstVecValue;
 import esdl.rand.expr: CstVecArrExpr, CstVecSliceExpr, CstRangeExpr,
   CstInsideSetElem, CstVec2LogicExpr, CstLogic2LogicExpr, CstVec2VecExpr,
   CstNotLogicExpr, CstNegVecExpr, CstInsideArrExpr;
-import esdl.rand.pred: CstSolverAgent, CstPredicate, Hash;
+import esdl.rand.pred: CstPredicate, Hash;
+import esdl.rand.agent: CstSolverAgent;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.misc: CstVectorOp, CstLogicOp, CstCompareOp,
   CstBinaryOp, SolveOrder, DomainContextEnum, CstVecType, _esdl__Sigbuf;

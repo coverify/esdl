@@ -4,14 +4,14 @@ import esdl.solver.base: CstSolver, CstDistSolverBase;
 import esdl.rand.base: CstVecPrim, CstScope, CstDomBase,
   CstObjectVoid, CstVarNodeIntf, CstObjectIntf,
   CstIterator, CstDomSet, CstVarGlobIntf, CstVecNodeIntf;
-import esdl.rand.pred: CstPredicate, CstSolverAgent, CstDistPredSolver;
+import esdl.rand.pred: CstPredicate;
+import esdl.rand.agent: CstSolverAgent;
 import esdl.rand.cstr: _esdl__ConstraintBase;
+import esdl.solver.dist: CstDistPredSolver;
 import esdl.rand.misc;
 import esdl.data.folder;
 
-import std.container: Array;
 import std.algorithm.searching: canFind;
-import std.array;
 import esdl.rand.parser: CstParseData, CstParser;
 import esdl.base.rand: _esdl__RandGen, getRandGen;
 

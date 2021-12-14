@@ -10,7 +10,9 @@ import esdl.rand.misc: rand, isVecSigned, Unconst, CstVecType,
 import esdl.rand.base: DomDistEnum, CstTerm, CstDomBase, CstDomSet,
   CstIterator, CstVecNodeIntf, CstVarNodeIntf, CstVecArrIntf,
   CstVecPrim, CstValue, CstVecTerm, CstLogicTerm, CstDepIntf;
-import esdl.rand.pred: CstPredicate, CstSolverAgent, Hash;
+import esdl.rand.pred: CstPredicate, Hash;
+import esdl.rand.agent: CstSolverAgent;
+
 import esdl.rand.func;
 
 import esdl.data.bvec: isBitVector, toBitVec;

@@ -14,7 +14,8 @@ import esdl.rand.misc: rand, writeHexString, isVecSigned, CstVectorOp,
   CstInsideOp, CstCompareOp, CstLogicOp, DomainContextEnum, GetVecType,
   CstVecType, _esdl__Sigbuf;
 import esdl.rand.proxy: _esdl__Proxy;
-import esdl.rand.pred: CstPredicate, CstSolverAgent, Hash;
+import esdl.rand.pred: CstPredicate, Hash;
+import esdl.rand.agent: CstSolverAgent;
 import esdl.rand.expr: CstNotLogicExpr, CstLogic2LogicExpr;
 import esdl.rand.meta: _esdl__staticCast;
 

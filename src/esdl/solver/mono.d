@@ -2,7 +2,8 @@ module esdl.solver.mono;
 
 import esdl.solver.base;
 import esdl.rand.base: CstDomBase, CstVecValueBase;
-import esdl.rand.pred: CstSolverAgent, CstPredicate;
+import esdl.rand.pred: CstPredicate;
+import esdl.rand.agent: CstSolverAgent;
 import esdl.rand.misc;
 import esdl.data.folder;
 import esdl.rand.proxy: _esdl__Proxy;

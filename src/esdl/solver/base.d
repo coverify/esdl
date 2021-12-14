@@ -4,7 +4,7 @@ module esdl.solver.base;
 
 import esdl.rand.misc;
 import esdl.base.rand: _esdl__RandGen;
-import esdl.rand.pred: CstSolverAgent;
+import esdl.rand.agent: CstSolverAgent;
 import esdl.rand.base: CstDomBase, CstVecValueBase;
 
 abstract class CstSolver
