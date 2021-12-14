@@ -1456,7 +1456,7 @@ interface CstLogicTerm: CstTerm
   
   CstLogicTerm opUnary(string op)() if(op == "*")
     {
-      static if(op == "*") {	// "!" in cstx is translated as "*"
+      static if(op == "*") {	// "!" in parser is translated as "*"
 	CstInsideArrExpr expr = cast(CstInsideArrExpr) this;
 	if (expr !is null) {
 	  CstInsideArrExpr notExpr =  expr.dup();
@@ -1469,7 +1469,7 @@ interface CstLogicTerm: CstTerm
 
   CstLogicTerm opUnary(string op)() if(op == "~")
     {
-      static if(op == "~") {	// "!" in cstx is translated as "*"
+      static if(op == "~") {	// "!" in parser is translated as "*"
 	return new CstNotLogicExpr(this);
       }
     }

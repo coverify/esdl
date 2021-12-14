@@ -11,7 +11,7 @@ import esdl.data.folder;
 import std.container: Array;
 import std.algorithm.searching: canFind;
 import std.array;
-import esdl.rand.cstx: CstParseData, CstParser;
+import esdl.rand.parser: CstParseData, CstParser;
 import esdl.base.rand: _esdl__RandGen, getRandGen;
 
 
