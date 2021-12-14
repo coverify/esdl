@@ -1409,7 +1409,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       }
     }
   }
-  else static if (isRandClassSet!L || isRandStructSet!L) {
+  else static if (isRandObjectSet!L) {
     // import std.stdio;
     // writeln("Creating VarVecArr, ", name);
     alias CstObjArrType = CstObjArrGlob!(L, rand(true, true), 0, V);
@@ -1426,7 +1426,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
     }
   }
   else {
-    static assert (false, "Unhandled Global Lookup -- Please report to the EUVM Developer");
+    static assert (false, "Unhandled Global Lookup -- Please report to the EUVM Developer: " ~ L.stringof);
     // import std.stdio;
     // assert (parent !is null);
     // writeln(V.stringof);
@@ -1532,7 +1532,9 @@ template _esdl__ProxyBase(T) {
 
 alias randomize_with = randomizeWith;
 
-void randomize(T, string FILE=__FILE__, size_t LINE=__LINE__)(T t) {
+void randomize(T, string FILE=__FILE__, size_t LINE=__LINE__)(T t)
+     if (is (T == class) || is (T == struct))
+{
   // FIXME
   // first check if the there are @rand or Constraint definitions but
   // missing mixin Randomization for some of the hierarchies
@@ -1547,36 +1549,36 @@ void randomize(T, string FILE=__FILE__, size_t LINE=__LINE__)(T t) {
 }
 
 void randomizeWith(string C, string FILE=__FILE__, size_t LINE=__LINE__, T, ARGS...)(ref T t, ARGS values)
-  if (is (T == class) || is (T == struct) // && allIntengral!ARGS
-      ) {
-    debug (CSTSOLVER) {
-      import std.stdio;
-      writeln("randomize_with() called from ", FILE, ":", LINE);
+     if (is (T == class) || is (T == struct)) // && allIntengral!ARGS
+{
+  debug (CSTSOLVER) {
+    import std.stdio;
+    writeln("randomize_with() called from ", FILE, ":", LINE);
 
-      scope (success) {
-	writeln("randomize_with() finished at ", FILE, ":", LINE);
-      }
+    scope (success) {
+      writeln("randomize_with() finished at ", FILE, ":", LINE);
     }
-
-    alias _esdl__ProxyType = _esdl__ProxyResolve!T;
-
-    _esdl__ProxyType proxyInst =
-      _esdl__staticCast!(_esdl__ProxyType)(t._esdl__virtualGetProxyInst());
-
-    alias CONSTRAINT = proxyInst._esdl__ConstraintLambdaImpl!(C, FILE, LINE, ARGS);
-
-    CONSTRAINT cstLambda;
-
-    if (proxyInst._esdl__lambdaCst !is null)
-      cstLambda = cast (CONSTRAINT) proxyInst._esdl__lambdaCst;
-      
-    if (cstLambda is null)
-      proxyInst._esdl__with!(C, FILE, LINE, ARGS)(values);
-    else
-      cstLambda.lambdaArgs(values);
-
-    t._esdl__virtualRandomizeWith(proxyInst, proxyInst._esdl__lambdaCst);
   }
+
+  alias _esdl__ProxyType = _esdl__ProxyResolve!T;
+
+  _esdl__ProxyType proxyInst =
+    _esdl__staticCast!(_esdl__ProxyType)(t._esdl__virtualGetProxyInst());
+
+  alias CONSTRAINT = proxyInst._esdl__ConstraintLambdaImpl!(C, FILE, LINE, ARGS);
+
+  CONSTRAINT cstLambda;
+
+  if (proxyInst._esdl__lambdaCst !is null)
+    cstLambda = cast (CONSTRAINT) proxyInst._esdl__lambdaCst;
+      
+  if (cstLambda is null)
+    proxyInst._esdl__with!(C, FILE, LINE, ARGS)(values);
+  else
+    cstLambda.lambdaArgs(values);
+
+  t._esdl__virtualRandomizeWith(proxyInst, proxyInst._esdl__lambdaCst);
+ }
 
 auto randomize(AA...)() {
   alias SS = _esdl__InlineRandomize!AA;
@@ -1603,7 +1605,8 @@ struct _esdl__InlineRandomize(AA...)
     }
   }
 
-  void using(string C, string FILE=__FILE__, size_t LINE=__LINE__, ARGS...)(ARGS values) {
+  void constrain(string C, string FILE=__FILE__,
+		 size_t LINE=__LINE__, ARGS...)(ARGS values) {
     randomizeWith!(C, FILE, LINE, typeof(this), ARGS)(this, values);
   }
 
