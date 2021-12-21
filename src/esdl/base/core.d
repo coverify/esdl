@@ -7593,6 +7593,7 @@ enum SimPhase : byte
       CONFIGURE,
       BINDEXEPORTS,
       BINDPORTS,
+      INIT,			// like PAUSE, but simulation has not started
       SIMULATE,
       PAUSE,
       SIMULATION_DONE,
@@ -7707,7 +7708,7 @@ void execElab(T)(T t)
 	t.getSimulator._executor.initPoolThreads();
 	t.getSimulator._executor._poolThreadInitBarrier.wait();
 
-	t.getSimulator.setPhase = SimPhase.PAUSE;
+	t.getSimulator.setPhase = SimPhase.INIT;
 	t.getSimulator._executor.resetStage();
 	t.message("Start of Simulation");
 	t._esdl__start();
@@ -9071,6 +9072,8 @@ interface RootEntityIntf: EntityIntf
 
   SimTime getSimTime();
 
+  ulong getRunTime();
+
   uint getNumPoolThreads();
 
   uint[] getThreadCoreList();
@@ -9390,6 +9393,10 @@ abstract class RootEntity: RootEntityIntf
     return _esdl__root.simulator().simTime();
   }
 
+  final override ulong getRunTime() {
+    return _esdl__root.simulator().runTime();
+  }
+
   final override uint getNumPoolThreads() {
     return cast(uint) _esdl__root.simulator()._executor._poolThreads.length;
   }
@@ -9496,11 +9503,14 @@ enum SchedMode: byte {
 
 class EsdlSimulator: EntityIntf
 {
+  import std.datetime.stopwatch: StopWatch, AutoStart;
   mixin Elaboration;
 
   SchedMode _schedMode;
 
   AsyncLock[] _asyncLocks;
+
+  StopWatch _sw = StopWatch(AutoStart.no);
 
   void setMode(SchedMode mode) {
     synchronized(this) {
@@ -9675,6 +9685,13 @@ class EsdlSimulator: EntityIntf
       import std.conv: to;
       // elabDoneLock.wait();
       switch(phase) {
+      case SimPhase.INIT:
+	_sw.start();
+	// start wallclock timer
+	runFor(runTime);
+	this.setPhase(SimPhase.SIMULATE);
+	simStepLock.notify();
+	break;
       case SimPhase.PAUSE:
 	runFor(runTime);
 	this.setPhase(SimPhase.SIMULATE);
@@ -9702,12 +9719,14 @@ class EsdlSimulator: EntityIntf
   }
 
   final void notifyDone() {
+    import std.format: format;
     simStepLock.notify();
     finalize();
     getRoot.message("Shutting down all the active Tasks");
     // this._executor.terminateProcs(getRoot().getChildProcsHier());
     // this._executor.joinSimThreads();
     getRoot.message("Simulation Complete");
+    getRoot.message(format("Total Run Time: %0.6f.sec", runTime()/1000000.0));
     RootEntity.delRoot(getRoot());
     getRoot._esdl__finish();
     simTermLock.notify();
@@ -9995,6 +10014,10 @@ class EsdlSimulator: EntityIntf
     }
   }
 
+  final ulong runTime() {
+    return _sw.peek.total!"usecs";
+  }
+  
   this(RootEntity _root) {
     synchronized(this) {
       this._esdl__root = _root;
@@ -10095,6 +10118,10 @@ RootEntity getRootEntity() {
 
 SimTime getSimTime() {
   return getRootEntity().getSimTime();
+}
+
+ulong getRunTime() {
+  return getRootEntity().getRunTime();
 }
 
 EsdlSimulator getSimulator() {
