@@ -530,12 +530,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   void reset() {
     // _solvedDomains is from previous cycle
-    foreach (dom; _solvedDomains) {
-      dom.reset();
-    }
-    foreach (domArr; _solvedDomainArrs) {
-      domArr.reset();
-    }
+    foreach (dom; _solvedDomains) dom.reset();
+    foreach (domArr; _solvedDomainArrs) domArr.reset();
     // reset all bins
     _newPreds.reset();
     _toNewPreds.reset();
@@ -842,72 +838,12 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _solvePreds.reset();
   }
 
-  // CstDomBase solveDist(CstPredicate pred) {
-  //   if (_esdl__debugSolver) {
-  //     import std.stdio;
-  //     writeln("Solving Dist Predicate: ", pred.describe());
-  //   }
-  //   CstDomBase distDom = pred.distDomain();
-  //   CstPredicate[] distPreds = distDom._unresolvedDomainPreds();
-  //   // long[] toRemove;
-  //   CstDistSolverBase dist = pred._expr.getDist();
-  //   dist.reset();
-  //   foreach (predicate; distPreds){
-  //     CstVecTerm ex = predicate._expr.isCompatWithDist(distDom);
-  //     // isCompatWithDist returns rhs if the predicate is of != type,
-  //     // otherwise it returns null
-  //     if (predicate.getUnresolvedRnds().length == 1 && ! predicate.isDistPredicate()) {
-  // 	if (ex is null) {
-  // 	  assert (false, "can only use != operator on distributed domains");
-  // 	}
-  // 	dist.purge(ex.evaluate());
-  //     }
-  //   }
-  //   dist.uniform(distDom, _esdl__getRandGen());
-  //   return distDom;
-  // }
-
   void addNewPredicate(CstPredicate pred) {
     // import std.stdio;
     // writeln("Adding: ", pred.describe());
     pred.initialize();
     _toNewPreds ~= pred;
   }
-
-  // void addUnrolledPredicate(CstPredicate pred) {
-  //   // import std.stdio;
-  //   // writeln("Adding : ", pred.name());
-  //   pred.initialize();
-  //   _toUnrolledPreds ~= pred;
-  // }
-
-  // void procNewPredicate(CstPredicate pred) {
-  //   pred.tryResolveAllDeps(this);
-  //   if (pred.isVisitor()) {
-  //     procResolved(pred);
-  //   }
-  //   else if (pred._iters.length > 0) {
-  //     _toRolledPreds ~= pred;
-  //   }
-  //   else if (pred._deps.length > 0) {
-  //     bool allDepsResolved = true;
-  //     foreach (dep; pred._deps) {
-  // 	if (! dep.isDepResolved()) {
-  // 	  allDepsResolved = false;
-  // 	  break;
-  // 	}
-  //     }
-  //     if (allDepsResolved) {
-  // 	// import std.stdio;
-  // 	// writeln("All Deps resolved: ", pred.name());
-  // 	procResolved(pred);
-  //     }
-  //     else _toUnresolvedPreds ~= pred;
-  //   }
-  //   else {
-  //     procResolved(pred);
-  //   }
-  // }
 
   void procNewPredicate(CstPredicate pred) {
     bool resolved = pred.tryResolveAllDeps(this);

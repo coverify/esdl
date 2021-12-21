@@ -263,9 +263,9 @@ void _esdl__doInitConstraintElems(P, Q, int I=0)(P p, Q q) {
       enum bool IS_USER_DEFINED = __traits(hasMember, q, EN);
       auto cst = p.new E(p, EN);
       p.tupleof[I] = cst;
-      static if (IS_USER_DEFINED) {
-	p.addConstraintName(cst);
-      }
+      // Keep a list of constraint names so that a derived class can
+      // override a constraint
+      static if (IS_USER_DEFINED) p.addConstraintName(cst);
     }
     _esdl__doInitConstraintElems!(P, Q, I+1)(p, q);
   }

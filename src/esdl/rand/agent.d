@@ -300,7 +300,8 @@ class CstSolverAgent			// agent of related predicates
 	}
       }
     }
-    if (!monoFlag){
+    if (!monoFlag) {
+      
       char[] mutableSig = signature();
       // assert(sig1 == mutableSig);
 
