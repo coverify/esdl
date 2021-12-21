@@ -304,7 +304,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     _resolvedDepsCount = 0;
   }
 
-  Folder!(CstPredicate, "uwPreds") _uwPreds;
+  Folder!(CstPredicate, "uwPreds", 0) _uwPreds;
   size_t _uwLength;
   
   __gshared uint _count;
@@ -502,7 +502,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   Folder!(CstDomBase, "distRnds") _distRnds;	// temporary folder used in expr.d
   void addUnresolvedRnd(CstDomBase rnd,
 	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
-    // A guard should on store its own rands as deps
+    // A guard should store its own rands as deps
     // should ignore the nested guards
     if (this.isGuard()) {
       if (this._isCurrentContext) this.addDep(rnd);
@@ -751,8 +751,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
   
   // A temporary context useful only for setDomainContext
-  // it is either null or points to the guard predicate that is
-  // currently being processed
   bool _isCurrentContext;
 
   final void doSetDomainContext(CstPredicate pred) {
@@ -765,12 +763,13 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     scope (exit) _isCurrentContext = false;
     
     // make sure that the doSetDomainContext has already
-    // processed the guards, if any
+    // processed the guards if any, since guards are processed before
+    // normal constraints
     assert (_guard is null || _guard._domainContextSet is true);
 
     if (pred is this)
       _expr.setDomainContext(pred, DomainContextEnum.DEFAULT);
-    else {
+    else {			// it is a guard
       // When looking at guards of predicates involving dist domains
       // we just need to add the guard in the dependency list
       if (pred.hasOnlyDistDomain()) pred.addDep(this);
@@ -783,7 +782,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       if (pred is this && pred._dists.length == 1 &&
 	  _unresolvedRnds.length == 0 && _unresolvedRndArrs.length == 0) {
 	// we are either dealing with a dist predicate itself or
-	// we have ancountered a predicate of the form a != b or a !inside []
+	// we have encountered a predicate of the form a != b or a !inside []
 	// where a is a dist domain
 	assert (pred._dists[0].getDistPred() !is null);
 	pred.addUnresolvedRnd(pred._dists[0]);
