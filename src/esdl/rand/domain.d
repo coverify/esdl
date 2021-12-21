@@ -400,10 +400,11 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
 	else {
 	  _valueChanged = false;
 	}
+	this.reset();
       }
     }
     else {
-      assert(false);
+      assert (false);
     }
   }
 
