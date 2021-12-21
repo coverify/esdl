@@ -437,7 +437,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
       import std.stdio;
       writeln("Marking ", this.name(), " as SOLVED");
     }
-    _resolvedDomainPreds.reset();
+    // _resolvedDomainPreds.reset(); // now done in reset()
     assert (_state != State.SOLVED, this.name() ~
 	    " already marked as solved");
     _state = State.SOLVED;
@@ -509,12 +509,12 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     if (rndPred.isLambdaPred()) {
       if (! _lambdaDomainPreds[].canFind(rndPred)) {
 	_lambdaDomainPreds ~= rndPred;
+	_root.addLambdaCstDom(this);
       }
     }
     else {
       if (! _unresolvedDomainPreds[].canFind(rndPred)) {
 	_unresolvedDomainPreds ~= rndPred;
-	_root.addLambdaCstDom(this);
       }
     }
   }
@@ -638,6 +638,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   uint _unresolveLap;
 
   override void reset() {
+    _resolvedDomainPreds.reset();
     _state = State.INIT;
     _orderVar = SolveOrder.UNDECIDED;
     _orderLevel = 0;
@@ -1020,12 +1021,12 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     if (rndPred.isLambdaPred()) {
       if (! _lambdaDomainPreds[].canFind(rndPred)) {
 	_lambdaDomainPreds ~= rndPred;
+	_root.addLambdaCstDom(this);
       }
     }
     else {
       if (! _unresolvedDomainPreds[].canFind(rndPred)) {
 	_unresolvedDomainPreds ~= rndPred;
-	_root.addLambdaCstDom(this);
       }
     }
   }
