@@ -5801,3 +5801,125 @@ void setByte(T)(ref T data, size_t n, ubyte b) if (isIntegral!T) {
   data |= byt;
  }
 
+// Implementation of SystemVerilog int and bitvector system calls
+
+// $clog2
+//
+// The system function $clog2 shall return the ceiling of the log base
+// 2 of the argument (the log rounded up to an integer value). The
+// argument can be an integer or an arbitrary sized vector value. The
+// argument shall be treated as an unsigned value, and an argument
+// value of 0 shall produce a result of 0.  This system function can
+// be used to compute the minimum address width necessary to address a
+// memory of a given size or the minimum vector width necessary to
+// represent a given number of states.
+// 
+// For example:
+// integer result;
+// result = $clog2(n);
+
+uint clog2(BV)(const BV bv) {
+  static if (isBitVector!BV && BV.IS4STATE) {
+    assert (! isunknown(bv));
+  }
+  BV one = true;
+  BV zero = false;
+  if (bv == zero) return 0;
+  uint count = 0;
+  while (bv > one) {
+    count += 1;
+    one <<= 1;
+  }
+  return count;
+}
+
+uint isunknown(BV)(const BV bv) {
+  static if (isBitVector!BV) return bv.isUnkown();
+  static if (isIntegral!BV) return false;
+}
+
+
+// $countbits
+//
+// The function $countbits counts the number of bits that have a
+// specific set of values (e.g., 0, 1, X, Z) in a bit vector.
+//
+// $countbits ( expression , control_bit { , control_bit } )
+
+uint countbits(B, BV)(const BV bv, const B b) {
+  static if (is (B == ULogic!1) && isBitVector!BV && BV.IS4STATE) {
+    uint count;
+    foreach (bb; bv) {
+      if (b is bb) count += 1;
+    }
+    return count;
+  }
+  static if (is (B == UBit!1) && isBitVector!BV && ! BV.IS4STATE) {
+    uint count;
+    foreach (bb; bv) {
+      if (b is bb) count += 1;
+    }
+    return count;
+  }
+  static if (is (B == bool) && isBitVector!BV && ! BV.IS4STATE) {
+    uint count;
+    foreach (bb; bv) {
+      if (b == bb) count += 1;
+    }
+    return count;
+  }
+  static if (is (B == UBit!1) && isIntegral!BV) {
+    enum SIZE = BV.sizeof * 8;
+    UBit!SIZE ibv = bv;
+    uint count;
+    foreach (bb; ibv) {
+      if (b is bb) count += 1;
+    }
+    return count;
+  }
+  static if (is (B == bool) && isIntegral!BV) {
+    enum SIZE = BV.sizeof * 8;
+    UBit!SIZE ibv = bv;
+    uint count;
+    foreach (bb; ibv) {
+      if (b == bb) count += 1;
+    }
+    return count;
+  }
+}
+
+// $countones
+//
+// is equivalent to $countbits(expression,'1).
+uint countones(T)(T t) {
+  static if (isBitVector!T && T.IS4STATE) {
+    return countbits(t, LOGIC_1);
+  }
+  static if (isBitVector!T && ! T.IS4STATE) {
+    return countbits(t, BIT_1);
+  }
+  static if (isIntegral!T) {
+    return countbits(t, true);
+  }
+}
+
+
+// $onehot
+// 
+// $onehot ( expression ) returns true (1'b1) if
+// $countbits(expression,'1)==1, otherwise it returns false (1'b0).
+
+bool onehot(T)(T t) {
+  return countones(t) == 1;
+}
+
+
+// $onehot0
+// 
+// $onehot0 ( expression ) returns true (1'b1) if
+// $countbits(expression,'1)<=1, otherwise it returns false (1'b0).
+
+bool onehot0(T)(T t) {
+  return countones(t) <= 1;
+}
+
