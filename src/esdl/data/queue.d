@@ -1012,6 +1012,10 @@ struct Queue(T) {
       return _Range(*_queue, _head+head, tail-head);
     }
 
+    public T[] toArray() @trusted {
+      return _getQueue().toArray();
+    }
+
     unittest {
       Queue!(int) q = [0, 1, 2, 3, 4, 5];
       immutable Queue!(int) r = [0, 1, 2, 3, 4, 5];
