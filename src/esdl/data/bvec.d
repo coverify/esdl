@@ -463,23 +463,23 @@ template _vecCmpT(T, U)	// return true if T >= U
 }
 
 template _bvec(T, U, string OP)
-  if((isBitVector!T || isIntegral!T || isSomeChar!T) &&
-     (isBitVector!U || isIntegral!U || isSomeChar!U)) {
-  static if (isIntegral!U || isSomeChar!U) alias UU = _bvec!U;
+  if((isBitVector!T || isIntegral!T || isSomeChar!T || isBoolean!T) &&
+     (isBitVector!U || isIntegral!U || isSomeChar!U || isBoolean!U)) {
+  static if (isIntegral!U || isSomeChar!U || isBoolean!U) alias UU = _bvec!U;
   else alias UU = U;
-  static if (isIntegral!T || isSomeChar!T) alias TT = _bvec!T;
+  static if (isIntegral!T || isSomeChar!T || isBoolean!T) alias TT = _bvec!T;
   else alias TT = T;
   static if(TT.ISSIGNED && UU.ISSIGNED) {enum bool S = true;}
   else                                  {enum bool S = false;}
   static if(TT.IS4STATE || UU.IS4STATE) {enum bool L = true;}
   else                                  {enum bool L = false;}
 
-  static if(OP == "~") {
+  static if (OP == "~") {
     alias _bvec!(TT.ISSIGNED, L, TT.SIZE + UU.SIZE) _bvec;
   }
   else {
-    static if(TT.SIZE > UU.SIZE)        {enum size_t N = TT.SIZE;}
-    else                                {enum size_t N = UU.SIZE;}
+    static if (TT.SIZE > UU.SIZE)        {enum size_t N = TT.SIZE;}
+    else                                 {enum size_t N = UU.SIZE;}
 
     alias _bvec = _bvec!(S, L, N);
   }
@@ -692,19 +692,11 @@ auto toBit(alias N)() if (isIntegral!(typeof(N))) {
 
 enum UBit!1 BIT_0   = UBit!1(0);
 enum UBit!1 BIT_1   = UBit!1(1);
-alias _0 = BIT_0;
-alias _1 = BIT_1;
 
 enum ULogic!1 LOGIC_0 = ULogic!1(0);
 enum ULogic!1 LOGIC_1 = ULogic!1(1);
 enum ULogic!1 LOGIC_X = cast(ULogic!1)bin!"X";
 enum ULogic!1 LOGIC_Z = cast(ULogic!1)bin!"Z";
-
-alias _X = LOGIC_X;
-alias _Z = LOGIC_Z;
-
-alias _x = LOGIC_X;
-alias _z = LOGIC_Z;
 
 public auto bin(string VAL)() {
   enum bool L = isStr4State(VAL);
@@ -727,19 +719,19 @@ public auto hex(string VAL)() {
   return result;
 }
 
-template _bvec(T) if(is(T == bool)) {
-  alias _bvec = _bvec!(false, false, 1);
+template _bvec(T) if (isBoolean!T) {
+  alias _bvec = UBit!1;
 }
 
-template _bvec(T) if(isIntegral!T) {
+template _bvec(T) if (isIntegral!T) {
   alias _bvec = _bvec!(isSigned!T, false, T.sizeof*8);
 }
 
-template _bvec(T) if(isSomeChar!T) {
+template _bvec(T) if (isSomeChar!T) {
   alias _bvec = _bvec!(false, false, T.sizeof*8);
 }
 
-template _bvec(T) if(isBitVector!T) {
+template _bvec(T) if (isBitVector!T) {
   alias _bvec = T;
 }
 
@@ -1740,24 +1732,24 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	  assert(i < SIZE);
 	}
     do {
-      static if(STORESIZE == 1) {
-	static if(other.IS4STATE) {
-	  static if(L) {
-	    if(other.aVal) this._aval[0] |=(1L << i);
+      static if (STORESIZE == 1) {
+	static if (other.IS4STATE) {
+	  static if (L) {
+	    if (other.aVal[0]) this._aval[0] |= (1L << i);
 	    else this._aval[0] &= ~(1L << i);
-	    if(other.bVal) this._bval[0] |=(1L << i);
+	    if (other.bVal[0]) this._bval[0] |= (1L << i);
 	    else this._bval[0] &= ~(1L << i);
 	  }
 	  else {
-	    if(other.aVal && !(other.bVal)) this._aval[0] |=(1L << i);
+	    if (other.aVal[0] && !(other.bVal[0])) this._aval[0] |= (1L << i);
 	    else this._aval[0] &= ~(1L << i);
 	  }
 	}
 	else {
-	  if(other.aVal)
-	    this._aval[0] |=(1L << i);
+	  if (other.aVal[0])
+	    this._aval[0] |= (1L << i);
 	  else this._aval[0] &= ~(1L << i);
-	  static if(L) {
+	  static if (L) {
 	    this._bval[0] &= ~(1L << i);
 	  }
 	}
@@ -1767,19 +1759,19 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	auto j_ = i / WORDSIZE;
 	static if(other.IS4STATE) {
 	  static if(L) {
-	    if(other.aVal) this._aval[j_] |=(1L << i_);
+	    if (other.aVal[0]) this._aval[j_] |= (1L << i_);
 	    else this._aval[j_] &= ~(1L << i_);
-	    if(other.bVal) this._bval[j_] |=(1L << i_);
+	    if (other.bVal[0]) this._bval[j_] |= (1L << i_);
 	    else this._bval[j_] &= ~(1L << i_);
 	  }
 	  else {
-	    if(other.aVal && !(other.bVal)) this._aval[j_] |=(1L << i_);
+	    if (other.aVal[0] && !(other.bVal[0])) this._aval[j_] |= (1L << i_);
 	    else this._aval[j_] &= ~(1L << i_);
 	  }
 	}
 	else {
-	  if(other.aVal)
-	    this._aval[j_] |=(1L << i_);
+	  if (other.aVal[0])
+	    this._aval[j_] |= (1L << i_);
 	  else this._aval[j_] &= ~(1L << i_);
 	  static if(L) {
 	    this._bval[j_] &= ~(1L << i_);
@@ -2892,30 +2884,96 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
     //   else static assert ("Unable to concat value of type: " ~ V.stringof);
     // }
 
-    // int opApply(scope int delegate(ref bool) dg)
-    // int opApply(scope int delegate(ref bit) dg) {
-    //   int result = 0;
-    //   for(size_t i = 0; i < SIZE; i++) {
-    //     bit b = this.opIndex(i);
-    //     result = dg(b);
-    //     this[i] = b;
-    //     if(result) break;
-    //   }
-    //   return result;
-    // }
+    // int opApply(scope int delegate(bool) dg)
+    static if (L) {
+      int opApply(scope int delegate(ULogic!1) dg) const {
+	int result = 0;
+	for (size_t i = 0; i < SIZE; i++) {
+	  ULogic!1 b = this[i];
+	  result = dg(b);
+	  if (result) break;
+	}
+	return result;
+      }
 
-    /** ditto */
-    // int opApply(scope int delegate(ref size_t, ref bool) dg)
-    // int opApply(int delegate(ref size_t, ref bit) dg) {
-    //   int result = 0;
-    //   for(size_t i = 0; i < SIZE; i++) {
-    //     bit b = this.opIndex(i);
-    //     result = dg(i, b);
-    //     this[i] = b;
-    //     if(result) break;
-    //   }
-    //   return result;
-    // }
+      int opApply(scope int delegate(ref size_t, ULogic!1) dg) const {
+	int result = 0;
+	for (size_t i = 0; i < SIZE; i++) {
+	  ULogic!1 b = this[i];
+	  result = dg(i, b);
+	  if(result) break;
+	}
+	return result;
+      }
+
+      int opApply(scope int delegate(ref ULogic!1) dg) {
+	int result = 0;
+	for (size_t i = 0; i < SIZE; i++) {
+	  ULogic!1 b = this[i];
+	  result = dg(b);
+	  this[i] = b;
+	  if(result) break;
+	}
+	return result;
+      }
+
+      int opApply(scope int delegate(ref size_t, ref ULogic!1) dg) {
+	int result = 0;
+	for (size_t i = 0; i < SIZE; i++) {
+	  ULogic!1 b = this[i];
+	  result = dg(i, b);
+	  this[i] = b;
+	  if(result) break;
+	}
+	return result;
+      }
+    }
+    else {
+      int opApply(scope int delegate(UBit!1) dg) const {
+	int result = 0;
+	for (size_t i = 0; i < SIZE; i++) {
+	  UBit!1 b = this[i];
+	  result = dg(b);
+	  if (result) break;
+	}
+	return result;
+      }
+
+      // int opApply(scope int delegate(ref size_t, ref UBit!1) dg)
+      int opApply(scope int delegate(ref size_t, UBit!1) dg) const {
+	int result = 0;
+	for (size_t i = 0; i < SIZE; i++) {
+	  UBit!1 b = this[i];
+	  result = dg(i, b);
+	  if(result) break;
+	}
+	return result;
+      }
+
+      // int opApply(scope int delegate(ref UBit!1) dg)
+      int opApply(scope int delegate(ref UBit!1) dg) {
+	int result = 0;
+	for(size_t i = 0; i < SIZE; i++) {
+	  UBit!1 b = this[i];
+	  result = dg(b);
+	  this[i] = b;
+	  if(result) break;
+	}
+	return result;
+      }
+
+      // int opApply(scope int delegate(ref size_t, ref UBit!1) dg)
+      int opApply(scope int delegate(ref size_t, ref UBit!1) dg) {
+	int result = 0;
+	for (size_t i = 0; i < SIZE; i++) {
+	  UBit!1 b = this[i];
+	  result = dg(i, b);
+	  this[i] = b;
+	  if(result) break;
+	}
+	return result;
+      }
+    }
 }
 
 public auto toBitVec(T)(T t) if(isIntegral!T) {
@@ -5742,3 +5800,4 @@ void setByte(T)(ref T data, size_t n, ubyte b) if (isIntegral!T) {
   data &= ~mask;
   data |= byt;
  }
+
