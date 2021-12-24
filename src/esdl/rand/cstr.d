@@ -52,7 +52,7 @@ abstract class _esdl__ConstraintBase: rand.disable
   }
 
   string fullName() {
-    return _proxy.fullName() ~ _name;
+    return _proxy.fullName() ~ '.' ~ _name;
   }
 
   final _esdl__Proxy getProxy() {
