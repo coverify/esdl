@@ -524,6 +524,10 @@ void _esdl__postRandomize(T)(T t) {
 
 void _esdl__randomize(T) (ref T t) if (is (T == struct))
   {
+    debug (CSTSOLVER) {
+      import std.stdio;
+      writeln("Type of Randomized Object: ", T.stringof);
+    }
 
     alias _esdl__ProxyType = _esdl__ProxyResolve!T;
 
@@ -554,6 +558,10 @@ void _esdl__randomize(T) (ref T t) if (is (T == struct))
 
 void _esdl__randomize(T) (T t) if (is (T == class))
   {
+    debug (CSTSOLVER) {
+      import std.stdio;
+      writeln("Type of Randomized Object: ", T.stringof);
+    }
 
     alias _esdl__ProxyType = _esdl__ProxyResolve!T;
 
@@ -607,6 +615,11 @@ _esdl__Proxy _esdl__getProxyInst(T)(T t) {
 void _esdl__randomizeWith(T)(T t, _esdl__Proxy proxy,
 			     _esdl__ConstraintBase lambdaCst) if (is (T == class))
   {
+    debug (CSTSOLVER) {
+      import std.stdio;
+      writeln("Type of Randomized Object: ", T.stringof);
+    }
+
     alias _esdl__ProxyType = _esdl__ProxyResolve!T;
     _esdl__ProxyType proxyInst = _esdl__staticCast!(_esdl__ProxyType)(proxy);
     _esdl__preRandomize(t);
@@ -632,6 +645,11 @@ void _esdl__randomizeWith(T)(T t, _esdl__Proxy proxy,
 void _esdl__randomizeWith(T) (ref T t, _esdl__Proxy proxy,
 			      _esdl__ConstraintBase lambdaCst) if (is (T == struct))
   {
+    debug (CSTSOLVER) {
+      import std.stdio;
+      writeln("Type of Randomized Object: ", T.stringof);
+    }
+
     alias _esdl__ProxyType = _esdl__ProxyResolve!T;
     _esdl__ProxyType proxyInst = _esdl__staticCast!(_esdl__ProxyType)(proxy);
 

@@ -939,6 +939,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     import std.conv: to;
     string description = "Predicate Name: " ~ name() ~ "\n";
     description ~= "Predicate ID: " ~ _id.to!string() ~ "\n    ";
+    description ~= "Soft (Weight): " ~ _soft.to!string() ~ "\n    ";
     description ~= "State: " ~ _state.to!string() ~ "\n    ";
     description ~= "Is In Range? " ~ _isInRange.to!string ~ "\n    ";
     description ~= "Expr: " ~ _expr.describe() ~ "\n    ";
