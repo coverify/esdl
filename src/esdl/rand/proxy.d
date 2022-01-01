@@ -136,8 +136,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     return _distPredSolver;
   }
 
-  static CstSolver[string] _solvers;
-
   CstVarGlobIntf[string] _globalLookups;
 
   void addGlobalLookup(CstVarGlobIntf global, string lookup) {

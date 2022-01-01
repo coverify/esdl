@@ -250,6 +250,8 @@ class CstSolverAgent			// agent of related predicates
     return _state == State.SOLVED;
   }
 
+  CstSolver[string] _solvers;
+
   CstSolver _solver;
 
   void solve() {
@@ -311,9 +313,9 @@ class CstSolverAgent			// agent of related predicates
       }
       // do not use mutableSig.to!string since we do not want to allocate mem
       // for now
-      CstSolver* solverp = (cast(string) mutableSig) in _proxy._solvers;
+      CstSolver* solverp = (cast(string) mutableSig) in _solvers;
       // _hasHashBeenCalculated = false;
-      // CstSolver* solverp = this in _proxy._solvers;
+      // CstSolver* solverp = this in _solvers;
 
       if (solverp !is null) {
 	_solver = *solverp;
@@ -362,8 +364,8 @@ class CstSolverAgent			// agent of related predicates
 	  }
 	}
 	// _hasHashBeenCalculated = true;
-	// if (_solver !is null) _proxy._solvers[this] = _solver;
-	if (_solver !is null) _proxy._solvers[immutableSig] = _solver;
+	// if (_solver !is null) _solvers[this] = _solver;
+	if (_solver !is null) _solvers[immutableSig] = _solver;
       }
     }
     // import std.stdio;
