@@ -19,23 +19,23 @@ import esdl.base.rand: _esdl__RandGen, getRandGen;
 abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 {
   // CstDomBase[] _cstRndDomains;
-  CstDomBase[] _cstValDomains;
+  CstDomBase[] _esdl__cstValDomains;
 
   // compositional parent -- not inheritance based
   // _esdl__Proxy _parent;
-  _esdl__Proxy _root;
+  _esdl__Proxy _esdl__root;
 
-  private _esdl__ConstraintBase[string] _cstNames;
+  private _esdl__ConstraintBase[string] _esdl__cstNames;
 
   void addConstraintName(_esdl__ConstraintBase cst) {
     auto cstName = cst.name();
-    _esdl__ConstraintBase* prevCst = cstName in _cstNames;
+    _esdl__ConstraintBase* prevCst = cstName in _esdl__cstNames;
     if (prevCst !is null) {
       prevCst.markOverridden();
-      _cstNames[cstName] = cst;
+      _esdl__cstNames[cstName] = cst;
     }
     else {
-      _cstNames[cstName] = cst;
+      _esdl__cstNames[cstName] = cst;
     }
   }
 
@@ -112,8 +112,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   
   _esdl__Proxy getProxyRoot() {
-    if (_root is null) { return this; }
-    else return _root;
+    if (_esdl__root is null) { return this; }
+    else return _esdl__root;
   }
 
   // CstObjNodeIntf
@@ -408,7 +408,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   uint _cycle;
 
   void updateValDomains() {
-    foreach (dom; _cstValDomains) {
+    foreach (dom; _esdl__cstValDomains) {
       dom.updateVal();
     }
   }
@@ -416,8 +416,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   _esdl__RandGen _esdl__rGen;
 
   _esdl__RandGen _esdl__getRandGen() {
-    assert(_root is this);
-    return _root._esdl__rGen;
+    assert(_esdl__root is this);
+    return _esdl__root._esdl__rGen;
   }
 
   uint _esdl__seed;
@@ -430,17 +430,17 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   bool _esdl__seeded = false;
 
   uint getRandomSeed() {
-    assert(_root is this);
+    assert(_esdl__root is this);
     return _esdl__seed;
   }
 
   bool isRandomSeeded() {
-    assert(_root is this);
+    assert(_esdl__root is this);
     return _esdl__seeded;
   }
 
   void seedRandom(uint seed) {
-    assert(_root is this);
+    assert(_esdl__root is this);
     _esdl__seeded = true;
     _esdl__seed = seed;
     _esdl__rGen.seed(seed);    
@@ -512,10 +512,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _esdl__rGen = new _esdl__RandGen(_esdl__seed);
 
     if (parent is null) {
-      _root = this;
+      _esdl__root = this;
     }
     else {
-      _root = parent.getProxyRoot();
+      _esdl__root = parent.getProxyRoot();
     }
     // scopes for constraint parsing
     _rootScope = new CstScope(null, null);
@@ -555,7 +555,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   void solvedSome() { _solvedSome = true; }
 
   void solve() {
-    assert(_root is this);
+    assert(_esdl__root is this);
     this._cycle += 1;
     while (// _newPreds.length > 0 ||
 	   _toNewPreds.length > 0 ||
