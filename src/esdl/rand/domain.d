@@ -13,7 +13,7 @@ import esdl.rand.base: CstValue, CstDomBase, CstDomSet, CstIterator,
 import esdl.rand.misc: rand, writeHexString, isVecSigned, CstVectorOp,
   CstInsideOp, CstCompareOp, CstLogicOp, DomainContextEnum, GetVecType,
   CstVecType, _esdl__Sigbuf;
-import esdl.rand.proxy: _esdl__Proxy;
+import esdl.rand.proxy: _esdl__Proxy, _esdl__CstProcessor;
 import esdl.rand.pred: CstPredicate, Hash;
 import esdl.rand.agent: CstSolverAgent;
 import esdl.rand.expr: CstNotLogicExpr, CstLogic2LogicExpr;
@@ -310,8 +310,7 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
   }
   
   this(string name, _esdl__Proxy root) {
-    _name = name;
-    _root = root;
+    super(name, root);
   }
 
   
@@ -631,6 +630,8 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 
   CstVecPrim[] _preReqs;
 
+  _esdl__CstProcessor _proc;
+
   final override bool isDistVar() { return false; }
 
   override string name() {
@@ -646,6 +647,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     super(name, parent.getProxyRoot());
     _name = name;
     _parent = parent;
+    _proc = parent.getProxyRoot()._esdl__getProcessor();
     _iterVar = new CstArrIterator!RV(_parent);
   }
 
@@ -655,7 +657,8 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     return _parent.getProxyRoot();
   }
 
-  override bool tryResolveDep(_esdl__Proxy proxy) {
+  override bool tryResolveDep(_esdl__CstProcessor proc) {
+    assert (proc is _proc);
     import std.algorithm.iteration: filter;
     debug (CSTSOLVER) {
       import std.stdio;
@@ -679,7 +682,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 	  import std.stdio;
 	  writeln("tryResolveDep: Resolving: ", fullName());
 	}
-	randomizeWithoutConstraints(proxy);
+	randomizeWithoutConstraints(proc);
 	return true;
       }
     }
@@ -945,7 +948,7 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
     return _parent.getProxyRoot();
   }
 
-  override bool tryResolveDep(_esdl__Proxy proxy) {
+  override bool tryResolveDep(_esdl__CstProcessor proc) {
     // import std.stdio;
     // writeln("Invoking tryResolveDep on: ", fullName());
     if (isMarkedSolved()) {

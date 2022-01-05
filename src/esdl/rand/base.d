@@ -13,7 +13,7 @@ import esdl.rand.expr: CstVecArrExpr, CstVecSliceExpr, CstRangeExpr,
   CstNotLogicExpr, CstNegVecExpr, CstInsideArrExpr;
 import esdl.rand.pred: CstPredicate, Hash;
 import esdl.rand.agent: CstSolverAgent;
-import esdl.rand.proxy: _esdl__Proxy;
+import esdl.rand.proxy: _esdl__Proxy, _esdl__CstProcessor;
 import esdl.rand.misc: CstVectorOp, CstLogicOp, CstCompareOp,
   CstBinaryOp, SolveOrder, DomainContextEnum, CstVecType, _esdl__Sigbuf;
 
@@ -51,7 +51,7 @@ interface CstDepIntf {
   abstract void registerIdxPred(CstDepCallback idxCb);
   abstract void registerDepPred(CstDepCallback depCb);
   abstract bool isDepResolved();
-  abstract bool tryResolveDep(_esdl__Proxy proxy);
+  abstract bool tryResolveDep(_esdl__CstProcessor proc);
 
   abstract CstDomBase getDomain();
 }
@@ -262,7 +262,19 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
 
 
   _esdl__Proxy _root;
+  _esdl__CstProcessor _proc;
+
+  final _esdl__getCstProcessor() {
+    return _proc;
+  }
+  
   string _name;
+
+  this(string name, _esdl__Proxy root) {
+    _name = name;
+    _root = root;
+    _proc = _root._esdl__getProcessor();
+  }
 
   string name() {
     return _name;
@@ -375,7 +387,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   
   abstract long value();
   
-  bool tryResolveDep(_esdl__Proxy proxy) {
+  bool tryResolveDep(_esdl__CstProcessor proc) {
     //
     // import std.stdio;
     // writeln("Trying to Resolve: ", this.fullName());
@@ -396,7 +408,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
 	  if (_unresolvedDomainPreds.length + _lambdaDomainPreds.length == 0 ||
 	      (_unresolvedDomainPreds[].filter!(pred => ! pred.isGuard()).empty() &&
 	       _lambdaDomainPreds[].filter!(pred => ! pred.isGuard()).empty())) {
-	    randomizeWithoutConstraints(proxy);
+	    randomizeWithoutConstraints(proc);
 	    return true;
 	  }
 	}
@@ -408,7 +420,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
 	       _lambdaDomainPreds[].filter!(pred => ! pred.isGuard()).empty() &&
 	       resolved._lambdaDomainPreds[].filter!(pred => ! pred.isGuard()).empty())) {
 	    // we point to resolved node inside randomizeWithoutConstraints
-	    randomizeWithoutConstraints(proxy);
+	    randomizeWithoutConstraints(proc);
 	    return true;
 	  }
 	}
@@ -417,17 +429,17 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     }
   }
   
-  void randomizeWithoutConstraints(_esdl__Proxy proxy) {
+  void randomizeWithoutConstraints(_esdl__CstProcessor proc) {
     assert (this.depsAreResolved());
     auto resolved = this.getResolvedNode();
     if (this.isRand())
       resolved._esdl__doRandomize(getProxyRoot()._esdl__getRandGen());
-    proxy.solvedSome();
+    proc.solvedSome();
     resolved.markSolved();
-    proxy.addSolvedDomain(resolved);
+    proc.addSolvedDomain(resolved);
     if (this !is resolved) {
       this.markSolved();
-      proxy.addSolvedDomain(this);
+      proc.addSolvedDomain(this);
     }
   }
 
@@ -441,7 +453,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     assert (_state != State.SOLVED, this.name() ~
 	    " already marked as solved");
     _state = State.SOLVED;
-    _root.addSolvedDomain(this);
+    _proc.addSolvedDomain(this);
     this.execCbs();
   }
 
@@ -585,7 +597,8 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     // import std.stdio;
     // writeln("setProxyContext on: ", this.name());
     assert (_state is State.INIT && (! this.isSolved()));
-    proxy.collateDomain(this);
+    assert (proxy is _root);
+    _proc.collateDomain(this);
     // assert (_agent is null && (! this.isSolved()));
     // _agent = agent;
     if (this.isRand()) {
@@ -729,10 +742,18 @@ abstract class CstObjSet: CstObjArrVoid, CstObjArrIntf
 {
   string _name;
 
-  _esdl__Proxy _root;
+  private _esdl__Proxy _root;
+  _esdl__CstProcessor _proc;
   
-  this(string name) {
+  final _esdl__getCstProcessor() {
+    return _proc;
+  }
+  
+  this(string name, _esdl__Proxy root) {
+    assert (root !is null);
     _name = name;
+    _root = root;
+    _proc = _root._esdl__getProcessor();
   }
 
   _esdl__Proxy getProxyRoot() {
@@ -767,7 +788,27 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   string _name;
 
   _esdl__Proxy _root;
+  _esdl__CstProcessor _proc;
   
+  final _esdl__getCstProcessor() {
+    return _proc;
+  }
+  
+  this(string name, _esdl__Proxy root) {
+    _name = name;
+    _root = root;
+    _proc = _root._esdl__getProcessor();
+  }
+
+  _esdl__Proxy getProxyRoot() {
+    assert (_root !is null);
+    return _root;
+  }
+
+  override string name() {
+    return _name;
+  }
+
   // Callbacks
   Folder!(CstDepCallback, "depCbs") _depCbs;
 
@@ -856,19 +897,6 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     _depCbs ~= idxCb;
   }
 
-  this(string name) {
-    _name = name;
-  }
-
-  _esdl__Proxy getProxyRoot() {
-    assert (_root !is null);
-    return _root;
-  }
-
-  override string name() {
-    return _name;
-  }
-
   uint _esdl__domsetUnresolvedArrLen = uint.max;
   uint _esdl__domsetUnsolvedLeafCount = uint.max;
   uint _esdl__domsetLeafElemsCount = 0;
@@ -904,7 +932,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     assert (_state != State.SOLVED, this.name() ~
 	    " already marked as solved");
     _state = State.SOLVED;
-    _root.addSolvedDomainArr(this);
+    _proc.addSolvedDomainArr(this);
     this.execCbs();
   }
   
@@ -912,7 +940,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     assert (false);
   }
 
-  bool tryResolveDep(_esdl__Proxy proxy) { return false; }
+  bool tryResolveDep(_esdl__CstProcessor proc) { return false; }
 	
   void visit(CstSolver solver) {
     foreach (dom; this[]) {
@@ -1088,6 +1116,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     // writeln("setProxyContext on: ", this.name());
     assert (this.isDepResolved(), this.name() ~ " is unresolved");
     assert (_state is State.INIT);
+    assert (proxy is _root);
     foreach (pred; _resolvedDomainPreds[]) {
       if (! pred.isGuard()) {
 	if (pred.isEnabled() && pred.isResolved() && ! pred.isBlocked()) {
@@ -1103,7 +1132,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
       }
     }
     else {			// only for the top arr
-      proxy.collateDomArr(this);
+      _proc.collateDomArr(this);
       foreach (dom; this[]) {
 	if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
 	  dom.setProxyContext(proxy);

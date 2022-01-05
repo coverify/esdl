@@ -18,9 +18,6 @@ import esdl.base.rand: _esdl__RandGen, getRandGen;
 
 abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 {
-  // CstDomBase[] _cstRndDomains;
-  CstDomBase[] _esdl__cstValDomains;
-
   // compositional parent -- not inheritance based
   // _esdl__Proxy _parent;
   _esdl__Proxy _esdl__root;
@@ -48,72 +45,58 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   }
   
   string fullName() {
-    if (_esdl__objIntf is null) return "";
-    else {
-      return _esdl__objIntf.fullName();
-    }
+    if (_esdl__objIntf is null) return "$root";
+    else return "$root." ~ _esdl__objIntf.fullName();
   }
   string name() {
-    if (_esdl__objIntf is null) return "";
-    else {
-      return _esdl__objIntf.name();
-    }
+    if (_esdl__objIntf is null) return "$root";
+    else return _esdl__objIntf.name();
   }
   
   bool isRand() {
     if (_esdl__objIntf is null) return true; // root proxy
-    else {
-      return _esdl__objIntf.isRand();
-    }
+    else return _esdl__objIntf.isRand();
   }
   
   bool inRange() {
     if (_esdl__objIntf is null) return true; // root proxy
-    else {
-      return _esdl__objIntf.inRange();
-    }
+    else return _esdl__objIntf.inRange();
   }
 
   override bool depsAreResolved() {
     if (_esdl__objIntf is null) return true; // root proxy
-    else {
-      return _esdl__objIntf.depsAreResolved();
-    }
+    else return _esdl__objIntf.depsAreResolved();
   }
 
   _esdl__Proxy unroll(CstIterator iter, ulong n) {
     if (_esdl__objIntf is null) return this;
-    else {
-      return _esdl__objIntf.unroll(iter, n)._esdl__getProxy();
-    }
+    else return _esdl__objIntf.unroll(iter, n)._esdl__getProxy();
   }
 
   // the root proxy is always static
   bool isStatic() {
     if (_esdl__objIntf is null) return true;
-    else {
-      return _esdl__objIntf.isStatic();
-    }
+    else return _esdl__objIntf.isStatic();
   }
 
   bool isReal() {
     if (_esdl__objIntf is null) return true;
-    else {
-      return _esdl__objIntf.isReal();
-    }
+    else return _esdl__objIntf.isReal();
   }
 
   bool isRolled() {
     if (_esdl__objIntf is null) return false;
-    else {
-      return _esdl__objIntf.isRolled();
-    }
+    else return _esdl__objIntf.isRolled();
   }
 
   
-  _esdl__Proxy getProxyRoot() {
-    if (_esdl__root is null) { return this; }
-    else return _esdl__root;
+  final _esdl__Proxy getProxyRoot() {
+    return _esdl__root;
+  }
+
+  final bool _esdl__isRoot() {
+    if (_esdl__root is this) return true;
+    else return false;
   }
 
   // CstObjNodeIntf
@@ -121,20 +104,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   final CstIterator _esdl__iter() { return null; }
   final CstVarNodeIntf _esdl__getChild(ulong n) { assert (false); }
   void scan() { }		// when an object is unrolled
-
-
-  static CstSolverAgent _agent;
-  static CstDistPredSolver _distPredSolver;
-
-  static getPredSolver() {
-    if (_agent is null) _agent = new CstSolverAgent();
-    return _agent;
-  }
-
-  static getDistPredSolver() {
-    if (_distPredSolver is null) _distPredSolver = new CstDistPredSolver();
-    return _distPredSolver;
-  }
 
   CstVarGlobIntf[string] _globalLookups;
 
@@ -181,6 +150,193 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   _esdl__ConstraintBase[] getArgVisitors() {
     return _argVisitors[];
+  }
+
+
+  _esdl__RandGen _esdl__rGen;
+
+  _esdl__RandGen _esdl__getRandGen() {
+    assert (_esdl__root !is null);
+    return _esdl__root._esdl__rGen;
+  }
+
+  uint _esdl__seed;
+  uint _esdl__varN;
+
+  uint indexVar() {
+    return _esdl__varN++;
+  }
+  
+  bool _esdl__seeded = false;
+
+  uint getRandomSeed() {
+    assert (_esdl__root is this);
+    return _esdl__seed;
+  }
+
+  bool isRandomSeeded() {
+    assert (_esdl__root is this);
+    return _esdl__seeded;
+  }
+
+  void seedRandom(uint seed) {
+    assert (_esdl__root is this);
+    _esdl__seeded = true;
+    _esdl__seed = seed;
+    _esdl__rGen.seed(seed);    
+  }
+  
+  
+  // Scope for foreach
+  CstScope _rootScope;
+  CstScope _currentScope;
+
+  void pushScope(CstIterator iter) {
+    assert (_currentScope !is null);
+    _currentScope = _currentScope.push(iter);
+  }
+
+  void popScope() {
+    assert (_currentScope !is null);
+    assert (_currentScope !is _rootScope);
+    _currentScope = _currentScope.pop();
+  }
+
+  CstScope currentScope() {
+    assert (_currentScope !is null);
+    return _currentScope;
+  }
+
+  abstract bool _esdl__debugSolver();
+
+  // Keep a list of constraints in the class
+  _esdl__ConstraintBase _esdl__lambdaCst;
+
+  _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
+				      CstObjectIntf obj, void* outer) {
+    assert (false,
+	    "Override _esdl__createProxyInst in the derived proxy class");
+  }
+
+  _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
+				      CstObjectIntf obj, Object outer) {
+    assert (false,
+	    "Override _esdl__createProxyInst in the derived proxy class");
+  }
+
+
+  // overridden by Randomization mixin -- see meta.d
+  abstract void _esdl__doRandomize(_esdl__RandGen randGen);
+  abstract void _esdl__doConstrain(_esdl__Proxy proxy, bool callPreRandomize);
+
+  Folder!(CstVecNodeIntf, "lambdaCstDoms") _lambdaCstDoms;
+
+  final void addLambdaCstDom(CstVecNodeIntf dom) {
+    _lambdaCstDoms ~= dom;
+  }
+
+  final void doResetLambdaPreds() {
+    foreach (lambdaCstDom; _lambdaCstDoms) lambdaCstDom.resetLambdaPreds();
+    _lambdaCstDoms.reset();
+    // reset lambda arg visitors
+    _argVisitors.reset();
+  }
+
+  _esdl__CstProcessor _esdl__cstProcessor;
+
+  final _esdl__CstProcessor _esdl__getProcessor() {
+    return _esdl__root._esdl__cstProcessor;
+  }
+  
+  this(_esdl__Proxy parent, CstObjectIntf obj, Object outer) {
+    this(parent, obj);
+  }
+
+  this(_esdl__Proxy parent, CstObjectIntf obj, void* outer) {
+    this(parent, obj);
+  }
+
+  this(_esdl__Proxy parent, CstObjectIntf obj) {
+    if (parent is null) _esdl__root = this;
+    else _esdl__root = parent.getProxyRoot();
+
+    _esdl__objIntf = obj;
+    
+    // import std.random: uniform;
+    debug(NOCONSTRAINTS) {
+      assert(false, "Constraint engine started");
+    }
+    else {
+      import esdl.base.core: Procedure;
+      auto proc = Procedure.self;
+      if (proc !is null) {
+	_esdl__seed = 0; // uniform!(uint)(procRgen);
+      }
+      else {
+	// no active simulation -- use global rand generator
+	_esdl__seed = 0; // uniform!(uint)();
+      }
+    }
+    _esdl__rGen = new _esdl__RandGen(_esdl__seed);
+
+    // only the root proxy shall have a processor
+    if (_esdl__root is this) {
+      _esdl__cstProcessor = new _esdl__CstProcessor(this);
+    }
+
+    // scopes for constraint parsing
+    _rootScope = new CstScope(null, null);
+    _currentScope = _rootScope;
+
+  }
+
+}
+
+class _esdl__CstProcessor
+{
+  this(_esdl__Proxy proxy) {
+    _proxy = proxy;
+    _debugSolver = _proxy._esdl__debugSolver();
+    _randGen = _proxy._esdl__getRandGen();
+    assert (_randGen !is null);
+  }
+  
+  immutable bool _debugSolver;
+  final bool debugSolver() {
+    return _debugSolver;
+  }
+  
+  _esdl__Proxy _proxy;
+
+  _esdl__Proxy getProxy() {
+    return _proxy;
+  }
+
+  _esdl__RandGen _randGen;
+
+  final _esdl__RandGen getRandGen() {
+    return _randGen;
+  }
+  
+  static CstSolverAgent _agent;
+  static CstDistPredSolver _distPredSolver;
+
+  string name() {
+    return _proxy.name() ~ "->processor";
+  }
+  
+  string fullName() {
+    return _proxy.fullName() ~ "->processor";
+  }
+  
+  static getPredSolver() {
+    if (_agent is null) _agent = new CstSolverAgent();
+    return _agent;
+  }
+
+  static getDistPredSolver() {
+    if (_distPredSolver is null) _distPredSolver = new CstDistPredSolver();
+    return _distPredSolver;
   }
 
   Folder!(CstPredicate, "unrolledNewPreds") _unrolledNewPreds;
@@ -250,19 +406,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _collatedDomArrs ~= domArr;
     domArr._orderLevel = 0;
     domArr._state = CstDomSet.State.COLLATED;
-  }
-
-  Folder!(CstVecNodeIntf, "lambdaCstDoms") _lambdaCstDoms;
-
-  final void addLambdaCstDom(CstVecNodeIntf dom) {
-    _lambdaCstDoms ~= dom;
-  }
-
-  final void doResetLambdaPreds() {
-    foreach (lambdaCstDom; _lambdaCstDoms) lambdaCstDom.resetLambdaPreds();
-    _lambdaCstDoms.reset();
-    // reset lambda arg visitors
-    _argVisitors.reset();
   }
 
   Folder!(CstIterator, "itersWithCbs") _itersWithCbs;
@@ -405,127 +548,15 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   //    vec/vec-array for the indicated randomization cycle
   uint _cycle;
 
-  void updateValDomains() {
-    foreach (dom; _esdl__cstValDomains) {
-      dom.updateVal();
-    }
-  }
+  // // CstDomBase[] _cstRndDomains;
+  // CstDomBase[] _esdl__cstValDomains;
+
+  // void updateValDomains() {
+  //   foreach (dom; _esdl__cstValDomains) {
+  //     dom.updateVal();
+  //   }
+  // }
   
-  _esdl__RandGen _esdl__rGen;
-
-  _esdl__RandGen _esdl__getRandGen() {
-    assert(_esdl__root is this);
-    return _esdl__root._esdl__rGen;
-  }
-
-  uint _esdl__seed;
-  uint _esdl__varN;
-
-  uint indexVar() {
-    return _esdl__varN++;
-  }
-  
-  bool _esdl__seeded = false;
-
-  uint getRandomSeed() {
-    assert(_esdl__root is this);
-    return _esdl__seed;
-  }
-
-  bool isRandomSeeded() {
-    assert(_esdl__root is this);
-    return _esdl__seeded;
-  }
-
-  void seedRandom(uint seed) {
-    assert(_esdl__root is this);
-    _esdl__seeded = true;
-    _esdl__seed = seed;
-    _esdl__rGen.seed(seed);    
-  }
-  
-  
-  // Scope for foreach
-  CstScope _rootScope;
-  CstScope _currentScope;
-
-  void pushScope(CstIterator iter) {
-    assert (_currentScope !is null);
-    _currentScope = _currentScope.push(iter);
-  }
-
-  void popScope() {
-    assert (_currentScope !is null);
-    assert (_currentScope !is _rootScope);
-    _currentScope = _currentScope.pop();
-  }
-
-  CstScope currentScope() {
-    assert (_currentScope !is null);
-    return _currentScope;
-  }
-
-  abstract bool _esdl__debugSolver();
-
-  // Keep a list of constraints in the class
-  _esdl__ConstraintBase _esdl__lambdaCst;
-
-  _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-				      CstObjectIntf obj, void* outer) {
-    assert (false,
-	    "Override _esdl__createProxyInst in the derived proxy class");
-  }
-
-  _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-				      CstObjectIntf obj, Object outer) {
-    assert (false,
-	    "Override _esdl__createProxyInst in the derived proxy class");
-  }
-
-  this(_esdl__Proxy parent, CstObjectIntf obj, Object outer) {
-    this(parent, obj);
-  }
-
-  this(_esdl__Proxy parent, CstObjectIntf obj, void* outer) {
-    this(parent, obj);
-  }
-
-  this(_esdl__Proxy parent, CstObjectIntf obj) {
-    _esdl__objIntf = obj;
-    import std.random: uniform;
-    debug(NOCONSTRAINTS) {
-      assert(false, "Constraint engine started");
-    }
-    else {
-      import esdl.base.core: Procedure;
-      auto proc = Procedure.self;
-      if (proc !is null) {
-	_esdl__seed = 0; // uniform!(uint)(procRgen);
-      }
-      else {
-	// no active simulation -- use global rand generator
-	_esdl__seed = 0; // uniform!(uint)();
-      }
-    }
-    _esdl__rGen = new _esdl__RandGen(_esdl__seed);
-
-    if (parent is null) {
-      _esdl__root = this;
-    }
-    else {
-      _esdl__root = parent.getProxyRoot();
-    }
-    // scopes for constraint parsing
-    _rootScope = new CstScope(null, null);
-    _currentScope = _rootScope;
-
-  }
-
-  // overridden by Randomization mixin -- see meta.d
-  abstract void _esdl__doRandomize(_esdl__RandGen randGen);
-  abstract void _esdl__doConstrain(_esdl__Proxy proxy, bool callPreRandomize);
-
-
   void reset() {
     // _solvedDomains is from previous cycle
     foreach (dom; _solvedDomains) dom.reset();
@@ -546,14 +577,13 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _toUnresolvedPreds.reset();
     _solvedDomains.reset();
     _solvedDomainArrs.reset();
-    updateValDomains();
+    // updateValDomains();
   }
   
   private bool _solvedSome = false;
   void solvedSome() { _solvedSome = true; }
 
   void solve() {
-    assert(_esdl__root is this);
     this._cycle += 1;
     while (// _newPreds.length > 0 ||
 	   _toNewPreds.length > 0 ||
@@ -568,7 +598,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       assert (_resolvedPreds.length == 0);
       assert (_resolvedDistPreds.length == 0);
 
-      if (_esdl__debugSolver) {
+      if (_debugSolver) {
 	import std.stdio;
 	if (_toNewPreds.length > 0) {
 	  stdout.writeln("_toNewPreds: ");
@@ -805,17 +835,17 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	_solvedSome = true;
 	continue;
       }
-      pred.setProxyContext(this);
+      pred.setProxyContext(_proxy);
 	  
       // makeSolverDomains();
       uint level = 0;
       while (markDependents(++level)){
-	if (_esdl__debugSolver) {
+	if (_debugSolver) {
 	  printSolver();
 	}
 	solveMarkedPreds(level);
       }
-      if (_esdl__debugSolver) {
+      if (_debugSolver) {
 	printSolver();
       }
       if (level == 1) {

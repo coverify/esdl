@@ -8,7 +8,7 @@ import esdl.solver.z3: CstZ3Solver;
 import esdl.solver.buddy: CstBuddySolver;
 
 import esdl.rand.misc: _esdl__Sigbuf, CstVectorOp;
-import esdl.rand.proxy: _esdl__Proxy;
+import esdl.rand.proxy: _esdl__Proxy, _esdl__CstProcessor;
 import esdl.rand.pred: CstPredicate, Hash;
 import esdl.rand.base: CstDomBase, CstDomSet, CstIterCallback,
   CstDepCallback, CstScope, CstIterator, CstVecNodeIntf,
@@ -51,8 +51,9 @@ class CstSolverAgent			// agent of related predicates
     _hasDistConstraints = true;
   }
 
-  void initialize(_esdl__Proxy proxy) {
-    _proxy = proxy;
+  void initialize(_esdl__CstProcessor proc) {
+    _proc = proc;
+    _proxy = _proc.getProxy();
     _preds.reset();
     _predList.reset();
 
@@ -82,6 +83,7 @@ class CstSolverAgent			// agent of related predicates
     return _preds[];
   }
 
+  _esdl__CstProcessor _proc;
   _esdl__Proxy _proxy;
 
   this () {
@@ -91,7 +93,11 @@ class CstSolverAgent			// agent of related predicates
     ulongMono = new CstMonoSolver!ulong("");
   }
 
-  _esdl__Proxy getProxy() {
+  final _esdl__CstProcessor getProcessor() {
+    return _proc;
+  }
+
+  final _esdl__Proxy getProxy() {
     return _proxy;
   }
 
@@ -257,7 +263,7 @@ class CstSolverAgent			// agent of related predicates
   void solve() {
     // import std.stdio;
     // writeln("Solving: ", this.describe());
-    if (_proxy._esdl__debugSolver()) {
+    if (_proc.debugSolver()) {
       import std.stdio;
       writeln(describe());
     }
@@ -268,7 +274,7 @@ class CstSolverAgent			// agent of related predicates
     if (!(_softPredicateCount != 0 || _hasVectorConstraints)) {
       if (_preds.length == 1 && _preds[0].isVisitor()) {
 	_preds[0]._state = CstPredicate.State.SOLVED;
-	_proxy.addSolvedDomain(_preds[0]._domain);
+	_proc.addSolvedDomain(_preds[0]._domain);
 	monoFlag = true;
       }
       else if (_annotatedDoms.length == 1 && (! _annotatedDoms[0].isBool())) {
@@ -307,7 +313,7 @@ class CstSolverAgent			// agent of related predicates
       char[] mutableSig = signature();
       // assert(sig1 == mutableSig);
 
-      if (_proxy._esdl__debugSolver()) {
+      if (_proc.debugSolver()) {
 	import std.stdio;
 	writeln(mutableSig);
       }
@@ -327,7 +333,7 @@ class CstSolverAgent			// agent of related predicates
 	// cast and use the same char buffer memory
 	string immutableSig = mutableSig.to!string();
 	if (_softPredicateCount != 0 || _hasVectorConstraints) {
-	  if (_proxy._esdl__debugSolver()) {
+	  if (_proc.debugSolver()) {
 	    import std.stdio;
 	    writeln("Invoking Z3 because of Soft/Vector Constraints");
 	    writeln("_preds: ", _preds[]);
@@ -350,7 +356,7 @@ class CstSolverAgent			// agent of related predicates
 	  }
 	  foreach (var; _annotatedVars) totalBits += var.bitcount();
 	  if (totalBits > 32 || _hasUniqueConstraints) {
-	    if (_proxy._esdl__debugSolver()) {
+	    if (_proc.debugSolver()) {
 	      import std.stdio;
 	      writeln("Invoking Z3 because of > 32 bits");
 	      writeln(describe());

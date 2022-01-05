@@ -4,7 +4,7 @@ import esdl.solver.base: CstDistSolverBase;
 
 import esdl.rand.base: CstDomBase;
 import esdl.rand.pred: CstPredicate;
-import esdl.rand.proxy: _esdl__Proxy;
+import esdl.rand.proxy: _esdl__CstProcessor;
 
 import esdl.data.bvec: isBitVector, to;
 import esdl.data.folder: Folder;
@@ -237,6 +237,7 @@ class CstVecDistSolver(T): CstDistSolverBase
   }
 
   override void uniform(CstDomBase dom, _esdl__RandGen randGen) {
+    assert (randGen !is null);
     dom.setVal(this.uniform(randGen));
   }
   
@@ -262,6 +263,7 @@ class CstVecDistSolver(T): CstDistSolverBase
   // }
 
   T uniform(_esdl__RandGen rgen) {
+    assert (rgen !is null);
     double select = getTotalWeight() * rgen.get();
     T var;
     foreach (ref dist; _set) {
@@ -439,8 +441,8 @@ class CstLogicDistSolver(T): CstDistSolverBase
 
 class CstDistPredSolver	// agent of dist and related predicates
 {
-  void initialize(_esdl__Proxy proxy) {
-    _proxy = proxy;
+  void initialize(_esdl__CstProcessor proc) {
+    _proc = proc;
     _preds.reset();
 
     _distPred = null;
@@ -454,10 +456,10 @@ class CstDistPredSolver	// agent of dist and related predicates
     return _preds[];
   }
 
-  _esdl__Proxy _proxy;
+  _esdl__CstProcessor _proc;
 
-  _esdl__Proxy getProxy() {
-    return _proxy;
+  _esdl__CstProcessor getProc() {
+    return _proc;
   }
 
   void distPred(CstPredicate pred) {
@@ -495,7 +497,7 @@ class CstDistPredSolver	// agent of dist and related predicates
   }
 
   void solve() {
-    if (_proxy._esdl__debugSolver()) {
+    if (_proc.debugSolver()) {
       import std.stdio;
       writeln(describe());
     }
@@ -519,8 +521,8 @@ class CstDistPredSolver	// agent of dist and related predicates
 	wp.markPredSolved();
       }
     }
-    dist.uniform(distDomain, _proxy._esdl__getRandGen());
-    _proxy.addSolvedDomain(distDomain);
+    dist.uniform(distDomain, _proc.getRandGen());
+    _proc.addSolvedDomain(distDomain);
     _distPred.markPredSolved();
 
 

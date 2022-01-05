@@ -14,7 +14,7 @@ import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.expr: CstRangeExpr, CstVec2LogicExpr;
 import esdl.rand.domain: CstArrIterator, CstArrLength, CstArrHierLength, CstDomain;
-import esdl.rand.meta: _esdl__ProxyResolve, _esdl__staticCast, _esdl__ARG;
+import esdl.rand.meta: _esdl__staticCast, _esdl__ARG;
 
 import esdl.base.rand: _esdl__RandGen;
 
@@ -378,7 +378,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
       override RV getResolvedNode() {
 	// domains do not resolve by themselves -- we only check if a
 	// domain has dependencies. If not, we make a call to getResolvedNode()
-	if (_resolvedCycle != getProxyRoot()._cycle) {
+	if (_resolvedCycle != _esdl__getCstProcessor()._cycle) {
 	  auto parent = _parent.getResolvedNode();
 	  if (_indexExpr) {
 	    _resolvedVec = parent[cast(size_t) _indexExpr.evaluate()];
@@ -392,7 +392,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	      _resolvedVec = parent[_pindex];
 	    }
 	  }
-	  _resolvedCycle = getProxyRoot()._cycle;
+	  _resolvedCycle = _esdl__getCstProcessor()._cycle;
 	}
 	return _resolvedVec;
       }
@@ -594,8 +594,8 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
 		  "Only top level Associative Arrays are supported for now");
   }
 
-  this(string name) {
-    super(name);
+  this(string name, _esdl__Proxy root) {
+    super(name, root);
   }
 
   CstArrLength!RV _arrLen;
@@ -888,10 +888,10 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
       }
       
       this(string name, _esdl__Proxy parent, V* var) {
-	super(name);
+	super(name, parent.getProxyRoot());
 	_var = var;
 	_parent = parent;
-	_root = _parent.getProxyRoot();
+	// _root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
 	_arrLen = new CstArrLength!RV (name ~ "->length", this);
 	_arrHierLen = new CstArrHierLength!RV (name ~ "->hierLength", this);
@@ -1056,11 +1056,11 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	// writeln("New ", name);
 	assert (parent !is null);
 	string iname = name ~ (isMapped ? "[#" : "[%") ~ indexExpr.describe() ~ "]";
-	super(iname);
+	super(iname, parent.getProxyRoot());
 	_nodeIsMapped = isMapped;
 	_parent = parent;
 	_indexExpr = indexExpr;
-	_root = _parent.getProxyRoot();
+	// _root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
 	_arrLen = new CstArrLength!RV (iname ~ "->length", this);
 	_arrHierLen = new CstArrHierLength!RV (name ~ "->hierLength", this);
@@ -1072,7 +1072,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	// writeln("New ", name);
 	assert (parent !is null);
 	string iname = name  ~ (isMapped ? "[#" : "[%") ~ index.to!string() ~ "]";
-	super(iname);
+	super(iname, parent.getProxyRoot());
 	_nodeIsMapped = isMapped;
 	_parent = parent;
 	_pindex = index;
@@ -1140,7 +1140,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       override RV getResolvedNode() {
-	if (_resolvedCycle != getProxyRoot()._cycle) {
+	if (_resolvedCycle != _esdl__getCstProcessor()._cycle) {
 	  auto parent = _parent.getResolvedNode();
 	  if (_indexExpr) {
 	    _resolvedVec = parent[_indexExpr.evaluate()];
@@ -1159,7 +1159,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	      }
 	    }
 	  }
-	  _resolvedCycle = getProxyRoot()._cycle;
+	  _resolvedCycle = _esdl__getCstProcessor()._cycle;
 	}
 	return _resolvedVec;
       }

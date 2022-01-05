@@ -12,7 +12,7 @@ import esdl.rand.base: CstValue, CstVecTerm, CstIterator,
   CstObjArrIntf, CstVarGlobIntf, CstObjectVoid, CstObjArrVoid,
   CstDepIntf, CstObjectIntf;
 import esdl.rand.pred: CstPredicate;
-import esdl.rand.proxy: _esdl__Proxy;
+import esdl.rand.proxy: _esdl__Proxy, _esdl__CstProcessor;
 import esdl.rand.expr: CstRangeExpr;
 import esdl.rand.domain: CstArrIterator, CstArrLength, CstArrHierLength;
 import esdl.rand.meta: _esdl__ProxyResolve, _esdl__staticCast, _esdl__ARG;
@@ -229,6 +229,7 @@ abstract class CstObjectBase(V, rand RAND_ATTR, int N)
 
 	string _name;
 	_esdl__Proxy _root;
+	_esdl__CstProcessor _proc;
 
 	override string name() {
 	  return _name;
@@ -271,6 +272,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	this(string name, _esdl__Proxy parent, V* var) {
 	  _parent = parent;
 	  _root = _parent.getProxyRoot();
+	  _proc = _root._esdl__getProcessor();
 	  _parentsDepsAreResolved = _parent.depsAreResolved();
 	  super(name, parent, var);
 	}
@@ -279,6 +281,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	this(string name, _esdl__Proxy parent, V var) {
 	  _parent = parent;
 	  _root = _parent.getProxyRoot();
+	  _proc = _root._esdl__getProcessor();
 	  _parentsDepsAreResolved = _parent.depsAreResolved();
 	  super(name, parent, var);
 	}
@@ -299,6 +302,11 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
       _esdl__Proxy getProxyRoot()() {
 	assert (_root !is null);
 	return _root;
+      }
+
+      _esdl__CstProcessor _esdl__getProcessor()() {
+	assert (_proc !is null);
+	return _proc;
       }
 
       final bool isStatic() {
@@ -379,11 +387,12 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	assert (parent !is null);
 	_nodeIsMapped = isMapped;
 	_name = name ~ (isMapped ? "[#" : "[%") ~ indexExpr.describe() ~ "]";
+	super(_name, parent.getProxyRoot(), null);
 	_parent = parent;
 	_root = _parent.getProxyRoot();
+	_proc = _root._esdl__getProcessor();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
 	_indexExpr = indexExpr;
-	super(_name, parent.getProxyRoot(), null);
 	// }
       }
 
@@ -393,11 +402,12 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	assert (parent !is null);
 	_nodeIsMapped = isMapped;
 	_name = name ~ (isMapped ? "[#" : "[%") ~ index.to!string() ~ "]";
+	super(_name, parent.getProxyRoot(), null);
 	_parent = parent;
 	_pindex = index;
 	_root = _parent.getProxyRoot();
+	_proc = _root._esdl__getProcessor();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
-	super(_name, parent.getProxyRoot(), null);
       }
 
       final override bool isRand() {
@@ -442,12 +452,17 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	return _root;
       }
 
+      _esdl__CstProcessor _esdl__getProcessor()() {
+	assert (_proc !is null);
+	return _proc;
+      }
+
       override bool depsAreResolved() {
 	return _parentsDepsAreResolved && _nodeIsMapped;
       }
 
       override RV getResolvedNode() {
-	if (_resolvedCycle != getProxyRoot()._cycle) {
+	if (_resolvedCycle != _esdl__getProcessor()._cycle) {
 	  auto parent = _parent.getResolvedNode();
 	  if (_indexExpr) {
 	    _resolvedObj = parent[cast(size_t) _indexExpr.evaluate()];
@@ -461,7 +476,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	      _resolvedObj = parent[_pindex];
 	    }
 	  }
-	  _resolvedCycle = getProxyRoot()._cycle;
+	  _resolvedCycle = _esdl__getProcessor()._cycle;
 	}
 	return _resolvedObj;
       }
@@ -595,7 +610,7 @@ class CstObjArrIdx(V, rand RAND_ATTR, int N, VT, int IDX,
   }
   else {
     override RV unroll(CstIterator iter, ulong n) {
-      if (_parent !is _root) {
+      if (_parent !is getProxyRoot()) {
 	P uparent = cast(P)(_parent.unroll(iter, n));
 	assert (uparent !is null);
 	return uparent.tupleof[PIDX];
@@ -651,8 +666,8 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
 		  "Only top level Associative Arrays are supported for now");
   }
 
-  this(string name) {
-    super(name);
+  this(string name, _esdl__Proxy root) {
+    super(name, root);
   }
     
   CstArrLength!RV _arrLen;
@@ -861,13 +876,12 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
       
       // Call super only after the _parent has been set
       this(string name, _esdl__Proxy parent, V* var) {
+	super(name, parent.getProxyRoot());
 	_var = var;
 	_parent = parent;
-	_root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
 	_arrLen = new CstArrLength!RV(name ~ "->length", this);
 	_arrHierLen = new CstArrHierLength!RV (name ~ "->hierLength", this);
-	super(name);
       }
 
       final override bool isRand() {
@@ -891,7 +905,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       final string fullName() {
-	if (_parent is _root) return _name;
+	if (_parent is getProxyRoot()) return _name;
 	else  
 	  return _parent.fullName() ~ "." ~ name();
       }
@@ -1002,14 +1016,14 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	// writeln("New ", name);
 	assert (parent !is null);
 	string iname = name ~ (isMapped ? "[#" : "[%") ~ indexExpr.describe() ~ "]";
+	super(iname, parent.getProxyRoot());
 	_nodeIsMapped = isMapped;
 	_parent = parent;
 	_indexExpr = indexExpr;
-	_root = _parent.getProxyRoot();
+	// _root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
 	_arrLen = new CstArrLength!RV(iname ~ "->length", this);
 	_arrHierLen = new CstArrHierLength!RV (name ~ "->hierLength", this);
-	super(iname);
       }
 
       // Call super only after the _parent has been set
@@ -1019,15 +1033,15 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	// writeln("New ", name);
 	assert (parent !is null);
 	string iname = name ~ (isMapped ? "[#" : "[%") ~ index.to!string() ~ "]";
+	super(iname, parent.getProxyRoot());
 	_nodeIsMapped = isMapped;
 	_parent = parent;
 	// _indexExpr = _esdl__cstVal(index);
 	_pindex = index;
-	_root = _parent.getProxyRoot();
+	// _root = _parent.getProxyRoot();
 	_parentsDepsAreResolved = _parent.depsAreResolved();
 	_arrLen = new CstArrLength!RV(iname ~ "->length", this);
 	_arrHierLen = new CstArrHierLength!RV (name ~ "->hierLength", this);
-	super(iname);
       }
 
       final override bool isRand() {
@@ -1072,7 +1086,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       override RV getResolvedNode() {
-	if (_resolvedCycle != getProxyRoot()._cycle) {
+	if (_resolvedCycle != _esdl__getCstProcessor()._cycle) {
 	  auto parent = _parent.getResolvedNode();
 	  if (_indexExpr) {
 		_resolvedObj = parent[_indexExpr.evaluate()];
@@ -1086,7 +1100,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	      _resolvedObj = parent[_pindex];
 	    }
 	  }
-	  _resolvedCycle = getProxyRoot()._cycle;
+	  _resolvedCycle = _esdl__getCstProcessor()._cycle;
 	}
 	return _resolvedObj;
       }

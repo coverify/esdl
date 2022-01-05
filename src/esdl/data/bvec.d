@@ -5854,21 +5854,21 @@ uint countbits(B, BV)(const BV bv, const B b) {
     }
     return count;
   }
-  static if (is (B == UBit!1) && isBitVector!BV && ! BV.IS4STATE) {
+  else static if (is (B == UBit!1) && isBitVector!BV && ! BV.IS4STATE) {
     uint count;
     foreach (bb; bv) {
       if (b is bb) count += 1;
     }
     return count;
   }
-  static if (is (B == bool) && isBitVector!BV && ! BV.IS4STATE) {
+  else static if (is (B == bool) && isBitVector!BV && ! BV.IS4STATE) {
     uint count;
     foreach (bb; bv) {
       if (b == bb) count += 1;
     }
     return count;
   }
-  static if (is (B == UBit!1) && isIntegral!BV) {
+  else static if (is (B == UBit!1) && isIntegral!BV) {
     enum SIZE = BV.sizeof * 8;
     UBit!SIZE ibv = bv;
     uint count;
@@ -5877,7 +5877,7 @@ uint countbits(B, BV)(const BV bv, const B b) {
     }
     return count;
   }
-  static if (is (B == bool) && isIntegral!BV) {
+  else static if (is (B == bool) && isIntegral!BV) {
     enum SIZE = BV.sizeof * 8;
     UBit!SIZE ibv = bv;
     uint count;
@@ -5885,6 +5885,9 @@ uint countbits(B, BV)(const BV bv, const B b) {
       if (b == bb) count += 1;
     }
     return count;
+  }
+  else {
+    static assert (false);
   }
 }
 

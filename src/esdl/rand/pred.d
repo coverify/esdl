@@ -7,7 +7,7 @@ import std.array;
 import std.container.array;
 
 import esdl.data.folder;
-import esdl.rand.proxy: _esdl__Proxy;
+import esdl.rand.proxy: _esdl__Proxy, _esdl__CstProcessor;
 import esdl.rand.cstr: _esdl__ConstraintBase;
 import esdl.rand.misc;
 import esdl.rand.agent: CstSolverAgent;
@@ -229,6 +229,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   final bool isVisitorPred() { return _isVisitorPred; }
 
   _esdl__Proxy _proxy;
+  _esdl__CstProcessor _proc;
+  
   CstScope _scope;
   CstLogicTerm _expr;
   CstPredicate _parent;
@@ -328,6 +330,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     _soft = soft;
     _statement = stmt;
     _proxy = proxy;
+    _proc = _proxy._esdl__getProcessor();
     _unrollIterVal = unrollIterVal;
     _isInRange = true;
     if (parent is null) {
@@ -390,7 +393,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     if (_state == State.BLOCKED) return;
     import std.conv: to;
     bool guardUnrolled = false;
-    if (_unrollCycle == _proxy._cycle) { // already executed
+    if (_unrollCycle == _proc._cycle) { // already executed
       return;
     }
 
@@ -414,10 +417,10 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     
     if (iter.getLenVec().isSolved()) {
       this.unroll(iter, guardUnrolled);
-      _unrollCycle = _proxy._cycle;
+      _unrollCycle = _proc._cycle;
     }
 
-    _proxy.procUnrolledNewPredicates();
+    _proc.procUnrolledNewPredicates();
   }
 
   uint _currLen;
@@ -453,12 +456,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	  uwPred._unrolledIters ~= this._unrolledIters[];
 	  uwPred._unrolledIters ~= iter;
 	  _uwPreds[i] = uwPred;
-	  _proxy.addUnrolledNewPredicate(uwPred);
+	  _proc.addUnrolledNewPredicate(uwPred);
 	}
 	else if (i >= prevLen) {
 	  _uwPreds[i]._isInRange = true;
 	}
-	_proxy.addNewPredicate(_uwPreds[i]);
+	_proc.addNewPredicate(_uwPreds[i]);
       }
       else {
 	_uwPreds[i]._isInRange = false;
@@ -724,7 +727,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   // }
 
   final bool isRolled() {
-    if (_unrollCycle != _proxy._cycle && _state != State.BLOCKED) {
+    if (_unrollCycle != _proc._cycle && _state != State.BLOCKED) {
       assert (this._iters.length > 0 && _state == State.INIT);
       return true;
     }
@@ -880,13 +883,15 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return _expr;
   }
 
-  bool tryResolveAllDeps(_esdl__Proxy proxy) {
+  bool tryResolveAllDeps(_esdl__CstProcessor proc) {
+    assert (proc !is null);
+    assert (proc is _proc, _proc.fullName() ~ " ~= " ~ proc.fullName());
     bool resolved = true;
     // import std.stdio;
     // writeln("pred: ", fullName());
     foreach (dep; _deps) {
       // writeln("dep: ", dep.fullName());
-      if (dep.tryResolveDep(proxy)) {
+      if (dep.tryResolveDep(proc)) {
 	// writeln("resolved: ", dep.fullName());
 	_resolvedDepsCount += 1;
       }
@@ -1022,9 +1027,11 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   //   return _agent;
   // }
 
-  void setProxyContext(_esdl__Proxy proxy){
+  void setProxyContext(_esdl__Proxy root) {
     // import std.stdio;
     // writeln("setProxyContext: ", this.describe());
+
+    assert (root !is null);
 
     foreach (dom; _resolvedRnds) {
       if (! dom.inRange()) {
@@ -1051,16 +1058,16 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	return;
       }
     }
-    proxy.collatePredicate(this);
+    _proc.collatePredicate(this);
 
     foreach (dom; _resolvedRnds) {
       if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
-	dom.setProxyContext(proxy);
+	dom.setProxyContext(root);
       }
     }
     foreach (arr; _resolvedRndArrs) {
       if (arr._state is CstDomSet.State.INIT && arr.isRand()) {
-	arr.setProxyContext(proxy);
+	arr.setProxyContext(root);
       }
     }
   }
@@ -1198,26 +1205,28 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     this.execDepCbs();
   }
 
-  bool tryResolveFixed(_esdl__Proxy proxy) {
+  bool tryResolveFixed(_esdl__CstProcessor proc) {
     assert (isGuard());
     if (_unresolvedRnds.length > 0 || _unresolvedVars.length > 0) return false;
-    else return tryResolveDep(proxy);
+    else return tryResolveDep(proc);
   }
   
-  bool tryResolveDep(_esdl__Proxy proxy) {
+  bool tryResolveDep(_esdl__CstProcessor proc) {
+    assert (proc !is null);
+    assert (proc is _proc, _proc.fullName() ~ " ~= " ~ proc.fullName());
     assert (isGuard());
     if (_unresolvedVarArrs.length > 0 ||
 	_unresolvedRndArrs.length > 0) return false;
     else {
       bool success = true;
       foreach (rnd; _unresolvedRnds) {
-	if (! rnd.tryResolveDep(proxy)) {
+	if (! rnd.tryResolveDep(proc)) {
 	  success = false;
 	}
       }
       if (success) {
 	this.markPredSolved();
-	proxy.solvedSome();
+	_proc.solvedSome();
       }
       return success;
     }
@@ -1326,7 +1335,7 @@ class CstVisitorPredicate: CstPredicate
 	// writeln("Collecting constraints from: ", _uwPreds[i]._expr.describe());
       }
       else {
-	_proxy.addNewPredicate(_uwPreds[i]);
+	_proc.addNewPredicate(_uwPreds[i]);
       }
     }
 

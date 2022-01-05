@@ -119,6 +119,7 @@ void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy) {
     return;
   }
   else {
+    _esdl__CstProcessor proc = proxy._esdl__getProcessor();
     alias Q = typeof (P.tupleof[I]);
     static if (is (Q: _esdl__ConstraintBase)) {
       static if (p.tupleof[I].stringof != "p._esdl__lambdaCst") {
@@ -127,11 +128,11 @@ void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy) {
 	  p.tupleof[I]._esdl__updateCst();
 	  foreach (pred; p.tupleof[I].getConstraintGuards()) {
 	    // writeln("Adding predicate: ", pred.name());
-	    proxy.addNewPredicate(pred);
+	    proc.addNewPredicate(pred);
 	  }
 	  foreach (pred; p.tupleof[I].getConstraints()) {
 	    // writeln("Adding predicate: ", pred.name());
-	    proxy.addNewPredicate(pred);
+	    proc.addNewPredicate(pred);
 	  }
 	}
       }
@@ -548,10 +549,12 @@ void _esdl__randomize(T) (ref T t) if (is (T == struct))
 
     proxyInst._esdl__doSetOuter(&t, true);
 
+    _esdl__CstProcessor proc = proxyInst._esdl__getProcessor();
+
     proxyInst._esdl__lambdaCst = null;
-    proxyInst.reset();
+    proc.reset();
     proxyInst._esdl__doConstrain(proxyInst, false);
-    proxyInst.solve();
+    proc.solve();
     proxyInst._esdl__doRandomize(t._esdl__virtualGetRandGen());
     // _esdl__postRandomize(t);
   }
@@ -582,10 +585,12 @@ void _esdl__randomize(T) (T t) if (is (T == class))
 
     proxyInst._esdl__doSetOuter(t, true);
 
+    _esdl__CstProcessor proc = proxyInst._esdl__getProcessor();
+
     proxyInst._esdl__lambdaCst = null;
-    proxyInst.reset();
+    proc.reset();
     proxyInst._esdl__doConstrain(proxyInst, false);
-    proxyInst.solve();
+    proc.solve();
     proxyInst._esdl__doRandomize(t._esdl__virtualGetRandGen());
     // _esdl__postRandomize(t);
   }
@@ -624,19 +629,21 @@ void _esdl__randomizeWith(T)(T t, _esdl__Proxy proxy,
     _esdl__ProxyType proxyInst = _esdl__staticCast!(_esdl__ProxyType)(proxy);
     _esdl__preRandomize(t);
 
+    _esdl__CstProcessor proc = proxy._esdl__getProcessor();
+
     proxyInst._esdl__doSetOuter(t, true);
 
     // lambdaCst._esdl__doSetOuter();
   
-    proxyInst.reset();
+    proc.reset();
     proxyInst._esdl__doConstrain(proxyInst, false);
     foreach (pred; lambdaCst.getConstraintGuards()) {
-      proxyInst.addNewPredicate(pred);
+      proc.addNewPredicate(pred);
     }
     foreach (pred; lambdaCst.getConstraints()) {
-      proxyInst.addNewPredicate(pred);
+      proc.addNewPredicate(pred);
     }
-    proxyInst.solve();
+    proc.solve();
     proxyInst._esdl__doRandomize(t._esdl__virtualGetRandGen());
     // _esdl__postRandomize(t);
 
@@ -655,19 +662,21 @@ void _esdl__randomizeWith(T) (ref T t, _esdl__Proxy proxy,
 
     _esdl__preRandomize(t);
 
+    _esdl__CstProcessor proc = proxy._esdl__getProcessor();
+
     proxyInst._esdl__doSetOuter(&t, true);
 
     // lambdaCst._esdl__doSetOuter();
   
-    proxyInst.reset();
+    proc.reset();
     proxyInst._esdl__doConstrain(proxyInst, false);
     foreach (pred; lambdaCst.getConstraintGuards()) {
-      proxyInst.addNewPredicate(pred);
+      proc.addNewPredicate(pred);
     }
     foreach (pred; lambdaCst.getConstraints()) {
-      proxyInst.addNewPredicate(pred);
+      proc.addNewPredicate(pred);
     }
-    proxyInst.solve();
+    proc.solve();
     proxyInst._esdl__doRandomize(t._esdl__virtualGetRandGen());
     // _esdl__postRandomize(t);
 
@@ -1178,13 +1187,14 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 
   override void _esdl__doConstrain(_esdl__Proxy proxy, bool callPreRandomize) {
     assert (this._esdl__outer !is null);
+    _esdl__CstProcessor proc = proxy._esdl__getProcessor();
     if (callPreRandomize) _esdl__preRandomize(this._esdl__outer);
     _esdl__doConstrainElems(this, proxy);
     foreach (visitor; getGlobalVisitors()) {
-      foreach (pred; visitor.getConstraints()) proxy.addNewPredicate(pred);
+      foreach (pred; visitor.getConstraints()) proc.addNewPredicate(pred);
     }
      foreach (visitor; getArgVisitors()) {
-      foreach (pred; visitor.getConstraints()) proxy.addNewPredicate(pred);
+      foreach (pred; visitor.getConstraints()) proc.addNewPredicate(pred);
     }
   }
 
@@ -1231,6 +1241,8 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   override bool _esdl__debugSolver() {
     return _esdl__DEBUGSOVER;
   }
+
+  pragma(msg, __traits(allMembers, typeof(this)));
 }
 
 // Just so identify visitor constraints
