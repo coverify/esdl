@@ -15,11 +15,11 @@ abstract class _esdl__ConstraintBase: rand.disable
 {
   this(_esdl__Proxy proxy, string name, string constraint) {
     _proxy = proxy;
-    _name = name;
+    _esdl__name = name;
     _constraint = constraint;
   }
   immutable string _constraint;
-  immutable string _name;
+  immutable string _esdl__name;
   protected bool _overridden = false;
   protected _esdl__Proxy _proxy;
 
@@ -47,12 +47,12 @@ abstract class _esdl__ConstraintBase: rand.disable
     return true;
   }
 
-  string name() {
-    return _name;
+  string _esdl__getName() {
+    return _esdl__name;
   }
 
-  string fullName() {
-    return _proxy.fullName() ~ '.' ~ _name;
+  string _esdl__getFullName() {
+    return _proxy._esdl__getFullName() ~ '.' ~ _esdl__name;
   }
 
   final _esdl__Proxy getProxy() {

@@ -600,7 +600,7 @@ class CstMonoSolver (S): CstSolver
     return "Mono Solver"  ~ super.describe();
   }
   override void pushToEvalStack(CstDomBase domain) {
-    if (domain.isRand() && !domain.isSolved()) {
+    if (domain._esdl__isRand() && !domain.isSolved()) {
       // debug (MONOSOLVER){
       // 	if(_debugFlag){
       // 	  import std.stdio;

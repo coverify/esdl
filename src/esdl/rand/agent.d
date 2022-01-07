@@ -187,7 +187,7 @@ class CstSolverAgent			// agent of related predicates
   void annotate() {
     foreach (pred; _preds) {
       // import std.stdio;
-      // writeln("Annotating: ", pred.fullName());
+      // writeln("Annotating: ", pred._esdl__getFullName());
       assert (! pred.isBlocked());
       if (! hasDistConstraints)
 	pred.annotate(this);
@@ -268,7 +268,7 @@ class CstSolverAgent			// agent of related predicates
       writeln(describe());
     }
 
-    assert (_distPred is null || (! _distPred.distDomain().isRand()));
+    assert (_distPred is null || (! _distPred.distDomain()._esdl__isRand()));
     annotate();
     bool monoFlag = false;
     if (!(_softPredicateCount != 0 || _hasVectorConstraints)) {
@@ -379,7 +379,7 @@ class CstSolverAgent			// agent of related predicates
     // _solver.solve(this);
     foreach (pred; _preds) {
       // import std.stdio;
-      // writeln("Marking Solved: ", pred.name());
+      // writeln("Marking Solved: ", pred._esdl__getName());
       pred.markPredSolved();
     }
 
@@ -399,7 +399,7 @@ class CstSolverAgent			// agent of related predicates
     if (_preds.length > 0) {
       description ~= "  Predicates:\n";
       foreach (pred; _preds) {
-	description ~= "    " ~ pred.name() ~ '\n';
+	description ~= "    " ~ pred._esdl__getName() ~ '\n';
       }
     }
     if (_softPredicateCount != 0) {

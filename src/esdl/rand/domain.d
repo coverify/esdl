@@ -42,7 +42,8 @@ abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
       override void setBool(bool val) {
 	static if (HAS_RAND_ATTRIB) {
 	  assert (getRef() !is null,
-		  "Domain does not have a valid R-Value pointer: " ~ fullName());
+		  "Domain does not have a valid R-Value pointer: " ~
+		  _esdl__getFullName());
 	  if (val != *(getRef())) {
 	    _valueChanged = true;
 	  }
@@ -67,7 +68,7 @@ abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
 	return cast(long) eval();
       }
 
-      override void scan() { }
+      override void _esdl__scan() { }
 
       override uint bitcount() { return 1; }
       
@@ -94,11 +95,11 @@ abstract class CstDomain(T, rand RAND_ATTR) if (!is (T == bool)):
 
       override long evaluate() {
 	static if (HAS_RAND_ATTRIB) {
-	  if (! this.isRand || this.isSolved()) {
+	  if (! this._esdl__isRand || this.isSolved()) {
 	    return value();
 	  }
 	  else {
-	    assert (false, "Error evaluating " ~ _name);
+	    assert (false, "Error evaluating " ~ _esdl__name);
 	  }
 	}
 	else {
@@ -236,15 +237,15 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
 
   void writeExprString(ref _esdl__Sigbuf str) {
     alias TYPE = typeof(this);
-    TYPE resolved = _esdl__staticCast!TYPE(this.getResolvedNode());
+    TYPE resolved = _esdl__staticCast!TYPE(this._esdl__getResolvedNode());
     resolved.writeExprStringResolved(str);
   }
 
   void writeExprStringResolved(ref _esdl__Sigbuf str) {
-    assert (this is this.getResolvedNode());
+    assert (this is this._esdl__getResolvedNode());
     if (this.isSolved()) {
       // import std.stdio;
-      // writeln(fullName(), " has a value of: ", value());
+      // writeln(_esdl__getFullName(), " has a value of: ", value());
       str ~= 'V';
       if (_domN < 256) (cast(ubyte) _domN).writeHexString(str);
       else (cast(ushort) _domN).writeHexString(str);
@@ -344,7 +345,7 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
       }
       debug (CSTSOLVER) {
 	import std.stdio;
-	writeln("Setting value of ", fullName(), " to: ", newVal);
+	writeln("Setting value of ", _esdl__getFullName(), " to: ", newVal);
       }
       *(getRef()) = newVal;
       markSolved();
@@ -367,7 +368,8 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
 	newVal._setNthWord(val, 0);
       }
       assert (getRef() !is null,
-	      "Domain does not have a valid R-Value pointer: " ~ fullName());
+	      "Domain does not have a valid R-Value pointer: " ~
+	      _esdl__getFullName());
       if (newVal != *(getRef())) {
 	_valueChanged = true;
       }
@@ -376,7 +378,7 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
       }
       debug (CSTSOLVER) {
 	import std.stdio;
-	writeln("Setting value of ", fullName(), " to: ", newVal);
+	writeln("Setting value of ", _esdl__getFullName(), " to: ", newVal);
       }
       *(getRef()) = newVal;
       markSolved();
@@ -414,7 +416,7 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
   }
   
   override bool updateVal() {
-    assert(isRand() !is true);
+    assert(_esdl__isRand() !is true);
     Unconst!T newVal;
     assert (_root !is null);
     if (! this.isSolved()) {
@@ -472,10 +474,10 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
   final override string describe(bool descExpr=false) {
     import std.conv: to;
     if (descExpr is true) {
-      return name();
+      return _esdl__getName();
     }
     else {
-      string desc = "CstDomBase: " ~ name();
+      string desc = "CstDomBase: " ~ _esdl__getName();
       // desc ~= "\n	DomType: " ~ _type.to!string();
       // if (_type !is DomType.MULTI) {
       //   desc ~= "\nIntRS: " ~ _rs.toString();
@@ -483,21 +485,21 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
       if (_unresolvedDomainPreds.length > 0) {
 	desc ~= "\n	Unresolved Domain Preds:";
 	foreach (pred; _unresolvedDomainPreds) {
-	  desc ~= "\n		" ~ pred.name();
+	  desc ~= "\n		" ~ pred._esdl__getName();
 	}
 	desc ~= "\n";
       }
       if (_lambdaDomainPreds.length > 0) {
 	desc ~= "\n	Lambda Domain Preds:";
 	foreach (pred; _lambdaDomainPreds) {
-	  desc ~= "\n		" ~ pred.name();
+	  desc ~= "\n		" ~ pred._esdl__getName();
 	}
 	desc ~= "\n";
       }
       if (_resolvedDomainPreds.length > 0) {
 	desc ~= "\n	Resolved Domain Preds:";
 	foreach (pred; _resolvedDomainPreds) {
-	  desc ~= "\n		" ~ pred.name();
+	  desc ~= "\n		" ~ pred._esdl__getName();
 	}
 	desc ~= "\n";
       }
@@ -514,10 +516,10 @@ class CstArrIterator(RV): CstIterator
     return _arrVar;
   }
 
-  string _name;
+  string _esdl__name;
 
   this(RV arrVar) {
-    _name = "iterVar";
+    _esdl__name = "iterVar";
     _arrVar = arrVar;
     // _arrVar._arrLen.iterVar(this);
   }
@@ -536,23 +538,23 @@ class CstArrIterator(RV): CstIterator
 	     "Iter Variable has not been unrolled");
     }
     // import std.stdio;
-    // writeln("size for arrVar: ", _arrVar.name(), " is ",
+    // writeln("size for arrVar: ", _arrVar._esdl__getName(), " is ",
     // 	    _arrVar.arrLen.value);
     return _arrVar.arrLen.value;
   }
 
-  override string name() {
-    string n = _arrVar.name();
+  override string _esdl__getName() {
+    string n = _arrVar._esdl__getName();
     return n ~ "->iterator";
   }
 
-  override string fullName() {
-    string n = _arrVar.fullName();
+  override string _esdl__getFullName() {
+    string n = _arrVar._esdl__getFullName();
     return n ~ "->iterator";
   }
 
   string describe(bool descExpr=false) {
-    return name();
+    return _esdl__getName();
   }
 
   // while an iterator is a singleton wrt to an array, the array
@@ -564,9 +566,9 @@ class CstArrIterator(RV): CstIterator
     else return (_arrVar == rhs._arrVar);
   }
 
-  CstVecTerm unroll(CstIterator iter, ulong n) {
+  CstVecTerm _esdl__unroll(CstIterator iter, ulong n) {
     if(this !is iter) {
-      return _arrVar.unroll(iter,n).arrLen().makeIterVar();
+      return _arrVar._esdl__unroll(iter,n).arrLen().makeIterVar();
     }
     else {
       return new CstVecValue!size_t(n); // CstVecValue!size_t.allocate(n);
@@ -575,7 +577,7 @@ class CstArrIterator(RV): CstIterator
 
   override CstIterator unrollIterator(CstIterator iter, uint n) {
     assert(this !is iter);
-    return _arrVar.unroll(iter,n).arrLen().makeIterVar();
+    return _arrVar._esdl__unroll(iter,n).arrLen().makeIterVar();
   }
 
   void visit(CstSolver solver) {
@@ -626,7 +628,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 
   RV _parent;
 
-  string _name;
+  string _esdl__name;
 
   CstVecPrim[] _preReqs;
 
@@ -634,27 +636,27 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 
   final override bool isDistVar() { return false; }
 
-  override string name() {
-    return _name;
+  override string _esdl__getName() {
+    return _esdl__name;
   }
 
-  override string fullName() {
-    return _parent.fullName() ~ "->length";
+  override string _esdl__getFullName() {
+    return _parent._esdl__getFullName() ~ "->length";
   }
 
-  this(string name, RV parent) {
+  this(string _esdl__getName, RV parent) {
     assert (parent !is null);
-    super(name, parent.getProxyRoot());
-    _name = name;
+    super(_esdl__getName, parent._esdl__getRootProxy());
+    _esdl__name = _esdl__getName;
     _parent = parent;
-    _proc = parent.getProxyRoot()._esdl__getProcessor();
+    _proc = parent._esdl__getRootProxy()._esdl__getProcessor();
     _iterVar = new CstArrIterator!RV(_parent);
   }
 
   ~this() { }
 
-  override _esdl__Proxy getProxyRoot() {
-    return _parent.getProxyRoot();
+  override _esdl__Proxy _esdl__getRootProxy() {
+    return _parent._esdl__getRootProxy();
   }
 
   override bool tryResolveDep(_esdl__CstProcessor proc) {
@@ -662,25 +664,25 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     import std.algorithm.iteration: filter;
     debug (CSTSOLVER) {
       import std.stdio;
-      writeln("tryResolveDep: ", fullName());
+      writeln("tryResolveDep: ", _esdl__getFullName());
     }
-    if (! this.depsAreResolved()) return false;
+    if (! this._esdl__depsAreResolved()) return false;
     if (isMarkedSolved()) {
       debug (CSTSOLVER) {
 	import std.stdio;
-	writeln("tryResolveDep: Already marked solved: ", fullName());
+	writeln("tryResolveDep: Already marked solved: ", _esdl__getFullName());
       }
       // execCbs();
       return true;
     }
     else {
-      if ((! this.isRand()) ||
+      if ((! this._esdl__isRand()) ||
 	  _unresolvedDomainPreds.length + _lambdaDomainPreds.length == 0 ||
 	  (_unresolvedDomainPreds[].filter!(pred => ! (pred.isGuard() || pred.isVisitor())).empty() &&
 	   _lambdaDomainPreds[].filter!(pred => ! (pred.isGuard() || pred.isVisitor())).empty())) {
 	debug (CSTSOLVER) {
 	  import std.stdio;
-	  writeln("tryResolveDep: Resolving: ", fullName());
+	  writeln("tryResolveDep: Resolving: ", _esdl__getFullName());
 	}
 	randomizeWithoutConstraints(proc);
 	return true;
@@ -695,7 +697,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     _parent.buildElements(_parent.getLen());
   }
   
-  override bool isRand() {
+  override bool _esdl__isRand() {
     static if (HAS_RAND_ATTRIB) {
       import std.traits;
       if (isStaticArray!(RV.L)) return false;
@@ -706,18 +708,18 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     }
   }
 
-  override bool inRange() {
-    return _parent.inRange();
+  override bool _esdl__isDomainInRange() {
+    return _parent._esdl__isDomainInRange();
   }
 
   T to(T)()
     if(is(T == string)) {
       import std.conv;
-      if(isRand) {
-	return "RAND-" ~ "#" ~ _name ~ ":" ~ value().to!string();
+      if(_esdl__isRand) {
+	return "RAND-" ~ "#" ~ _esdl__name ~ ":" ~ value().to!string();
       }
       else {
-	return "VAL#" ~ _name ~ ":" ~ value().to!string();
+	return "VAL#" ~ _esdl__name ~ ":" ~ value().to!string();
       }
     }
 
@@ -762,7 +764,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   override void setVal(ulong value) {
     debug (CSTSOLVER) {
       import std.stdio;
-      writeln("Setting value of ", fullName(), " to: ", value);
+      writeln("Setting value of ", _esdl__getFullName(), " to: ", value);
     }
     _parent.setLen(cast(size_t) value);
     markSolved();
@@ -771,7 +773,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   override void setVal(ulong[] v) {
     debug (CSTSOLVER) {
       import std.stdio;
-      writeln("Setting value of ", fullName(), " to: ", v[0]);
+      writeln("Setting value of ", _esdl__getFullName(), " to: ", v[0]);
     }
     assert(v.length == 1);
     _parent.setLen(cast(size_t) v[0]);
@@ -788,17 +790,17 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   //   _parent.setLen(cast(size_t) v);
   // }
 
-  CstVecTerm unroll(CstIterator iter, ulong n) {
-    return _parent.unroll(iter,n).arrLen();
+  CstVecTerm _esdl__unroll(CstIterator iter, ulong n) {
+    return _parent._esdl__unroll(iter,n).arrLen();
   }
 
-  override AV getResolvedNode() {
-    if (_parent.depsAreResolved()) return this;
-    else return _parent.getResolvedNode().arrLen;
+  override AV _esdl__getResolvedNode() {
+    if (_parent._esdl__depsAreResolved()) return this;
+    else return _parent._esdl__getResolvedNode().arrLen;
   }
 
-  override bool depsAreResolved() {
-    return _parent.depsAreResolved();
+  override bool _esdl__depsAreResolved() {
+    return _parent._esdl__depsAreResolved();
   }
 
   void solveBefore(CstVecPrim other) {
@@ -833,7 +835,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   }
 
   override bool updateVal() {
-    assert(isRand() !is true);
+    assert(_esdl__isRand() !is true);
     uint newVal;
     assert(_root !is null);
     if (! this.isSolved()) {
@@ -852,12 +854,12 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     return true;
   }
   
-  final override bool isStatic() {
-    return _parent.isStatic();
+  final override bool _esdl__isStatic() {
+    return _parent._esdl__isStatic();
   }
 
-  final override bool isRolled() {
-    return _parent.isRolled();
+  final override bool _esdl__isRolled() {
+    return _parent._esdl__isRolled();
   }
 
   override CstDomSet getParentDomSet() {
@@ -874,12 +876,12 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 
   final override long evaluate() {
     static if (HAS_RAND_ATTRIB) {
-      if (! this.isRand || this.isSolved()) {
+      if (! this._esdl__isRand || this.isSolved()) {
 	return value();
       }
       else {
 	import std.conv: to;
-	assert (false, "Error evaluating " ~ _name ~
+	assert (false, "Error evaluating " ~ _esdl__name ~
 		" State: " ~ _state.to!string());
       }
     }
@@ -920,41 +922,41 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
 
   RV _parent;
 
-  string _name;
+  string _esdl__name;
 
   CstVecPrim[] _preReqs;
 
   final override bool isDistVar() { return false; }
 
-  override string name() {
-    return _name;
+  override string _esdl__getName() {
+    return _esdl__name;
   }
 
-  override string fullName() {
-    return _parent.fullName() ~ "->hierLength";
+  override string _esdl__getFullName() {
+    return _parent._esdl__getFullName() ~ "->hierLength";
   }
 
-  this(string name, RV parent) {
+  this(string _esdl__getName, RV parent) {
     assert (parent !is null);
-    super(name, parent.getProxyRoot());
-    _name = name;
+    super(_esdl__getName, parent._esdl__getRootProxy());
+    _esdl__name = _esdl__getName;
     _parent = parent;
     // _iterVar = new CstArrIterator!RV(_parent);
   }
 
   ~this() { }
 
-  override _esdl__Proxy getProxyRoot() {
-    return _parent.getProxyRoot();
+  override _esdl__Proxy _esdl__getRootProxy() {
+    return _parent._esdl__getRootProxy();
   }
 
   override bool tryResolveDep(_esdl__CstProcessor proc) {
     // import std.stdio;
-    // writeln("Invoking tryResolveDep on: ", fullName());
+    // writeln("Invoking tryResolveDep on: ", _esdl__getFullName());
     if (isMarkedSolved()) {
       debug (CSTSOLVER) {
 	import std.stdio;
-	writeln("tryResolveDep: Already marked solved: ", fullName());
+	writeln("tryResolveDep: Already marked solved: ", _esdl__getFullName());
       }
       // execCbs();
       return true;
@@ -967,22 +969,22 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
 
   override void _esdl__doRandomize(_esdl__RandGen randGen) { }
   
-  override bool isRand() {
+  override bool _esdl__isRand() {
     return false;
   }
 
-  override bool inRange() {
-    return _parent.inRange();
+  override bool _esdl__isDomainInRange() {
+    return _parent._esdl__isDomainInRange();
   }
 
   T to(T)()
     if(is(T == string)) {
       import std.conv;
-      if(isRand) {
-	return "RAND-" ~ "#" ~ _name ~ ":" ~ value().to!string();
+      if(_esdl__isRand) {
+	return "RAND-" ~ "#" ~ _esdl__name ~ ":" ~ value().to!string();
       }
       else {
-	return "VAL#" ~ _name ~ ":" ~ value().to!string();
+	return "VAL#" ~ _esdl__name ~ ":" ~ value().to!string();
       }
     }
 
@@ -1030,7 +1032,7 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
   override void setVal(ulong value) {
     debug (CSTSOLVER) {
       import std.stdio;
-      writeln("Setting value of ", fullName(), " to: ", value);
+      writeln("Setting value of ", _esdl__getFullName(), " to: ", value);
     }
     _val = cast(uint) value;
     markSolved();
@@ -1039,7 +1041,7 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
   override void setVal(ulong[] v) {
     debug (CSTSOLVER) {
       import std.stdio;
-      writeln("Setting value of ", fullName(), " to: ", v[0]);
+      writeln("Setting value of ", _esdl__getFullName(), " to: ", v[0]);
     }
     assert(v.length == 1);
     _val = cast(uint) v[0];
@@ -1061,17 +1063,17 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
   //   _parent.setLen(cast(size_t) v);
   // }
 
-  CstVecTerm unroll(CstIterator iter, ulong n) {
-    return _parent.unroll(iter,n).arrLen();
+  CstVecTerm _esdl__unroll(CstIterator iter, ulong n) {
+    return _parent._esdl__unroll(iter,n).arrLen();
   }
 
-  override AV getResolvedNode() {
-    if (_parent.depsAreResolved()) return this;
-    else return _parent.getResolvedNode().arrHierLen;
+  override AV _esdl__getResolvedNode() {
+    if (_parent._esdl__depsAreResolved()) return this;
+    else return _parent._esdl__getResolvedNode().arrHierLen;
   }
 
-  override bool depsAreResolved() {
-    return _parent.depsAreResolved();
+  override bool _esdl__depsAreResolved() {
+    return _parent._esdl__depsAreResolved();
   }
 
   void solveBefore(CstVecPrim other) {
@@ -1109,12 +1111,12 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
     return true;
   }
   
-  final override bool isStatic() {
-    return _parent.isStatic();
+  final override bool _esdl__isStatic() {
+    return _parent._esdl__isStatic();
   }
 
-  final override bool isRolled() {
-    return _parent.isRolled();
+  final override bool _esdl__isRolled() {
+    return _parent._esdl__isRolled();
   }
 
   override CstDomSet getParentDomSet() {
@@ -1131,12 +1133,12 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
 
   final override long evaluate() {
     static if (HAS_RAND_ATTRIB) {
-      if (! this.isRand || this.isSolved()) {
+      if (! this._esdl__isRand || this.isSolved()) {
 	return value();
       }
       else {
 	import std.conv: to;
-	assert (false, "Error evaluating " ~ _name ~
+	assert (false, "Error evaluating " ~ _esdl__name ~
 		" State: " ~ _state.to!string());
       }
     }
@@ -1239,7 +1241,7 @@ class CstLogicValue: CstValue, CstLogicTerm
   override CstDistSolverBase getDist() { assert(false); }
   override bool isCompatWithDist(CstDomBase A) { assert(false); }
   override void visit(CstDistSolverBase solver) { assert(false); }
-  override CstLogicValue unroll(CstIterator iter, ulong n) { return this; }
+  override CstLogicValue _esdl__unroll(CstIterator iter, ulong n) { return this; }
   override void setDistPredContext(CstPredicate pred) { }
   override CstDomBase getDomain() { return null; }
 }
@@ -1299,7 +1301,7 @@ class CstVecValue(T): CstVecValueBase
 
   T _val;			// the value of the constant
 
-  override RV unroll(CstIterator iters, ulong n) {
+  override RV _esdl__unroll(CstIterator iters, ulong n) {
     return this;
   }
 

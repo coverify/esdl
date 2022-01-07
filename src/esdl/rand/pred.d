@@ -112,21 +112,21 @@ struct Hash
 
 class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 {
-  string name() {
+  string _esdl__getName() {
     import std.conv;
     if (_parent is null) {
-      return _constraint.fullName() ~ '/' ~
+      return _constraint._esdl__getFullName() ~ '/' ~
 	(_isGuard ? "guard_" : "pred_") ~
 	_statement.to!string() ~ '%' ~ _id.to!string();
     }
     else {
-      return _parent.name() ~
+      return _parent._esdl__getName() ~
 	'[' ~ _unrollIterVal.to!string() ~ ']' ~'%' ~ _id.to!string();
     }
   }
   
-  string fullName() {
-    return name();
+  string _esdl__getFullName() {
+    return _esdl__getName();
   }
 
   bool isVisitor() {
@@ -135,11 +135,11 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   bool visit(CstSolver solver, bool inv=false) {
     // import std.stdio;
-    // writeln ("Visiting: ", fullName());
+    // writeln ("Visiting: ", _esdl__getFullName());
     assert (_state !is State.BLOCKED);
     if (_guard is null) {
       if (this.isGuard() && _state == State.SOLVED) {
-	assert (inv ^ _exprVal, this.fullName());
+	assert (inv ^ _exprVal, this._esdl__getFullName());
 	return false;
 	// import std.stdio;
 	// writeln (_exprVal, ": ", inv);
@@ -266,8 +266,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   bool isEnabled() {
     if (_parent is null)
-      return _constraint.isEnabled() && isInRange() && _proxy.isRand();
-    else return _constraint.isEnabled() && isInRange() && _proxy.isRand() && _parent.isEnabled();
+      return _constraint.isEnabled() && isInRange() && _proxy._esdl__isRand();
+    else return _constraint.isEnabled() && isInRange() && _proxy._esdl__isRand() && _parent.isEnabled();
   }
 
   bool isInRange() {
@@ -334,7 +334,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     _unrollIterVal = unrollIterVal;
     _isInRange = true;
     if (parent is null) {
-      _scope = _proxy.currentScope();
+      _scope = _proxy._esdl__getCurrentScope();
       _level = 0;
     }
     else {
@@ -399,7 +399,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
     // _proxy.registerUnrolled(this);
     assert (_state != State.UNROLLED,
-	    "Predicate: " ~ fullName() ~ " in unexpected state: " ~ _state.to!string());
+	    "Predicate: " ~ _esdl__getFullName() ~ " in unexpected state: " ~ _state.to!string());
     _state = State.UNROLLED;
     // check if all the dependencies are resolved
     // foreach (dep; _deps) {
@@ -416,7 +416,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
     
     if (iter.getLenVec().isSolved()) {
-      this.unroll(iter, guardUnrolled);
+      this._esdl__unroll(iter, guardUnrolled);
       _unrollCycle = _proc._cycle;
     }
 
@@ -425,7 +425,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   uint _currLen;
   
-  void unroll(CstIterator iter, bool guardUnrolled) {
+  void _esdl__unroll(CstIterator iter, bool guardUnrolled) {
     assert (iter is _iters[0]);
 
     if (! iter.isUnrollable()) {
@@ -449,7 +449,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	  CstPredicate guard = _guard;
 	  if (guardUnrolled) guard = _guard._uwPreds[i];
 	  uwPred = new CstPredicate(_constraint, guard, _guardInv, _statement,
-				    _proxy, _soft, _expr.unroll(iter, iter.mapIter(i)),
+				    _proxy, _soft, _expr._esdl__unroll(iter, iter.mapIter(i)),
 				    _isGuard, this, iter, i// ,
 				    // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
 				    );
@@ -484,7 +484,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       }
       if (resolved) {
 	import std.conv: to;
-	assert (_resolvedDepsCount == _deps.length, "Predicate: " ~ fullName() ~ " -- " ~
+	assert (_resolvedDepsCount == _deps.length, "Predicate: " ~ _esdl__getFullName() ~ " -- " ~
 		_resolvedDepsCount.to!string ~ " != " ~ _deps.length.to!string() ~
 		" _markResolve: " ~ _markResolve.to!string() ~ " init_: " ~ init_.to!string());
 	if (isGuard()) procResolvedGuard();
@@ -674,8 +674,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     _resolvedVarArrs.reset();
 
     foreach (rnd; _unresolvedRnds) {
-      CstDomBase resolved = rnd.getResolvedNode();
-      if (resolved.isRand()) {
+      CstDomBase resolved = rnd._esdl__getResolvedNode();
+      if (resolved._esdl__isRand()) {
 	addResolvedRnd(resolved);
 	resolved.addResolvedPred(this);
       }
@@ -683,8 +683,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
     
     foreach (rnd; _unresolvedRndArrs) {
-      CstDomSet resolved = rnd.getResolvedNode();
-      if (resolved.isRand()) {
+      CstDomSet resolved = rnd._esdl__getResolvedNode();
+      if (resolved._esdl__isRand()) {
 	addResolvedRndArr(resolved);
 	resolved.addResolvedPred(this);
       }
@@ -692,11 +692,11 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
     
     foreach (rnd; _unresolvedVars) {
-      addResolvedVar(rnd.getResolvedNode());
+      addResolvedVar(rnd._esdl__getResolvedNode());
     }
     
     foreach (rnd; _unresolvedVarArrs) {
-      addResolvedVarArr(rnd.getResolvedNode());
+      addResolvedVarArr(rnd._esdl__getResolvedNode());
     }
     
   }
@@ -726,7 +726,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   //   return false;
   // }
 
-  final bool isRolled() {
+  final bool _esdl__isRolled() {
     if (_unrollCycle != _proc._cycle && _state != State.BLOCKED) {
       assert (this._iters.length > 0 && _state == State.INIT);
       return true;
@@ -849,7 +849,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   void procDependency(CstDepIntf dep) {
     // import std.stdio;
-    // writeln("Removing dep from rnds: ", dep.name());
+    // writeln("Removing dep from rnds: ", dep._esdl__getName());
     CstDomBase dom = cast (CstDomBase) dep;
     if (dom !is null) {
       auto index = countUntil(_unresolvedRnds[], dep);
@@ -885,18 +885,18 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   bool tryResolveAllDeps(_esdl__CstProcessor proc) {
     assert (proc !is null);
-    assert (proc is _proc, _proc.fullName() ~ " ~= " ~ proc.fullName());
+    assert (proc is _proc, _proc._esdl__getFullName() ~ " ~= " ~ proc._esdl__getFullName());
     bool resolved = true;
     // import std.stdio;
-    // writeln("pred: ", fullName());
+    // writeln("pred: ", _esdl__getFullName());
     foreach (dep; _deps) {
-      // writeln("dep: ", dep.fullName());
+      // writeln("dep: ", dep._esdl__getFullName());
       if (dep.tryResolveDep(proc)) {
-	// writeln("resolved: ", dep.fullName());
+	// writeln("resolved: ", dep._esdl__getFullName());
 	_resolvedDepsCount += 1;
       }
       else {
-	// writeln("cb: ", dep.fullName());
+	// writeln("cb: ", dep._esdl__getFullName());
 	dep.registerDepPred(this);
 	resolved = false;
       }
@@ -920,7 +920,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   
   void block() {
     // import std.stdio;
-    // writeln ("Blocking: ", fullName());
+    // writeln ("Blocking: ", _esdl__getFullName());
     this._state = State.BLOCKED;
     foreach (pred; _depPreds) pred.block();
   }
@@ -942,7 +942,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   string describe() {
     import std.string:format;
     import std.conv: to;
-    string description = "Predicate Name: " ~ name() ~ "\n";
+    string description = "Predicate _esdl__Name: " ~ _esdl__getName() ~ "\n";
     description ~= "Predicate ID: " ~ _id.to!string() ~ "\n    ";
     description ~= "Soft (Weight): " ~ _soft.to!string() ~ "\n    ";
     description ~= "State: " ~ _state.to!string() ~ "\n    ";
@@ -954,37 +954,37 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     if (_iters.length > 0) {
       description ~= "    Iterators: \n";
       foreach (iter; _iters) {
-	description ~= "\t" ~ iter.fullName() ~ "\n";
+	description ~= "\t" ~ iter._esdl__getFullName() ~ "\n";
       }
     }
     if (_unrolledIters.length > 0) {
       description ~= "    Unrolled Iterators: \n";
       foreach (iter; _unrolledIters) {
-	description ~= "\t" ~ iter.fullName() ~ "\n";
+	description ~= "\t" ~ iter._esdl__getFullName() ~ "\n";
       }
     }
     if (_unresolvedRnds.length > 0) {
       description ~= "    Domains: \n";
       foreach (rnd; _unresolvedRnds) {
-	description ~= "\t" ~ rnd.fullName() ~ "\n";
+	description ~= "\t" ~ rnd._esdl__getFullName() ~ "\n";
       }
     }
     if (_resolvedRnds.length > 0) {
       description ~= "    Resolved Domains: \n";
       foreach (rnd; _resolvedRnds) {
-	description ~= "\t" ~ rnd.fullName() ~ "\n";
+	description ~= "\t" ~ rnd._esdl__getFullName() ~ "\n";
       }
     }
     if (_unresolvedVars.length > 0) {
       description ~= "    Variables: \n";
       foreach (var; _unresolvedVars) {
-	description ~= "\t" ~ var.fullName() ~ "\n";
+	description ~= "\t" ~ var._esdl__getFullName() ~ "\n";
       }
     }
     if (_resolvedVars.length > 0) {
       description ~= "    Resolved Variables: \n";
       foreach (var; _resolvedVars) {
-	description ~= "\t" ~ var.fullName() ~ "\n";
+	description ~= "\t" ~ var._esdl__getFullName() ~ "\n";
       }
     }
     if (_vals.length > 0) {
@@ -996,25 +996,25 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     if (_idxs.length > 0) {
       description ~= "    Indexes: \n";
       foreach (idx; _idxs) {
-	description ~= "\t" ~ idx.fullName() ~ "\n";
+	description ~= "\t" ~ idx._esdl__getFullName() ~ "\n";
       }
     }
     if (_bitIdxs.length > 0) {
       description ~= "    Bit Indexes: \n";
       foreach (idx; _bitIdxs) {
-	description ~= "\t" ~ idx.fullName() ~ "\n";
+	description ~= "\t" ~ idx._esdl__getFullName() ~ "\n";
       }
     }
     if (_deps.length > 0) {
       description ~= "    Depends on: \n";
       foreach (dep; _deps) {
-	description ~= "\t" ~ dep.fullName() ~ "\n";
+	description ~= "\t" ~ dep._esdl__getFullName() ~ "\n";
       }
     }
     if (_depPreds.length > 0) {
       description ~= "    Gated Predicates: \n";
       foreach (dep; _depPreds) {
-	description ~= "\t" ~ dep.fullName() ~ "\n";
+	description ~= "\t" ~ dep._esdl__getFullName() ~ "\n";
       }
     }
     description ~= "\n";
@@ -1034,12 +1034,13 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     assert (root !is null);
 
     foreach (dom; _resolvedRnds) {
-      if (! dom.inRange()) {
+      if (! dom._esdl__isDomainInRange()) {
 	// import std.stdio;
 	// writeln(this.describe());
 	// writeln(_guard.describe());
 	if (_guard is null || _guard._expr.eval()) {
-	  assert (false, "Predicate " ~ name() ~ " has out of bound domain: " ~ dom.name());
+	  assert (false, "Predicate " ~ _esdl__getName() ~
+		  " has out of bound domain: " ~ dom._esdl__getName());
 	}
 	_state = State.BLOCKED;
 	return;
@@ -1047,12 +1048,13 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
 
     foreach (dom; _resolvedVars) {
-      if (! dom.inRange()) {
+      if (! dom._esdl__isDomainInRange()) {
 	// import std.stdio;
 	// writeln(this.describe());
 	// writeln(_guard.describe());
 	if (_guard is null || _guard._expr.eval()) {
-	  assert (false, "Predicate " ~ name() ~ " has out of bound domain: " ~ dom.name());
+	  assert (false, "Predicate " ~ _esdl__getName() ~
+		  " has out of bound domain: " ~ dom._esdl__getName());
 	}
 	_state = State.BLOCKED;
 	return;
@@ -1066,7 +1068,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       }
     }
     foreach (arr; _resolvedRndArrs) {
-      if (arr._state is CstDomSet.State.INIT && arr.isRand()) {
+      if (arr._state is CstDomSet.State.INIT && arr._esdl__isRand()) {
 	arr.setProxyContext(root);
       }
     }
@@ -1075,11 +1077,11 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   void setSolverContext(CstSolverAgent agent, uint level) {
     if (this.isBlocked()) return;
     
-    assert(getOrderLevel() == level - 1, "unexpected error in solving before constraints");
+    assert(_esdl__getOrderLevel() == level - 1, "unexpected error in solving before constraints");
       
     foreach (dom; _resolvedRnds) {
-      assert(dom.getOrderLevel() != level, "unexpected error in solving before constraints");
-      if (dom.getOrderLevel < level - 1){
+      assert(dom._esdl__getOrderLevel() != level, "unexpected error in solving before constraints");
+      if (dom._esdl__getOrderLevel < level - 1){
 	assert(dom.isSolved(), "unexpected error in solving before constraints");
       }
     } 
@@ -1207,13 +1209,15 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   bool tryResolveFixed(_esdl__CstProcessor proc) {
     assert (isGuard());
-    if (_unresolvedRnds.length > 0 || _unresolvedVars.length > 0) return false;
+    if (_unresolvedRnds.length > 0 ||
+	_unresolvedVars.length > 0) return false;
     else return tryResolveDep(proc);
   }
   
   bool tryResolveDep(_esdl__CstProcessor proc) {
     assert (proc !is null);
-    assert (proc is _proc, _proc.fullName() ~ " ~= " ~ proc.fullName());
+    assert (proc is _proc, _proc._esdl__getFullName() ~ " ~= " ~
+	    proc._esdl__getFullName());
     assert (isGuard());
     if (_unresolvedVarArrs.length > 0 ||
 	_unresolvedRndArrs.length > 0) return false;
@@ -1265,11 +1269,11 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   uint _orderLevel = 0;
 
-  uint getOrderLevel(){
+  uint _esdl__getOrderLevel(){
     return _orderLevel;
   }
   
-  void setOrderLevel(uint level){
+  void _esdl__setOrderLevel(uint level){
     _orderLevel = level;
   }
   
@@ -1284,7 +1288,7 @@ class CstVisitorPredicate: CstPredicate
        ) {
     assert (guard is null);
     // import std.stdio;
-    // writeln("Creating a visitor predicate: ", cst.name());
+    // writeln("Creating a visitor predicate: ", cst._esdl__getName());
     super(cst, guard, guardInv, stmt, proxy, soft, expr, isGuard, parent, unrollIter, unrollIterVal);
   }
 
@@ -1292,7 +1296,7 @@ class CstVisitorPredicate: CstPredicate
     return true;
   }
 
-  override void unroll(CstIterator iter, bool guardUnrolled) {
+  override void _esdl__unroll(CstIterator iter, bool guardUnrolled) {
     // import std.stdio;
     // writeln("Unrolling Visitor");
     assert (iter is _iters[0]);
@@ -1308,13 +1312,13 @@ class CstVisitorPredicate: CstPredicate
 
     if (currLen > prevLen) {
       // import std.stdio;
-      // writeln("Need to unroll ", currLen - _uwPreds.length, " times");
+      // writeln("Need to _esdl__unroll ", currLen - _uwPreds.length, " times");
       for (uint i = cast(uint) _uwPreds.length; i != currLen; ++i) {
 	// import std.stdio;
 	// writeln("i: ", i, " mapped: ", iter.mapIter(i));
 	CstVisitorPredicate uwPred =
 	  new CstVisitorPredicate(_constraint, _guard, _guardInv, _statement, _proxy, _soft,
-				  _expr.unroll(iter, iter.mapIter(i)), false, this, iter, i// ,
+				  _expr._esdl__unroll(iter, iter.mapIter(i)), false, this, iter, i// ,
 				  // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
 				  );
 	uwPred._unrolledIters ~= this._unrolledIters[];
@@ -1330,7 +1334,7 @@ class CstVisitorPredicate: CstPredicate
     // array than the current value of currLen
     for (size_t i=0; i!=currLen; ++i) {
       if (_uwPreds[i]._iters.length == 0) { // completely unrolled
-	_uwPreds[i]._expr.scan();
+	_uwPreds[i]._expr._esdl__scan();
 	// import std.stdio;
 	// writeln("Collecting constraints from: ", _uwPreds[i]._expr.describe());
       }

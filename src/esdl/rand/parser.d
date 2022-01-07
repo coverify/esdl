@@ -1355,7 +1355,7 @@ struct CstParser {
     }
 
     // Parse array
-    fillOut("    " ~ _proxy ~ ".pushScope(");
+    fillOut("    " ~ _proxy ~ "._esdl__pushScope(");
     srcTag = srcCursor;
     procIdentifier();
     fillOut("._esdl__iter);\n");
@@ -1403,7 +1403,7 @@ struct CstParser {
       procStmt();
     }
 
-    fillOut("    " ~ _proxy ~ ".popScope();\n");
+    fillOut("    " ~ _proxy ~ "._esdl__popScope();\n");
     // fillOut("    // End of Foreach \n");
     
     iterators = iterators[0..$-1];

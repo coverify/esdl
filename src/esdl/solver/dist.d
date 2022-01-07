@@ -537,12 +537,12 @@ class CstDistPredSolver	// agent of dist and related predicates
     if (_preds.length > 0) {
       description ~= "  Predicates:\n";
       foreach (pred; _preds) {
-	description ~= "    " ~ pred.name() ~ '\n';
+	description ~= "    " ~ pred._esdl__getName() ~ '\n';
       }
     }
     if (_distPred !is null) {
       description ~= "  Dist Predicate:\n";
-      description ~= "    " ~ _distPred.name() ~ '\n';
+      description ~= "    " ~ _distPred._esdl__getName() ~ '\n';
     }
     return description;
   }

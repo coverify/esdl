@@ -127,21 +127,21 @@ void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy) {
 	  // Update constraint guards if any
 	  p.tupleof[I]._esdl__updateCst();
 	  foreach (pred; p.tupleof[I].getConstraintGuards()) {
-	    // writeln("Adding predicate: ", pred.name());
+	    // writeln("Adding predicate: ", pred._esdl__getName());
 	    proc.addNewPredicate(pred);
 	  }
 	  foreach (pred; p.tupleof[I].getConstraints()) {
-	    // writeln("Adding predicate: ", pred.name());
+	    // writeln("Adding predicate: ", pred._esdl__getName());
 	    proc.addNewPredicate(pred);
 	  }
 	}
       }
     }
     static if (is (Q: CstObjectIntf)//  ||
-	       // is (Q: CstObjArrIntf)  // handled by the visitor on unroll
+	       // is (Q: CstObjArrIntf)  // handled by the visitor on _esdl__unroll
 	       ) {
       static if (P.tupleof[I]._esdl__ISRAND) {
-	if (p.tupleof[I].isRand()) {
+	if (p.tupleof[I]._esdl__isRand()) {
 	  // import std.stdio;
 	  // writeln(p.tupleof[I].stringof, ": ", p.tupleof[I].rand_mode());
 	  p.tupleof[I]._esdl__doConstrain(proxy, true);
@@ -152,7 +152,7 @@ void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy) {
       }
     }
     // static if (is (Q: CstObjectStubBase)//  ||
-    // 	       // is (Q: CstObjArrIntf)  // handled by the visitor on unroll
+    // 	       // is (Q: CstObjArrIntf)  // handled by the visitor on _esdl__unroll
     // 	       ) {
     //   // static if (P.tupleof[I]._esdl__ISRAND) {
     //   auto q = p.tupleof[I]._esdl__obj();
@@ -182,7 +182,7 @@ void _esdl__doRandomizeElems(P, int I=0)(P p, _esdl__RandGen randGen) {
     alias Q = typeof (P.tupleof[I]);
     static if (is (Q: CstVarNodeIntf)) {
       static if (P.tupleof[I]._esdl__ISRAND) {
-	if (p.tupleof[I].isRand())
+	if (p.tupleof[I]._esdl__isRand())
 	  p.tupleof[I]._esdl__doRandomize(randGen);
       }
     }
@@ -235,7 +235,8 @@ void _esdl__doInitRandObjectElems(P, int I=0)(P p) {
       else {
 	debug (CSTSOLVERTRACE) {
 	  import std.stdio;
-	  writeln("Outer not set for: ", p.fullName(), " of type: ", P.stringof);
+	  writeln("Outer not set for: ", p._esdl__getFullName(),
+		  " of type: ", P.stringof);
 	}
 	p.tupleof[I] = new Q(NAME, p, null);
       }
@@ -256,7 +257,7 @@ void _esdl__doInitConstraintElems(P, Q, int I=0)(P p, Q q) {
   static if (I == P.tupleof.length) {
     return;
   }
-  else if (p.isReal()) {
+  else if (p._esdl__isReal()) {
     alias E = typeof (P.tupleof[I]);
     // pragma(msg, E.stringof);
     static if (is (E: _esdl__ConstraintBase)) {
@@ -266,7 +267,7 @@ void _esdl__doInitConstraintElems(P, Q, int I=0)(P p, Q q) {
       p.tupleof[I] = cst;
       // Keep a list of constraint names so that a derived class can
       // override a constraint
-      static if (IS_USER_DEFINED) p.addConstraintName(cst);
+      static if (IS_USER_DEFINED) p._esdl__addConstraintName(cst);
     }
     _esdl__doInitConstraintElems!(P, Q, I+1)(p, q);
   }
@@ -286,7 +287,7 @@ void _esdl__doProcPredicateElems(P, int I=0)(P p, void function(_esdl__Constrain
   static if (I == P.tupleof.length) {
     return;
   }
-  else if (p.isReal()) {
+  else if (p._esdl__isReal()) {
     alias Q = typeof (P.tupleof[I]);
     // pragma(msg, Q.stringof);
     static if (is (Q: _esdl__ConstraintBase)) {
@@ -543,7 +544,7 @@ void _esdl__randomize(T) (ref T t) if (is (T == struct))
       _esdl__ProxyType._esdl__proxyInst = proxyInst;
     }
 
-    proxyInst.doResetLambdaPreds();
+    proxyInst._esdl__doResetLambdaPreds();
 
     _esdl__preRandomize(t);
 
@@ -579,7 +580,7 @@ void _esdl__randomize(T) (T t) if (is (T == class))
       _esdl__ProxyType._esdl__proxyInst = proxyInst;
     }
 
-    proxyInst.doResetLambdaPreds();
+    proxyInst._esdl__doResetLambdaPreds();
 
     _esdl__preRandomize(t);
 
@@ -742,7 +743,7 @@ mixin template Randomization()
 	_esdl__doInitConstraintElems(this, outer);
 	_esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);
 	_esdl__doProcPredicateElems(this, &_esdl__doProcDomainContext);
-	setContextGlobalVisitors();
+	_esdl__setContextGlobalVisitors();
       }
     }
   }
@@ -779,7 +780,7 @@ mixin template Randomization()
 	_esdl__doInitConstraintElems(this, outer);
 	_esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);
 	_esdl__doProcPredicateElems(this, &_esdl__doProcDomainContext);
-	setContextGlobalVisitors();
+	_esdl__setContextGlobalVisitors();
       }
     }
   }
@@ -950,7 +951,7 @@ class _esdl__ProxyNoRand(_esdl__T)
 	  _esdl__doInitConstraintElems(this, outer);
 	  _esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);
 	  _esdl__doProcPredicateElems(this, &_esdl__doProcDomainContext);
-	  setContextGlobalVisitors();
+	  _esdl__setContextGlobalVisitors();
 	}
 
       }
@@ -989,7 +990,7 @@ class _esdl__ProxyNoRand(_esdl__T)
 	  _esdl__doInitConstraintElems(this, outer);
 	  _esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);
 	  _esdl__doProcPredicateElems(this, &_esdl__doProcDomainContext);
-	  setContextGlobalVisitors();
+	  _esdl__setContextGlobalVisitors();
 	}
       }
 
@@ -1173,7 +1174,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   }
 
   void _esdl__with(string _esdl__CstString, string FILE, size_t LINE, ARGS...)(ARGS values) {
-    this.doResetLambdaPreds();
+    this._esdl__doResetLambdaPreds();
     auto cstLambda =
       new _esdl__ConstraintLambdaImpl!(_esdl__CstString,
 				     FILE, LINE, ARGS)(this, "lambdaConstraint", values);
@@ -1181,7 +1182,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     cstLambda.doProcDomainContext();
     // cstLambda.lambdaArgs(values);
     _esdl__lambdaCst = cstLambda;
-    setContextArgVisitors();
+    _esdl__setContextArgVisitors();
   }
 
 
@@ -1190,10 +1191,10 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     _esdl__CstProcessor proc = proxy._esdl__getProcessor();
     if (callPreRandomize) _esdl__preRandomize(this._esdl__outer);
     _esdl__doConstrainElems(this, proxy);
-    foreach (visitor; getGlobalVisitors()) {
+    foreach (visitor; _esdl__getGlobalVisitors()) {
       foreach (pred; visitor.getConstraints()) proc.addNewPredicate(pred);
     }
-     foreach (visitor; getArgVisitors()) {
+     foreach (visitor; _esdl__getArgVisitors()) {
       foreach (pred; visitor.getConstraints()) proc.addNewPredicate(pred);
     }
   }
@@ -1205,7 +1206,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   }
 
   void _esdl__doSetOuter()(bool changed) {
-    foreach (name, lookup; _globalLookups) {
+    foreach (name, lookup; _esdl__globalLookups) {
       lookup._esdl__fixRef();
     }
     _esdl__doSetOuterElems(this, changed);
@@ -1214,7 +1215,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   static if (is (_esdl__T == struct)) {
     void _esdl__doSetOuter()(_esdl__T* obj, bool changed) {
       _esdl__outer = obj;
-      foreach (name, lookup; _globalLookups) {
+      foreach (name, lookup; _esdl__globalLookups) {
 	lookup._esdl__fixRef();
       }
       _esdl__doSetOuterElems(this, changed);
@@ -1223,7 +1224,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   else {
     void _esdl__doSetOuter()(_esdl__T obj, bool changed) {
       _esdl__outer = obj;
-      foreach (name, lookup; _globalLookups) {
+      foreach (name, lookup; _esdl__globalLookups) {
 	lookup._esdl__fixRef();
       }
       _esdl__doSetOuterElems(this, changed);
@@ -1231,7 +1232,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   }
 
 
-  debug(CSTSOLVER) {
+  debug (CSTSOLVER) {
     enum bool _esdl__DEBUGSOVER = true;
   }
   else {
@@ -1242,7 +1243,23 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     return _esdl__DEBUGSOVER;
   }
 
-  pragma(msg, __traits(allMembers, typeof(this)));
+  debug (CSTPARSER) {
+    import std.traits: FieldNameTuple;
+    pragma(msg, __traits(allMembers, typeof(this)));
+    pragma(msg, FieldNameTuple!(typeof(this)));
+    void _esdl__debugPrintElems() {
+      _esdl__debugPrintElems!(typeof(this))();
+    }
+
+    void _esdl__debugPrintElems(T)() {
+      static if (is (T B == super)) {
+	static if (B.length > 0) {
+	  pragma(msg, FieldNameTuple!T);
+	  _esdl__debugPrintElems!(B[0])();
+	}
+      }
+    }
+  }
 }
 
 // Just so identify visitor constraints
@@ -1307,11 +1324,11 @@ auto _esdl__sym(L)(L l, string name,
 
 struct _esdl__rand_type_proxy(T, P)
 {
-  string _name;
+  string _esdl__name;
   P _parent;
 
   this(string name, P parent) {
-    _name = name;
+    _esdl__name = name;
     _parent = parent;
   }
 
@@ -1366,12 +1383,12 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
   else static if (isRandomizable!L) {
     static if (isLvalue!V) {
       alias CstVecType = CstVectorGlob!(L, rand(true, true), 0, V);
-      CstVarGlobIntf global = parent.getGlobalLookup(V.stringof);
+      CstVarGlobIntf global = parent._esdl__getGlobalLookup(V.stringof);
       if (global !is null)
 	return cast(CstVecType) global;
       else {
 	CstVecType obj = new CstVecType(name, parent, &V);
-	parent.addGlobalLookup(obj, V.stringof);
+	parent._esdl__addGlobalLookup(obj, V.stringof);
 	return obj;
       }
     }
@@ -1393,7 +1410,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
     else {
       alias CstObjType = CstObjectGlob!(U, rand(true, true), 0, V);
     }
-    CstVarGlobIntf global = parent.getGlobalLookup(V.stringof);
+    CstVarGlobIntf global = parent._esdl__getGlobalLookup(V.stringof);
     if (global !is null)
       return cast(CstObjType) global;
     else {
@@ -1404,7 +1421,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       else {
 	CstObjType obj = new CstObjType(name, parent, V);
       }
-      parent.addGlobalLookup(obj, V.stringof);
+      parent._esdl__addGlobalLookup(obj, V.stringof);
       return obj;
     }
   }
@@ -1413,29 +1430,29 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
     // writeln("Creating VarVecArr, ", name);
     static if (isLvalue!V) {
       alias CstVecArrType = CstVecArrGlob!(L, rand(true, true), 0, V);
-      CstVarGlobIntf global = parent.getGlobalLookup(V.stringof);
+      CstVarGlobIntf global = parent._esdl__getGlobalLookup(V.stringof);
       if (global !is null)
 	return cast(CstVecArrType) global;
       else {
 	CstVecArrType obj = new CstVecArrType(name, parent, &V);
-	parent.addGlobalLookup(obj, V.stringof);
+	parent._esdl__addGlobalLookup(obj, V.stringof);
 	auto visitor =
 	  new _esdl__VisitorCst!CstVecArrType(parent, name ~ "_CstVisitor", obj);
-	parent.addGlobalVisitor(visitor);
+	parent._esdl__addGlobalVisitor(visitor);
 	return obj;
       }
     }
     else {
       alias CstVecArrType = CstVecArrGlobEnum!(L, rand(true, true), 0);
-      CstVarGlobIntf global = parent.getGlobalLookup(V.stringof);
+      CstVarGlobIntf global = parent._esdl__getGlobalLookup(V.stringof);
       if (global !is null)
 	return cast(CstVecArrType) global;
       else {
 	CstVecArrType obj = new CstVecArrType(name, parent, V);
-	parent.addGlobalLookup(obj, V.stringof);
+	parent._esdl__addGlobalLookup(obj, V.stringof);
 	auto visitor =
 	  new _esdl__VisitorCst!CstVecArrType(parent, name ~ "_CstVisitor", obj);
-	parent.addGlobalVisitor(visitor);
+	parent._esdl__addGlobalVisitor(visitor);
 	return obj;
       }
     }
@@ -1444,15 +1461,15 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
     // import std.stdio;
     // writeln("Creating VarVecArr, ", name);
     alias CstObjArrType = CstObjArrGlob!(L, rand(true, true), 0, V);
-    CstVarGlobIntf global = parent.getGlobalLookup(V.stringof);
+    CstVarGlobIntf global = parent._esdl__getGlobalLookup(V.stringof);
     if (global !is null)
       return cast(CstObjArrType) global;
     else {
       CstObjArrType obj = new CstObjArrType(name, parent, &V);
-      parent.addGlobalLookup(obj, V.stringof);
+      parent._esdl__addGlobalLookup(obj, V.stringof);
       auto visitor =
 	new _esdl__VisitorCst!CstObjArrType(parent, name ~ "_CstVisitor", obj);
-      parent.addGlobalVisitor(visitor);
+      parent._esdl__addGlobalVisitor(visitor);
       return obj;
     }
   }
@@ -1503,7 +1520,7 @@ auto _esdl__arg_proxy(L, X, P)(size_t idx, string name, ref L arg, X proxy, P pa
       CstVecArrType vvar = new CstVecArrType(name, parent, &arg);
       auto visitor =
 	new _esdl__VisitorCst!CstVecArrType(parent, name ~ "_CstVisitor", vvar);
-      parent.addArgVisitor(visitor);
+      parent._esdl__addArgVisitor(visitor);
       proxy._proxyLambdaArgs[idx] = vvar;
       return vvar;
     }
