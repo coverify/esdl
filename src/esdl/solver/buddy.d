@@ -8,7 +8,7 @@ import esdl.solver.base;
 import esdl.rand.expr;
 import esdl.rand.base;
 import esdl.rand.agent: CstSolverAgent;
-import esdl.rand.proxy: _esdl__Proxy;
+import esdl.rand.proxy: _esdl__CstProcessor;
 import esdl.rand.misc;
 import esdl.solver.obdd;
 
@@ -430,7 +430,7 @@ class CstBuddySolver: CstSolver
 
   BuddyContext _context;
 
-  _esdl__Proxy _proxy;
+  _esdl__CstProcessor _proc;
 
   void print() {
     import std.stdio;
@@ -469,7 +469,7 @@ class CstBuddySolver: CstSolver
 
     super(signature);
 
-    _proxy = agent.getProxy();
+    _proc = agent.getProcessor();
 
     if (_esdl__buddy is null) {
       _esdl__buddy = new Buddy(1000, 1000);
@@ -566,14 +566,14 @@ class CstBuddySolver: CstSolver
 
     ubvec!MAXBDDLEVELS vec;
 
-    vec = _proxy._esdl__rGen.gen!(ubvec!MAXBDDLEVELS);
+    vec = _proc.getRandGen.gen!(ubvec!MAXBDDLEVELS);
 
-    uint sol = _context.getBDD().getRandSat(vec, _proxy._esdl__rGen.get(),
+    uint sol = _context.getBDD().getRandSat(vec, _proc.getRandGen.get(),
 					    _context._bddDist);
     // import std.stdio;
     // writeln (vec);
 
-    // BDD solution = _context.getBDD().randSatOne(_proxy._esdl__rGen.get(),
+    // BDD solution = _context.getBDD().randSatOne(_proc.getRandGen.get(),
     // 						_context._bddDist);
     // byte[][] solVecs = solution.toVector();
 
@@ -590,7 +590,7 @@ class CstBuddySolver: CstSolver
 	int index = bitindices[0];
 	dom.setBool(vec[index]);
 	// if (bits.length == 0 || bits[index] == -1) {
-	//   dom.setBool(_proxy._esdl__rGen.flip());
+	//   dom.setBool(_proc.getRandGen.flip());
 	// }
 	// else {
 	//   dom.setBool(bits[index] == 1);
@@ -611,7 +611,7 @@ class CstBuddySolver: CstSolver
 	  uint word = (cast(uint) i) / WORDSIZE;
 	  v = v + ((vec[j] ? 1UL : 0UL) << pos);
 	  // if (bits.length == 0 || bits[j] == -1) {
-	  //   v = v + ((cast(size_t) _proxy._esdl__rGen.flip()) << pos);
+	  //   v = v + ((cast(size_t) _proc.getRandGen.flip()) << pos);
 	  // }
 	  // else if (bits[j] == 1) {
 	  //   v = v + ((cast(ulong) 1) << pos);

@@ -91,6 +91,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   
   final _esdl__Proxy _esdl__getRootProxy() {
+    assert (_esdl__root !is null);
     return _esdl__root;
   }
 
@@ -161,12 +162,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   }
 
   uint _esdl__seed;
-  uint _esdl__varN;
-
-  uint _esdl__indexVar() {
-    return _esdl__varN++;
-  }
-  
   bool _esdl__seeded = false;
 
   uint _esdl__getRandomSeed() {
@@ -227,7 +222,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   // overridden by Randomization mixin -- see meta.d
   abstract void _esdl__doRandomize(_esdl__RandGen randGen);
-  abstract void _esdl__doConstrain(_esdl__Proxy proxy, bool callPreRandomize);
+  abstract void _esdl__doConstrain(_esdl__CstProcessor proc, bool callPreRandomize);
 
   Folder!(CstVecNodeIntf, "lambdaCstDoms") _esdl__lambdaCstDoms;
 
@@ -242,10 +237,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _esdl__argVisitors.reset();
   }
 
-  _esdl__CstProcessor _esdl__cstProcessor;
+  _esdl__CstProcessor _esdl__proc;
 
-  final _esdl__CstProcessor _esdl__getProcessor() {
-    return _esdl__root._esdl__cstProcessor;
+  final _esdl__CstProcessor _esdl__getProc() {
+    return _esdl__proc;
   }
   
   this(_esdl__Proxy parent, CstObjectIntf obj, Object outer) {
@@ -280,9 +275,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _esdl__rGen = new _esdl__RandGen(_esdl__seed);
 
     // only the root proxy shall have a processor
-    if (_esdl__root is this) {
-      _esdl__cstProcessor = new _esdl__CstProcessor(this);
-    }
+    if (_esdl__root is this) _esdl__proc = new _esdl__CstProcessor(this);
+    else _esdl__proc = _esdl__getRootProxy()._esdl__getProc();
 
     // scopes for constraint parsing
     _esdl__rootScope = new CstScope(null, null);
@@ -312,6 +306,12 @@ class _esdl__CstProcessor
     return _proxy;
   }
 
+  uint _annotationIndex;
+
+  uint getAnnotationIndex() {
+    return _annotationIndex++;
+  }
+  
   _esdl__RandGen _randGen;
 
   final _esdl__RandGen getRandGen() {
@@ -836,7 +836,7 @@ class _esdl__CstProcessor
 	_solvedSome = true;
 	continue;
       }
-      pred.setProxyContext(_proxy);
+      pred.setProcContext(this);
 	  
       // makeSolverDomains();
       uint level = 0;

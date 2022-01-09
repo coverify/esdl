@@ -191,8 +191,8 @@ abstract class _esdl__ProxyStub(T): CstObjectIntf, rand.disable, rand.barrier
     return __traits(getMember, _esdl__get(), WHAT);
   }
 
-  void _esdl__doConstrain(_esdl__Proxy proxy, bool callPreRandomize) {
-    this._esdl__get()._esdl__doConstrain(proxy, callPreRandomize);
+  void _esdl__doConstrain(_esdl__CstProcessor proc, bool callPreRandomize) {
+    this._esdl__get()._esdl__doConstrain(proc, callPreRandomize);
   }
   
   void _esdl__doRandomize(_esdl__RandGen randGen) {
@@ -272,7 +272,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	this(string name, _esdl__Proxy parent, V* var) {
 	  _parent = parent;
 	  _root = _parent._esdl__getRootProxy();
-	  _proc = _root._esdl__getProcessor();
+	  _proc = _root._esdl__getProc();
 	  _parentsDepsAreResolved = _parent._esdl__depsAreResolved();
 	  super(name, parent, var);
 	}
@@ -281,7 +281,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	this(string name, _esdl__Proxy parent, V var) {
 	  _parent = parent;
 	  _root = _parent._esdl__getRootProxy();
-	  _proc = _root._esdl__getProcessor();
+	  _proc = _root._esdl__getProc();
 	  _parentsDepsAreResolved = _parent._esdl__depsAreResolved();
 	  super(name, parent, var);
 	}
@@ -304,7 +304,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	return _root;
       }
 
-      _esdl__CstProcessor _esdl__getProcessor()() {
+      _esdl__CstProcessor _esdl__getProc()() {
 	assert (_proc !is null);
 	return _proc;
       }
@@ -390,7 +390,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	super(_esdl__name, parent._esdl__getRootProxy(), null);
 	_parent = parent;
 	_root = _parent._esdl__getRootProxy();
-	_proc = _root._esdl__getProcessor();
+	_proc = _root._esdl__getProc();
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
 	_indexExpr = indexExpr;
 	// }
@@ -406,7 +406,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	_parent = parent;
 	_pindex = index;
 	_root = _parent._esdl__getRootProxy();
-	_proc = _root._esdl__getProcessor();
+	_proc = _root._esdl__getProc();
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
       }
 
@@ -452,7 +452,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	return _root;
       }
 
-      _esdl__CstProcessor _esdl__getProcessor()() {
+      _esdl__CstProcessor _esdl__getProc()() {
 	assert (_proc !is null);
 	return _proc;
       }
@@ -462,7 +462,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       override RV _esdl__getResolvedNode() {
-	if (_resolvedCycle != _esdl__getProcessor()._cycle) {
+	if (_resolvedCycle != _esdl__getProc()._cycle) {
 	  auto parent = _parent._esdl__getResolvedNode();
 	  if (_indexExpr) {
 	    _resolvedObj = parent[cast(size_t) _indexExpr.evaluate()];
@@ -476,7 +476,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	      _resolvedObj = parent[_pindex];
 	    }
 	  }
-	  _resolvedCycle = _esdl__getProcessor()._cycle;
+	  _resolvedCycle = _esdl__getProc()._cycle;
 	}
 	return _resolvedObj;
       }
@@ -518,7 +518,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	assert (this.getRef() !is null);
 	_esdl__setValRef(this.getRef());
 	if (this._esdl__isRand()) {
-	  _esdl__doConstrain(_esdl__getRootProxy(), true);
+	  _esdl__doConstrain(_esdl__getProc(), true);
 	}
       }
 
@@ -1086,7 +1086,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       override RV _esdl__getResolvedNode() {
-	if (_resolvedCycle != _esdl__getCstProcessor()._cycle) {
+	if (_resolvedCycle != _esdl__getProc()._cycle) {
 	  auto parent = _parent._esdl__getResolvedNode();
 	  if (_indexExpr) {
 		_resolvedObj = parent[_indexExpr.evaluate()];
@@ -1100,7 +1100,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	      _resolvedObj = parent[_pindex];
 	    }
 	  }
-	  _resolvedCycle = _esdl__getCstProcessor()._cycle;
+	  _resolvedCycle = _esdl__getProc()._cycle;
 	}
 	return _resolvedObj;
       }

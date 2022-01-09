@@ -64,7 +64,7 @@ interface CstVecNodeIntf: CstVarNodeIntf, CstDepIntf {
   abstract void registerRndPred(CstPredicate rndPred);  
 
   abstract void setSolverContext(CstSolverAgent agent);
-  abstract void setProxyContext(_esdl__Proxy proxy);
+  abstract void setProcContext(_esdl__CstProcessor proc);
   abstract void reset();
 
   abstract void resetLambdaPreds();
@@ -264,7 +264,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   _esdl__Proxy _root;
   _esdl__CstProcessor _proc;
 
-  final _esdl__getCstProcessor() {
+  final _esdl__CstProcessor _esdl__getProc() {
     return _proc;
   }
   
@@ -273,7 +273,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   this(string name, _esdl__Proxy root) {
     _esdl__name = name;
     _root = root;
-    _proc = _root._esdl__getProcessor();
+    _proc = _root._esdl__getProc();
   }
 
   string _esdl__getName() {
@@ -445,7 +445,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
 
   void markSolved() {
     if (_state == State.SOLVED) return;
-    if (_root._esdl__debugSolver) {
+    if (_proc.debugSolver()) {
       import std.stdio;
       writeln("Marking ", this._esdl__getName(), " as SOLVED");
     }
@@ -581,7 +581,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     // import std.stdio;
     // writeln("annotate: ", this._esdl__getName());
     if (_domN == uint.max) {
-      if (_varN == uint.max) _varN = _root._esdl__indexVar();
+      if (_varN == uint.max) _varN = _proc.getAnnotationIndex();
       if (this.isSolved()) setAnnotation(agent.addAnnotatedVar(this));
       else setAnnotation(agent.addAnnotatedDom(this));
     }
@@ -593,26 +593,26 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     assert(false, "_esdl__isDomainInRange is not defined for: " ~ _esdl__getName());
   }
 
-  void setProxyContext(_esdl__Proxy proxy) {
+  void setProcContext(_esdl__CstProcessor proc) {
     // import std.stdio;
-    // writeln("setProxyContext on: ", this._esdl__getName());
+    // writeln("setProcContext on: ", this._esdl__getName());
     assert (_state is State.INIT && (! this.isSolved()));
-    assert (proxy is _root);
+    assert (proc is _proc);
     _proc.collateDomain(this);
     // assert (_agent is null && (! this.isSolved()));
     // _agent = agent;
     if (this._esdl__isRand()) {
       foreach (pred; _resolvedDomainPreds) {
 	if (pred.isEnabled() && pred.isResolved() && ! pred.isBlocked()) {
-	  pred.setProxyContext(proxy);
+	  pred.setProcContext(proc);
 	}
       }
       if (_esdl__parentIsConstrained()) {
 	CstDomSet parent = getParentDomSet();
-	// writeln("setProxyContext on parent: ", parent._esdl__getName());
+	// writeln("setProcContext on parent: ", parent._esdl__getName());
 	assert (parent !is null);
 	if (parent._state is CstDomSet.State.INIT) {
-	  parent.setProxyContext(proxy);
+	  parent.setProcContext(proc);
 	}
       }
     }
@@ -745,7 +745,7 @@ abstract class CstObjSet: CstObjArrVoid, CstObjArrIntf
   private _esdl__Proxy _root;
   _esdl__CstProcessor _proc;
   
-  final _esdl__getCstProcessor() {
+  final _esdl__CstProcessor _esdl__getProc() {
     return _proc;
   }
   
@@ -753,7 +753,7 @@ abstract class CstObjSet: CstObjArrVoid, CstObjArrIntf
     assert (root !is null);
     _esdl__name = name;
     _root = root;
-    _proc = _root._esdl__getProcessor();
+    _proc = _root._esdl__getProc();
   }
 
   _esdl__Proxy _esdl__getRootProxy() {
@@ -790,14 +790,14 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   _esdl__Proxy _root;
   _esdl__CstProcessor _proc;
   
-  final _esdl__getCstProcessor() {
+  final _esdl__CstProcessor _esdl__getProc() {
     return _proc;
   }
   
   this(string name, _esdl__Proxy root) {
     _esdl__name = name;
     _root = root;
-    _proc = _root._esdl__getProcessor();
+    _proc = _root._esdl__getProc();
   }
 
   _esdl__Proxy _esdl__getRootProxy() {
@@ -924,7 +924,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
 
   void markSolved() {
     if (_state == State.SOLVED) return;
-    if (_root._esdl__debugSolver) {
+    if (_proc.debugSolver()) {
       import std.stdio;
       writeln("Marking ", this._esdl__getName(), " as SOLVED");
     }
@@ -984,7 +984,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
       // import std.stdio;
       // writeln("annotate: ", this._esdl__getName());
       if (_domSetN == uint.max) {
-	if (_varSetN == uint.max) _varSetN = _root._esdl__indexVar();
+	if (_varSetN == uint.max) _varSetN = _proc.getAnnotationIndex();
 	if (this.isSolved()) setAnnotation(agent.addAnnotatedVarArr(this));
 	else setAnnotation(agent.addAnnotatedDomArr(this));
       }
@@ -1111,16 +1111,16 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     _depCbs.reset();
   }
   
-  void setProxyContext(_esdl__Proxy proxy) {
+  void setProcContext(_esdl__CstProcessor proc) {
     // import std.stdio;
-    // writeln("setProxyContext on: ", this._esdl__getName());
+    // writeln("setProcContext on: ", this._esdl__getName());
     assert (this.isDepResolved(), this._esdl__getName() ~ " is unresolved");
     assert (_state is State.INIT);
-    assert (proxy is _root);
+    assert (proc is _proc);
     foreach (pred; _resolvedDomainPreds[]) {
       if (! pred.isGuard()) {
 	if (pred.isEnabled() && pred.isResolved() && ! pred.isBlocked()) {
-	  pred.setProxyContext(proxy);
+	  pred.setProcContext(proc);
 	}
       }
     }
@@ -1128,14 +1128,14 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
       CstDomSet parent = getParentDomSet();
       assert (parent !is null);
       if (parent._state is State.INIT) {
-	parent.setProxyContext(proxy);
+	parent.setProcContext(proc);
       }
     }
     else {			// only for the top arr
-      _proc.collateDomArr(this);
+      proc.collateDomArr(this);
       foreach (dom; this[]) {
 	if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
-	  dom.setProxyContext(proxy);
+	  dom.setProcContext(proc);
 	}
       }
     }

@@ -649,7 +649,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     super(_esdl__getName, parent._esdl__getRootProxy());
     _esdl__name = _esdl__getName;
     _parent = parent;
-    _proc = parent._esdl__getRootProxy()._esdl__getProcessor();
+    _proc = parent._esdl__getProc();
     _iterVar = new CstArrIterator!RV(_parent);
   }
 

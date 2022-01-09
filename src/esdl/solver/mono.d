@@ -6,7 +6,7 @@ import esdl.rand.pred: CstPredicate;
 import esdl.rand.agent: CstSolverAgent;
 import esdl.rand.misc;
 import esdl.data.folder;
-import esdl.rand.proxy: _esdl__Proxy;
+import esdl.rand.proxy: _esdl__CstProcessor;
 enum NumType: ubyte {INT, UINT, LONG, ULONG};
 enum Type: ubyte { NUM, ADD, SUB, RAND};
 
@@ -584,7 +584,7 @@ class CstMonoSolver (S): CstSolver
   RangeStack!S _rangeStack;
   Range!S  _finalRange;
   ulong _count;
-  _esdl__Proxy _proxy;
+  _esdl__CstProcessor _proc;
   TermArray _insideEqual;
   TermArray _insideRange; // inclusive
   debug (CHECKMONO){
@@ -888,7 +888,7 @@ class CstMonoSolver (S): CstSolver
     _rangeStack.reset();
     _finalRange.clear();
     _count = 0;
-    _proxy = null;
+    _proc = null;
   
     debug (CHECKMONO){
       _debugFlag = false;
@@ -955,7 +955,7 @@ class CstMonoSolver (S): CstSolver
     
     // if(!checkDifference()){
     //   _count = counter();
-    //   auto rand = _proxy._esdl__rGen.gen(0, _count);
+    //   auto rand = _proc.getRandGen.gen(0, _count);
     //   ulong num = choose(rand);
     //   doms[0].setVal(num);
     //   debug (MONOSOLVER){
@@ -982,7 +982,7 @@ class CstMonoSolver (S): CstSolver
     if(isEnum){
       _finalRange.and(_rangeStack[0]);
     }
-    _proxy = agent.getProxy();
+    _proc = agent.getProcessor();
     foreach (pred; predSet){
       if (! pred.isGuard()) {
 	reset();
@@ -1071,7 +1071,7 @@ class CstMonoSolver (S): CstSolver
       assert (false, "No solution found");
     }
     _count = counter();
-    auto rand = _proxy._esdl__rGen.gen(0, _count);
+    auto rand = _proc.getRandGen.gen(0, _count);
     ulong num = choose(rand);
     doms[0].setVal(num);
     _hasBeenSolved = true;

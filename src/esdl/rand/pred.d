@@ -228,7 +228,9 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   final bool isLambdaPred() { return _isLambdaPred; }
   final bool isVisitorPred() { return _isVisitorPred; }
 
+  // this is not root proxy
   _esdl__Proxy _proxy;
+
   _esdl__CstProcessor _proc;
   
   CstScope _scope;
@@ -330,7 +332,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     _soft = soft;
     _statement = stmt;
     _proxy = proxy;
-    _proc = _proxy._esdl__getProcessor();
+    _proc = _proxy._esdl__getProc();
     _unrollIterVal = unrollIterVal;
     _isInRange = true;
     if (parent is null) {
@@ -1027,11 +1029,11 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   //   return _agent;
   // }
 
-  void setProxyContext(_esdl__Proxy root) {
+  void setProcContext(_esdl__CstProcessor proc) {
     // import std.stdio;
-    // writeln("setProxyContext: ", this.describe());
+    // writeln("setProcContext: ", this.describe());
 
-    assert (root !is null);
+    assert (proc !is null);
 
     foreach (dom; _resolvedRnds) {
       if (! dom._esdl__isDomainInRange()) {
@@ -1060,16 +1062,16 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	return;
       }
     }
-    _proc.collatePredicate(this);
+    proc.collatePredicate(this);
 
     foreach (dom; _resolvedRnds) {
       if (dom._state is CstDomBase.State.INIT && (! dom.isSolved())) {
-	dom.setProxyContext(root);
+	dom.setProcContext(proc);
       }
     }
     foreach (arr; _resolvedRndArrs) {
       if (arr._state is CstDomSet.State.INIT && arr._esdl__isRand()) {
-	arr.setProxyContext(root);
+	arr.setProcContext(proc);
       }
     }
   }

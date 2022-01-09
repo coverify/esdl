@@ -378,7 +378,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
       override RV _esdl__getResolvedNode() {
 	// domains do not resolve by themselves -- we only check if a
 	// domain has dependencies. If not, we make a call to _esdl__getResolvedNode()
-	if (_resolvedCycle != _esdl__getCstProcessor()._cycle) {
+	if (_resolvedCycle != _esdl__getProc()._cycle) {
 	  auto parent = _parent._esdl__getResolvedNode();
 	  if (_indexExpr) {
 	    _resolvedVec = parent[cast(size_t) _indexExpr.evaluate()];
@@ -392,7 +392,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	      _resolvedVec = parent[_pindex];
 	    }
 	  }
-	  _resolvedCycle = _esdl__getCstProcessor()._cycle;
+	  _resolvedCycle = _esdl__getProc()._cycle;
 	}
 	return _resolvedVec;
       }
@@ -1140,7 +1140,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       override RV _esdl__getResolvedNode() {
-	if (_resolvedCycle != _esdl__getCstProcessor()._cycle) {
+	if (_resolvedCycle != _esdl__getProc()._cycle) {
 	  auto parent = _parent._esdl__getResolvedNode();
 	  if (_indexExpr) {
 	    _resolvedVec = parent[_indexExpr.evaluate()];
@@ -1159,7 +1159,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	      }
 	    }
 	  }
-	  _resolvedCycle = _esdl__getCstProcessor()._cycle;
+	  _resolvedCycle = _esdl__getProc()._cycle;
 	}
 	return _resolvedVec;
       }

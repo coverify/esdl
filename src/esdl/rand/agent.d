@@ -8,7 +8,7 @@ import esdl.solver.z3: CstZ3Solver;
 import esdl.solver.buddy: CstBuddySolver;
 
 import esdl.rand.misc: _esdl__Sigbuf, CstVectorOp;
-import esdl.rand.proxy: _esdl__Proxy, _esdl__CstProcessor;
+import esdl.rand.proxy: _esdl__CstProcessor;
 import esdl.rand.pred: CstPredicate, Hash;
 import esdl.rand.base: CstDomBase, CstDomSet, CstIterCallback,
   CstDepCallback, CstScope, CstIterator, CstVecNodeIntf,
@@ -53,7 +53,6 @@ class CstSolverAgent			// agent of related predicates
 
   void initialize(_esdl__CstProcessor proc) {
     _proc = proc;
-    _proxy = _proc.getProxy();
     _preds.reset();
     _predList.reset();
 
@@ -84,7 +83,6 @@ class CstSolverAgent			// agent of related predicates
   }
 
   _esdl__CstProcessor _proc;
-  _esdl__Proxy _proxy;
 
   this () {
     intMono = new CstMonoSolver!int("");
@@ -95,10 +93,6 @@ class CstSolverAgent			// agent of related predicates
 
   final _esdl__CstProcessor getProcessor() {
     return _proc;
-  }
-
-  final _esdl__Proxy getProxy() {
-    return _proxy;
   }
 
   void addPredicate(CstPredicate pred) {

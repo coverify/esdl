@@ -105,21 +105,20 @@ template _esdl__RandProxyType(T, int I, P, int PI)
   }
 }
 
-void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy) {
+void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__CstProcessor proc) {
   static if (I == 0 &&
 	     is (P B == super) &&
 	     is (B[0]: _esdl__Proxy) &&
 	     is (B[0] == class)) {
     static if (! is (B[0] == _esdl__Proxy)) {
       B[0] b = p;			// super object
-      _esdl__doConstrainElems(b, proxy);
+      _esdl__doConstrainElems(b, proc);
     }
   }
   static if (I == P.tupleof.length) {
     return;
   }
   else {
-    _esdl__CstProcessor proc = proxy._esdl__getProcessor();
     alias Q = typeof (P.tupleof[I]);
     static if (is (Q: _esdl__ConstraintBase)) {
       static if (p.tupleof[I].stringof != "p._esdl__lambdaCst") {
@@ -144,7 +143,7 @@ void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy) {
 	if (p.tupleof[I]._esdl__isRand()) {
 	  // import std.stdio;
 	  // writeln(p.tupleof[I].stringof, ": ", p.tupleof[I].rand_mode());
-	  p.tupleof[I]._esdl__doConstrain(proxy, true);
+	  p.tupleof[I]._esdl__doConstrain(proc, true);
 	}
       // else {
       // 	p.tupleof[I]._esdl__doConstrain(proxy);
@@ -157,11 +156,11 @@ void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__Proxy proxy) {
     //   // static if (P.tupleof[I]._esdl__ISRAND) {
     //   auto q = p.tupleof[I]._esdl__obj();
     //   if (q !is null) {
-    // 	q._esdl__doConstrain(proxy);
+    // 	q._esdl__doConstrain(proc);
     //   }
     //   // }
     // }
-    _esdl__doConstrainElems!(P, I+1)(p, proxy);
+    _esdl__doConstrainElems!(P, I+1)(p, proc);
   }
 }
 
@@ -550,11 +549,11 @@ void _esdl__randomize(T) (ref T t) if (is (T == struct))
 
     proxyInst._esdl__doSetOuter(&t, true);
 
-    _esdl__CstProcessor proc = proxyInst._esdl__getProcessor();
+    _esdl__CstProcessor proc = proxyInst._esdl__getProc();
 
     proxyInst._esdl__lambdaCst = null;
     proc.reset();
-    proxyInst._esdl__doConstrain(proxyInst, false);
+    proxyInst._esdl__doConstrain(proc, false);
     proc.solve();
     proxyInst._esdl__doRandomize(t._esdl__virtualGetRandGen());
     // _esdl__postRandomize(t);
@@ -586,11 +585,11 @@ void _esdl__randomize(T) (T t) if (is (T == class))
 
     proxyInst._esdl__doSetOuter(t, true);
 
-    _esdl__CstProcessor proc = proxyInst._esdl__getProcessor();
+    _esdl__CstProcessor proc = proxyInst._esdl__getProc();
 
     proxyInst._esdl__lambdaCst = null;
     proc.reset();
-    proxyInst._esdl__doConstrain(proxyInst, false);
+    proxyInst._esdl__doConstrain(proc, false);
     proc.solve();
     proxyInst._esdl__doRandomize(t._esdl__virtualGetRandGen());
     // _esdl__postRandomize(t);
@@ -630,14 +629,14 @@ void _esdl__randomizeWith(T)(T t, _esdl__Proxy proxy,
     _esdl__ProxyType proxyInst = _esdl__staticCast!(_esdl__ProxyType)(proxy);
     _esdl__preRandomize(t);
 
-    _esdl__CstProcessor proc = proxy._esdl__getProcessor();
+    _esdl__CstProcessor proc = proxy._esdl__getProc();
 
     proxyInst._esdl__doSetOuter(t, true);
 
     // lambdaCst._esdl__doSetOuter();
   
     proc.reset();
-    proxyInst._esdl__doConstrain(proxyInst, false);
+    proxyInst._esdl__doConstrain(proc, false);
     foreach (pred; lambdaCst.getConstraintGuards()) {
       proc.addNewPredicate(pred);
     }
@@ -663,14 +662,14 @@ void _esdl__randomizeWith(T) (ref T t, _esdl__Proxy proxy,
 
     _esdl__preRandomize(t);
 
-    _esdl__CstProcessor proc = proxy._esdl__getProcessor();
+    _esdl__CstProcessor proc = proxy._esdl__getProc();
 
     proxyInst._esdl__doSetOuter(&t, true);
 
     // lambdaCst._esdl__doSetOuter();
   
     proc.reset();
-    proxyInst._esdl__doConstrain(proxyInst, false);
+    proxyInst._esdl__doConstrain(proc, false);
     foreach (pred; lambdaCst.getConstraintGuards()) {
       proc.addNewPredicate(pred);
     }
@@ -737,8 +736,8 @@ mixin template Randomization()
 	}
       }
       this(_esdl__Proxy parent, CstObjectIntf obj, _esdl__T outer) {
-	_esdl__outer = outer;
 	super(parent, obj, outer);
+	_esdl__outer = outer;
 	_esdl__doInitRandObjectElems(this);
 	_esdl__doInitConstraintElems(this, outer);
 	_esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);
@@ -774,8 +773,8 @@ mixin template Randomization()
 	}
       }
       this(_esdl__Proxy parent, CstObjectIntf obj, _esdl__T* outer) {
-	_esdl__outer = outer;
 	super(parent, obj);
+	_esdl__outer = outer;
 	_esdl__doInitRandObjectElems(this);
 	_esdl__doInitConstraintElems(this, outer);
 	_esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);
@@ -920,7 +919,6 @@ class _esdl__ProxyNoRand(_esdl__T)
       {
 	mixin _esdl__ProxyMixin!_esdl__T;
 	_esdl__T _esdl__outer;
-
 	_esdl__T _esdl__getRef()() {return _esdl__outer;}
 
 	enum bool _esdl__HAS_RAND_INFO = false;
@@ -945,8 +943,8 @@ class _esdl__ProxyNoRand(_esdl__T)
 	  }
 	}
 	this(_esdl__Proxy parent, CstObjectIntf obj, _esdl__T outer) {
-	  _esdl__outer = outer;
 	  super(parent, obj, outer);
+	  _esdl__outer = outer;
 	  _esdl__doInitRandObjectElems(this);
 	  _esdl__doInitConstraintElems(this, outer);
 	  _esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);
@@ -984,8 +982,8 @@ class _esdl__ProxyNoRand(_esdl__T)
 	  }
 	}
 	this(_esdl__Proxy parent, CstObjectIntf obj, _esdl__T* outer) {
-	  _esdl__outer = outer;
 	  super(parent, obj);
+	  _esdl__outer = outer;
 	  _esdl__doInitRandObjectElems(this);
 	  _esdl__doInitConstraintElems(this, outer);
 	  _esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);
@@ -1186,11 +1184,10 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   }
 
 
-  override void _esdl__doConstrain(_esdl__Proxy proxy, bool callPreRandomize) {
+  override void _esdl__doConstrain(_esdl__CstProcessor proc, bool callPreRandomize) {
     assert (this._esdl__outer !is null);
-    _esdl__CstProcessor proc = proxy._esdl__getProcessor();
     if (callPreRandomize) _esdl__preRandomize(this._esdl__outer);
-    _esdl__doConstrainElems(this, proxy);
+    _esdl__doConstrainElems(this, proc);
     foreach (visitor; _esdl__getGlobalVisitors()) {
       foreach (pred; visitor.getConstraints()) proc.addNewPredicate(pred);
     }

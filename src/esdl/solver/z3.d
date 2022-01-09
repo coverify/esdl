@@ -12,7 +12,7 @@ import esdl.rand.expr;
 import esdl.rand.base;
 import esdl.rand.agent: CstSolverAgent;
 import esdl.rand.pred: CstPredicate;
-import esdl.rand.proxy: _esdl__Proxy;
+import esdl.rand.proxy: _esdl__CstProcessor;
 import esdl.rand.misc;
 import esdl.data.folder: Folder;
 import esdl.intf.z3.z3;
@@ -242,7 +242,7 @@ class CstZ3Solver: CstSolver
   Optimize _optimize;
   bool _needOptimize;
 
-  _esdl__Proxy _proxy;
+  _esdl__CstProcessor _proc;
 
   uint _countStable;
   uint _countVariable;
@@ -264,7 +264,7 @@ class CstZ3Solver: CstSolver
     import std.stdio;
     super(signature);
 
-    _proxy = agent.getProxy();
+    _proc = agent.getProcessor();
 
     setParam("auto_config", false);
     setParam("smt.phase_selection", 5);
@@ -372,7 +372,7 @@ class CstZ3Solver: CstSolver
 	.array();
     }
 
-    _seed = _proxy._esdl__rGen.gen!uint();
+    _seed = _proc.getRandGen.gen!uint();
     _solver.set("random_seed", _seed);
     
 
@@ -507,7 +507,7 @@ class CstZ3Solver: CstSolver
     updateVars(agent);
     if (_needOptimize) {
       if (updateOptimize() || (_optimizeInit is false)) {
-	if (_proxy._esdl__debugSolver()) {
+	if (_proc.debugSolver()) {
 	  import std.stdio;
 	  writeln(_optimize);
 	}
@@ -557,7 +557,7 @@ class CstZ3Solver: CstSolver
       }
     }
 
-    if (_proxy._esdl__debugSolver()) {
+    if (_proc.debugSolver()) {
       import std.stdio;
       writeln(_solver);
     }
