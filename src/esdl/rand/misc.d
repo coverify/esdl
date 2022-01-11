@@ -659,3 +659,48 @@ enum CstInsideOp: byte
     }
 
 enum isLvalue(alias A) = is(typeof((ref _){}(A)));
+
+struct EnumRange(E) if (is(E == enum))
+  {
+    private E _min;
+    private E _max;
+    E min() { return _min; }
+    E max() { return _max; }
+}
+
+template EnumRanges(E) if (is(E == enum) && isIntegral!E)
+  {
+    import std.meta : AliasSeq;
+    template EnumSpecificRanges(names...)
+    {
+      static if (names.length == 0) {
+	alias EnumSpecificRanges = AliasSeq!();
+      }
+      else static if (names.length == 1) {
+	enum VAL = __traits(getMember, E, names[0]);
+	alias EnumSpecificRanges =
+	  AliasSeq!(EnumRange!E(VAL, VAL));
+      }
+      else {
+	alias PART1 = EnumSpecificRanges!(names[0 .. $/2]);
+	alias PART2 = EnumSpecificRanges!(names[$/2 .. $]);
+
+	enum MIN1 = PART1[$-1]._min;
+	enum MAX1 = PART1[$-1]._max;
+	enum MIN2 = PART2[0]._min;
+	enum MAX2 = PART2[0]._max;
+
+	static if (MIN2 >= MIN1 && // MAX1 + 1 > MAX1 &&
+		   (MIN2 <= MAX1 || MIN2 <= MAX1 + 1) &&
+		   MAX2 >= MAX1) {
+	  alias EnumSpecificRanges =
+	    AliasSeq!(PART1[0..$-1], EnumRange!E(MIN1, MAX2), PART2[1..$]);
+	}
+	else {
+	  alias EnumSpecificRanges = AliasSeq!(PART1, PART2);
+	}
+      }
+    }
+
+    alias EnumRanges = EnumSpecificRanges!(__traits(allMembers, E));
+}

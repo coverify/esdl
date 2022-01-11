@@ -12,7 +12,7 @@ import esdl.rand.base: CstValue, CstDomBase, CstDomSet, CstIterator,
   CstVecTerm, CstVecValueBase, CstDepIntf;
 import esdl.rand.misc: rand, writeHexString, isVecSigned, CstVectorOp,
   CstInsideOp, CstCompareOp, CstLogicOp, DomainContextEnum, GetVecType,
-  CstVecType, _esdl__Sigbuf;
+  CstVecType, _esdl__Sigbuf, EnumRange, EnumRanges;
 import esdl.rand.proxy: _esdl__Proxy, _esdl__CstProcessor;
 import esdl.rand.pred: CstPredicate, Hash;
 import esdl.rand.agent: CstSolverAgent;
@@ -146,13 +146,13 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
   static if (is (T == enum)) {
     alias OT = OriginalType!T;
 
-    T[] _enumSortedVals;
+    // T[] _enumSortedVals;
 
-    void _enumSortedValsPopulate() {
-      import std.algorithm.sorting: sort;
-      _enumSortedVals = cast(T[]) [EnumMembers!T];
-      _enumSortedVals.sort();
-    }
+    // void _enumSortedValsPopulate() {
+    //   import std.algorithm.sorting: sort;
+    //   _enumSortedVals = cast(T[]) [EnumMembers!T];
+    //   _enumSortedVals.sort();
+    // }
 
 
     static if (isIntegral!OT) {
@@ -200,34 +200,40 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
 
 
    override bool visitDomain(CstSolver solver) {
-    static if (is (T == enum)) {
-      uint count;
-      if (_enumSortedVals.length == 0) {
-	_enumSortedValsPopulate();
+    static if (is (T == enum) && isIntegral!T) {
+      // uint count;
+
+      // EnumRange!T enumRanges[] = [EnumRanges!T];
+      // if (_enumSortedVals.length == 0) {
+      // 	_enumSortedValsPopulate();
+      // }
+      // T min;
+      // T max;
+      // foreach (i, val; _enumSortedVals) {
+      // 	if (i == 0) {
+      // 	  min = val;
+      // 	  max = val;
+      // 	}
+      // 	else {
+      // 	  if (val - max == 1) {
+      // 	    max = val;
+      // 	  }
+      // 	  else {
+      // 	    _addRangeConstraint(solver, min, max);
+      // 	    count += 1;
+      // 	    min = val;
+      // 	    max = val;
+      // 	  }
+      // 	}
+      // }
+
+      foreach (enumRange; [EnumRanges!T]) {
+	_addRangeConstraint(solver, enumRange.min(), enumRange.max());
       }
-      T min;
-      T max;
-      foreach (i, val; _enumSortedVals) {
-	if (i == 0) {
-	  min = val;
-	  max = val;
-	}
-	else {
-	  if (val - max == 1) {
-	    max = val;
-	  }
-	  else {
-	    _addRangeConstraint(solver, min, max);
-	    count += 1;
-	    min = val;
-	    max = val;
-	  }
-	}
-      }
-      _addRangeConstraint(solver, min, max);
-      for (uint i=0; i!=count; ++i) {
+
+      for (uint i=0; i!=(EnumRanges!T).length-1; ++i)
 	solver.processEvalStack(CstLogicOp.LOGICOR);
-      }
+
       return true;
     }
     else {
