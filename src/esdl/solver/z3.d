@@ -4,19 +4,22 @@ import std.conv: to;
 
 
 import std.container: Array;
-// import std.array;
+import std.array: array;
 
 import esdl.solver.base;
 import esdl.solver.z3expr;
 import esdl.rand.expr;
 import esdl.rand.base;
-import esdl.rand.proxy: _esdl__Proxy;
+import esdl.rand.agent: CstSolverAgent;
+import esdl.rand.pred: CstPredicate;
+import esdl.rand.proxy: _esdl__CstProcessor;
 import esdl.rand.misc;
+import esdl.data.folder: Folder;
 import esdl.intf.z3.z3;
 import esdl.intf.z3.api.z3_types: Z3_ast;
-import esdl.intf.z3.api.z3_api: Z3_mk_int64, Z3_mk_unsigned_int64;
+import esdl.intf.z3.api.z3_api: Z3_mk_int64, Z3_mk_unsigned_int64, Z3_mk_true, Z3_mk_false;
 
-import std.algorithm.searching: canFind;
+import std.algorithm.sorting: sort;
 
 private import std.typetuple: staticIndexOf, TypeTuple;
 private import std.traits: BaseClassesTuple; // required for staticIndexOf
@@ -29,8 +32,8 @@ struct Z3Term
   enum Type: ubyte { BOOLEXPR, BVEXPR, ULONG }
 
   BoolExpr _boolExpr;
-  BvExpr _bvExpr;
-  ulong   _ulong;
+  BvExpr   _bvExpr;
+  ulong    _ulong;
 
   Type _type;
 
@@ -93,51 +96,105 @@ struct Z3Term
 
 }
 
-struct BvVar
+struct Z3Var
 {
+  enum Type: ubyte { BOOLEXPR, BVEXPR }
+
   enum State: ubyte {INIT, STABLE, VARIABLE}
-  BvExpr _dom;
-  long   _val;
+
+  Type   _type;
+  
+  BvExpr _bvDom;
+  BoolExpr _boolDom;
+  
+  long   _bvVal;
+  bool   _boolVal;
+  
   State  _state;
 
   BoolExpr _rule;
 
-  alias _dom this;
+  // alias _bvDom this;
   
   this(BvExpr dom) {
-    _dom = dom;
-    _val = 0;
+    _bvDom = dom;
+    _bvVal = 0;
+    _type  = Type.BVEXPR;
     _state = State.INIT;
   }
 
-  ref BvVar opAssign(ref BvExpr dom) return {
-    assert (_dom.isNull());
-    _dom = dom;
-    _val = 0;
+  this(BoolExpr dom) {
+    _boolDom = dom;
+    _boolVal = false;
+    _type  = Type.BOOLEXPR;
+    _state = State.INIT;
+  }
+
+  ref Z3Var opAssign(ref BvExpr dom) return {
+    assert (_bvDom.isNull());
+    _bvDom = dom;
+    _bvVal = 0;
+    _type = Type.BVEXPR;
     _state = State.INIT;
     return this;
   }
 
-  BvExpr getValExpr() {
-    Sort sort = _dom.getSort();
-    Context context = _dom.context();
+  ref Z3Var opAssign(ref BoolExpr dom) return {
+    assert (_boolDom.isNull());
+    _boolDom = dom;
+    _boolVal = false;
+    _type = Type.BOOLEXPR;
+    _state = State.INIT;
+    return this;
+  }
+
+  BvExpr getValBvExpr() {
+    assert (_type == Type.BVEXPR);
+    Sort sort = _bvDom.getSort();
+    Context context = _bvDom.context();
     Z3_ast r;
-    if (_dom.isSigned()) r = Z3_mk_int64(context, _val, sort);
-    else        r = Z3_mk_unsigned_int64(context, _val, sort);
-    return BvExpr(context, r, _dom.isSigned());
+    if (_bvDom.isSigned()) r = Z3_mk_int64(context, _bvVal, sort);
+    else        r = Z3_mk_unsigned_int64(context, _bvVal, sort);
+    return BvExpr(context, r, _bvDom.isSigned());
+  }
+
+  BoolExpr getValBoolExpr() {
+    assert (_type == Type.BOOLEXPR);
+    Sort sort = _boolDom.getSort();
+    Context context = _boolDom.context();
+    Z3_ast r;
+    if (_boolVal) r = Z3_mk_true(context);
+    else          r = Z3_mk_false(context);
+    return BoolExpr(context, r);
   }
 
   ref BoolExpr getRule() return {
     return _rule;
   }
   
-  void update(CstDomain dom, CstZ3Solver solver) {
+  void update(CstDomBase dom, CstZ3Solver solver) {
     assert (dom.isSolved());
-    long val = dom.value();
-    if (_val != val) {
-      _val = val;
-      BoolExpr rule = eq(_dom, getValExpr());
-      _rule = rule;
+    bool updated = false;
+    
+    if (dom.isBool()) {
+      bool val = dom.getBool();
+      if (_boolVal != val || _state == State.INIT) {
+	_boolVal = val;
+	BoolExpr rule = eq(_boolDom, getValBoolExpr());
+	_rule = rule;
+	updated = true;
+      }
+    }
+    else {
+      long val = dom.value();
+      if (_bvVal != val || _state == State.INIT) {
+	_bvVal = val;
+	BoolExpr rule = eq(_bvDom, getValBvExpr());
+	_rule = rule;
+	updated = true;
+      }
+    }
+    if (updated is true) {
       final switch (_state) {
       case State.INIT:
 	_state = State.STABLE;
@@ -153,32 +210,31 @@ struct BvVar
 	break;
       }
     }
-    else {
-      final switch (_state) {
-      case State.INIT:
-	BoolExpr rule = eq(_dom, getValExpr());
-	_rule = rule;
-	_state = State.STABLE;
-	solver._countStable += 1;
-	break;
-      case State.STABLE:
-	break;
-      case State.VARIABLE:
-	break;
-      }
-    }
+    // else {
+    //   final switch (_state) {
+    //   case State.INIT:
+    // 	assert (false);
+    // 	// _state = State.STABLE;
+    // 	// solver._countStable += 1;
+    // 	break;
+    //   case State.STABLE:
+    // 	break;
+    //   case State.VARIABLE:
+    // 	break;
+    //   }
+    // }
   }
 }
 
 class CstZ3Solver: CstSolver
 {
   
-  Z3Term[] _evalStack;
+  Folder!(Z3Term, "evalStack") _evalStack;
 
   Z3Term _term;
 
-  BvExpr[] _domains;
-  BvVar[] _variables;
+  Z3Term[] _domains;
+  Z3Var[] _variables;
 
   Context _context;
 
@@ -186,7 +242,7 @@ class CstZ3Solver: CstSolver
   Optimize _optimize;
   bool _needOptimize;
 
-  _esdl__Proxy _proxy;
+  _esdl__CstProcessor _proc;
 
   uint _countStable;
   uint _countVariable;
@@ -198,57 +254,81 @@ class CstZ3Solver: CstSolver
 
   uint _seed;
 
-  Z3_ast[] _vector;
+  Folder!(Z3_ast, "vector") _vector;
+  CstPredicate[] _softPreds;
 
   CstVectorOp _state;
-  // the group is used only for the purpose of constructing the Z3 solver
+  // the agent is used only for the purpose of constructing the Z3 solver
   // otherwise the solver identifies with the signature only
-  this(string signature, CstPredGroup group) {
+  this(string signature, CstSolverAgent agent) {
     import std.stdio;
     super(signature);
 
-    _proxy = group.getProxy();
+    _proc = agent.getProcessor();
 
     setParam("auto_config", false);
     setParam("smt.phase_selection", 5);
+    // setParam("smt.auto_config", false);
+    // setParam("relevancy", 0);
     Config cfg = new Config();
+    // cfg.set("auto_config", false);
+    // cfg.set("smt.relevancy", 0);
+    // cfg.set("phase_selection", 5);
     _context = new Context(cfg);
 
     // _vector = BvExprVector(_context);
     
-    CstDomain[] doms = group.domains();
+    CstDomBase[] doms = agent.annotatedDoms();
     _domains.length = doms.length;
 
     foreach (i, ref dom; _domains) {
       import std.string: format;
       // import std.stdio;
       // writeln("Adding Z3 Domain for @rand ", doms[i].name());
-      auto d = BvExpr(_context, format("_dom%s", i), doms[i].bitcount, doms[i].signed());
-      dom = d;
+      if (doms[i].isBool()) {
+	auto d = BoolExpr(_context, format("_dom%s", i)); // , doms[i].bitcount, doms[i].signed());
+	dom = Z3Term(d);
+      }
+      else {
+	auto d = BvExpr(_context, format("_dom%s", i), doms[i].bitcount, doms[i].signed());
+	dom = Z3Term(d);
+      }
     }
 
-    CstDomain[] vars = group.variables();
+    CstDomBase[] vars = agent.annotatedVars();
     _variables.length = vars.length;
 
     foreach (i, ref var; _variables) {
       import std.string: format;
       // import std.stdio;
       // writeln("Adding Z3 Domain for variable ", vars[i].name());
-      auto d = BvExpr(_context, format("_var%s", i), vars[i].bitcount, vars[i].signed());
-      var = d;
+      if (vars[i].isBool()) {
+	// writeln("Adding Z3 Domain for bool ", vars[i].name());
+	auto d = BoolExpr(_context, format("_vars%s", i));
+	var = d;
+      }
+      else {
+	// writeln("Adding Z3 Domain for vec ", vars[i].name());
+	auto d = BvExpr(_context, format("_var%s", i), vars[i].bitcount, vars[i].signed());
+	var = d;
+      }
     }
+
+    // Tactic tactic = and(Tactic(_context, "simplify"), Tactic(_context, "smtfd"));
+    // Solver solver = tactic.mkSolver();
 
     Solver solver = Solver(_context);
     _solver = solver;
 
-    if (group.hasSoftConstraints()) {
+    // if (agent.softPredicateCount() > 2) { // very slow
+    if (agent.softPredicateCount() > 0) {
       _needOptimize = true;
       Optimize optimize = Optimize(_context);
       _optimize = optimize;
     }
 
     foreach (dom; doms) {
-      if (dom.visitDomain(this)) {
+      if (dom.visitDomain(this)) { // enum predicates
 	assert(_evalStack.length == 1);
 	addRule(_solver, _evalStack[0].toBool());
 	if (_needOptimize) addRule(_optimize, _evalStack[0].toBool());
@@ -256,28 +336,43 @@ class CstZ3Solver: CstSolver
       }
     }
     
-    foreach (pred; group.predicates()) {
+    foreach (pred; agent.predicates()) {
       // import std.stdio;
-      // writeln("Working on: ", pred.name());
-      if (pred.group() !is group) {
-	assert (false, "Group Violation " ~ pred.name());
-      }
-      pred.visit(this);
-      assert(_evalStack.length == 1);
+      // writeln("Z3 Working on: ", pred.name());
+
+      assert (! pred.isGuard());
+      // import std.stdio;
+      // writeln(pred.describe());
+
+      // assert(_evalStack.length == 0);
       uint softWeight = pred.getSoftWeight();
       if (softWeight == 0) {
+	pred.visit(this);
+	assert(_evalStack.length == 1);
 	addRule(_solver, _evalStack[0].toBool());
 	if (_needOptimize) addRule(_optimize, _evalStack[0].toBool());
       }
       else {
 	// ignore the soft constraint
-	assert (_needOptimize);
-	addRule(_optimize, _evalStack[0].toBool(), softWeight, "@soft");
+	if (_needOptimize) {
+	  pred.visit(this);
+	  assert(_evalStack.length == 1);
+	  addRule(_optimize, _evalStack[0].toBool(), softWeight, "@soft");
+	}
+	else {
+	  _softPreds ~= pred;
+	}
       }
       _evalStack.length = 0;
     }
 
-    _seed = _proxy._esdl__rGen.gen!uint();
+    if (_softPreds.length > 0) {
+      _softPreds = _softPreds.sort!((x, y) =>
+				    x.getSoftWeight() > y.getSoftWeight())
+	.array();
+    }
+
+    _seed = _proc.getRandGen.gen!uint();
     _solver.set("random_seed", _seed);
     
 
@@ -300,7 +395,7 @@ class CstZ3Solver: CstSolver
     return "Z3 SMT Solver"  ~ super.describe();
   }
 
-  // BvVar.State varState;
+  // Z3Var.State varState;
 
   enum State: ubyte
   {   NULL,			// Does not exist, no action          pop n push n
@@ -344,13 +439,17 @@ class CstZ3Solver: CstSolver
     _solver.pop();
   }
 
-  bool[] _assumptionFlags;
+  Folder!(bool, "assumptionFlags") _assumptionFlags;
 
   bool _optimizeInit = false;
 
-  Expr[] optimize() {
-    Expr[] assumptions;
-    bool[] assumptionFlags;
+  Folder!(bool, "newAssumptionFlags") _newAssumptionFlags;
+  Folder!(Expr, "assumptions") _assumptions;
+  
+  void optimize() {
+    _newAssumptionFlags.reset();
+    _assumptions.reset();
+
     Model model = _optimize.getModel();
     assert (_optimize.objectives.size() == 1);
     auto objective = _optimize.objectives[0];
@@ -363,13 +462,13 @@ class CstZ3Solver: CstSolver
 	// writeln("Objective: ", subObjective.arg(0)._ast.toString());
 	// writeln(model.eval(subObjective)._ast.toString());
 	if (model.eval(subObjective).getNumeralDouble() < 0.01) { // == 0.0
-	  assumptionFlags ~= true;
+	  _newAssumptionFlags ~= true;
 	  Expr assumption = subObjective.arg(0);
 	  // writeln("Objective: ", assumption._ast.toString());
-	  assumptions ~= subObjective.arg(0);
+	  _assumptions ~= assumption;
 	}
 	else {
-	  assumptionFlags ~= false;
+	  _newAssumptionFlags ~= false;
 	}
       }
     }
@@ -380,46 +479,46 @@ class CstZ3Solver: CstSolver
       // writeln("Objective: ", subObjective.arg(0)._ast.toString());
       // writeln(model.eval(subObjective)._ast.toString());
       if (model.eval(objective).getNumeralDouble() < 0.01) { // == 0.0
-	assumptionFlags ~= true;
+	_newAssumptionFlags ~= true;
 	Expr assumption = objective.arg(0);
 	// writeln("Objective: ", assumption._ast.toString());
-	assumptions ~= objective.arg(0);
+	_assumptions ~= assumption;
       }
       else {
-	assumptionFlags ~= false;
+	_newAssumptionFlags ~= false;
       }
     }
 
-    if (_assumptionFlags != assumptionFlags) {
+    if (_assumptionFlags[] != _newAssumptionFlags[]) {
       if (_assumptionFlags.length == 0) {
 	_assumptionState = State.INIT;
       }
       else {
 	_assumptionState = State.PROD;
       }
-      _assumptionFlags = assumptionFlags;
+      _assumptionFlags.swap(_newAssumptionFlags);
     }
     else {
       _assumptionState = State.NONE;
     }
-    return assumptions[];
   }
   
-  override bool solve(CstPredGroup group) {
-    updateVars(group);
+  override bool solve(CstSolverAgent agent) {
+    updateVars(agent);
     if (_needOptimize) {
       if (updateOptimize() || (_optimizeInit is false)) {
-	if (_proxy._esdl__debugSolver()) {
+	if (_proc.debugSolver()) {
 	  import std.stdio;
 	  writeln(_optimize);
 	}
 	_optimize.check();
-	Expr[] assumptions = optimize();
+	optimize();
 	_optimizeInit = true;
-	updateSolver(assumptions);
+	updateSolver();
       }
     }
     else {
+      _assumptions.reset();
       updateSolver();
     }
     
@@ -434,6 +533,8 @@ class CstZ3Solver: CstSolver
 	    " _assumptionState: " ~ _assumptionState.to!string() ~
 	    " _pushSolverCount: " ~ _pushSolverCount.to!string());
     
+    uint pushSolverCount = _pushSolverCount;
+
     if (_needOptimize) {
       assert (pushLevel(_variableState) +
 	      pushLevel(_stableState) == _pushOptimizeCount,
@@ -441,29 +542,57 @@ class CstZ3Solver: CstSolver
 	      " _stableState: " ~ _stableState.to!string() ~
 	      " _pushOptimizeCount: " ~ _pushSolverCount.to!string());
     }
-    
-    CstDomain[] doms = group.domains();
+    else { // if there are <= 2 soft constraints
 
-    if (_proxy._esdl__debugSolver()) {
+      if (_softPreds.length > 0) {
+	foreach (pred; _softPreds) {
+	  pushSolver();
+	  pred.visit(this);
+	  assert(_evalStack.length == 1);
+	  addRule(_solver, _evalStack[0].toBool());
+	  _evalStack.length = 0;
+	  CheckResult result = _solver.check();
+	  if (result != CheckResult.SAT) popSolver();
+	}
+      }
+    }
+
+    if (_proc.debugSolver()) {
       import std.stdio;
       writeln(_solver);
     }
-    _solver.check();
+
+    CheckResult result = _solver.check();
+
+    if (result != CheckResult.SAT)
+      assert (false, "constraints do not converge");
+
     // writeln(_solver.check());
     // writeln(_solver.getModel());
     auto model = _solver.getModel();
+    CstDomBase[] doms = agent.annotatedDoms();
     foreach (i, ref dom; _domains) {
       // import std.string: format;
       // string value;
-      BvExpr vdom = dom.mapTo(model, true);
-      ulong vlong = vdom.getNumeralInt64();
-      doms[i].setVal(vlong);
+      if (dom._type == Z3Term.Type.BOOLEXPR) {
+	BoolExpr vdom = dom.toBool.mapTo(model, true);
+	bool val = vdom.getBool();
+	doms[i].setBool(val);
+      }
+      else {
+	BvExpr vdom = dom.toBv.mapTo(model, true);
+	ulong val = vdom.getNumeralUint64();
+	doms[i].setVal(val);
+      }
+
       // writeln("Value for Domain ", doms[i].name(), ": ",
       // 	      vdom.getNumeralInt64());
       // writeln(vdom.getNumeralInt64());
       // vdom.isNumeral(value);
       // writeln(value);
     }
+
+    while (_pushSolverCount > pushSolverCount) popSolver();
 
     return true;
   }
@@ -479,9 +608,9 @@ class CstZ3Solver: CstSolver
     }
   }
   
-  void updateVars(CstPredGroup group) {
+  void updateVars(CstSolverAgent agent) {
     
-    CstDomain[] vars = group.variables();
+    CstDomBase[] vars = agent.annotatedVars();
     _refreshVar = false;
     uint pcountStable = _countStable;
     uint pcountVariable = _countVariable;
@@ -544,7 +673,7 @@ class CstZ3Solver: CstSolver
       hasUpdated = true;
       this.pushOptimize();
       foreach (i, ref var; _variables) {
-	if (var._state == BvVar.State.STABLE)
+	if (var._state == Z3Var.State.STABLE)
 	  addRule(_optimize, var.getRule());
       }
     }
@@ -552,14 +681,14 @@ class CstZ3Solver: CstSolver
       hasUpdated = true;
       this.pushOptimize();
       foreach (i, ref var; _variables) {
-	if (var._state == BvVar.State.VARIABLE)
+	if (var._state == Z3Var.State.VARIABLE)
 	  addRule(_optimize, var.getRule());
       }
     }
     return hasUpdated;
   }
 
-  void updateSolver(Expr[] assumptions=[]) {
+  void updateSolver() {
     if (_variableState == State.PROD) {
       this.popSolver();		// for variables
     }
@@ -583,7 +712,7 @@ class CstZ3Solver: CstSolver
     if (_stableState == State.PROD || _stableState == State.INIT) {
       this.pushSolver();
       foreach (i, ref var; _variables) {
-	if (var._state == BvVar.State.STABLE)
+	if (var._state == Z3Var.State.STABLE)
 	  addRule(_solver, var.getRule());
       }
     }
@@ -591,7 +720,7 @@ class CstZ3Solver: CstSolver
 	_stableState == State.INIT) {
       if (_assumptionState != State.NULL) {
 	this.pushSolver();
-	foreach (assumption; assumptions) {
+	foreach (assumption; _assumptions) {
 	  _solver.add(assumption);
 	}
       }
@@ -599,7 +728,7 @@ class CstZ3Solver: CstSolver
     else {
       if (_assumptionState == State.PROD || _assumptionState == State.INIT) {
 	this.pushSolver();
-	foreach (assumption; assumptions) {
+	foreach (assumption; _assumptions) {
 	  _solver.add(assumption);
 	}
       }
@@ -608,20 +737,21 @@ class CstZ3Solver: CstSolver
     if (_variableState == State.INIT || _variableState == State.PROD) {
       this.pushSolver();
       foreach (i, ref var; _variables) {
-	if (var._state == BvVar.State.VARIABLE)
+	if (var._state == Z3Var.State.VARIABLE)
 	  addRule(_solver, var.getRule());
       }
     }
   }
 
-  override void pushToEvalStack(CstDomain domain) {
+  override void pushToEvalStack(CstDomBase domain) {
     // import std.stdio;
     uint n = domain.annotation();
     // writeln("push: ", domain.name(), " annotation: ", n);
     // writeln("_domains has a length: ", _domains.length);
 
     if (domain.isSolved()) { // is a variable
-      pushToEvalStack(_variables[n]);
+      if (domain.isBool()) pushToEvalStack(_variables[n]._boolDom);
+      else                 pushToEvalStack(_variables[n]._bvDom);
     }
     else {
       pushToEvalStack(_domains[n]);
@@ -629,7 +759,7 @@ class CstZ3Solver: CstSolver
 
   }
 
-  override void pushToEvalStack(CstValue value) {
+  override void pushToEvalStack(CstVecValueBase value) {
     // writeln("push: value ", value.value());
     BvExpr bv = bvNumVal(_context, value.value(),
 			 value.bitcount(), value.signed());
@@ -787,6 +917,16 @@ class CstZ3Solver: CstSolver
       popEvalStack();
       pushToEvalStack(e);
       break;
+    case CstLogicOp.LOGICEQ:
+      BoolExpr e = eq(_evalStack[$-2].toBool(), _evalStack[$-1].toBool());
+      popEvalStack(2);
+      pushToEvalStack(e);
+      break;
+    case CstLogicOp.LOGICNEQ:
+      BoolExpr e = xor(_evalStack[$-2].toBool(), _evalStack[$-1].toBool());
+      popEvalStack(2);
+      pushToEvalStack(e);
+      break;
     }
   }
 
@@ -927,7 +1067,7 @@ class CstZ3Solver: CstSolver
 	pushToEvalStack(true);
       }
       else {
-	Z3_ast r = Z3_mk_distinct(_context, cast(uint) _vector.length, _vector.ptr);
+	Z3_ast r = Z3_mk_distinct(_context, cast(uint) _vector[].length, _vector[].ptr);
 	_context.checkError();
 	BoolExpr be = BoolExpr(_context, r);
 	pushToEvalStack(be);

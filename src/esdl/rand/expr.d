@@ -1,1200 +1,50 @@
 module esdl.rand.expr;
 
-import esdl.rand.dist;
+import esdl.solver.base: CstSolver, CstDistSolverBase;
 
-import esdl.solver.base: CstSolver;
+import esdl.rand.misc: rand, isVecSigned, Unconst, CstVecType,
+  CstVectorOp, CstInsideOp, CstBinaryOp, CstCompareOp, CstLogicOp,
+  CstUnaryOp, CstSliceOp, writeHexString, CstUniqueOp, DomainContextEnum,
+  getCommonVecType, _esdl__Sigbuf;
 
-import esdl.rand.misc: rand, _esdl__RandGen, isVecSigned, Unconst, CstVectorOp, CstInsideOp;
-import esdl.rand.misc: CstBinaryOp, CstCompareOp, CstLogicOp,
-  CstUnaryOp, CstSliceOp, writeHexString, CstUniqueOp;
+import esdl.rand.base: DomDistEnum, CstTerm, CstDomBase, CstDomSet,
+  CstIterator, CstVecNodeIntf, CstVarNodeIntf, CstVecArrIntf,
+  CstVecPrim, CstValue, CstVecTerm, CstLogicTerm, CstDepIntf;
+import esdl.rand.pred: CstPredicate, Hash;
+import esdl.rand.agent: CstSolverAgent;
 
-import esdl.rand.base;
 import esdl.rand.func;
-import esdl.rand.proxy: _esdl__Proxy;
 
 import esdl.data.bvec: isBitVector, toBitVec;
-import esdl.data.charbuf;
+import esdl.data.folder: Charbuf;
 import std.traits: isIntegral, isBoolean, isStaticArray,
   isSomeChar, EnumMembers, isSigned, OriginalType;
+import std.algorithm: canFind;
 
-abstract class CstVecTerm: CstVecExpr
+abstract class CstLogicExpr: CstLogicTerm
 {
-
-  final CstLogicTerm toBoolExpr() {
-    auto zero = new CstVecValue!int(0); // CstVecValue!int.allocate(0);
-    return new CstVec2LogicExpr(this, zero, CstCompareOp.NEQ);
-  }
-
-  // abstract CstVecExpr unroll(CstIterator iter, uint n);
-
-  CstVec2VecExpr opBinary(string op)(CstVecTerm other)
-  {
-    static if(op == "&") {
-      return new CstVec2VecExpr(this, other, CstBinaryOp.AND);
-    }
-    static if(op == "|") {
-      return new CstVec2VecExpr(this, other, CstBinaryOp.OR);
-    }
-    static if(op == "^") {
-      return new CstVec2VecExpr(this, other, CstBinaryOp.XOR);
-    }
-    static if(op == "+") {
-      return new CstVec2VecExpr(this, other, CstBinaryOp.ADD);
-    }
-    static if(op == "-") {
-      return new CstVec2VecExpr(this, other, CstBinaryOp.SUB);
-    }
-    static if(op == "*") {
-      return new CstVec2VecExpr(this, other, CstBinaryOp.MUL);
-    }
-    static if(op == "/") {
-      return new CstVec2VecExpr(this, other, CstBinaryOp.DIV);
-    }
-    static if(op == "%") {
-      return new CstVec2VecExpr(this, other, CstBinaryOp.REM);
-    }
-    static if(op == "<<") {
-      return new CstVec2VecExpr(this, other, CstBinaryOp.LSH);
-    }
-    static if(op == ">>") {
-      return new CstVec2VecExpr(this, other, CstBinaryOp.RSH);
-    }
-    static if(op == ">>>") {
-      return new CstVec2VecExpr(this, other, CstBinaryOp.LRSH);
-    }
-    static if(op == "~") {
-      return new CstVec2VecExpr(this, other, CstBinaryOp.RANGE);
-    }
-  }
-
-  CstVec2VecExpr opBinary(string op, Q)(Q q)
-    if(isBitVector!Q || isIntegral!Q)
-      {
-  	auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
-  	static if(op == "&") {
-  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.AND);
-  	}
-  	static if(op == "|") {
-  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.OR);
-  	}
-  	static if(op == "^") {
-  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.XOR);
-  	}
-  	static if(op == "+") {
-  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.ADD);
-  	}
-  	static if(op == "-") {
-  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.SUB);
-  	}
-  	static if(op == "*") {
-  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.MUL);
-  	}
-  	static if(op == "/") {
-  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.DIV);
-  	}
-  	static if(op == "%") {
-  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.REM);
-  	}
-  	static if(op == "<<") {
-  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.LSH);
-  	}
-  	static if(op == ">>") {
-  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.RSH);
-  	}
-  	static if(op == ">>>") {
-  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.LRSH);
-  	}
-  	static if(op == "~") {
-  	  return new CstVec2VecExpr(this, qq, CstBinaryOp.RANGE);
-  	}
-      }
-
-  CstVec2VecExpr opBinaryRight(string op, Q)(Q q)
-    if(isBitVector!Q || isIntegral!Q)
-      {
-	auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
-	static if(op == "&") {
-	  return new CstVec2VecExpr(qq, this, CstBinaryOp.AND);
-	}
-	static if(op == "|") {
-	  return new CstVec2VecExpr(qq, this, CstBinaryOp.OR);
-	}
-	static if(op == "^") {
-	  return new CstVec2VecExpr(qq, this, CstBinaryOp.XOR);
-	}
-	static if(op == "+") {
-	  return new CstVec2VecExpr(qq, this, CstBinaryOp.ADD);
-	}
-	static if(op == "-") {
-	  return new CstVec2VecExpr(qq, this, CstBinaryOp.SUB);
-	}
-	static if(op == "*") {
-	  return new CstVec2VecExpr(qq, this, CstBinaryOp.MUL);
-	}
-	static if(op == "/") {
-	  return new CstVec2VecExpr(qq, this, CstBinaryOp.DIV);
-	}
-	static if(op == "%") {
-	  return new CstVec2VecExpr(qq, this, CstBinaryOp.REM);
-	}
-	static if(op == "<<") {
-	  return new CstVec2VecExpr(qq, this, CstBinaryOp.LSH);
-	}
-	static if(op == ">>") {
-	  return new CstVec2VecExpr(qq, this, CstBinaryOp.RSH);
-	}
-	static if(op == ">>>") {
-	  return new CstVec2VecExpr(qq, this, CstBinaryOp.LRSH);
-	}
-	static if(op == "~") {
-	  return new CstVec2VecExpr(qq, this, CstBinaryOp.RANGE);
-	}
-      }
-
-  // final CstVecSliceExpr opSlice(CstVecTerm lhs, CstVecTerm rhs) {
-  //   return new CstVecSliceExpr(this, lhs, rhs);
-  // }
-
-  final CstVecSliceExpr opIndex(CstRangeExpr range) {
-    return new CstVecSliceExpr(this, range);
-  }
-
-  // final CstVecIndexExpr opIndex(CstVecTerm index) {
-  //   return new CstVecIndexExpr(this, index);
-  // }
-
-  CstNotLogicExpr opUnary(string op)() if(op == "*") {
-    return new CstNotLogicExpr(this.toBoolExpr());
-  }
-  CstNotVecExpr opUnary(string op)() if(op == "~") {
-    return new CstNotVecExpr(this);
-  }
-  CstNegVecExpr opUnary(string op)() if(op == "-") {
-    return new CstNegVecExpr(this);
-  }
-
-  final CstLogicTerm inside(CstInsideSetElem range) {
-    if (range._rhs is null) {
-      return new CstVec2LogicExpr(this, range._lhs, CstCompareOp.EQU);
-    }
-    else {
-      CstLogicTerm lhs = new CstVec2LogicExpr(this, range._lhs, CstCompareOp.GTE);
-      CstLogicTerm rhs;
-      if (range._inclusive) rhs = new CstVec2LogicExpr(this, range._rhs, CstCompareOp.LTE);
-      else rhs = new CstVec2LogicExpr(this, range._rhs, CstCompareOp.LTH);
-      return lhs & rhs;
-    }
-  }
+  void setDistPredContext(CstPredicate pred) { }
+  CstDomBase getDomain() { return null; }
 }
 
-class CstVecDomain(T, rand RAND_ATTR): CstDomain
+abstract class CstVecExpr: CstVecTerm
 {
-  enum HAS_RAND_ATTRIB = RAND_ATTR.isRand();
-
-  Unconst!T _shadowValue;
-
-  override void annotate(CstPredGroup group) {
-    if (_domN == uint.max) {
-      if (this.isSolved()) {
-	_domN = group.addVariable(this);
-	if (_varN == uint.max) _varN = _root.indexVar();
-      }
-      else {
-	_domN = group.addDomain(this);
-      }
-    }
-  }
-
-  static if (is (T == enum)) {
-    alias OT = OriginalType!T;
-
-    T[] _enumSortedVals;
-
-    void _enumSortedValsPopulate() {
-      import std.algorithm.sorting: sort;
-      _enumSortedVals = cast(T[]) [EnumMembers!T];
-      _enumSortedVals.sort();
-    }
-
-
-    static if (isIntegral!OT) {
-      private void _addRangeConstraint(CstSolver solver, OT min, OT max) {
-	if (min == max) {
-	  solver.pushToEvalStack(this);
-	  solver.pushToEvalStack(min, OT.sizeof*8, isSigned!OT);
-	  solver.processEvalStack(CstCompareOp.EQU);
-	}
-	else {
-	  solver.pushToEvalStack(this);
-	  solver.pushToEvalStack(min, OT.sizeof*8, isSigned!OT);
-	  solver.processEvalStack(CstCompareOp.GTE);
-	  solver.pushToEvalStack(this);
-	  solver.pushToEvalStack(max, OT.sizeof*8, isSigned!OT);
-	  solver.processEvalStack(CstCompareOp.LTE);
-	  solver.processEvalStack(CstLogicOp.LOGICAND);
-	}
-      }
-    }
-    else static if (isBitVector!OT && OT.SIZE <= 64) {
-      private void _addRangeConstraint(CstSolver solver, OT min, OT max) {
-	if (min == max) {
-	  solver.pushToEvalStack(this);
-	  solver.pushToEvalStack(cast(ulong) min, OT.SIZE, OT.ISSIGNED);
-	  solver.processEvalStack(CstCompareOp.EQU);
-	}
-	else {
-	  solver.pushToEvalStack(this);
-	  solver.pushToEvalStack(cast(ulong) min, OT.SIZE, OT.ISSIGNED);
-	  solver.processEvalStack(CstCompareOp.GTE);
-	  solver.pushToEvalStack(this);
-	  solver.pushToEvalStack(cast(ulong) max, OT.SIZE, OT.ISSIGNED);
-	  solver.processEvalStack(CstCompareOp.LTE);
-	  solver.processEvalStack(CstLogicOp.LOGICAND);
-	}
-      }
-    }
-    else {
-      private void _addRangeConstraint(CstSolver solver, OT min, OT max) {
-	assert (false);
-      }
-    }
-  }
-
-
-   override bool visitDomain(CstSolver solver) {
-    static if (is (T == enum)) {
-      uint count;
-      if (_enumSortedVals.length == 0) {
-	_enumSortedValsPopulate();
-      }
-      T min;
-      T max;
-      foreach (i, val; _enumSortedVals) {
-	if (i == 0) {
-	  min = val;
-	  max = val;
-	}
-	else {
-	  if (val - max == 1) {
-	    max = val;
-	  }
-	  else {
-	    _addRangeConstraint(solver, min, max);
-	    count += 1;
-	    min = val;
-	    max = val;
-	  }
-	}
-      }
-      _addRangeConstraint(solver, min, max);
-      for (uint i=0; i!=count; ++i) {
-	solver.processEvalStack(CstLogicOp.LOGICOR);
-      }
-      return true;
-    }
-    else {
-      return false;
-    }
-  }
-
-  override void visit(CstSolver solver) {
-    // assert (solver !is null);
-    solver.pushToEvalStack(this);
-  }
-
-  override void writeExprString(ref Charbuf str) {
-    if (this.isSolved()) {
-      str ~= 'V';
-      if (_domN < 256) (cast(ubyte) _domN).writeHexString(str);
-      else (cast(ushort) _domN).writeHexString(str);
-      str ~= '#';
-      if (_varN < 256) (cast(ubyte) _varN).writeHexString(str);
-      else (cast(ushort) _varN).writeHexString(str);
-    }
-    else {
-      str ~= 'R';
-      if (_domN < 256) (cast(ubyte) _domN).writeHexString(str);
-      else (cast(ushort) _domN).writeHexString(str);
-      str ~= T.stringof;
-      // static if (isBitVector!T) {
-      // 	static if (T.ISSIGNED) {
-      // 	  str ~= 'S';
-      // 	}
-      // 	else {
-      // 	  str ~= 'U';
-      // 	}
-      // 	if (T.SIZE < 256) (cast(ubyte) T.SIZE).writeHexString(str);
-      // 	else (cast(ushort) T.SIZE).writeHexString(str);
-      // }
-      // else static if (is (T == enum)) {
-      // 	str ~= T.stringof;
-      // }
-      // else static if (isIntegral!T) {
-      // 	static if (isSigned!T) {
-      // 	  str ~= 'S';
-      // 	}
-      // 	else {
-      // 	  str ~= 'U';
-      // 	}
-      // 	(cast(ubyte) (T.sizeof * 8)).writeHexString(str);
-      // }
-      // else static if (isBoolean!T) {
-      // 	str ~= 'U';
-      // 	(cast(ubyte) 1).writeHexString(str);
-      // }
-    }
-  }
-
-  this(string name, _esdl__Proxy root) {
-    _name = name;
-    _root = root;
-  }
-
-  ~this() {
-  }    
-
-  override long evaluate() {
-    static if (HAS_RAND_ATTRIB) {
-      if (! this.isRand || this.isSolved()) {
-	return value();
-      }
-      else {
-	assert (false, "Error evaluating " ~ _name);
-      }
-    }
-    else {
-      return value();
-    }
-  }
-
-  // S to(S)()
-  //   if (is (S == string)) {
-  //     import std.conv;
-  //     static if (HAS_RAND_ATTRIB) {
-  // 	if (isRand) {
-  // 	  return "RAND#" ~ _name ~ ":" ~ value().to!string();
-  // 	}
-  // 	else {
-  // 	  return "VAL#" ~ _name ~ ":" ~ value().to!string();
-  // 	}
-  //     }
-  //     else {
-  // 	return "VAR#" ~ _name ~ ":" ~ value().to!string();
-  //     }
-  //   }
-
-  // override string toString() {
-  //   return this.to!string();
-  // }
-
-  override uint bitcount() {
-    static if (isBoolean!T)         return 1;
-    else static if (isIntegral!T || isSomeChar!T)   return T.sizeof * 8;
-    else static if (isBitVector!T)  return T.SIZE;
-    else static assert(false, "bitcount can not operate on: " ~ T.stringof);
-  }
-
-   override bool signed() {
-    static if (isVecSigned!T) {
-      return true;
-    }
-    else  {
-      return false;
-    }
-  }
-  
-  abstract T* getRef();
-  
-  // override void collate(ulong v, int word = 0) {
-  //   static if (HAS_RAND_ATTRIB) {
-  //     T* var = getRef();
-  //     static if(isIntegral!T) {
-  // 	if(word == 0) {
-  // 	  *var = cast(T) v;
-  // 	}
-  // 	else {
-  // 	  assert(false, "word has to be 0 for integrals");
-  // 	}
-  //     }
-  //     else {
-  // 	(*var)._setNthWord(v, word);
-  //     }
-  //     markSolved();
-  //   }
-  //   else {
-  //     assert(false);
-  //   }
-  // }
-
-  override void setVal(ulong[] value) {
-    static if (HAS_RAND_ATTRIB) {
-      Unconst!T newVal;
-      foreach (i, v; value) {
-	static if(isIntegral!T || isBoolean!T) {
-	  if (i == 0) {
-	    newVal = cast(T) v;
-	  }
-	  else {
-	    assert(false, "word has to be 0 for integrals");
-	  }
-	}
-	else {
-	  newVal._setNthWord(v, i);
-	}
-      }
-      if (newVal != *(getRef())) {
-	_valueChanged = true;
-      }
-      else {
-	_valueChanged = false;
-      }
-      *(getRef()) = newVal;
-      markSolved();
-      execCbs();
-    }
-    else {
-      assert(false);
-    }
-  }
-
-  override void setVal(ulong val) {
-    static if (isBitVector!T) {
-      assert (T.SIZE <= 64);
-    }
-    static if (HAS_RAND_ATTRIB) {
-      Unconst!T newVal;
-      static if(isIntegral!T || isBoolean!T) {
-	newVal = cast(T) val;
-      }
-      else {
-	newVal._setNthWord(val, 0);
-      }
-      assert (getRef() !is null);
-      if (newVal != *(getRef())) {
-	_valueChanged = true;
-      }
-      else {
-	_valueChanged = false;
-      }
-      *(getRef()) = newVal;
-      markSolved();
-      execCbs();
-    }
-    else {
-      assert(false);
-    }
-  }
-
-  override void _esdl__doRandomize(_esdl__RandGen randGen) {
-    static if (HAS_RAND_ATTRIB) {
-      if (! isSolved()) {
-	Unconst!T newVal;
-	randGen.gen(newVal);
-	if (newVal != *(getRef())) {
-	  _valueChanged = true;
-	  *(getRef()) = newVal;
-	}
-	else {
-	  _valueChanged = false;
-	}
-      }
-    }
-    else {
-      assert(false);
-    }
-  }
-
-  bool _valueChanged = true;
-
-  override bool hasChanged() {
-    return _valueChanged;
-  }
-  
-  override bool updateVal() {
-    assert(isRand() !is true);
-    Unconst!T newVal;
-    assert (_root !is null);
-    if (! this.isSolved()) {
-      newVal = *(getRef());
-      this.markSolved();
-      if (newVal != _shadowValue) {
-	_shadowValue = newVal;
-	_valueChanged = true;
-	return true;
-      }
-      else {
-	_valueChanged = false;
-	return false;
-      }
-    }
-    return true;
-  }
-
-  static if (isIntegral!T) {
-    import std.traits;
-    static if (isSigned!T) {
-      enum bool tSigned = true;
-    }
-    else {
-      enum bool tSigned = false;
-    }
-    enum size_t tSize = T.sizeof * 8;
-  }
-  else static if (isBoolean!T) {
-    enum bool tSigned = false;
-    enum size_t tSize = 1;
-  }
-  else static if (isSomeChar!T) {
-    enum bool tSigned = false;
-    enum size_t tSize = T.sizeof * 8;
-  }
-  else static if (isBitVector!T) {
-    static if (T.ISSIGNED) {
-      enum bool tSigned = true;
-    }
-    else {
-      enum bool tSigned = false;
-    }
-    static if (T.SIZE <= 64) {
-      enum size_t tSize = T.SIZE;
-    }
-  }
-
-
-  override void registerRndPred(CstPredicate rndPred) {
-    foreach (pred; _rndPreds) {
-      if (pred is rndPred) {
-	return;
-      }
-    }
-    _rndPreds ~= rndPred;
-  }
-  
-  // override void registerVarPred(CstPredicate varPred) {
-  //   foreach (pred; _varPreds) {
-  //     if (pred is varPred) {
-  // 	return;
-  //     }
-  //   }
-  //   _varPreds ~= varPred;
-  // }
-  
-  override void markSolved() {
-    super.markSolved();
-    static if (HAS_RAND_ATTRIB) {
-      if (this.isRand()) {
-	_domN = uint.max;
-      }
-    }
-  }
-  
-  final override string describe() {
-    import std.conv: to;
-    string desc = "CstDomain: " ~ name();
-    // desc ~= "\n	DomType: " ~ _type.to!string();
-    // if (_type !is DomType.MULTI) {
-    //   desc ~= "\nIntRS: " ~ _rs.toString();
-    // }
-    if (_rndPreds.length > 0) {
-      desc ~= "\n	Preds:";
-      foreach (pred; _rndPreds) {
-	desc ~= "\n		" ~ pred.name();
-      }
-      desc ~= "\n";
-    }
-    if (_tempPreds.length > 0) {
-      desc ~= "\n	Temporary Preds:";
-      foreach (pred; _tempPreds) {
-	desc ~= "\n		" ~ pred.name();
-      }
-      desc ~= "\n";
-    }
-    return desc;
-  }
+  CstDomBase getDomain() { return null; }
+  final override bool isDistVar() { return false; }
 }
 
-abstract class CstLogicTerm: CstLogicExpr
-{
-  abstract override CstLogicTerm unroll(CstIterator iter, uint n);
-
-  CstLogicTerm opBinary(string op)(CstLogicTerm other)
-  {
-    static if(op == "&") {
-      return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICAND);
-    }
-    static if(op == "|") {
-      return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICOR);
-    }
-    static if(op == ">>") {
-      return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICIMP);
-    }
-  }
-
-  CstLogicTerm opOpAssign(string op)(CstLogicTerm other)
-  {
-    static if(op == ">>>") {
-      return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICIMP);
-    }
-  }
-  
-  CstLogicTerm opUnary(string op)() if(op == "*")
-  {
-    static if(op == "*") {	// "!" in cstx is translated as "*"
-      return new CstNotLogicExpr(this);
-    }
-  }
-
-  CstLogicTerm opUnary(string op)() if(op == "~")
-  {
-    static if(op == "~") {	// "!" in cstx is translated as "*"
-      return new CstNotLogicExpr(this);
-    }
-  }
-
-  final CstLogicTerm implies(CstLogicTerm other)
-  {
-    return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICIMP);
-  }
-
-  final CstLogicTerm implies(CstVecTerm other)
-  {
-    return new CstLogic2LogicExpr(this, other.toBoolExpr(), CstLogicOp.LOGICIMP);
-  }
-
-  final CstLogicTerm logicOr(CstLogicTerm other)
-  {
-    return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICOR);
-  }
-
-  final CstLogicTerm logicOr(CstVecTerm other)
-  {
-    return new CstLogic2LogicExpr(this, other.toBoolExpr(), CstLogicOp.LOGICOR);
-  }
-
-  final CstLogicTerm logicAnd(CstLogicTerm other)
-  {
-    return new CstLogic2LogicExpr(this, other, CstLogicOp.LOGICAND);
-  }
-
-  final CstLogicTerm logicAnd(CstVecTerm other)
-  {
-    return new CstLogic2LogicExpr(this, other.toBoolExpr(), CstLogicOp.LOGICAND);
-  }
-
-}
-
-class CstArrIterator(RV): CstIterator
-{
-  RV _arrVar;
-
-  RV arrVar() {
-    return _arrVar;
-  }
-
-  string _name;
-
-  this(RV arrVar) {
-    _name = "iterVar";
-    _arrVar = arrVar;
-    // _arrVar._arrLen.iterVar(this);
-  }
-
-  final override CstDomain getLenVec() {
-    return _arrVar.arrLen();
-  }
-  
-  override uint size() {
-    if(! getLenVec().isSolved()) {
-      assert(false, "Can not find size since the " ~
-	     "Iter Variable is unrollable");
-    }
-    // import std.stdio;
-    // writeln("size for arrVar: ", _arrVar.name(), " is ",
-    // 	    _arrVar.arrLen.value);
-    return cast(uint) _arrVar.arrLen.value;
-  }
-
-  override string name() {
-    string n = _arrVar.name();
-    return n ~ "->iterator";
-  }
-
-  override string fullName() {
-    string n = _arrVar.fullName();
-    return n ~ "->iterator";
-  }
-
-  override string describe() {
-    return name();
-  }
-
-  // while an iterator is a singleton wrt to an array, the array
-  // itself could have multiple object instances in case it is not
-  // concrete -- eg foo[foo.iter].iter
-  override bool opEquals(Object other) {
-    auto rhs = cast(typeof(this)) other;
-    if (rhs is null) return false;
-    else return (_arrVar == rhs._arrVar);
-  }
-
-  override CstVecExpr unroll(CstIterator iter, uint n) {
-    if(this !is iter) {
-      return _arrVar.unroll(iter,n).arrLen().makeIterVar();
-    }
-    else {
-      return new CstVecValue!size_t(n); // CstVecValue!size_t.allocate(n);
-    }
-  }
-
-  override CstIterator unrollIterator(CstIterator iter, uint n) {
-    assert(this !is iter);
-    return _arrVar.unroll(iter,n).arrLen().makeIterVar();
-  }
-
-  override void visit(CstSolver solver) {
-    assert (false, "Can not visit an Iter Variable without unrolling");
-  }
-
-  // override bool getVal(ref long val) {
-  //   return false;
-  // }
-
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
-    deps ~= getLenVec();
-    iters ~= this;
-  }
-
-  override bool signed() {
-    return false;
-  }
-
-  override uint bitcount() {
-    return 64;
-  }
-  
-  override bool isSolved() {
-    return _arrVar._arrLen.isSolved();
-  }
-
-
-  override void writeExprString(ref Charbuf str) {
-    // assert(false);
-  }
-}
-
-class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecPrim
-{
-
-  enum HAS_RAND_ATTRIB = RV.RAND.isRand();
-
-  CstArrIterator!RV _iterVar;
-
-  RV _parent;
-
-  string _name;
-
-  CstVecPrim[] _preReqs;
-
-  override string name() {
-    return _name;
-  }
-
-  override string fullName() {
-    return _parent.fullName() ~ "->length";
-  }
-
-  this(string name, RV parent) {
-    assert (parent !is null);
-    super(name, parent.getProxyRoot());
-    _name = name;
-    _parent = parent;
-    _iterVar = new CstArrIterator!RV(_parent);
-  }
-
-  ~this() { }
-
-  override _esdl__Proxy getProxyRoot() {
-    return _parent.getProxyRoot();
-  }
-
-  override CstArrLength!RV getResolved() { // always self
-    return this;
-  }
-
-  override void visit(CstSolver solver) {
-    solver.pushToEvalStack(this);
-  }
-
-  override void randomizeIfUnconstrained(_esdl__Proxy proxy) {
-    if ((! isSolved()) && isStatic() && (! isRolled())) {
-      if (_rndPreds.length == 0) {
-	_esdl__doRandomize(getProxyRoot()._esdl__getRandGen());
-	proxy.solvedSome();
-	markSolved();
-	proxy.addSolvedDomain(this);
-	execCbs();
-      }
-    }
-    if (! isRand()) {
-      _parent.buildElements(_parent.getLen());
-      execCbs();
-    }
-  }
-
-  override void _esdl__doRandomize(_esdl__RandGen randGen) {
-    // this function will only be called when array lenght is
-    // unconstrainted
-    _parent.buildElements(_parent.getLen());
-  }
-  
-  override bool isRand() {
-    static if (HAS_RAND_ATTRIB) {
-      import std.traits;
-      if (isStaticArray!(RV.L)) return false;
-      else return true;
-    }
-    else {
-      return false;
-    }
-  }
-
-  T to(T)()
-    if(is(T == string)) {
-      import std.conv;
-      if(isRand) {
-	return "RAND-" ~ "#" ~ _name ~ ":" ~ value().to!string();
-      }
-      else {
-	return "VAL#" ~ _name ~ ":" ~ value().to!string();
-      }
-    }
-
-  override string toString() {
-    return this.to!string();
-  }
-
-  void iterVar(CstArrIterator!RV var) {
-    _iterVar = var;
-  }
-
-  CstArrIterator!RV iterVar() {
-    return _iterVar;
-  }
-
-  CstArrIterator!RV makeIterVar() {
-    if(_iterVar is null) {
-      _iterVar = new CstArrIterator!RV(_parent);
-    }
-    return _iterVar;
-  }
-
-  override uint bitcount() {
-    if (_parent.maxArrLen == -1) {
-      return 32;
-    }
-    uint i = 1;
-    for (size_t c=1; c < _parent.maxArrLen; c *= 2) {
-      i++;
-    }
-    return i;
-  }
-
-  override bool signed() {
-    return false;
-  }
-
-  override long value() {
-    return _parent.getLen();
-  }
-
-  override void setVal(ulong value) {
-    _parent.setLen(cast(size_t) value);
-    markSolved();
-    execCbs();
-  }
-
-  override void setVal(ulong[] v) {
-    assert(v.length == 1);
-    _parent.setLen(cast(size_t) v[0]);
-    markSolved();
-    execCbs();
-  }
-
-  override void markSolved() {
-    super.markSolved();
-    _parent.markArrLen(value());
-  }
-
-  // override void collate(ulong v, int word = 0) {
-  //   assert(word == 0);
-  //   _parent.setLen(cast(size_t) v);
-  // }
-
-  override CstVecExpr unroll(CstIterator iter, uint n) {
-    return _parent.unroll(iter,n).arrLen();
-  }
-
-  void solveBefore(CstVecPrim other) {
-    other.addPreRequisite(this);
-  }
-
-  void addPreRequisite(CstVecPrim domain) {
-    _preReqs ~= domain;
-  }
-
-  override bool isConst() {
-    return false;
-  }
-  
-  override bool isIterator() {
-    return false;
-  }
-  
-  override bool isOrderingExpr() {
-    return false;		// only CstVecOrderingExpr return true
-  }
-
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
-    bool listed;
-    foreach (rnd; rnds) {
-      if (rnd is this) {
-	listed = true;
-	break;
-      }
-    }
-    if (listed is false) {
-      rnds ~= this;
-    }
-    static if (HAS_RAND_ATTRIB) {
-      if (! this.isStatic()) {
-	if (_type <= DomType.LAZYMONO) _type = DomType.MAYBEMONO;
-      }
-    }
-    _parent.setDomainContext(pred, rnds, rndArrs, vars, varArrs,
-			     vals, iters, idxs, bitIdxs, deps);
-  }
-
-  override void execIterCbs() {
-    assert(_iterVar !is null);
-    _iterVar.unrollCbs();
-  }
-
-  override uint* getRef() {
-    assert(false);
-  }
-
-  override bool updateVal() {
-    assert(isRand() !is true);
-    uint newVal;
-    assert(_root !is null);
-    if (! this.isSolved()) {
-      newVal = cast(uint)_parent.getLen();
-      this.markSolved();
-      if (newVal != _shadowValue) {
-	_shadowValue = cast(uint) newVal;
-	_valueChanged = true;
-	return true;
-      }
-      else {
-	_valueChanged = false;
-	return false;
-      }
-    }
-    return true;
-  }
-  
-  final override bool isStatic() {
-    return _parent.isStatic();
-  }
-
-  final override bool isRolled() {
-    return _parent.isRolled();
-  }
-
-  override CstDomSet getParentDomSet() {
-    static if (is (RV: CstDomSet)) return _parent;
-    else return null;
-  }
-}
-
-abstract class CstValue: CstVecTerm
-{
-  CstLogicExpr _cstExpr;
-  
-  override bool isConst() {
-    return true;
-  }
-
-  override bool isIterator() {
-    return false;
-  }
-
-  override CstVecExpr unroll(CstIterator l, uint n) {
-    return this;
-  }
-
-  abstract long value();
-  // abstract bool signed();
-  // abstract uint bitcount();
-}
-
-auto _esdl__cstVal(T)(T val) {
-  return new CstVecValue!(T)(val); // CstVecValue!(T).allocate(val);
-}
-
-class CstVecValue(T = int): CstValue
-{
-  static if (isIntegral!T) {
-    import std.traits;
-    enum bool SIGNED = isSigned!T;
-    enum uint BITCOUNT = T.sizeof * 8;
-  }
-  else static if (isBitVector!T) {
-    enum bool SIGNED = T.ISSIGNED;
-    enum uint BITCOUNT = T.SIZE;
-  }
-
-  override bool signed() {
-    return SIGNED;
-  }
-
-  override uint bitcount() {
-    return BITCOUNT;
-  }
-
-  override long value() {
-    return _val;
-  }
-
-  import std.conv;
-
-  // static Allocator _allocator;
-
-  // static this() {
-  //   CstVecValue!T._allocator = new Allocator;
-  //   CstValueAllocator.allocators ~= CstVecValue!T._allocator;
-  // }
-
-  T _val;			// the value of the constant
-
-  override string describe() {
-    return _val.to!string();
-  }
-
-  // static CstVecValue!T allocate(T value) {
-  //   Allocator allocator = _allocator;
-  //   if (allocator is null) {
-  //     allocator = new Allocator;
-  //     _allocator = allocator;
-  //     CstValueAllocator.allocators ~= allocator;
-  //   }
-
-  //   // return new CstVecValue!T(value);
-  //   return allocator.allocate(value);
-  // }
-
-  this(T value) {
-    _val = value;
-  }
-
-  ~this() {
-  }
-
-  override void visit(CstSolver solver) {
-    solver.pushToEvalStack(this);
-  }
-
-  const(T)* getRef() {
-    return &_val;
-  }
-
-  // bool getVal(ref long val) {
-  //   val = _val;
-  //   return true;
-  // }
-
-  override long evaluate() {
-    return _val;
-  }
-
-  override bool isOrderingExpr() {
-    return false;		// only CstVecOrderingExpr return true
-  }
-
-  override bool isSolved() {
-    return true;
-  }
-
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
-    vals ~= this;
-  }
-
-  override void writeExprString(ref Charbuf str) {
-    // VSxxxxx or VUxxxxx
-    str ~= 'V';
-    static if (isBoolean!T) {
-      str ~= 'U';
-    }
-    static if (isIntegral!T) {
-      static if (isSigned!T) {
-	str ~= 'S';
-      }
-      else {
-	str ~= 'U';
-      }
-    }
-    else {
-      static if (T.ISSIGNED) {
-	str ~= 'S';
-      }
-      else {
-	str ~= 'U';
-      }
-    }
-    _val.writeHexString(str);
-  }
-}
-
-
-class CstVecArrExpr: CstVecTerm
+class CstVecArrExpr: CstVecExpr
 {
   import std.conv;
 
   CstDomSet _arr;
   CstVectorOp _op;
 
-  override string describe() {
-    return "( " ~ _arr.fullName ~ " " ~ _op.to!string() ~ " )";
+  string describe(bool descExpr=false) {
+    return "( " ~ _arr._esdl__getFullName ~ " " ~ _op.to!string() ~ " )";
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     CstVecArrIntf.Range range = _arr[];
     solver.pushToEvalStack(0, 32, true);
 
@@ -1203,7 +53,7 @@ class CstVecArrExpr: CstVecTerm
       solver.processEvalStack(CstBinaryOp.ADD);
     }
     // assert (! range.empty());
-    // CstDomain dom = range.front();
+    // CstDomBase dom = range.front();
     // uint bitcount = dom.bitcount();
     // bool signed = dom.signed();
     // if (signed) {
@@ -1218,11 +68,32 @@ class CstVecArrExpr: CstVecTerm
     // solver.processEvalStack(_op);
   }
 
-  override long evaluate() {
-    assert (false, "TBD");
+  long evaluate() {
+    CstVecType type = _arr.getVecType();
+
+    switch (type) {
+    case CstVecType.BOOL, CstVecType.INT:
+      int sum = 0;
+      foreach (v; _arr[]) { sum += cast(int) v.evaluate(); }
+      return sum;
+    case CstVecType.UINT:
+      uint sum = 0;
+      foreach (v; _arr[]) { sum += cast(uint) v.evaluate(); }
+      return sum;
+    case CstVecType.LONG:
+      long sum = 0;
+      foreach (v; _arr[]) { sum += cast(long) v.evaluate(); }
+      return sum;
+    case CstVecType.ULONG:
+      ulong sum = 0;
+      foreach (v; _arr[]) { sum += cast(ulong) v.evaluate(); }
+      return sum;
+    default: assert (false, "Unsupported expression type: " ~
+		     type.to!string());
+    }
   }
 
-  override CstVecArrExpr unroll(CstIterator iter, uint n) {
+  CstVecArrExpr _esdl__unroll(CstIterator iter, ulong n) {
     return this;
   }
 
@@ -1232,7 +103,7 @@ class CstVecArrExpr: CstVecTerm
     _op = CstVectorOp.SUM;
   }
 
-  override uint bitcount() {
+  uint bitcount() {
     uint _elemBitCount = _arr.elemBitcount();
 
     if (_elemBitCount <= 32) return 32;
@@ -1242,7 +113,7 @@ class CstVecArrExpr: CstVecTerm
     }
   }
 
-  override bool signed() {
+  bool signed() {
     uint _elemBitCount = _arr.elemBitcount();
     bool _elemSigned = _arr.elemSigned();
 
@@ -1255,121 +126,124 @@ class CstVecArrExpr: CstVecTerm
     }
   }
   
-  override bool isConst() {
+  bool isConst() {
     return false;
   }
 
-  override bool isIterator() {
+  bool isIterator() {
     return false;
   }
 
-  override bool isOrderingExpr() {
-    return false;		// only CstVecOrderingExpr return true
-  }
-
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
     pred._vectorOp = _op;
-    _arr.setDomainArrContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
-    assert (rndArrs.length > 0 || varArrs.length > 0);
+    _arr.setDomainArrContext(pred, context);
+    assert (pred._unresolvedRndArrs.length > 0 || pred._unresolvedVarArrs.length > 0);
   }
 
-  override bool isSolved() {
+  bool isSolved() {
     return false;
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void annotate(CstSolverAgent agent) {
+    _arr.annotate(agent);
+  }
+  
+  void writeExprString(ref _esdl__Sigbuf str) {
+    import std.format: sformat;
+    char[16] buff;
     str ~= '(';
-    str ~= _op.to!string;
+    str ~= sformat(buff[], "%s", _op);
     str ~= ' ';
     _arr.writeExprString(str);
     str ~= ')';
+  }
+  
+  void calcHash(ref Hash hash){
+    hash.modify(40);
+    hash.modify(_op);
+    hash.modify(32);
+    _arr.calcHash(hash);
+    hash.modify(41);
+  }
+  
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(40);
+    _hash.modify(_op);
+    _hash.modify(32);
+    _arr.makeHash();
+    _hash.modify(_arr.hashValue());
+    _hash.modify(41);
+  }
+  
+  void _esdl__scan() { }
+
+  final void visit(CstDistSolverBase dist) { assert(false); }
+
+  final override CstVecType getVecType() {
+    return _arr.getVecType();
   }
 }
 
 // This class would hold two(bin) vector nodes and produces a vector
 // only after processing those two nodes
-class CstVec2VecExpr: CstVecTerm
+class CstVec2VecExpr: CstVecExpr
 {
   import std.conv;
 
-  CstVecExpr _lhs;
-  CstVecExpr _rhs;
+  CstVecTerm _lhs;
+  CstVecTerm _rhs;
   CstBinaryOp _op;
 
-  override string describe() {
-    return "( " ~ _lhs.describe ~ " " ~ _op.to!string() ~ " " ~ _rhs.describe ~ " )";
+  string describe(bool descExpr=false) {
+    return "( " ~ _lhs.describe(true) ~ " " ~ _op.to!string() ~ " " ~ _rhs.describe(true) ~ " )";
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     _lhs.visit(solver);
     _rhs.visit(solver);
     solver.processEvalStack(_op);
   }
 
-  //   long lval;
-  //   long rval;
-  //   if (! _lhs.getVal(lval)) {
-  //     return false;
-  //   }
-  //   if (! _rhs.getVal(rval)) {
-  //     return false;
-  //   }
+  long evaluate() {
+    long lvec = _lhs.evaluate();
+    long rvec = _rhs.evaluate();
 
-  //   final switch(_op) {
-  //   case CstBinaryOp.AND: val = lval &  rval; return true;
-  //   case CstBinaryOp.OR:  val = lval |  rval; return true;
-  //   case CstBinaryOp.XOR: val = lval ^  rval; return true;
-  //   case CstBinaryOp.ADD: val = lval +  rval; return true;
-  //   case CstBinaryOp.SUB: val = lval -  rval; return true;
-  //   case CstBinaryOp.MUL: val = lval *  rval; return true;
-  //   case CstBinaryOp.DIV: val = lval /  rval; return true;
-  //   case CstBinaryOp.REM: val = lval %  rval; return true;
-  //   case CstBinaryOp.LSH: val = lval << rval; return true;
-  //   case CstBinaryOp.RSH: val = lval >> rval; return true;
-  //   case CstBinaryOp.BITINDEX:
-  //     assert(false, "BITINDEX is not implemented yet!");
-  //   }
-  // }
+    CstVecType ltype = _lhs.getVecType();
+    CstVecType rtype = _rhs.getVecType();
 
-  override long evaluate() {
-    auto lvec = _lhs.evaluate();
-    auto rvec = _rhs.evaluate();
+    CstVecType type = getCommonVecType(ltype, rtype);
 
-    final switch(_op) {
-    case CstBinaryOp.AND: return lvec &  rvec;
-    case CstBinaryOp.OR:  return lvec |  rvec;
-    case CstBinaryOp.XOR: return lvec ^  rvec;
-    case CstBinaryOp.ADD: return lvec +  rvec;
-    case CstBinaryOp.SUB: return lvec -  rvec;
-    case CstBinaryOp.MUL: return lvec *  rvec;
-    case CstBinaryOp.DIV: return lvec /  rvec;
-    case CstBinaryOp.REM: return lvec %  rvec;
-    case CstBinaryOp.LSH: return lvec << rvec;
-    case CstBinaryOp.RSH: return lvec >> rvec;
-    case CstBinaryOp.LRSH: return lvec >>> rvec;
+    switch (type) {
+    case CstVecType.BOOL, CstVecType.INT:
+      return _esdl__evaluate(cast(int) lvec, cast(int) rvec, _op);
+    case CstVecType.UINT:
+      return _esdl__evaluate(cast(uint) lvec, cast(uint) rvec, _op);
+    case CstVecType.LONG:
+      return _esdl__evaluate(cast(long) lvec, cast(long) rvec, _op);
+    case CstVecType.ULONG:
+      return _esdl__evaluate(cast(ulong) lvec, cast(ulong) rvec, _op);
+    default: assert (false, "Unsupported expression type: " ~
+		     type.to!string());
     }
   }
 
-  override CstVec2VecExpr unroll(CstIterator iter, uint n) {
-    return new CstVec2VecExpr(_lhs.unroll(iter, n), _rhs.unroll(iter, n), _op);
+  CstVec2VecExpr _esdl__unroll(CstIterator iter, ulong n) {
+    return new CstVec2VecExpr(_lhs._esdl__unroll(iter, n),
+			      _rhs._esdl__unroll(iter, n), _op);
   }
 
-  this(CstVecExpr lhs, CstVecExpr rhs, CstBinaryOp op) {
+  this(CstVecTerm lhs, CstVecTerm rhs, CstBinaryOp op) {
     _lhs = lhs;
     _rhs = rhs;
     _op = op;
   }
 
-  override uint bitcount() {
+  uint bitcount() {
     uint lhsBitcount = _lhs.bitcount();
     uint rhsBitCount = _rhs.bitcount();
     uint count = rhsBitCount > lhsBitcount ? rhsBitCount : lhsBitcount;
@@ -1379,7 +253,7 @@ class CstVec2VecExpr: CstVecTerm
     else return count;
   }
   
-  override bool signed() {
+  bool signed() {
     uint lhsBitcount = _lhs.bitcount();
     uint rhsBitcount = _rhs.bitcount();
     bool lhsSigned = _lhs.signed();
@@ -1388,75 +262,148 @@ class CstVec2VecExpr: CstVecTerm
     if (lhsSigned && rhsSigned) return true; // both signed
     else if (lhsBitcount > rhsBitcount) {
       if (lhsBitcount == 32 || lhsBitcount == 64) return lhsSigned;
-      else return false;
+      else return true;
     }
     else if (rhsBitcount > lhsBitcount) {
       if (rhsBitcount == 32 || rhsBitcount == 64) return rhsSigned;
-      else return false;
+      else return true;
     }
     else {			// size is same
       if (rhsBitcount == 32 || rhsBitcount == 64) return rhsSigned && lhsSigned;
-      else return false;
+      else return true;
     }
   }
   
-  override bool isConst() {
+  bool isConst() {
     return _lhs.isConst() && _rhs.isConst();
   }
 
-  override bool isIterator() {
+  bool isIterator() {
     return false;
   }
 
-  override bool isOrderingExpr() {
-    return false;		// only CstVecOrderingExpr return true
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+    _lhs.setDomainContext(pred, context);
+    _rhs.setDomainContext(pred, context);
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
-    _lhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
-    _rhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
-  }
-
-  override bool isSolved() {
+  bool isSolved() {
     return _lhs.isSolved() && _rhs.isSolved();
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void annotate(CstSolverAgent agent) {
+    _lhs.annotate(agent);
+    _rhs.annotate(agent);
+  }
+  
+  void writeExprString(ref _esdl__Sigbuf str) {
+    import std.format: sformat;
+    char[16] buff;
     str ~= '(';
-    str ~= _op.to!string;
+    str ~= sformat(buff[], "%s", _op);
     str ~= ' ';
     _lhs.writeExprString(str);
     str ~= ' ';
     _rhs.writeExprString(str);
     str ~= ')';
   }
+  
+  void calcHash(ref Hash hash){
+    hash.modify(40);
+    hash.modify(_op);
+    hash.modify(32);
+    _lhs.calcHash(hash);
+    hash.modify(32);
+    _rhs.calcHash(hash);
+    hash.modify(41);
+  }
+  
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(40);
+    bool isSymmetric;
+    _lhs.makeHash();
+    _rhs.makeHash();
+    final switch (_op){
+    case CstBinaryOp.AND:
+      isSymmetric = true;
+      break;
+    case CstBinaryOp.OR:
+      isSymmetric = true;
+      break;
+    case CstBinaryOp.XOR:
+      isSymmetric = true;
+      break;
+    case CstBinaryOp.ADD:
+      isSymmetric = true;
+      break;
+    case CstBinaryOp.SUB:
+      isSymmetric = false;
+      break;
+    case CstBinaryOp.MUL:
+      isSymmetric = true;
+      break;
+    case CstBinaryOp.DIV:
+      isSymmetric = false;
+      break;
+    case CstBinaryOp.REM:
+      isSymmetric = false;
+      break;
+    case CstBinaryOp.LSH:
+      isSymmetric = false;
+      break;
+    case CstBinaryOp.RSH:
+      isSymmetric = false;
+      break;
+    case CstBinaryOp.LRSH:
+      isSymmetric = false;
+      break;
+    }
+    if (isSymmetric){
+      if (_lhs.hashValue() > _rhs.hashValue()){
+    	CstVecTerm temp = _lhs;
+    	_lhs = _rhs;
+    	_rhs = temp;
+      }
+    }
+    _hash.modify(_op);
+    _hash.modify(32);
+    _hash.modify(_lhs.hashValue());
+    _hash.modify(32);
+    _hash.modify(_rhs.hashValue());
+    _hash.modify(41);
+  }
+  
+  void _esdl__scan() { }
+
+  final void visit(CstDistSolverBase dist) { assert(false); }
+
+  final override CstVecType getVecType() {
+    return getCommonVecType(_lhs.getVecType(), _rhs.getVecType);
+  }
+
 }
 
 class CstRangeExpr
 {
   import std.conv;
 
-  CstVecExpr _lhs;
-  CstVecExpr _rhs;
+  CstVecTerm _lhs;
+  CstVecTerm _rhs;
 
   bool _inclusive = false;
 
-  string describe() {
+  string describe(bool descExpr=false) {
     if (_rhs is null)
-      return "( " ~ _lhs.describe ~ " )";
+      return "( " ~ _lhs.describe(true) ~ " )";
     else if (_inclusive)
-      return "( " ~ _lhs.describe ~ " : " ~ _rhs.describe ~ " )";
+      return "( " ~ _lhs.describe(true) ~ " : " ~ _rhs.describe(true) ~ " )";
     else
-      return "( " ~ _lhs.describe ~ " .. " ~ _rhs.describe ~ " )";
+      return "( " ~ _lhs.describe(true) ~ " .. " ~ _rhs.describe(true) ~ " )";
   }
 
   long evaluate() {
@@ -1464,15 +411,15 @@ class CstRangeExpr
     return _lhs.evaluate();
   }
 
-  CstRangeExpr unroll(CstIterator iter, uint n) {
+  CstRangeExpr _esdl__unroll(CstIterator iter, ulong n) {
     if (_rhs is null)
-      return new CstRangeExpr(_lhs.unroll(iter, n), null, _inclusive);
+      return new CstRangeExpr(_lhs._esdl__unroll(iter, n), null, _inclusive);
     else
-      return new CstRangeExpr(_lhs.unroll(iter, n),
-			      _rhs.unroll(iter, n), _inclusive);
+      return new CstRangeExpr(_lhs._esdl__unroll(iter, n),
+			      _rhs._esdl__unroll(iter, n), _inclusive);
   }
 
-  this(CstVecExpr lhs, CstVecExpr rhs, bool inclusive=false) {
+  this(CstVecTerm lhs, CstVecTerm rhs, bool inclusive=false) {
     _lhs = lhs;
     _rhs = rhs;
     _inclusive = inclusive;
@@ -1486,55 +433,75 @@ class CstRangeExpr
   //   return false;
   // }
 
-  // bool isOrderingExpr() {
-  //   return false;		// only CstVecOrderingExpr return true
-  // }
-
-  void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
-    _lhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+    _lhs.setDomainContext(pred, context);
     if (_rhs !is null)
-      _rhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
+      _rhs.setDomainContext(pred, context);
   }
 
   bool isSolved() {
     return _lhs.isSolved() && (_rhs is null || _rhs.isSolved());
   }
 
-  void writeExprString(ref Charbuf str) {
+  void annotate(CstSolverAgent agent) {
+    _lhs.annotate(agent);
+    if (_rhs !is null) {
+      _rhs.annotate(agent);
+    }
+  }
+
+  void writeExprString(ref _esdl__Sigbuf str) {
     _lhs.writeExprString(str);
     if (_rhs !is null) {
       if (_inclusive) str ~= " : ";
       else str ~= " .. ";
       _rhs.writeExprString(str);
+    }
+  }
+  
+  void calcHash(ref Hash hash){
+    _lhs.calcHash(hash);
+    if (_rhs !is null) {
+      if (_inclusive) hash.modify(58);
+      else hash.modify(46);
+      _rhs.calcHash(hash);
+    }
+  }
+  
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(0);
+    _lhs.makeHash();
+    _hash.modify(_lhs.hashValue());
+    if (_rhs !is null) {
+      _rhs.makeHash();
+      if (_inclusive) _hash.modify(58);
+      else _hash.modify(46);
+      _hash.modify(_rhs.hashValue());
     }
   }
 }
 
-class CstDistSetElem
+class CstVecDistSetElem
 {
   import std.conv;
 
-  CstVecExpr _lhs;
-  CstVecExpr _rhs;
+  CstVecTerm _lhs;
+  CstVecTerm _rhs;
 
   bool _inclusive = false;
 
-  string describe() {
+  string describe(bool descExpr=false) {
     if (_rhs is null)
-      return "( " ~ _lhs.describe ~ " )";
+      return "( " ~ _lhs.describe(true) ~ " )";
     else if (_inclusive)
-      return "( " ~ _lhs.describe ~ " : " ~ _rhs.describe ~ " )";
+      return "( " ~ _lhs.describe(true) ~ " : " ~ _rhs.describe(true) ~ " )";
     else
-      return "( " ~ _lhs.describe ~ " .. " ~ _rhs.describe ~ " )";
+      return "( " ~ _lhs.describe(true) ~ " .. " ~ _rhs.describe(true) ~ " )";
   }
 
   long evaluate() {
@@ -1542,15 +509,15 @@ class CstDistSetElem
     return _lhs.evaluate();
   }
 
-  CstDistSetElem unroll(CstIterator iter, uint n) {
+  CstVecDistSetElem _esdl__unroll(CstIterator iter, ulong n) {
     if (_rhs is null)
-      return new CstDistSetElem(_lhs.unroll(iter, n), null, _inclusive);
+      return new CstVecDistSetElem(_lhs._esdl__unroll(iter, n), null, _inclusive);
     else
-      return new CstDistSetElem(_lhs.unroll(iter, n),
-				  _rhs.unroll(iter, n), _inclusive);
+      return new CstVecDistSetElem(_lhs._esdl__unroll(iter, n),
+				   _rhs._esdl__unroll(iter, n), _inclusive);
   }
 
-  this(CstVecExpr lhs, CstVecExpr rhs, bool inclusive=false) {
+  this(CstVecTerm lhs, CstVecTerm rhs, bool inclusive=false) {
     _lhs = lhs;
     _rhs = rhs;
     _inclusive = inclusive;
@@ -1564,30 +531,24 @@ class CstDistSetElem
   //   return false;
   // }
 
-  // bool isOrderingExpr() {
-  //   return false;		// only CstVecOrderingExpr return true
-  // }
-
-  void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
-    _lhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+    _lhs.setDomainContext(pred, context);
     if (_rhs !is null)
-      _rhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
+      _rhs.setDomainContext(pred, context);
   }
 
   bool isSolved() {
     return _lhs.isSolved() && (_rhs is null || _rhs.isSolved());
   }
 
-  void writeExprString(ref Charbuf str) {
+  void annotate(CstSolverAgent agent) {
+    _lhs.annotate(agent);
+    if (_rhs !is null) {
+      _rhs.annotate(agent);
+    }
+  }
+  
+  void writeExprString(ref _esdl__Sigbuf str) {
     _lhs.writeExprString(str);
     if (_rhs !is null) {
       if (_inclusive) str ~= " : ";
@@ -1595,40 +556,68 @@ class CstDistSetElem
       _rhs.writeExprString(str);
     }
   }
+  
+  void calcHash(ref Hash hash){
+    _lhs.calcHash(hash);
+    if (_rhs !is null) {
+      if (_inclusive) hash.modify(58);
+      else hash.modify(46);
+      _rhs.calcHash(hash);
+    }
+  }
+  
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(0);
+    _lhs.makeHash();
+    _hash.modify(_lhs.hashValue());
+    if (_rhs !is null) {
+      _rhs.makeHash();
+      if (_inclusive) _hash.modify(58);
+      else _hash.modify(46);
+      _hash.modify(_rhs.hashValue());
+    }
+  }
+
 }
 
 class CstUniqueSetElem
 {
   import std.conv;
 
-  CstVecExpr _vec;
+  // to make that more generic, could _vec be CstVecExpr
+  CstVecTerm _vec;
   CstDomSet  _arr;
 
   bool _inclusive = false;
 
-  string describe() {
+  string describe(bool descExpr=false) {
     if (_arr !is null) {
       assert (_vec is null);
-      return "( " ~ _arr.fullName ~ "[] )";
+      return "( " ~ _arr._esdl__getFullName ~ "[] )";
     }
     else {
       assert (_arr is null);
-      return "( " ~ _vec.describe ~ " )";
+      return "( " ~ _vec.describe(true) ~ " )";
     }
   }
 
-  CstUniqueSetElem unroll(CstIterator iter, uint n) {
+  CstUniqueSetElem _esdl__unroll(CstIterator iter, ulong n) {
     if (_arr !is null) {
       assert (_vec is null);
-      return new CstUniqueSetElem(_arr.unroll(iter, n));
+      return new CstUniqueSetElem(_arr._esdl__unroll(iter, n));
     }
     else {
       assert (_arr is null);
-      return new CstUniqueSetElem(_vec.unroll(iter, n));
+      return new CstUniqueSetElem(_vec._esdl__unroll(iter, n));
     }
   }
 
-  this(CstVecExpr vec) {
+  this(CstVecTerm vec) {
     _vec = vec;
   }
 
@@ -1668,33 +657,25 @@ class CstUniqueSetElem
   //   return false;
   // }
 
-  // bool isOrderingExpr() {
-  //   return false;		// only CstVecOrderingExpr return true
-  // }
-
-  void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
-			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
-			ref CstDomSet[] varArrs,
-			ref CstValue[] vals,
-			ref CstIterator[] iters,
-			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
-			ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
     if (_arr !is null) {
-      _arr.setDomainArrContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
-      assert (rndArrs.length > 0 || varArrs.length > 0);
+      _arr.setDomainArrContext(pred, context);
+      assert (pred._unresolvedRndArrs.length > 0 || pred._unresolvedVarArrs.length > 0);
     }
     if (_vec !is null)
-      _vec.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
+      _vec.setDomainContext(pred, context);
   }
 
   bool isSolved() {
     return false;
   }
 
-  void writeExprString(ref Charbuf str) {
+  void annotate(CstSolverAgent agent) {
+    if (_arr !is null) _arr.annotate(agent);
+    else               _vec.annotate(agent);
+  }
+  
+  void writeExprString(ref _esdl__Sigbuf str) {
     if (_arr !is null) {
       str ~= "[ ";
       _arr.writeExprString(str);
@@ -1704,6 +685,127 @@ class CstUniqueSetElem
       _vec.writeExprString(str);
     }
   }
+  
+  void calcHash(ref Hash hash){
+    if (_arr !is null) {
+      hash.modify(91);
+      _arr.calcHash(hash);
+      hash.modify(93);
+    }
+    else {
+      _vec.calcHash(hash);
+    }
+  }
+  
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+
+  void makeHash() {
+    if (_arr !is null){
+      _hash = Hash(91);
+      _arr.makeHash();
+      _hash.modify(_arr.hashValue());
+      _hash.modify(93);
+    }
+    else {
+      _hash = Hash(0);
+      _vec.makeHash();
+      _hash.modify(_vec.hashValue());
+    }
+  }
+
+  CstVecType getVecType() {
+    if (_arr !is null) return _arr.getVecType();
+    else return _vec.getVecType();
+  }
+  
+
+  bool inAssoc(ref bool[bool] assoc) {
+    if (_arr !is null) {
+      foreach (leaf; _arr[]) {
+	bool val = cast(bool) leaf.evaluate();
+	if (val in assoc) return true;
+	else assoc[val] = true;
+      }
+      return false;
+    }
+    else {
+      bool val = cast(bool) _vec.evaluate();
+      if (val in assoc) return true;
+      else assoc[val] = true;
+      return false;
+    }
+  }
+
+  bool inAssoc(ref bool[int] assoc) {
+    if (_arr !is null) {
+      foreach (leaf; _arr[]) {
+	int val = cast(int) leaf.evaluate();
+	if (val in assoc) return true;
+	else assoc[val] = true;
+      }
+      return false;
+    }
+    else {
+      int val = cast(int) _vec.evaluate();
+      if (val in assoc) return true;
+      else assoc[val] = true;
+      return false;
+    }
+  }  
+
+  bool inAssoc(ref bool[uint] assoc) {
+    if (_arr !is null) {
+      foreach (leaf; _arr[]) {
+	uint val = cast(uint) leaf.evaluate();
+	if (val in assoc) return true;
+	else assoc[val] = true;
+      }
+      return false;
+    }
+    else {
+      uint val = cast(uint) _vec.evaluate();
+      if (val in assoc) return true;
+      else assoc[val] = true;
+      return false;
+    }
+  }
+
+  bool inAssoc(ref bool[long] assoc) {
+    if (_arr !is null) {
+      foreach (leaf; _arr[]) {
+	long val = cast(long) leaf.evaluate();
+	if (val in assoc) return true;
+	else assoc[val] = true;
+      }
+      return false;
+    }
+    else {
+      long val = cast(long) _vec.evaluate();
+      if (val in assoc) return true;
+      else assoc[val] = true;
+      return false;
+    }
+  }  
+
+  bool inAssoc(ref bool[ulong] assoc) {
+    if (_arr !is null) {
+      foreach (leaf; _arr[]) {
+	ulong val = cast(ulong) leaf.evaluate();
+	if (val in assoc) return true;
+	else assoc[val] = true;
+      }
+      return false;
+    }
+    else {
+      ulong val = cast(ulong) _vec.evaluate();
+      if (val in assoc) return true;
+      else assoc[val] = true;
+      return false;
+    }
+  }
 }
 
 
@@ -1711,43 +813,43 @@ class CstInsideSetElem
 {
   import std.conv;
 
-  CstVecExpr _lhs;
-  CstVecExpr _rhs;
+  CstVecTerm _lhs;
+  CstVecTerm _rhs;
 
   CstDomSet  _arr;
 
   bool _inclusive = false;
 
-  string describe() {
+  string describe(bool descExpr=false) {
     if (_arr !is null)
-      return "( " ~ _arr.fullName ~ "[] )";
+      return "( " ~ _arr._esdl__getFullName ~ "[] )";
     else {
       assert (_arr is null);
       if (_rhs is null)
-	return "( " ~ _lhs.describe ~ " )";
+	return "( " ~ _lhs.describe(true) ~ " )";
       else if (_inclusive)
-	return "( " ~ _lhs.describe ~ " : " ~ _rhs.describe ~ " )";
+	return "( " ~ _lhs.describe(true) ~ " : " ~ _rhs.describe(true) ~ " )";
       else
-	return "( " ~ _lhs.describe ~ " .. " ~ _rhs.describe ~ " )";
+	return "( " ~ _lhs.describe(true) ~ " .. " ~ _rhs.describe(true) ~ " )";
     }
   }
 
-  CstInsideSetElem unroll(CstIterator iter, uint n) {
+  CstInsideSetElem _esdl__unroll(CstIterator iter, ulong n) {
     if (_arr !is null) {
       assert (_lhs is null);
-      return new CstInsideSetElem(_arr.unroll(iter, n));
+      return new CstInsideSetElem(_arr._esdl__unroll(iter, n));
     }
     else {
       assert (_arr is null);
       if (_rhs is null)
-	return new CstInsideSetElem(_lhs.unroll(iter, n), null, _inclusive);
+	return new CstInsideSetElem(_lhs._esdl__unroll(iter, n), null, _inclusive);
       else
-	return new CstInsideSetElem(_lhs.unroll(iter, n),
-				    _rhs.unroll(iter, n), _inclusive);
+	return new CstInsideSetElem(_lhs._esdl__unroll(iter, n),
+				    _rhs._esdl__unroll(iter, n), _inclusive);
     }
   }
 
-  this(CstVecExpr lhs, CstVecExpr rhs, bool inclusive=false) {
+  this(CstVecTerm lhs, CstVecTerm rhs, bool inclusive=false) {
     _lhs = lhs;
     _rhs = rhs;
     _inclusive = inclusive;
@@ -1767,35 +869,30 @@ class CstInsideSetElem
   //   return false;
   // }
 
-  // bool isOrderingExpr() {
-  //   return false;		// only CstVecOrderingExpr return true
-  // }
-
-  void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
-			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
-			ref CstDomSet[] varArrs,
-			ref CstValue[] vals,
-			ref CstIterator[] iters,
-			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
-			ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
     if (_arr !is null) {
-      _arr.setDomainArrContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
-      assert (rndArrs.length > 0 || varArrs.length > 0);
+      _arr.setDomainArrContext(pred, context);
+      // assert (rndArrs.length > 0 || varArrs.length > 0);
     }
     if (_lhs !is null)
-      _lhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
+      _lhs.setDomainContext(pred, context);
     if (_rhs !is null)
-      _rhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
+      _rhs.setDomainContext(pred, context);
   }
 
   bool isSolved() {
     return false;
   }
 
-  void writeExprString(ref Charbuf str) {
+  void annotate(CstSolverAgent agent) {
+    if (_arr !is null) _arr.annotate(agent);
+    else {
+      _lhs.annotate(agent);
+      if (_rhs !is null) _rhs.annotate(agent);
+    }
+  }
+  
+  void writeExprString(ref _esdl__Sigbuf str) {
     if (_arr !is null) {
       str ~= "[ ";
       _arr.writeExprString(str);
@@ -1810,29 +907,257 @@ class CstInsideSetElem
       }
     }
   }
+  
+  void calcHash(ref Hash hash){
+    if (_arr !is null) {
+      hash.modify(91);
+      _arr.calcHash(hash);
+      hash.modify(93);
+    }
+    else {
+      _lhs.calcHash(hash);
+      if (_rhs !is null) {
+	if (_inclusive) hash.modify(58);
+	else hash.modify(46);
+	_rhs.calcHash(hash);
+      }
+    }
+  }
+
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    if (_arr !is null){
+      _hash = Hash(91);
+      _arr.makeHash();
+      _hash.modify(_arr.hashValue());
+      _hash.modify(93);
+    }
+    else {
+      _hash = Hash(0);
+      _lhs.makeHash();
+      _hash.modify(_lhs.hashValue());
+      if (_rhs !is null) {
+	if (_inclusive) _hash.modify(58);
+	else _hash.modify(46);
+	_hash.modify(_rhs.hashValue());
+      }
+    }
+  }
+  
+  final void visit(CstDistSolverBase dist) {
+    if (_arr !is null) _arr.visit(dist);
+    else if (_lhs !is null) {
+      if (_rhs !is null) {
+	if (_inclusive) {
+	  assert (_lhs.evaluate() <= _rhs.evaluate());
+	  for (ulong val = _lhs.evaluate(); val <= _rhs.evaluate(); val += 1) {
+	    dist.purge(val);
+	  }
+	}
+	else {
+	  assert (_lhs.evaluate() < _rhs.evaluate());
+	  for (ulong val = _lhs.evaluate(); val < _rhs.evaluate(); val += 1) {
+	    dist.purge(val);
+	  }
+	}
+      }
+      else {
+	dist.purge(_lhs.evaluate());
+      }
+    }
+  }
+
+  final bool eval(CstVecTerm vec) {
+    import std.conv: to;
+    if (_arr !is null) {
+      CstVecType type = getCommonVecType(_arr.getVecType(), vec.getVecType());
+
+      switch (type) {
+      case CstVecType.BOOL:
+	return canFind!((CstDomBase a, CstVecTerm b) {
+	    return cast(bool) a.evaluate() == cast(bool) b.evaluate();
+	  }) (_arr[], vec);
+      case CstVecType.INT:
+	return canFind!((CstDomBase a, CstVecTerm b) {
+	    return cast(int) a.evaluate() == cast(int) b.evaluate();
+	  }) (_arr[], vec);
+      case CstVecType.UINT:
+	return canFind!((CstDomBase a, CstVecTerm b) {
+	    return cast(uint) a.evaluate() == cast(uint) b.evaluate();
+	  }) (_arr[], vec);
+      case CstVecType.LONG:
+	return canFind!((CstDomBase a, CstVecTerm b) {
+	    return cast(long) a.evaluate() == cast(long) b.evaluate();
+	  }) (_arr[], vec);
+      case CstVecType.ULONG:
+	return canFind!((CstDomBase a, CstVecTerm b) {
+	    return cast(ulong) a.evaluate() == cast(ulong) b.evaluate();
+	  }) (_arr[], vec);
+      // case CstVecType.CENT:
+      // 	return canFind!((CstDomBase a, CstVecTerm b) {
+      // 	    return cast(cent) a.evaluate() == cast(cent) b.evaluate();
+      // 	  }) (_arr[], vec);
+      // case CstVecType.UCENT:
+      // 	return canFind!((CstDomBase a, CstVecTerm b) {
+      // 	    return cast(ucent) a.evaluate() == cast(ucent) b.evaluate();
+      // 	  }) (_arr[], vec);
+      default: assert (false, "Type " ~ type.to!string() ~ " not supported");
+      }
+    }
+    else if (_rhs is null) {
+      CstVecType type = getCommonVecType(_lhs.getVecType(), vec.getVecType());
+      switch (type) {
+      case CstVecType.BOOL:
+	return cast(bool) vec.evaluate() == cast(bool) _lhs.evaluate();
+      case CstVecType.INT:
+	return cast(int) vec.evaluate() == cast(int) _lhs.evaluate();
+      case CstVecType.UINT:
+	return cast(uint) vec.evaluate() == cast(uint) _lhs.evaluate();
+      case CstVecType.LONG:
+	return cast(long) vec.evaluate() == cast(long) _lhs.evaluate();
+      case CstVecType.ULONG:
+	return cast(ulong) vec.evaluate() == cast(ulong) _lhs.evaluate();
+      default: assert (false, "Type " ~ type.to!string() ~ " not supported");
+      }
+    }
+    else {
+      CstVecType type = getCommonVecType(vec.getVecType(),
+					 getCommonVecType(_lhs.getVecType(),
+							  _rhs.getVecType()));
+      switch (type) {
+      case CstVecType.BOOL: 
+	return cast(bool) vec.evaluate() >= cast(bool) _lhs.evaluate()
+	  && (_inclusive ? cast(bool) vec.evaluate() <= cast(bool) _rhs.evaluate() :
+	      cast(bool) vec.evaluate() < cast(bool) _rhs.evaluate());
+      case CstVecType.INT: 
+	return cast(int) vec.evaluate() >= cast(int) _lhs.evaluate()
+	  && (_inclusive ? cast(int) vec.evaluate() <= cast(int) _rhs.evaluate() :
+	      cast(int) vec.evaluate() < cast(int) _rhs.evaluate());
+      case CstVecType.UINT: 
+	return cast(uint) vec.evaluate() >= cast(uint) _lhs.evaluate()
+	  && (_inclusive ? cast(uint) vec.evaluate() <= cast(uint) _rhs.evaluate() :
+	      cast(uint) vec.evaluate() < cast(uint) _rhs.evaluate());
+      case CstVecType.LONG: 
+	return cast(long) vec.evaluate() >= cast(long) _lhs.evaluate()
+	  && (_inclusive ? cast(long) vec.evaluate() <= cast(long) _rhs.evaluate() :
+	      cast(long) vec.evaluate() < cast(long) _rhs.evaluate());
+      case CstVecType.ULONG: 
+	return cast(ulong) vec.evaluate() >= cast(ulong) _lhs.evaluate()
+	  && (_inclusive ? cast(ulong) vec.evaluate() <= cast(ulong) _rhs.evaluate() :
+	      cast(ulong) vec.evaluate() < cast(ulong) _rhs.evaluate());
+      default: assert (false, "Type " ~ type.to!string() ~ " not supported");
+      }
+    }
+  }
 }
 
-class CstWeightedDistSetElem
+class CstLogicWeightedDistSetElem
 {
   import std.conv;
 
-  CstDistSetElem _range;
-  CstVecExpr   _weight;
+  CstLogicTerm _term;
+  CstVecTerm   _weight;
   bool         _perItem = false;
 
-  string describe() {
-    string str = "( " ~ _range.describe;
+  string describe(bool descExpr=false) {
+    string str = "( " ~ _term.describe(true);
     if (_perItem) str ~= " := ";
     else str ~= " :/ ";
-    str ~= _weight.describe() ~ " )";
+    str ~= _weight.describe(true) ~ " )";
     return str;
   }
 
-  CstWeightedDistSetElem unroll(CstIterator iter, uint n) {
-    return this;
+  CstLogicWeightedDistSetElem _esdl__unroll(CstIterator iter, ulong n) {
+    return new CstLogicWeightedDistSetElem(_term._esdl__unroll(iter, n),
+					   _weight._esdl__unroll(iter, n),
+					   _perItem);
   }
 
-  this(CstDistSetElem range, CstVecExpr weight, bool perItem=false) {
+  this(CstLogicTerm term, CstVecTerm weight, bool perItem=false) {
+    _term = term;
+    _weight = weight;
+    _perItem = perItem;
+  }
+
+  // bool isConst() {
+  //   return false;
+  // }
+
+  // bool isIterator() {
+  //   return false;
+  // }
+
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+    _term.setDomainContext(pred, context);
+    _weight.setDomainContext(pred, context);
+  }
+
+  bool isSolved() {
+    return _term.isSolved() && _weight.isSolved();
+  }
+
+  void annotate(CstSolverAgent agent) {
+    _term.annotate(agent);
+  }
+
+  void writeExprString(ref _esdl__Sigbuf str) {
+    import std.conv: to;
+    _term.writeExprString(str);
+    if (_perItem) str ~= " := ";
+    else str ~= " :/ ";
+    str ~= _weight.evaluate().to!string;
+  }
+  
+  void calcHash(ref Hash hash){
+    _term.calcHash(hash);
+    if (_perItem) hash.modify(64);
+    else hash.modify(42);
+    hash.modify(_weight.evaluate());
+  }
+  
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(0);
+    _term.makeHash();
+    _hash.modify(_term.hashValue());
+    if (_perItem) _hash.modify(64);
+    else _hash.modify(42);
+    // _hash.modify(_weight.evaluate()); // cant call evaluate here because it isnt resolved
+    _hash.modify('w');
+  }
+}
+
+class CstVecWeightedDistSetElem
+{
+  import std.conv;
+
+  CstVecDistSetElem _range;
+  CstVecTerm   _weight;
+  bool         _perItem = false;
+
+  string describe(bool descExpr=false) {
+    string str = "( " ~ _range.describe(true);
+    if (_perItem) str ~= " := ";
+    else str ~= " :/ ";
+    str ~= _weight.describe(true) ~ " )";
+    return str;
+  }
+
+  CstVecWeightedDistSetElem _esdl__unroll(CstIterator iter, ulong n) {
+    return new CstVecWeightedDistSetElem(_range._esdl__unroll(iter, n),
+					 _weight._esdl__unroll(iter, n),
+					 _perItem);
+  }
+
+  this(CstVecDistSetElem range, CstVecTerm weight, bool perItem=false) {
     _range = range;
     _weight = weight;
     _perItem = perItem;
@@ -1846,47 +1171,193 @@ class CstWeightedDistSetElem
   //   return false;
   // }
 
-  // bool isOrderingExpr() {
-  //   return false;		// only CstVecOrderingExpr return true
-  // }
-
-  void setDomainContext(CstPredicate pred,
-			ref CstDomain[] rnds,
-			ref CstDomSet[] rndArrs,
-			ref CstDomain[] vars,
-			ref CstDomSet[] varArrs,
-			ref CstValue[] vals,
-			ref CstIterator[] iters,
-			ref CstVecNodeIntf[] idxs,
-			ref CstDomain[] bitIdxs,
-			ref CstVecNodeIntf[] deps) { }
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+    _range.setDomainContext(pred, context);
+    _weight.setDomainContext(pred, context);
+  }
 
   bool isSolved() {
     return _range.isSolved() && _weight.isSolved();
   }
 
-  void writeExprString(ref Charbuf str) {
+  void annotate(CstSolverAgent agent) {
+    _range.annotate(agent);
+  }
+
+  void writeExprString(ref _esdl__Sigbuf str) {
     import std.conv: to;
     _range.writeExprString(str);
     if (_perItem) str ~= " := ";
     else str ~= " :/ ";
     str ~= _weight.evaluate().to!string;
   }
+
+  void calcHash(ref Hash hash){
+    _range.calcHash(hash);
+    if (_perItem) hash.modify(64);
+    else hash.modify(42);
+    hash.modify(_weight.evaluate());
+  }
+  
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(0);
+    _range.makeHash();
+    _hash.modify(_range.hashValue());
+    if (_perItem) _hash.modify(64);
+    else _hash.modify(42);
+    _hash.modify(_weight.evaluate());
+  }
 }
 
-class CstDistExpr(T): CstLogicTerm
+class CstLogicDistExpr(T): CstLogicExpr
 {
   import std.conv;
+  import esdl.solver.dist: CstLogicDistSolver, CstLogicDistRange;
 
-  CstDomain _vec;
-  CstWeightedDistSetElem[] _dists;
+  CstDomBase _vec;
+  CstLogicWeightedDistSetElem[] _dists;
 
-  DistRangeSet!T _rs;
+  CstLogicDistSolver!T _rs;
   
-  this(CstDomain vec, CstWeightedDistSetElem[] dists) {
+  this(CstDomBase vec, CstLogicWeightedDistSetElem[] dists) {
     _vec = vec;
     _dists = dists;
-    _rs = new DistRangeSet!T;
+  }
+
+  private final void initDistSolver() {
+    _rs = new CstLogicDistSolver!T(_vec);
+    foreach (dist; _dists) {
+      T term = cast(T) dist._term.eval();
+      T rhs;
+      int weight = cast(int) dist._weight.evaluate();
+      bool perItem = dist._perItem;
+      _rs ~= CstLogicDistRange!T(term, weight, perItem);
+    }
+  }
+
+  CstDistSolverBase getDist() {
+    if (_rs is null) initDistSolver();
+    return _rs;
+  }
+
+  string describe(bool descExpr=false) {
+    string str = "( " ~ _vec.describe(true) ~ " dist ";
+    foreach (dist; _dists) {
+      assert (dist !is null);
+      str ~= dist.describe(true) ~ ", ";
+    }
+    str ~= " )";
+    return str;
+  }
+
+  void visit(CstSolver solver) {
+    solver.pushToEvalStack(false);
+    _vec.visit(solver);
+    solver.processEvalStack(CstInsideOp.INSIDE);
+    foreach (dist; _dists) {
+      auto elem = dist._term;
+      elem.visit(solver);
+      solver.processEvalStack(CstInsideOp.EQUAL);
+    }
+    solver.processEvalStack(CstInsideOp.DONE);
+  }
+  
+  override CstLogicDistExpr!T _esdl__unroll(CstIterator iter, ulong n) {
+    CstLogicWeightedDistSetElem[] dists;
+    foreach (dist; _dists) {
+      dists ~= dist._esdl__unroll(iter, n);
+    }
+    return new CstLogicDistExpr!T(cast (CstDomBase) (_vec._esdl__unroll(iter, n)), dists);
+  }
+
+  override void setDistPredContext(CstPredicate pred) {
+    pred.distDomain(_vec);
+    _vec.setDistPred(pred);
+  }
+
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+    pred.addUnresolvedRnd(_vec);
+    size_t rndLen = pred._unresolvedRnds.length;
+    size_t rndArrLen = pred._unresolvedRndArrs.length;
+    size_t distLen = pred._dists.length;
+    foreach (dist; _dists)	// CstLogicWeightedDistSetElem
+      dist.setDomainContext(pred, context);
+    assert (pred._unresolvedRnds.length == rndLen &&
+	    pred._dists.length == distLen &&
+	    pred._unresolvedRndArrs.length == rndArrLen);
+  }
+
+  bool isSolved() {
+    return _vec.isSolved();
+  }
+
+  void annotate(CstSolverAgent agent) {
+    _vec.annotate(agent);
+    foreach (dist; _dists) dist.annotate(agent);
+  }
+
+  void writeExprString(ref _esdl__Sigbuf str) {
+    str ~= "DIST ";
+    _vec.writeExprString(str);
+    foreach (dist; _dists) {
+      dist.writeExprString(str);
+    }
+  }
+  
+  void calcHash(ref Hash hash){
+    hash.modify(100);
+    _vec.calcHash(hash);
+    foreach (dist; _dists) {
+      dist.calcHash(hash);
+    }
+  }
+
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(100);
+    _vec.makeHash();
+    _hash.modify(_vec.hashValue());
+    foreach (dist; _dists){
+      dist.makeHash();
+      _hash.modify(dist.hashValue());
+    }
+  }
+
+  bool isCompatWithDist(CstDomBase dom) { return false; }
+
+  void visit (CstDistSolverBase solver) { assert (false); }
+  
+  bool eval() {assert (false, "Unable to evaluate CstLogicDistExpr");}
+
+  override void _esdl__scan() { }
+}
+
+class CstVecDistExpr(T): CstLogicExpr
+{
+  import std.conv;
+  import esdl.solver.dist: CstVecDistSolver, CstVecDistRange;
+
+  CstDomBase _vec;
+  CstVecWeightedDistSetElem[] _dists;
+
+  CstVecDistSolver!T _rs;
+  
+  this(CstDomBase vec, CstVecWeightedDistSetElem[] dists) {
+    _vec = vec;
+    _dists = dists;
+  }
+
+  private final void initDistSolver() {
+    _rs = new CstVecDistSolver!T(_vec);
     foreach (dist; _dists) {
       T lhs = cast(T) dist._range._lhs.evaluate();
       T rhs;
@@ -1898,74 +1369,130 @@ class CstDistExpr(T): CstLogicTerm
       }
       int weight = cast(int) dist._weight.evaluate();
       bool perItem = dist._perItem;
-      _rs ~= DistRange!T(lhs, rhs, weight, perItem);
+      _rs ~= CstVecDistRange!T(lhs, rhs, weight, perItem);
     }
   }
 
-  override DistRangeSetBase getDist() {
+  CstDistSolverBase getDist() {
+    if (_rs is null) initDistSolver();
     return _rs;
   }
 
-  override string describe() {
-    string str = "( " ~ _vec.describe() ~ " dist ";
+  string describe(bool descExpr=false) {
+    string str = "( " ~ _vec.describe(true) ~ " dist ";
     foreach (dist; _dists) {
       assert (dist !is null);
-      str ~= dist.describe() ~ ", ";
+      str ~= dist.describe(true) ~ ", ";
     }
     str ~= " )";
     return str;
   }
 
-  override void visit(CstSolver solver) {
-    assert (false, "Can not visit Dist Constraint: " ~ describe());
+  void visit(CstSolver solver) {
+    solver.pushToEvalStack(false);
+    _vec.visit(solver);
+    solver.processEvalStack(CstInsideOp.INSIDE);
+    foreach (dist; _dists) {
+      auto elem = dist._range;
+      elem._lhs.visit(solver);
+      if (elem._rhs !is null) {
+	elem._rhs.visit(solver);
+	if (elem._inclusive) solver.processEvalStack(CstInsideOp.RANGEINCL);
+	else solver.processEvalStack(CstInsideOp.RANGE);
+	// solver.processEvalStack(CstLogicOp.LOGICAND);
+      }
+      else {
+	solver.processEvalStack(CstInsideOp.EQUAL);
+      }
+    }
+    solver.processEvalStack(CstInsideOp.DONE);
+  }
+  
+  override CstVecDistExpr!T _esdl__unroll(CstIterator iter, ulong n) {
+    CstVecWeightedDistSetElem[] dists;
+    foreach (dist; _dists) {
+      dists ~= dist._esdl__unroll(iter, n);
+    }
+    return new CstVecDistExpr!T(cast (CstDomBase) (_vec._esdl__unroll(iter, n)), dists);
   }
 
-  override CstDistExpr!T unroll(CstIterator iter, uint n) {
-    // import std.stdio;
-    // writeln(_lhs.describe() ~ " " ~ _op.to!string ~ " " ~ _rhs.describe() ~ " Getting unwound!");
-    // writeln("RHS: ", _rhs.unroll(iter, n).describe());
-    // writeln("LHS: ", _lhs.unroll(iter, n).describe());
-    return new CstDistExpr!T(cast (CstDomain) (_vec.unroll(iter, n)), _dists);
+  override void setDistPredContext(CstPredicate pred) {
+    pred.distDomain(_vec);
+    _vec.setDistPred(pred);
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
-    rnds ~= _vec;
-    pred.isDist(true);
-    _vec.isDist(true);
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+    size_t rndLen = pred._unresolvedRnds.length;
+    size_t rndArrLen = pred._unresolvedRndArrs.length;
+    size_t distLen = pred._dists.length;
+    foreach (dist; _dists)	// CstVecWeightedDistSetElem
+      dist.setDomainContext(pred, context);
+    assert (pred._unresolvedRnds.length == rndLen &&
+	    pred._dists.length == distLen &&
+	    pred._unresolvedRndArrs.length == rndArrLen);
+    _vec.setDomainContext(pred, context);
   }
 
-  override bool isSolved() {
+  bool isSolved() {
     return _vec.isSolved();
   }
 
-  override void writeExprString(ref Charbuf str) {
-    assert(false);
+  void annotate(CstSolverAgent agent) {
+    _vec.annotate(agent);
+    foreach (dist; _dists) dist.annotate(agent);
   }
-  override CstVecExpr isNot(CstDomain dom){
-    return null;
+  
+  void writeExprString(ref _esdl__Sigbuf str) {
+    str ~= "DIST ";
+    _vec.writeExprString(str);
+    foreach (dist; _dists) {
+      dist.writeExprString(str);
+    }
   }
+  
+  void calcHash(ref Hash hash){
+    hash.modify(100);
+    _vec.calcHash(hash);
+    foreach (dist; _dists) {
+      dist.calcHash(hash);
+    }
+  }
+
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(100);
+    _vec.makeHash();
+    _hash.modify(_vec.hashValue());
+    foreach (dist; _dists){
+      dist.makeHash();
+      _hash.modify(dist.hashValue());
+    }
+  }
+
+  bool isCompatWithDist(CstDomBase dom) { return false; }
+
+  void visit (CstDistSolverBase solver) { assert (false); }
+  
+  bool eval() {assert (false, "Unable to evaluate CstVecDistExpr");}
+
+  override void _esdl__scan() { }
 }
 
-// class CstVecSliceExpr: CstVecTerm
+// class CstVecSliceExpr: CstVecExpr
 // {
-//   CstVecExpr _vec;
-//   CstVecExpr _lhs;
-//   CstVecExpr _rhs;
+//   CstVecTerm _vec;
+//   CstVecTerm _lhs;
+//   CstVecTerm _rhs;
   
-//   string describe() {
+//   string describe(bool descExpr=false) {
 //     if (_rhs is null)
-//       return _vec.describe() ~ "[ " ~ _lhs.describe() ~ " ]";
+//       return _vec.describe(true) ~ "[ " ~ _lhs.describe(true) ~ " ]";
 //     else
-//       return _vec.describe() ~ "[ " ~ _lhs.describe() ~ " .. " ~ _rhs.describe() ~ " ]";
+//       return _vec.describe(true) ~ "[ " ~ _lhs.describe(true) ~ " .. " ~ _rhs.describe(true) ~ " ]";
 //   }
 
 //   void visit(CstSolver solver) {
@@ -1990,16 +1517,16 @@ class CstDistExpr(T): CstLogicTerm
 //     assert(false, "Can not evaluate a CstVecSliceExpr!");
 //   }
 
-//   override CstVecSliceExpr unroll(CstIterator iter, uint n) {
+//   override CstVecSliceExpr _esdl__unroll(CstIterator iter, ulong n) {
 //     if (_rhs is null)
-//       return new CstVecSliceExpr(_vec.unroll(iter, n),
-// 				 _lhs.unroll(iter, n), null);
+//       return new CstVecSliceExpr(_vec._esdl__unroll(iter, n),
+// 				 _lhs._esdl__unroll(iter, n), null);
 //     else 
-//       return new CstVecSliceExpr(_vec.unroll(iter, n),
-// 				 _lhs.unroll(iter, n), _rhs.unroll(iter, n));
+//       return new CstVecSliceExpr(_vec._esdl__unroll(iter, n),
+// 				 _lhs._esdl__unroll(iter, n), _rhs._esdl__unroll(iter, n));
 //   }
 
-//   this(CstVecExpr vec, CstVecExpr lhs, CstVecExpr rhs) {
+//   this(CstVecTerm vec, CstVecTerm lhs, CstVecTerm rhs) {
 //     _vec = vec;
 //     _lhs = lhs;
 //     _rhs = rhs;
@@ -2013,24 +1540,11 @@ class CstDistExpr(T): CstLogicTerm
 //     return false;
 //   }
 
-//   bool isOrderingExpr() {
-//     return false;		// only CstVecOrderingExpr return true
-//   }
-
-//   void setDomainContext(CstPredicate pred,
-// 			ref CstDomain[] rnds,
-//		        ref CstDomSet[] rndArrs,
-// 			ref CstDomain[] vars,
-//			ref CstDomSet[] varArrs,
-// 			ref CstValue[] vals,
-// 			ref CstIterator[] iters,
-// 			ref CstVecNodeIntf[] idxs,
-// 			ref CstDomain[] bitIdxs,
-// 			ref CstVecNodeIntf[] deps) {
-//     _vec.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
-//     _lhs.setDomainContext(pred, bitIdxs, rndArrs, bitIdxs, varArrs, vals, iters, idxs, bitIdxs, deps);
+//   void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+//     _vec.setDomainContext(pred, context);
+//     _lhs.setDomainContext(pred, DomainContextEnum.BITINDEX);
 //     if (_rhs !is null)
-//       _rhs.setDomainContext(pred, bitIdxs, rndArrs, bitIdxs, varArrs, vals, iters, idxs, bitIdxs, deps);
+//       _rhs.setDomainContext(pred, DomainContextEnum.BITINDEX);
 //   }
 
 //   override bool isSolved() {
@@ -2038,7 +1552,7 @@ class CstDistExpr(T): CstLogicTerm
 //     else return _lhs.isSolved() && _rhs.isSolved() && _vec.isSolved();
 //   }
   
-//   override void writeExprString(ref Charbuf str) {
+//   override void writeExprString(ref _esdl__Sigbuf str) {
 //     _vec.writeExprString(str);
 //     str ~= '[';
 //     _lhs.writeExprString(str);
@@ -2050,16 +1564,16 @@ class CstDistExpr(T): CstLogicTerm
 //   }
 // }
 
-class CstVecSliceExpr: CstVecTerm
+class CstVecSliceExpr: CstVecExpr
 {
-  CstVecExpr _vec;
+  CstVecTerm _vec;
   CstRangeExpr _range;
   
-  override string describe() {
-    return _vec.describe() ~ "[ " ~ _range.describe() ~ " ]";
+  string describe(bool descExpr=false) {
+    return _vec.describe(true) ~ "[ " ~ _range.describe(true) ~ " ]";
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     _vec.visit(solver);
     // _range.visit(solver);
     assert (_range._lhs.isSolved());
@@ -2077,77 +1591,108 @@ class CstVecSliceExpr: CstVecTerm
   //   return false;
   // }
 
-  override long evaluate() {
-    // auto vec  = _vec.evaluate();
-    // auto lvec = _lhs.evaluate();
-    // auto rvec = _range._rhs.evaluate();
+  long evaluate() {
+    ulong vec  = _vec.evaluate();
 
-    assert(false, "Can not evaluate a CstVecSliceExpr!");
+    ulong lvec = _range._lhs.evaluate();
+
+    ulong rvec;
+    if (_range._rhs is null) rvec = lvec + 1;
+    else       rvec = _range._rhs.evaluate();
+
+    ulong mask = (1L << (rvec - lvec)) - 1;
+
+    vec = vec >> lvec;
+
+    vec = vec & mask;
+
+    return vec;
   }
 
-  override CstVecSliceExpr unroll(CstIterator iter, uint n) {
-    return new CstVecSliceExpr(_vec.unroll(iter, n),
-			       _range.unroll(iter, n));
+  override CstVecType getVecType() {
+    return _vec.getVecType();
   }
 
-  this(CstVecExpr vec, CstRangeExpr range) {
+  CstVecSliceExpr _esdl__unroll(CstIterator iter, ulong n) {
+    return new CstVecSliceExpr(_vec._esdl__unroll(iter, n),
+			       _range._esdl__unroll(iter, n));
+  }
+
+  this(CstVecTerm vec, CstRangeExpr range) {
     _vec = vec;
     _range = range;
   }
 
-  override uint bitcount() {
+  uint bitcount() {
     return _vec.bitcount();
   }
   
-  override bool signed() {
+  bool signed() {
     return false;
   }
   
-  override bool isConst() {
+  bool isConst() {
     return false;
   }
 
-  override bool isIterator() {
+  bool isIterator() {
     return false;
   }
 
-  override bool isOrderingExpr() {
-    return false;		// only CstVecOrderingExpr return true
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+    _vec.setDomainContext(pred, context);
+    _range.setDomainContext(pred, DomainContextEnum.BITINDEX);
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
-    _vec.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
-    _range.setDomainContext(pred, bitIdxs, rndArrs, bitIdxs, varArrs, vals, iters, idxs, bitIdxs, deps);
-  }
-
-  override bool isSolved() {
+  bool isSolved() {
     return _range.isSolved() && _vec.isSolved();
   }
   
-  override void writeExprString(ref Charbuf str) {
+  void annotate(CstSolverAgent agent) {
+    _vec.annotate(agent);
+    _range.annotate(agent);
+  }
+
+  void writeExprString(ref _esdl__Sigbuf str) {
     _vec.writeExprString(str);
     str ~= '[';
     _range.writeExprString(str);
     str ~= ']';
   }
+
+  void calcHash(ref Hash hash){
+    _vec.calcHash(hash);
+    hash.modify(91);
+    _range.calcHash(hash);
+    hash.modify(93);
+  }
+  
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(0);
+    _vec.makeHash();
+    _hash.modify(_vec.hashValue());
+    _range.makeHash();
+    _hash.modify(_range.hashValue());
+  }
+
+  void _esdl__scan() { }
+
+  final void visit(CstDistSolverBase dist) { assert(false); }
+
 }
 
-// class CstVecIndexExpr: CstVecTerm
+// class CstVecIndexExpr: CstVecExpr
 // {
-//   CstVecExpr _vec;
-//   CstVecExpr _index;
+//   CstVecTerm _vec;
+//   CstVecTerm _index;
   
-//   string describe() {
-//     return _vec.describe() ~ "[ " ~ _index.describe() ~ " ]";
+//   string describe(bool descExpr=false) {
+//     return _vec.describe(true) ~ "[ " ~ _index.describe(true) ~ " ]";
 //   }
 
 //   void visit(CstSolver solver) {
@@ -2166,12 +1711,12 @@ class CstVecSliceExpr: CstVecTerm
 //     assert(false, "Can not evaluate a CstVecIndexExpr!");
 //   }
 
-//   override CstVecIndexExpr unroll(CstIterator iter, uint n) {
-//     return new CstVecIndexExpr(_vec.unroll(iter, n),
-// 			       _index.unroll(iter, n));
+//   override CstVecIndexExpr _esdl__unroll(CstIterator iter, ulong n) {
+//     return new CstVecIndexExpr(_vec._esdl__unroll(iter, n),
+// 			       _index._esdl__unroll(iter, n));
 //   }
 
-//   this(CstVecExpr vec, CstVecExpr index) {
+//   this(CstVecTerm vec, CstVecTerm index) {
 //     _vec = vec;
 //     _index = index;
 //   }
@@ -2184,29 +1729,16 @@ class CstVecSliceExpr: CstVecTerm
 //     return false;
 //   }
 
-//   bool isOrderingExpr() {
-//     return false;		// only CstVecOrderingExpr return true
-//   }
-
-//   void setDomainContext(CstPredicate pred,
-// 			ref CstDomain[] rnds,
-//			ref CstDomSet[] rndArrs,
-// 			ref CstDomain[] vars,
-//			ref CstDomSet[] varArrs,
-// 			ref CstValue[] vals,
-// 			ref CstIterator[] iters,
-// 			ref CstVecNodeIntf[] idxs,
-// 			ref CstDomain[] bitIdxs,
-// 			ref CstVecNodeIntf[] deps) {
-//     _vec.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
-//     _index.setDomainContext(pred, bitIdxs, rndArrs, bitIdxs, varArrs, vals, iters, idxs, bitIdxs, deps);
+//   void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+//     _vec.setDomainContext(pred, context);
+//     _index.setDomainContext(pred, DomainContextEnum.BITINDEX);
 //   }
 
 //   override bool isSolved() {
 //     return _index.isSolved() && _vec.isSolved();
 //   }
   
-//   override void writeExprString(ref Charbuf str) {
+//   override void writeExprString(ref _esdl__Sigbuf str) {
 //     _vec.writeExprString(str);
 //     str ~= '[';
 //     _index.writeExprString(str);
@@ -2214,17 +1746,17 @@ class CstVecSliceExpr: CstVecTerm
 //   }
 // }
 
-class CstNotVecExpr: CstVecTerm
+class CstNotVecExpr: CstVecExpr
 {
   import std.conv;
 
-  CstVecExpr _expr;
+  CstVecTerm _expr;
 
-  override string describe() {
-    return "( ~ " ~ _expr.describe ~ " )";
+  string describe(bool descExpr=false) {
+    return "( ~ " ~ _expr.describe(true) ~ " )";
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     _expr.visit(solver);
     solver.processEvalStack(CstUnaryOp.NOT);
   }
@@ -2235,19 +1767,23 @@ class CstNotVecExpr: CstVecTerm
   //   return retval;
   // }
 
-  override long evaluate() {
+  long evaluate() {
     return ~(_expr.evaluate());
   }
 
-  override CstNotVecExpr unroll(CstIterator iter, uint n) {
-    return new CstNotVecExpr(_expr.unroll(iter, n));
+  override CstVecType getVecType() {
+    return _expr.getVecType();
   }
 
-  this(CstVecExpr expr) {
+  CstNotVecExpr _esdl__unroll(CstIterator iter, ulong n) {
+    return new CstNotVecExpr(_expr._esdl__unroll(iter, n));
+  }
+
+  this(CstVecTerm expr) {
     _expr = expr;
   }
 
-  override uint bitcount() {
+  uint bitcount() {
     uint count = _expr.bitcount();
 
     if (count <= 32) return 32;
@@ -2255,7 +1791,7 @@ class CstNotVecExpr: CstVecTerm
     else return count;
   }
   
-  override bool signed() {
+  bool signed() {
     bool sign = _expr.signed();
     uint count = _expr.bitcount();
 
@@ -2263,53 +1799,70 @@ class CstNotVecExpr: CstVecTerm
     else return true;		// int promotion
   }
   
-  override bool isConst() {
+  bool isConst() {
     return _expr.isConst();
   }
 
-  override bool isIterator() {
+  bool isIterator() {
     return false;
   }
 
-  override bool isOrderingExpr() {
-    return false;		// only CstVecOrderingExpr return true
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+    _expr.setDomainContext(pred, context);
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
-    _expr.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
-  }
-
-  override bool isSolved() {
+  bool isSolved() {
     return _expr.isSolved();
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void annotate(CstSolverAgent agent) {
+    _expr.annotate(agent);
+  }
+  
+  void writeExprString(ref _esdl__Sigbuf str) {
     str ~= "(NOT ";
     _expr.writeExprString(str);
     str ~= ')';
   }
+  
+  void calcHash(ref Hash hash){
+    hash.modify(40);
+    hash.modify(78);
+    _expr.calcHash(hash);
+    hash.modify(41);
+  }
+
+  
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(40);
+    _hash.modify(78);
+    _expr.makeHash();
+    _hash.modify(_expr.hashValue());
+    _hash.modify(41);
+  }
+
+  void _esdl__scan() { }
+
+  final void visit(CstDistSolverBase dist) { assert(false); }
+
 }
 
-class CstNegVecExpr: CstVecTerm
+class CstNegVecExpr: CstVecExpr
 {
   import std.conv;
 
-  CstVecExpr _expr;
+  CstVecTerm _expr;
 
-  override string describe() {
-    return "( - " ~ _expr.describe ~ " )";
+  string describe(bool descExpr=false) {
+    return "( - " ~ _expr.describe(true) ~ " )";
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     _expr.visit(solver);
     solver.processEvalStack(CstUnaryOp.NEG);
   }
@@ -2320,19 +1873,23 @@ class CstNegVecExpr: CstVecTerm
   //   return retval;
   // }
 
-  override long evaluate() {
+  long evaluate() {
     return -(_expr.evaluate());
   }
 
-  override CstNegVecExpr unroll(CstIterator iter, uint n) {
-    return new CstNegVecExpr(_expr.unroll(iter, n));
+  override CstVecType getVecType() {
+    return _expr.getVecType();
   }
 
-  this(CstVecExpr expr) {
+  CstNegVecExpr _esdl__unroll(CstIterator iter, ulong n) {
+    return new CstNegVecExpr(_expr._esdl__unroll(iter, n));
+  }
+
+  this(CstVecTerm expr) {
     _expr = expr;
   }
 
-  override uint bitcount() {
+  uint bitcount() {
     uint count = _expr.bitcount();
 
     if (count <= 32) return 32;
@@ -2340,7 +1897,7 @@ class CstNegVecExpr: CstVecTerm
     else return count;
   }
   
-  override bool signed() {
+  bool signed() {
     bool sign = _expr.signed();
     uint count = _expr.bitcount();
 
@@ -2348,100 +1905,109 @@ class CstNegVecExpr: CstVecTerm
     else return true;		// int promotion
   }
   
-  override bool isConst() {
+  bool isConst() {
     return _expr.isConst();
   }
 
-  override bool isIterator() {
+  bool isIterator() {
     return false;
   }
 
-  override bool isOrderingExpr() {
-    return false;		// only CstVecOrderingExpr return true
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+    _expr.setDomainContext(pred, context);
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
-    _expr.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
-  }
-
-  override bool isSolved() {
+  bool isSolved() {
     return _expr.isSolved();
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void annotate(CstSolverAgent agent) {
+    _expr.annotate(agent);
+  }
+  
+  void writeExprString(ref _esdl__Sigbuf str) {
     str ~= "(NEG ";
     _expr.writeExprString(str);
     str ~= ')';
   }
+  
+  void calcHash(ref Hash hash){
+    hash.modify(40);
+    hash.modify(126);
+    _expr.calcHash(hash);
+    hash.modify(41);
+  }
+    
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(40);
+    _hash.modify(126);
+    _expr.makeHash();
+    _hash.modify(_expr.hashValue());
+    _hash.modify(41);
+  }
+
+  void _esdl__scan() { }
+
+  final void visit(CstDistSolverBase dist) { assert(false); }
+
 }
 
 
-class CstLogic2LogicExpr: CstLogicTerm
+class CstLogic2LogicExpr: CstLogicExpr
 {
   import std.conv;
 
-  CstLogicExpr _lhs;
-  CstLogicExpr _rhs;
+  CstLogicTerm _lhs;
+  CstLogicTerm _rhs;
   CstLogicOp _op;
 
-  this(CstLogicExpr lhs, CstLogicExpr rhs, CstLogicOp op) {
+  this(CstLogicTerm lhs, CstLogicTerm rhs, CstLogicOp op) {
     _lhs = lhs;
     _rhs = rhs;
     _op = op;
   }
 
-  override string describe() {
-    return "( " ~ _lhs.describe ~ " " ~ _op.to!string ~ " " ~ _rhs.describe ~ " )";
+  string describe(bool descExpr=false) {
+    return "( " ~ _lhs.describe(true) ~ " " ~ _op.to!string ~ " " ~ _rhs.describe(true) ~ " )";
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     _lhs.visit(solver);
     _rhs.visit(solver);
     solver.processEvalStack(_op);
   }
 
-  override CstLogic2LogicExpr unroll(CstIterator iter, uint n) {
-    return new CstLogic2LogicExpr(_lhs.unroll(iter, n), _rhs.unroll(iter, n), _op);
+  override CstLogic2LogicExpr _esdl__unroll(CstIterator iter, ulong n) {
+    return new CstLogic2LogicExpr(_lhs._esdl__unroll(iter, n),
+				  _rhs._esdl__unroll(iter, n), _op);
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
-    _lhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
-    _rhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+    _lhs.setDomainContext(pred, context);
+    _rhs.setDomainContext(pred, context);
   }
 
-  override CstVecExpr isNot(CstDomain dom){
-    return null;
-  }
+  bool isCompatWithDist(CstDomBase dom) { return false; }
+  void visit (CstDistSolverBase solver) { assert (false); }
+
   
-  bool cstExprIsNop() {
-    return false;
+  bool isSolved() { return _lhs.isSolved && _rhs.isSolved(); }
+
+  void annotate(CstSolverAgent agent) {
+    _lhs.annotate(agent);
+    _rhs.annotate(agent);
   }
 
-  override bool isSolved() {
-    return _lhs.isSolved && _rhs.isSolved();
-  }
-
-  override void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
+    import std.format: sformat;
+    char[16] buff;
     str ~= '(';
-    str ~= _op.to!string;
+    str ~= sformat(buff[], "%s", _op);
     str ~= ' ';
     _lhs.writeExprString(str);
     str ~= ' ';
@@ -2449,31 +2015,113 @@ class CstLogic2LogicExpr: CstLogicTerm
     str ~= ")\n";
   }
 
-  override DistRangeSetBase getDist() {
+  void calcHash(ref Hash hash){
+    hash.modify(40);
+    hash.modify(_op);
+    hash.modify(32);
+    _lhs.calcHash(hash);
+    hash.modify(32);
+    _rhs.calcHash(hash);
+    hash.modify(41);
+  }
+    
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(40);
+    bool isSymetrical;
+    _lhs.makeHash();
+    _rhs.makeHash();
+    final switch (_op){
+    case CstLogicOp.LOGICAND:
+      isSymetrical = true;
+      break;
+    case CstLogicOp.LOGICOR:
+      isSymetrical = true;
+      break;
+    case CstLogicOp.LOGICIMP:
+      isSymetrical = false;
+      break;
+    case CstLogicOp.LOGICNOT:
+      isSymetrical = false;
+      break;
+    case CstLogicOp.LOGICEQ:
+      isSymetrical = true;
+      break;
+    case CstLogicOp.LOGICNEQ:
+      isSymetrical = true;
+      break;
+    }
+    if (isSymetrical){
+      if (_lhs.hashValue() > _rhs.hashValue()){
+    	CstLogicTerm temp = _lhs;
+    	_lhs = _rhs;
+    	_rhs = temp;
+      }
+    }
+    _hash.modify(_op);
+    _hash.modify(32);
+    _hash.modify(_lhs.hashValue());
+    _hash.modify(32);
+    _hash.modify(_rhs.hashValue());
+    _hash.modify(41);
+  }
+  
+  CstDistSolverBase getDist() {
     assert (false);
   }
+
+  override bool eval() {
+    final switch (_op) {
+    case CstLogicOp.LOGICAND:
+      return _lhs.eval() && _rhs.eval();
+    case CstLogicOp.LOGICOR:
+      return _lhs.eval() || _rhs.eval();
+    case CstLogicOp.LOGICIMP:
+      return (! _lhs.eval()) || _rhs.eval();
+    case CstLogicOp.LOGICNOT:
+      assert (false);
+    case CstLogicOp.LOGICEQ:
+      return (_lhs.eval() == _rhs.eval());
+    case CstLogicOp.LOGICNEQ:
+      return (_lhs.eval() != _rhs.eval());
+    }
+  }
+  
+  override void _esdl__scan() { }
 }
 
-class CstInsideArrExpr: CstLogicTerm
+class CstInsideArrExpr: CstLogicExpr
 {
   CstInsideSetElem[] _elems;
 
-  CstVecExpr _term;
+  CstVecTerm _term;
 
   bool _notinside = false;
 
-  void setNotInside() { _notinside = true; }
+  void negate() {
+    _notinside = !_notinside;
+  }
 
-  override string describe() {
-    string description = "( " ~ _term.describe() ~ " inside [";
+  CstInsideArrExpr dup() {
+    CstInsideArrExpr expr = new CstInsideArrExpr(_term);
+    expr._elems = _elems;
+    return expr;
+  }
+
+  string describe(bool descExpr=false) {
+    string description = "( " ~ _term.describe(true) ~ " inside [";
     foreach (elem; _elems) {
-      description ~= elem.describe();
+      description ~= elem.describe(true);
     }
     description ~= "]";
     return description;
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     solver.pushToEvalStack(false);
     _term.visit(solver);
     solver.processEvalStack(CstInsideOp.INSIDE);
@@ -2505,7 +2153,18 @@ class CstInsideArrExpr: CstLogicTerm
     if (_notinside) solver.processEvalStack(CstLogicOp.LOGICNOT);
   }
 
-  this(CstVecExpr term) {
+  void visit(CstDistSolverBase solver) {
+    assert (_term == solver.getDomain());
+    assert (_notinside is true);
+    foreach (elem; _elems) {
+      // import std.stdio;
+      // writeln("visit CstDistSolverBase");
+      elem.visit(solver);
+    }
+  }
+  
+
+  this(CstVecTerm term) {
     _term = term;
   }
 
@@ -2513,70 +2172,124 @@ class CstInsideArrExpr: CstLogicTerm
     _elems ~= elem;
   }
 
-  override CstInsideArrExpr unroll(CstIterator iter, uint n) {
-    CstInsideArrExpr unrolled = new CstInsideArrExpr(_term.unroll(iter, n));
+  override CstInsideArrExpr _esdl__unroll(CstIterator iter, ulong n) {
+    CstInsideArrExpr unrolled = new CstInsideArrExpr(_term._esdl__unroll(iter, n));
     foreach (elem; _elems) {
-      unrolled.addElem(elem.unroll(iter, n));
+      unrolled.addElem(elem._esdl__unroll(iter, n));
     }
+    unrolled._notinside = _notinside;
     return unrolled;
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
-    _term.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+    // if (_notinside) {
+    //   // special processing for dist domains
+    //   CstDomBase tdom = _term.getDomain();
+    //   if (tdom !is null && tdom.getDistPred() !is null) {
+    // 	CstPredicate distPred = tdom.getDistPred();
+    // 	foreach (elem; _elems) {
+    // 	  elem.setDomainContext(pred, DomainContextEnum.DIST);
+    // 	}
+    // 	if (pred._distRnds.length > 0) {
+    // 	  foreach (rnd; pred._distRnds)
+    // 	    distPred.addDep(rnd, context);
+    // 	  pred._distRnds.reset();
+    // 	}
+    //   }
+    // }
+
+    _term.setDomainContext(pred, context);
     foreach (elem; _elems) {
-      elem.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
+      elem.setDomainContext(pred, context);
     }
   }
 
-  override CstVecExpr isNot(CstDomain dom){
-    return null;
+  bool isCompatWithDist(CstDomBase dom) {
+    CstTerm term = cast(CstTerm) _term;
+    if (_notinside && term == dom) return true;
+    else return false;
   }
   
-  bool cstExprIsNop() {
-    return false;
-  }
+  bool isSolved() { return false; }
 
-  override bool isSolved() {
-    return false;
+  void annotate(CstSolverAgent agent) {
+    _term.annotate(agent);
+    foreach (elem; _elems) elem.annotate(agent);
   }
-
-  override void writeExprString(ref Charbuf str) {
-    str ~= "(INSIDE ";
+  
+  void writeExprString(ref _esdl__Sigbuf str) {
+    if (_notinside) str ~= "(! INSIDE ";
+    else            str ~= "(INSIDE ";
     _term.writeExprString(str);
-    str ~= " [";
-    foreach (elem; _elems)
+    str ~= " [ ";
+    foreach (elem; _elems) {
       elem.writeExprString(str);
+      str ~= ' ';
+    }
     str ~= "])\n";
   }
-
-  override DistRangeSetBase getDist() {
+  
+  void calcHash(ref Hash hash){
+    hash.modify(40);
+    if (_notinside) hash.modify(92);
+    else            hash.modify(47);
+    _term.calcHash(hash);
+    hash.modify(91);
+    foreach (elem; _elems)
+      elem.calcHash(hash);
+    hash.modify(93);
+    hash.modify(41);
+  }
+  
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(40);
+    if (_notinside) _hash.modify(92);
+    else            _hash.modify(47);
+    _term.makeHash();
+    _hash.modify(_term.hashValue());
+    _hash.modify(91);
+    foreach (elem; _elems){
+      elem.makeHash();
+      _hash.modify(elem.hashValue());
+    }
+    _hash.modify(93);
+    _hash.modify(41);
+  }
+  
+  CstDistSolverBase getDist() {
     assert (false);
   }
+
+  override bool eval() {
+    bool inside = canFind!((CstInsideSetElem a, CstVecTerm b) =>
+			   a.eval(b))(_elems, _term);
+    if (_notinside) return ! inside;
+    else return inside;
+  }
+
+  override void _esdl__scan() { }
+
 }
 
-class CstUniqueArrExpr: CstLogicTerm
+class CstUniqueArrExpr: CstLogicExpr
 {
   CstUniqueSetElem[] _elems;
 
-  override string describe() {
+  string describe(bool descExpr=false) {
     string description = "( unique [";
     foreach (elem; _elems) {
-      description ~= elem.describe();
+      description ~= elem.describe(true);
     }
     description ~= "]";
     return description;
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     CstUniqueOp intT = CstUniqueOp.INT;
     foreach (elem; _elems) elem.fixIntType(intT);
     foreach (elem; _elems) {
@@ -2600,164 +2313,263 @@ class CstUniqueArrExpr: CstLogicTerm
     _elems ~= elem;
   }
 
-  override CstUniqueArrExpr unroll(CstIterator iter, uint n) {
+  override CstUniqueArrExpr _esdl__unroll(CstIterator iter, ulong n) {
     CstUniqueArrExpr unrolled = new CstUniqueArrExpr();
     foreach (elem; _elems) {
-      unrolled.addElem(elem.unroll(iter, n));
+      unrolled.addElem(elem._esdl__unroll(iter, n));
     }
     return unrolled;
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
     pred.setUniqueFlag();
     foreach (elem; _elems) {
-      elem.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
+      elem.setDomainContext(pred, context);
     }
   }
 
-  override CstVecExpr isNot(CstDomain dom){
-    return null;
+  bool isCompatWithDist(CstDomBase dom) { return false; }
+  void visit (CstDistSolverBase solver) { assert (false); }
+  
+  bool isSolved() { return false; }
+
+  void annotate(CstSolverAgent agent) {
+    foreach (elem; _elems) elem.annotate(agent);
   }
   
-  bool cstExprIsNop() {
-    return false;
-  }
-
-  override bool isSolved() {
-    return false;
-  }
-
-  override void writeExprString(ref Charbuf str) {
+  void writeExprString(ref _esdl__Sigbuf str) {
     str ~= "(UNIQUE ";
     str ~= " [";
     foreach (elem; _elems)
       elem.writeExprString(str);
     str ~= "])\n";
   }
-
-  override DistRangeSetBase getDist() {
-    assert (false);
+  
+  void calcHash(ref Hash hash){
+    hash.modify(40);
+    hash.modify(117);
+    hash.modify(91);
+    foreach (elem; _elems)
+      elem.calcHash(hash);
+    hash.modify(93);
+    hash.modify(41);
   }
+ 
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(40);
+    _hash = Hash(117);
+    _hash = Hash(91);
+    foreach (elem; _elems){
+      elem.makeHash();
+      _hash.modify(elem.hashValue());
+    }
+    _hash.modify(93);
+    _hash.modify(41);
+  }
+  
+
+  CstDistSolverBase getDist() { assert (false); }
+
+  override bool eval() {
+    import std.conv: to;
+    CstVecType type;
+    foreach (elem; _elems) {
+      if (type < elem.getVecType()) {
+	type = elem.getVecType();
+      }
+    }
+
+    switch (type) {
+    case CstVecType.BOOL:
+      bool[bool] assoc;
+      foreach (elem; _elems) {if (elem.inAssoc(assoc)) return false;}
+      return true;
+    case CstVecType.INT:
+      bool[int] assoc;
+      foreach (elem; _elems) {if (elem.inAssoc(assoc)) return false;}
+      return true;
+    case CstVecType.UINT:
+      bool[uint] assoc;
+      foreach (elem; _elems) {if (elem.inAssoc(assoc)) return false;}
+      return true;
+    case CstVecType.LONG:
+      bool[long] assoc;
+      foreach (elem; _elems) {if (elem.inAssoc(assoc)) return false;}
+      return true;
+    case CstVecType.ULONG:
+      bool[ulong] assoc;
+      foreach (elem; _elems) {if (elem.inAssoc(assoc)) return false;}
+      return true;
+    default: assert (false, "Type " ~ type.to!string() ~ " not supported");
+    }
+  }
+
+  override void _esdl__scan() { }
 }
 
 // TBD
-class CstIteLogicExpr: CstLogicTerm
+class CstIteLogicExpr: CstLogicExpr
 {
-  override string describe() {
+  string describe(bool descExpr=false) {
     return "CstIteLogicExpr";
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
     assert(false, "TBD");
   }
 
-  override CstVecExpr isNot(CstDomain dom){
-    return null;
-  }
+  bool isCompatWithDist(CstDomBase dom) { return false; }
+  void visit (CstDistSolverBase solver) { assert (false); }
+  
 
-  bool cstExprIsNop() {
-    return false;
-  }
-
-  override CstLogicTerm unroll(CstIterator iter, uint n) {
+  override CstLogicTerm _esdl__unroll(CstIterator iter, ulong n) {
     assert(false, "TBD");
   }
 
-  override abstract void visit(CstSolver solver) {
-    assert(false, "TBD");
+  void visit(CstSolver solver) { assert(false, "TBD"); }
+
+  bool isSolved() { assert(false, "TBD"); }
+
+  CstDistSolverBase getDist() { assert (false); }
+
+  void annotate(CstSolverAgent agent) {
+    assert (false, "TBD");
   }
 
-  override bool isSolved() {
-    assert(false, "TBD");
+  void writeExprString(ref _esdl__Sigbuf str) {
+    assert (false, "TBD");
   }
 
-  override DistRangeSetBase getDist() {
-    assert (false);
+  void calcHash(ref Hash hash){
+    assert (false, "TBD");
   }
+
+  Hash _hash;
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    assert(false, "TBD");
+  }
+  
+
+  override bool eval() { assert(false, "TBD"); }
+  override void _esdl__scan() { }
 }
 
-class CstVec2LogicExpr: CstLogicTerm
+class CstVec2LogicExpr: CstLogicExpr
 {
   import std.conv;
 
-  CstVecExpr _lhs;
-  CstVecExpr _rhs;
+  CstVecTerm _lhs;
+  CstVecTerm _rhs;
   CstCompareOp _op;
 
-  this(CstVecExpr lhs, CstVecExpr rhs, CstCompareOp op) {
+  this(CstVecTerm lhs, CstVecTerm rhs, CstCompareOp op) {
     _lhs = lhs;
     _rhs = rhs;
     _op = op;
   }
 
-  override string describe() {
-    return "( " ~ _lhs.describe ~ " " ~ _op.to!string ~ " " ~ _rhs.describe ~ " )";
+  string describe(bool descExpr=false) {
+    return "( " ~ _lhs.describe(true) ~ " " ~ _op.to!string ~ " " ~ _rhs.describe(true) ~ " )";
   }
 
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     _lhs.visit(solver);
     _rhs.visit(solver);
     solver.processEvalStack(_op);
   }
 
-  override CstVec2LogicExpr unroll(CstIterator iter, uint n) {
+  override CstVec2LogicExpr _esdl__unroll(CstIterator iter, ulong n) {
     // import std.stdio;
-    // writeln(_lhs.describe() ~ " " ~ _op.to!string ~ " " ~ _rhs.describe() ~ " Getting unwound!");
-    // writeln("RHS: ", _rhs.unroll(iter, n).describe());
-    // writeln("LHS: ", _lhs.unroll(iter, n).describe());
-    return new CstVec2LogicExpr(_lhs.unroll(iter, n), _rhs.unroll(iter, n), _op);
+    // writeln(_lhs.describe(true) ~ " " ~ _op.to!string ~ " " ~ _rhs.describe(true) ~ " Getting unwound!");
+    // writeln("RHS: ", _rhs._esdl__unroll(iter, n).describe(true));
+    // writeln("LHS: ", _lhs._esdl__unroll(iter, n).describe(true));
+    return new CstVec2LogicExpr(_lhs._esdl__unroll(iter, n),
+				_rhs._esdl__unroll(iter, n), _op);
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
-    _lhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
-    _rhs.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+    // if (_op == CstCompareOp.NEQ) {
+    //   // special processing for dist domains
+    //   CstDomBase ldom = _lhs.getDomain();
+    //   if (ldom !is null && ldom.getDistPred() !is null) {
+    // 	CstPredicate distPred = ldom.getDistPred();
+    // 	// find if RHS is also a dist domain
+    // 	CstDomBase rdom = _rhs.getDomain();
+    // 	if (rdom !is null && rdom.getDistPred() !is null) {
+    // 	  distPred.addDep(rdom, context);
+    // 	}
+    // 	else {
+    // 	  _rhs.setDomainContext(pred, DomainContextEnum.DIST);
+    // 	  if (pred._distRnds.length > 0) {
+    // 	    foreach (rnd; pred._distRnds) distPred.addDep(rnd, context);
+    // 	    pred._distRnds.reset();
+    // 	  }
+    // 	}
+    //   }
+    //   else {
+    // 	assert (_rhs !is null);
+    // 	CstDomBase rdom = _rhs.getDomain();
+    // 	if (rdom !is null && rdom.getDistPred() !is null) {
+    // 	  CstPredicate distPred = rdom.getDistPred();
+    // 	  _lhs.setDomainContext(pred, DomainContextEnum.DIST);
+    // 	  if (pred._distRnds.length > 0) {
+    // 	    foreach (rnd; pred._distRnds) distPred.addDep(rnd, context);
+    // 	    pred._distRnds.reset();
+    // 	  }
+    // 	}
+    //   }
+    // }
+    _lhs.setDomainContext(pred, context);
+    _rhs.setDomainContext(pred, context);
   }
   
-  override CstVecExpr isNot(CstDomain dom){
+  bool isCompatWithDist(CstDomBase dom) {
     if (_op is CstCompareOp.NEQ) {
-      if (_lhs !is dom) {
-	assert(false, "Constraint " ~ describe() ~ " not allowed since " ~ dom.name()
-	       ~ " is dist");
-      }
-      return _rhs;
+      CstDomBase ldom = _lhs.getDomain();
+      if (ldom !is null && ldom is dom) return true;
+      CstDomBase rdom = _rhs.getDomain();
+      if (rdom !is null && rdom is dom) return true;
     }
-    return null;
+    return false;
+  }
+
+  void visit (CstDistSolverBase solver) {
+    assert (_op is CstCompareOp.NEQ);
+    // try considering LHS as dom
+    CstDomBase ldom = _lhs.getDomain();
+    CstDomBase rdom = _rhs.getDomain();
+    assert (ldom !is null || rdom !is null);
+    if (ldom !is null && ldom is solver.getDomain()) {
+      solver.purge(_rhs.evaluate());
+    }
+    if (rdom !is null && rdom is solver.getDomain()) {
+      solver.purge(_lhs.evaluate());
+    }
   }
     
-  override bool isSolved() {
+  bool isSolved() {
     return _lhs.isSolved && _rhs.isSolved();
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void annotate(CstSolverAgent agent) {
+    _lhs.annotate(agent);
+    _rhs.annotate(agent);
+  }
+
+  void writeExprString(ref _esdl__Sigbuf str) {
+    import std.format: sformat;
+    char[16] buff;
     str ~= '(';
-    str ~= _op.to!string;
+    str ~= sformat(buff[], "%s", _op);
     str ~= ' ';
     _lhs.writeExprString(str);
     str ~= ' ';
@@ -2765,117 +2577,236 @@ class CstVec2LogicExpr: CstLogicTerm
     str ~= ")\n";
   }
 
-  override DistRangeSetBase getDist() {
+  void calcHash(ref Hash hash){
+    hash.modify(40);
+    hash.modify(_op);
+    hash.modify(32);
+    _lhs.calcHash(hash);
+    hash.modify(32);
+    _rhs.calcHash(hash);
+    hash.modify(41);
+  }
+
+  Hash _hash;
+  
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(40);
+    _lhs.makeHash();
+    _rhs.makeHash();
+    final switch(_op){
+    case CstCompareOp.LTH:
+      break;
+    case CstCompareOp.LTE:
+      break;
+    case CstCompareOp.GTH:
+      CstVecTerm temp = _lhs;
+      _lhs = _rhs;
+      _rhs = temp;
+      _op = CstCompareOp.LTH;
+      break;
+    case CstCompareOp.GTE:
+      CstVecTerm temp = _lhs;
+      _lhs = _rhs;
+      _rhs = temp;
+      _op = CstCompareOp.LTE;
+      break;
+    case CstCompareOp.EQU:
+      if (_lhs.hashValue() > _rhs.hashValue()){
+    	CstVecTerm temp = _lhs;
+    	_lhs = _rhs;
+    	_rhs = temp;
+      }
+      break;
+    case CstCompareOp.NEQ:
+      if (_lhs.isDistVar() || _rhs.isDistVar()){
+	break;
+      }
+      if (_lhs.hashValue() > _rhs.hashValue()){
+    	CstVecTerm temp = _lhs;
+    	_lhs = _rhs;
+    	_rhs = temp;
+      }
+      break;
+    }
+    _hash.modify(_op);
+    _hash.modify(32);
+    _hash.modify(_lhs.hashValue());
+    _hash.modify(32);
+    _hash.modify(_rhs.hashValue());
+    _hash.modify(41);
+  }
+
+  CstDistSolverBase getDist() {
     assert (false);
   }
+
+  override bool eval() {
+    auto lvec = _lhs.evaluate();
+    auto rvec = _rhs.evaluate();
+
+    if (_lhs.bitcount() < 32 || (_lhs.bitcount() == 32 && _lhs.signed())) {
+      int lhs_ = cast(int) lvec;
+      if (_rhs.bitcount() < 32 || (_rhs.bitcount() == 32 && _rhs.signed())) {
+	int rhs_ = cast(int) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 32 && !_rhs.signed()) {
+	uint rhs_ = cast(uint) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() < 64 || (_rhs.bitcount() == 64 && _rhs.signed())) {
+	long rhs_ = cast(long) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 64 && !_rhs.signed()) {
+	ulong rhs_ = cast(ulong) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      assert(false, "TBD -- Can not yet handle > 64 bit math operations");
+    }
+    if (_lhs.bitcount() == 32 && !_lhs.signed) {
+      uint lhs_ = cast(uint) lvec;
+      if (_rhs.bitcount() < 32 || (_rhs.bitcount() == 32 && _rhs.signed())) {
+	int rhs_ = cast(int) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 32 && !_rhs.signed()) {
+	uint rhs_ = cast(uint) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() < 64 || (_rhs.bitcount() == 64 && _rhs.signed())) {
+	long rhs_ = cast(long) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 64 && !_rhs.signed()) {
+	ulong rhs_ = cast(ulong) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      assert(false, "TBD -- Can not yet handle > 64 bit math operations");
+    }
+    if (_lhs.bitcount() < 64 || (_lhs.bitcount() == 64 && _lhs.signed())) {
+      long lhs_ = cast(long) lvec;
+      if (_rhs.bitcount() < 32 || (_rhs.bitcount() == 32 && _rhs.signed())) {
+	int rhs_ = cast(int) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 32 && !_rhs.signed()) {
+	uint rhs_ = cast(uint) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() < 64 || (_rhs.bitcount() == 64 && _rhs.signed())) {
+	long rhs_ = cast(long) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 64 && !_rhs.signed()) {
+	ulong rhs_ = cast(ulong) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      assert(false, "TBD -- Can not yet handle > 64 bit math operations");
+    }
+    if (_lhs.bitcount() == 64 && !_lhs.signed()) {
+      ulong lhs_ = cast(ulong) lvec;
+      if (_rhs.bitcount() < 32 || (_rhs.bitcount() == 32 && _rhs.signed())) {
+	int rhs_ = cast(int) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 32 && !_rhs.signed()) {
+	uint rhs_ = cast(uint) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() < 64 || (_rhs.bitcount() == 64 && _rhs.signed())) {
+	long rhs_ = cast(long) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      if (_rhs.bitcount() == 64 && !_rhs.signed()) {
+	ulong rhs_ = cast(ulong) rvec;
+	return _esdl__evaluate(lhs_, rhs_, _op);
+      }
+      assert(false, "TBD -- Can not yet handle > 64 bit math operations");
+    }
+    assert(false, "TBD -- Can not yet handle > 64 bit math operations");
+  }
+
+  override void _esdl__scan() { }
 }
 
-class CstLogicConst: CstLogicTerm
+class CstNotLogicExpr: CstLogicExpr
 {
-  immutable bool _expr;
+  CstLogicTerm _expr;
 
-  this(bool expr) {
+  this(CstLogicTerm expr) {
     _expr = expr;
   }
 
-  override void visit(CstSolver solver) {
-    solver.pushToEvalStack(_expr);
+  string describe(bool descExpr=false) {
+    return "( " ~ "!" ~ " " ~ _expr.describe(true) ~ " )";
   }
 
-  override string describe() {
-    if(_expr) return "TRUE";
-    else return "FALSE";
-  }
-
-  override CstLogicConst unroll(CstIterator iter, uint n) {
-    return this;
-  }
-
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
-    // nothing for CstLogicConst
-  }
-
-  override CstVecExpr isNot(CstDomain dom){
-    return null;
-  }
-
-  override bool isSolved() {
-    return true;
-  }
-
-  override void writeExprString(ref Charbuf str) {
-    if (_expr) str ~= "TRUE";
-    else str ~= "FALSE";
-  }
-
-  override DistRangeSetBase getDist() {
-    assert (false);
-  }
-}
-
-class CstNotLogicExpr: CstLogicTerm
-{
-  CstLogicExpr _expr;
-
-  this(CstLogicExpr expr) {
-    _expr = expr;
-  }
-
-  override string describe() {
-    return "( " ~ "!" ~ " " ~ _expr.describe ~ " )";
-  }
-
-  override void visit(CstSolver solver) {
+  void visit(CstSolver solver) {
     _expr.visit(solver);
     solver.processEvalStack(CstLogicOp.LOGICNOT);
   }
 
-  override CstNotLogicExpr unroll(CstIterator iter, uint n) {
-    return new CstNotLogicExpr(_expr.unroll(iter, n));
+  override CstNotLogicExpr _esdl__unroll(CstIterator iter, ulong n) {
+    return new CstNotLogicExpr(_expr._esdl__unroll(iter, n));
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
-    _expr.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
+    _expr.setDomainContext(pred, context);
   }
 
-  override CstVecExpr isNot(CstDomain dom){
-    return null;
-  }
+  bool isCompatWithDist(CstDomBase dom) { return false; }
+  void visit (CstDistSolverBase solver) { assert (false); }
 
-  override bool isSolved() {
+  bool isSolved() {
     return _expr.isSolved();
   }
 
-  override void writeExprString(ref Charbuf str) {
+  void annotate(CstSolverAgent agent) {
+    _expr.annotate(agent);
+  }
+
+  void writeExprString(ref _esdl__Sigbuf str) {
     str ~= "(NOT ";
     _expr.writeExprString(str);
     str ~= ")\n";
   }
+
+  void calcHash(ref Hash hash){
+    hash.modify(40);
+    hash.modify(78);
+    _expr.calcHash(hash);
+    hash.modify(41);
+  }
   
-  override DistRangeSetBase getDist() {
+  Hash _hash;
+  
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(40);
+    _hash.modify(78);
+    _expr.makeHash();
+    _hash.modify(_expr.hashValue());
+    _hash.modify(41);
+  }
+  
+  CstDistSolverBase getDist() {
     assert (false);
   }
+
+  override bool eval() {return !_expr.eval();}
+
+  override void _esdl__scan() { }
 }
 
-class CstVarVisitorExpr: CstLogicTerm
+class CstVarVisitorExpr: CstLogicExpr
 {
   CstVarNodeIntf _obj;
 
@@ -2884,23 +2815,18 @@ class CstVarVisitorExpr: CstLogicTerm
     _obj = obj;
   }
 
-  override string describe() {
-    return "Visitor: " ~ _obj.fullName();
+  string describe(bool descExpr=false) {
+    return "Visitor: " ~ _obj._esdl__getFullName() ~ '\n';
   }
 
-  override void visit(CstSolver solver) {
-    assert (false);
+  void visit(CstSolver solver) {
+    solver.pushToEvalStack(true);
   }
 
-  override void visit() {
+  override CstVarVisitorExpr _esdl__unroll(CstIterator iter, ulong n) {
     assert (_obj !is null);
-    _obj.visit();
-  }
-
-  override CstVarVisitorExpr unroll(CstIterator i, uint n) {
-    assert (_obj !is null);
-    CstIterator iter = _obj._esdl__iter();
-    if (iter is i) {
+    CstIterator iter_ = _obj._esdl__iter();
+    if (iter_ is iter) {
       return new CstVarVisitorExpr(_obj._esdl__getChild(n));
     }
     else {
@@ -2908,36 +2834,53 @@ class CstVarVisitorExpr: CstLogicTerm
     }
   }
 
-  override void setDomainContext(CstPredicate pred,
-				 ref CstDomain[] rnds,
-				 ref CstDomSet[] rndArrs,
-				 ref CstDomain[] vars,
-				 ref CstDomSet[] varArrs,
-				 ref CstValue[] vals,
-				 ref CstIterator[] iters,
-				 ref CstVecNodeIntf[] idxs,
-				 ref CstDomain[] bitIdxs,
-				 ref CstVecNodeIntf[] deps) {
+  void setDomainContext(CstPredicate pred, DomainContextEnum context) {
     assert (_obj !is null);
     CstIterator iter = _obj._esdl__iter();
     if (iter !is null) {
-      iter.setDomainContext(pred, rnds, rndArrs, vars, varArrs, vals, iters, idxs, bitIdxs, deps);
+      iter.setDomainContext(pred, context);
+      pred.addUnresolvedRnd(iter.getLenVec(), context);
     }
   }
 
-  override bool isSolved() {
+  bool isSolved() {
     return false;
   }
 
-  override void writeExprString(ref Charbuf str) {
-    str ~= this.describe();
+  void annotate(CstSolverAgent agent) { }
+
+  void writeExprString(ref _esdl__Sigbuf str) {
+    str ~= this.describe(true);
   }
 
-  override CstVecExpr isNot(CstDomain dom){
-    return null;
+  
+  void calcHash(ref Hash hash){
+    hash.modify(118);
+    hash.modify(_obj._esdl__getFullName());
+  }
+  Hash _hash;
+  
+  size_t hashValue() {
+    return _hash.hash;
+  }
+  
+  void makeHash(){
+    _hash = Hash(118);
+    _hash.modify(_obj._esdl__getFullName());
   }
 
-  override DistRangeSetBase getDist() {
+  bool isCompatWithDist(CstDomBase dom) { return false; }
+  void visit (CstDistSolverBase solver) { assert (false); }
+
+  CstDistSolverBase getDist() {
     assert (false);
   }
+
+  override void _esdl__scan() {
+    assert (_obj !is null);
+    _obj._esdl__scan();
+  }
+
+  override bool eval() {assert(false);}
+
 }

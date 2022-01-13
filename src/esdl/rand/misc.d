@@ -1,22 +1,70 @@
 module esdl.rand.misc;
 
-import esdl.data.bvec: isBitVector;
 import esdl.data.queue;
-import esdl.data.charbuf;
-import std.traits: isIntegral, isBoolean, isArray,
-  EnumMembers, isSomeChar;
+import esdl.data.folder: Charbuf;
+import std.traits: isIntegral, isBoolean, isArray, EnumMembers, isSigned,
+  isSomeChar, isAssociativeArray, ValueType, KeyType, OriginalType;
+import std.range: ElementType;
 import std.meta: AliasSeq;
+import esdl.data.bvec: isBitVector;
 
-interface _esdl__Norand { } 	// classes derived from this interface shall not have a proxy
+alias _esdl__Sigbuf = Charbuf!("Signature", 0);
 
-// Different types attributes for UI
-// template _esdl__norand() {}
-// enum norand;
+public enum SolveOrder: ubyte { UNDECIDED, NOW, LATER }
 
+// https://stackoverflow.com/questions/46073295/implicit-type-promotion-rules
+// Mainly two things:
+// 1. if a number smaller than int can fit into an int, it will be promoted to int
+//    We can extend this principle to vectors with < 64 bits and promote that to long
+// 2. if a signed integer interacts with a non-singed interger of the same size,
+//    both will be promoted to unsigned
+public enum CstVecType: ubyte { BOOL, INT, UINT, LONG, ULONG, CENT, UCENT, NAN }
 
+template GetVecType(T) // if (isIntegral!T || isBitVector!T || isBoolean!T)
+{
+  static assert (isIntegral!T || isBitVector!T || isBoolean!T);
+
+  static if (isIntegral!T) {
+    enum size_t tSize = T.sizeof * 8;
+    enum bool tSign = isSigned!T;
+  }
+  else static if (isBitVector!T) {
+    enum size_t tSize = T.SIZE * 8;
+    enum bool tSign = T.ISSIGNED;
+  }
+  else static if (isBoolean!T) {
+    enum size_t tSize = 1;
+    enum bool tSign = false;
+  }
+
+  static if (tSign) {
+    static if (tSize <= 32) enum CstVecType GetVecType = CstVecType.INT;
+    else static if (tSize <= 64) enum CstVecType GetVecType = CstVecType.LONG;
+    else static if (tSize <= 128) enum CstVecType GetVecType = CstVecType.CENT;
+    else enum CstVecType GetVecType = CstVecType.NAN;
+  }
+  else {
+    static if (tSize == 1) enum CstVecType GetVecType = CstVecType.BOOL;
+    else static if (tSize < 32) enum CstVecType GetVecType = CstVecType.INT;
+    else static if (tSize == 32) enum CstVecType GetVecType = CstVecType.UINT;
+    else static if (tSize < 64) enum CstVecType GetVecType = CstVecType.LONG;
+    else static if (tSize == 64) enum CstVecType GetVecType = CstVecType.ULONG;
+    else static if (tSize < 128) enum CstVecType GetVecType = CstVecType.CENT;
+    else static if (tSize == 128) enum CstVecType GetVecType = CstVecType.UCENT;
+    else enum CstVecType GetVecType = CstVecType.NAN;
+  }
+}
+
+CstVecType getCommonVecType(CstVecType lhs, CstVecType rhs) {
+  if (rhs > lhs) return rhs;
+  else return lhs;
+}
+
+public enum DomainContextEnum: ubyte { DEFAULT, INDEX, BITINDEX, DIST }
 
 // write in Hex form for all the bytes of data
-size_t writeHexString(T)(T val, ref Charbuf str) {
+size_t writeHexString(T)(T val, ref _esdl__Sigbuf str) {
+  import esdl.data.bvec: isBitVector;
   static if (isBitVector!T) {
     enum size_t NIBBLES = 2 * (T.SIZE + 7)/8;
     enum size_t NIBBLESPERWORD = 2 * T.STORE_T.sizeof;
@@ -45,6 +93,10 @@ size_t writeHexString(T)(T val, ref Charbuf str) {
 
 struct rand
 {
+  // enum phony;
+  static interface disable { }
+  static interface barrier { }
+
   bool _noRand;
   bool _noProxy;
 
@@ -54,9 +106,9 @@ struct rand
     _counts = counts;
   }
   
-  this(bool hasProxy) {
-    _noProxy = ! hasProxy;
-    _noRand  = _noProxy;
+  this(bool hasRand) {
+    _noRand  = ! hasRand;
+    _noProxy = false;
   }
 
   this(bool noRand, bool noProxy) {
@@ -105,7 +157,194 @@ struct rand
 
 // struct _esdl__rand(N...) { }
 
+template isRandomizableInt(T) {
+  import esdl.data.bvec: isBitVector;
+  enum bool isRandomizableInt =
+    isIntegral!T || isBitVector!T || isBoolean!T; // || isSomeChar!T
+}
+
+template isRandomizableEnum(T) {
+  alias OT = OriginalType!T;
+  enum bool isRandomizableEnum = is (T == enum) && isRandomizableInt!OT;
+}
+
+template isRandomizable(T) {
+  enum bool isRandomizable = isRandomizableInt!T || isRandomizableEnum!T;
+}
+
+
+template isRandVectorSet(T) {
+  enum bool isRandVectorSet = isRandVectorAssoc!T || isRandVectorArray!T;
+}
+
+// template isRandStructSet(T) {
+//   enum bool isRandStructSet = isRandStructAssoc!T || isRandStructArray!T;
+// }
+
+// template isRandClassSet(T) {
+//   enum bool isRandClassSet = isRandClassAssoc!T || isRandClassArray!T;
+// }
+
+template isRandObjectSet(T) {
+  enum bool isRandObjectSet = isRandObjectAssoc!T || isRandObjectArray!T;
+}
+
+template isRandObject(T) {
+  static if (is (T == class) ||
+	     (is (T == struct) && !isQueue!T)) {
+    enum bool isRandObject = ! _esdl__TypeHasRandBarrier!T;
+  }
+  else static if (is (T == U*, U)) {
+    static if (is (U == struct))
+      enum bool isRandObject = ! _esdl__TypeHasRandBarrier!U;
+    else
+      enum bool isRandObject = false;
+  }
+  else enum bool isRandObject = false;
+}
+
+// Associative arrays that can be randomized
+template isRandVectorAssoc(T) {
+  // only the top level array can be Assoc
+  static if (isAssociativeArray!T) {
+    alias K = KeyType!T; 
+    static if (isRandomizable!K) {
+      alias E = ValueType!T;
+      enum bool isRandVectorAssoc =
+	isRandVectorArray!E || isRandomizable!E;
+    }
+    else {
+      enum bool isRandVectorAssoc = false;
+    }
+  }
+  else {
+    enum bool isRandVectorAssoc = false;
+  }
+}
+
+// template isRandStructAssoc(T) {
+//   // only the top level array can be Assoc
+//   static if (isAssociativeArray!T) {
+//     alias K = KeyType!T; 
+//     static if (isRandomizable!K) {
+//       alias E = ValueType!T;
+//       enum bool isRandStructAssoc =
+// 	isRandStructArray!E || is (E == struct);
+//     }
+//     else {
+//       enum bool isRandStructAssoc = false;
+//     }
+//   }
+//   else {
+//     enum bool isRandStructAssoc = false;
+//   }
+// }
+
+// template isRandClassAssoc(T) {
+//   // only the top level array can be Assoc
+//   static if (isAssociativeArray!T) {
+//     alias K = KeyType!T; 
+//     static if (isRandomizable!K) {
+//       alias E = ValueType!T;
+//       enum bool isRandClassAssoc =
+// 	isRandClassArray!E || is (E == class) ||
+// 	(is (E == U*, U) && is (U == struct));
+//     }
+//     else {
+//       enum bool isRandClassAssoc = false;
+//     }
+//   }
+//   else {
+//     enum bool isRandClassAssoc = false;
+//   }
+// }
+
+template isRandObjectAssoc(T) {
+  // only the top level array can be Assoc
+  static if (isAssociativeArray!T) {
+    alias K = KeyType!T; 
+    static if (isRandomizable!K) {
+      alias E = ValueType!T;
+      enum bool isRandObjectAssoc =
+	isRandObjectArray!E || isRandObject!E;
+    }
+    else {
+      enum bool isRandObjectAssoc = false;
+    }
+  }
+  else {
+    enum bool isRandObjectAssoc = false;
+  }
+}
+
+template isRandVectorArray(T) {
+  static if (isArray!T) {
+    alias E = ElementType!T;
+    enum bool isRandVectorArray =
+      isRandVectorArray!E || isRandomizable!E;
+  }
+  else static if (isQueue!T) {
+    alias E = T.ElementType;
+    enum bool isRandVectorArray =
+      isRandVectorArray!E || isRandomizable!E;
+  }
+  else {
+    enum bool isRandVectorArray = false;
+  }
+}
+
+// template isRandStructArray(T) {
+//   static if (isArray!T) {
+//     alias E = ElementType!T;
+//     enum bool isRandStructArray =
+//       isRandStructArray!E || is (E == struct);
+//   }
+//   else static if (isQueue!T) {
+//     alias E = T.ElementType;
+//     enum bool isRandStructArray =
+//       isRandStructArray!E || is (E == struct);
+//   }
+//   else {
+//     enum bool isRandStructArray = false;
+//   }
+// }
+
+// template isRandClassArray(T) {
+//   static if (isArray!T) {
+//     alias E = ElementType!T;
+//     enum bool isRandClassArray =
+//       isRandClassArray!E || is (E == class) ||
+//       (is (E == U*, U) && is (U == struct));
+//   }
+//   else static if (isQueue!T) {
+//     alias E = T.ElementType;
+//     enum bool isRandClassArray =
+//       isRandClassArray!E || is (E == class) ||
+//       (is (E == U*, U) && is (U == struct));
+//   }
+//   else {
+//     enum bool isRandClassArray = false;
+//   }
+// }
+
+template isRandObjectArray(T) {
+  static if (isArray!T) {
+    alias E = ElementType!T;
+    enum bool isRandObjectArray =
+      isRandObjectArray!E || isRandObject!E;
+  }
+  else static if (isQueue!T) {
+    alias E = T.ElementType;
+    enum bool isRandObjectArray =
+      isRandObjectArray!E || isRandObject!E;
+  }
+  else {
+    enum bool isRandObjectArray = false;
+  }
+}
+
 template isVecSigned(L) {
+  import esdl.data.bvec: isBitVector;
   import std.traits: isIntegral, isSigned;
   static if (is(L: bool))
     enum bool isVecSigned = false;
@@ -123,14 +362,18 @@ template isVecSigned(L) {
 template LeafElementType(T)
 {
   import std.range;		// ElementType
-  static if (is (T == string)) {
-    alias LeafElementType = immutable(char);
-  }
-  else static if (isArray!T) {
+  // static if (is (T == string)) {
+  //   alias LeafElementType = immutable(char);
+  // }
+  // else
+  static if (isArray!T) {
     alias LeafElementType = LeafElementType!(ElementType!T);
   }
   else static if (isQueue!T) {
     alias LeafElementType = LeafElementType!(T.ElementType);
+  }
+  else static if (isAssociativeArray!T) {
+    alias LeafElementType = LeafElementType!(ValueType!T);
   }
   else {
     alias LeafElementType = T;
@@ -143,9 +386,16 @@ template ElementTypeN(T, int N=0)
   static if(N==0) {
     alias ElementTypeN = T;
   }
-  else {
+  else static if (isArray!T) {
     alias ElementTypeN = ElementTypeN!(ElementType!T, N-1);
   }
+  else static if (isQueue!T) {
+    alias ElementTypeN = ElementTypeN!(T.ElementType, N-1);
+  }
+  else static if (isAssociativeArray!T) {
+    alias ElementTypeN = ElementTypeN!(ValueType!T, N-1);
+  }
+  else static assert(false);
 }
 
 template Unconst(T) {
@@ -169,6 +419,9 @@ template _esdl__ArrOrder(T, int N=0) {
   }
   else static if (isQueue!T) {
     enum int _esdl__ArrOrder = 1 + _esdl__ArrOrder!(T.ElementType) - N;
+  }
+  else static if (isAssociativeArray!T) {
+    enum int _esdl__ArrOrder = 1 + _esdl__ArrOrder!(ValueType!T) - N;
   }
   else {
     static assert (N == 0);
@@ -259,6 +512,32 @@ template _esdl__ArrOrder(T, int N=0) {
 //   }
 // }
 
+template _esdl__TypeHasRandBarrier(T) {
+  static if (is (T == class) &&
+	     is (T B == super) &&
+	     _esdl__TypeEnlistsRandBarrier!B) {
+    enum bool _esdl__TypeHasRandBarrier = true;
+  }
+  else static if (is (T == struct) &&
+		  __traits (compiles,  T._esdl__TypeHasRandBarrier)
+		  ) {
+    enum bool _esdl__TypeHasRandBarrier = true;
+  }
+  else {
+    enum bool _esdl__TypeHasRandBarrier = false;
+  }
+}
+
+template _esdl__TypeEnlistsRandBarrier(B...) {
+  static if (B.length == 0)
+    enum bool _esdl__TypeEnlistsRandBarrier = false;
+  else static if (is (B[0] == rand.barrier))
+    enum bool _esdl__TypeEnlistsRandBarrier = true;
+  else
+    enum bool _esdl__TypeEnlistsRandBarrier =
+      _esdl__TypeEnlistsRandBarrier!(B[1..$]);
+}
+
 template _esdl__TypeHasNorandAttr(T) {
   static if (is (T == class) || is (T == struct)) {
     enum rand RAND = scanRandAttr!(__traits(getAttributes, T));
@@ -291,10 +570,10 @@ template getRandAttr(T, int I) {
 }
 
 template scanRandAttr(A...) {
-  static if(A.length == 0) {
-    enum rand scanRandAttr = rand(true, false);
+  static if (A.length == 0) {
+    enum rand scanRandAttr = rand(true, true);
   }
-  else static if(__traits(isSame, A[0], rand)) {
+  else static if (__traits(isSame, A[0], rand)) {
     enum rand scanRandAttr = rand(false, false);
   }
   else static if (__traits(compiles, typeof(A[0])) &&
@@ -306,109 +585,6 @@ template scanRandAttr(A...) {
   }
 }
 
-
-class _esdl__RandGen
-{
-  import std.random;
-
-  private Random _gen;
-
-  private uint _seed;
-
-  this(uint seed) {
-    _seed = seed;
-    _gen = Random(seed);
-  }
-
-  void seed(uint seed) {
-    _seed = seed;
-    _gen.seed(seed);
-  }
-
-  bool flip() {
-    auto x = dice(_gen, 50, 50);
-    if (x == 0) return false;
-    else return true;
-  }
-
-  double get() {
-    return uniform(0.0, 1.0, _gen);
-  }
-
-  @property T gen(T)() {
-    static if (isBoolean!T) {
-      return flip();
-    }
-    else static if (is (T == enum)) {
-      static immutable T[EnumMembers!T.length] vals = [EnumMembers!T];
-      return vals[uniform(0, cast(uint) vals.length, _gen)];
-    }
-    else static if (isIntegral!T) {
-      return uniform!(T)(_gen);
-    }
-    else static if (isBitVector!T) {
-      T val;
-      val.randomize(_gen);
-      return val;
-    }
-    else {
-      static assert(false);
-    }
-  }
-
-  @property void gen(T)(T* t) {
-    static if (isBoolean!T) {
-      *t = cast(T) flip();
-    }
-    else static if (is (T == enum)) {
-      static immutable T[EnumMembers!T.length] vals = [EnumMembers!T];
-      *t = vals[uniform(0, cast(uint) vals.length, _gen)];
-    }
-    else static if(isIntegral!T) {
-      *t = uniform!(T)(_gen);
-    }
-    else static if(isBitVector!T) {
-      t.randomize(_gen);
-    }
-    else {
-      static assert(false);
-    }
-  }
-
-  @property void gen(T)(ref T t) {
-    static if (isBoolean!T) {
-      t = cast(T) flip();
-    }
-    else static if (is (T == enum)) {
-      static immutable T[EnumMembers!T.length] vals = [EnumMembers!T];
-      t = vals[uniform(0, cast(uint) vals.length, _gen)];
-    }
-    else static if(isIntegral!T) {
-      t = uniform!(T)(_gen);
-    }
-    else static if(isBitVector!T) {
-      t.randomize(_gen);
-    }
-    else {
-      static assert(false);
-    }
-  }
-
-  @property auto gen(T1, T2)(T1 a, T2 b)
-    if(isIntegral!T1 && isIntegral!T2) {
-      return uniform(a, b, _gen);
-    }
-
-  @property void gen(T, T1, T2)(ref T t, T1 a, T2 b)
-    if(isIntegral!T1 && isIntegral!T2) {
-      t = uniform(a, b, _gen);
-    }
-
-  @property void gen(T, T1, T2)(T* t, T1 a, T2 b)
-    if(isIntegral!T1 && isIntegral!T2) {
-      *t = uniform(a, b, _gen);
-    }
-}
 
 enum CstUnaryOp: byte
 {   NOT,
@@ -449,6 +625,8 @@ enum CstLogicOp: byte
     LOGICOR,
     LOGICIMP,
     LOGICNOT,
+    LOGICEQ,
+    LOGICNEQ
     }
 
 
@@ -481,3 +659,48 @@ enum CstInsideOp: byte
     }
 
 enum isLvalue(alias A) = is(typeof((ref _){}(A)));
+
+struct EnumRange(E) if (is(E == enum))
+  {
+    private E _min;
+    private E _max;
+    E min() { return _min; }
+    E max() { return _max; }
+}
+
+template EnumRanges(E) if (is(E == enum) && isIntegral!E)
+  {
+    import std.meta : AliasSeq;
+    template EnumSpecificRanges(names...)
+    {
+      static if (names.length == 0) {
+	alias EnumSpecificRanges = AliasSeq!();
+      }
+      else static if (names.length == 1) {
+	enum VAL = __traits(getMember, E, names[0]);
+	alias EnumSpecificRanges =
+	  AliasSeq!(EnumRange!E(VAL, VAL));
+      }
+      else {
+	alias PART1 = EnumSpecificRanges!(names[0 .. $/2]);
+	alias PART2 = EnumSpecificRanges!(names[$/2 .. $]);
+
+	enum MIN1 = PART1[$-1]._min;
+	enum MAX1 = PART1[$-1]._max;
+	enum MIN2 = PART2[0]._min;
+	enum MAX2 = PART2[0]._max;
+
+	static if (MIN2 >= MIN1 && // MAX1 + 1 > MAX1 &&
+		   (MIN2 <= MAX1 || MIN2 <= MAX1 + 1) &&
+		   MAX2 >= MAX1) {
+	  alias EnumSpecificRanges =
+	    AliasSeq!(PART1[0..$-1], EnumRange!E(MIN1, MAX2), PART2[1..$]);
+	}
+	else {
+	  alias EnumSpecificRanges = AliasSeq!(PART1, PART2);
+	}
+      }
+    }
+
+    alias EnumRanges = EnumSpecificRanges!(__traits(allMembers, E));
+}

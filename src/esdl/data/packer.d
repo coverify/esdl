@@ -266,6 +266,10 @@ struct Packer
     this.pack_(t, count, bigEndian);
   }
 
+  void unpack(T)(ref T t, size_t count, bool bigEndian) if (! isArray!T) {
+    this.unpack_(t, count, bigEndian);
+  }
+
   void unpack(T)(ref T t, bool bigEndian, size_t count=-1) if (! isArray!T) {
     this.unpack_(t, count, bigEndian);
   }

@@ -18,7 +18,7 @@ import std.string: isNumeric;	// required for timeScale
 
 // beyond this size the parser would create a logicstring instead of
 // an lvec for storing data.
-enum uint MaxVectorSize = 65536; // 16384; // 32768; // 65536;
+enum uint MaxVectorSize = 1024; // 16384; // 32768; // 65536;
 
 import core.bitop;
 

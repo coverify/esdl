@@ -17,14 +17,15 @@ import core.thread: Thread, Fiber, ThreadGroup;
 
 public import esdl.data.time;
 public import esdl.base.comm;
+public import esdl.base.rand: RandomGen;
 import esdl.data.bvec: isBitVector;
 
 // use atomicStore and atomicLoad
 // This would get redundant later when share construct gets functional
 // in the D compiler.
 
-import std.traits: isArray, isIntegral;
-import std.random: Random, uniform;
+import std.traits: isArray, isIntegral, isBoolean;
+import std.random: uniform;
 
 import esdl.sys.sched: stickToCpuCore, CPU_COUNT, CPU_COUNT_AFFINITY, CPU_LIST;
 version(WEAKREF) {
@@ -54,9 +55,9 @@ T staticCast(T, F)(const F from)
       // assert statement will not be compiled for production release
       assert((from is null) || cast(T)from !is null);
     }
-body {
+do {
   return cast(T) cast(void*) from;
- }
+}
 
 // Base class for ESDL -- all ESDL classes will have this common parent
 private interface EsdlObj {}
@@ -1439,16 +1440,10 @@ interface ParContext
     // Implementation of the parallelize UDP functionality
     //////////////////////////////////////////////////////
 
-    // Lock to inhibit parallel threads in the same Entity
-    // This valriable is set in elaboration phase and in the later
-    // phases it is only accessed. Therefor this variable can be
-    // treated as effectively immutable.
+    // When set (!= -1), this index overrides the _esdl__multicoreConfig
+    // settings to allow the user to forcibly set the pool thread index
+    long _esdl__poolIndex = -1;
 
-    // In practice, the end-user does not need to bother about
-    // this Lock. It is automatically picked up by the simulator
-    // when a process wakes up and subsequently, when the process
-    // deactivates (starts waiting for an event), the simulator
-    // gives away the Lock
     MulticoreConfig _esdl__multicoreConfig;
     MulticoreConfig _esdl__getHierMulticoreConfig() {
       // of the ParContext does not have a MulticoreConfig Object, get it
@@ -1464,6 +1459,17 @@ interface ParContext
       // from the enclosing ParContext
       return _esdl__multicoreConfig;
     }
+
+    // Lock to inhibit parallel threads in the same Entity
+    // This valriable is set in elaboration phase and in the later
+    // phases it is only accessed. Therefor this variable can be
+    // treated as effectively immutable.
+
+    // In practice, the end-user does not need to bother about
+    // this Lock. It is automatically picked up by the simulator
+    // when a process wakes up and subsequently, when the process
+    // deactivates (starts waiting for an event), the simulator
+    // gives away the Lock
     static if(!__traits(compiles, _esdl__parLock)) {
       import core.sync.semaphore: CoreSemaphore = Semaphore;
       CoreSemaphore _esdl__parLock;
@@ -1804,8 +1810,6 @@ interface ElabContext: HierComp
 	if(add) this._esdl__exePorts ~= exeport;
       }
     }
-    // _Random_ Generator
-    // Random _r;
 
     alias typeof(this) _esdl__elab_type;
     _esdl__elab_type _esdl__elab_typeID() {
@@ -3093,10 +3097,10 @@ class EventObj: EventAgent, NamedComp
     if (_simEvent !is null) {
       _simEvent.disableWait();
     }
-    else {
-      import std.stdio;
-      stderr.writeln("disableWait called on uninitialized Event ", getFullName);
-    }
+    // else {
+    //   import std.stdio;
+    //   stderr.writeln("disableWait called on uninitialized Event ", getFullName);
+    // }
   }
 }
 
@@ -4497,6 +4501,9 @@ class AsyncLock: CoreSemaphore
 
 interface Procedure: NamedComp
 {
+
+  import esdl.base.rand: _esdl__RandGen;
+
   // returns true if the process was spawned at run time
   // on the other hand if the process was created at time of
   // elaboration, return false.
@@ -4511,28 +4518,22 @@ interface Procedure: NamedComp
   }
 
   // Functions for Random Stability
-  ref Random getRandGen();
+  _esdl__RandGen getRandGen();
 
   void setRandSeed(uint seed);
 
   uint getRandSeed();
 
   final void srandom(uint seed) {
-    synchronized(this) {
-      getRandGen().seed(seed);
-    }
+    getRandGen().seed(seed);
   }
 
-  final void getRandState(ref Random rstate) {
-    synchronized(this) {
-      rstate = getRandGen.save();
-    }
+  final void getRandState(ref RandomGen rstate) {
+    rstate = getRandGen.getGen().save();
   }
 
-  final void setRandState(ref Random state) {
-    synchronized(this) {
-      getRandGen = state;
-    }
+  final void setRandState(ref RandomGen state) {
+    getRandGen().getGen() = state;
   }
 
 }
@@ -5026,51 +5027,6 @@ void unlockStage() {
 // Entity. The Entity just passes the messages to the
 // EsdlSimulator via the 'getSimulator'.
 interface SimContext: NamedComp { }
-
-// Each process, routine and the root process have their own random
-// generator. This is done to enable random stability.
-private ref Random getRandGen() {
-  Procedure proc;
-  proc = Process.self;
-  if(proc is null) {
-    proc = RootThread.self;
-  }
-  if(proc !is null) {
-    return proc.getRandGen();
-  }
-  else {
-    assert(false, "getRandGen can be accessed only from a Process," ~
-	   " or RootThread");
-  }
-}
-
-T urandom(T=uint)() {
-  static if(isBitVector!T) {
-    T v;
-    v.randomize(getRandGen());
-    return v;
-  }
-  else {
-    auto v = uniform!T(getRandGen());
-    // debug(SEED) {
-    //   import std.stdio;
-    //   stderr.writeln("URANDOM returns: ", v);
-    // }
-    return v;
-  }
-}
-
-T urandom(string BOUNDARY="[]", T=uint)(T min, T max) {
-  return uniform!(BOUNDARY, T)(min, max, getRandGen());
-}
-
-T urandom_range(string BOUNDARY="[]", T=uint)(T min, T max) {
-  return uniform!(BOUNDARY, T)(min, max, getRandGen());
-}
-
-void srandom(uint _seed) {
-  getRandGen().seed(_seed);
-}
 
 @_esdl__component struct Inst(M, string S="")
   if(is(M: EntityIntf))
@@ -5929,8 +5885,8 @@ class BaseWorker: Process
       }
       // freeLock();
       exit(22);
-      this.caughtException();
-      throw(e);
+      // this.caughtException();
+      // throw(e);
     }
     this.cleanup();
   }
@@ -5972,8 +5928,8 @@ class BaseWorker: Process
       }
       // freeLock();
       exit(22);
-      this.caughtException();
-      throw (e);
+      // this.caughtException();
+      // throw (e);
     }
     this.cleanup();
   }
@@ -6210,6 +6166,7 @@ class BaseRoutine: Process
 
 abstract class Process: Procedure, HierComp, EventClient
 {
+  import esdl.base.rand: urandom, _esdl__RandGen;
 
   mixin HierMixin;
 
@@ -6328,6 +6285,7 @@ abstract class Process: Procedure, HierComp, EventClient
       _procID = _procCount++;
     }
     synchronized(this) {
+      _randGen = new _esdl__RandGen(uniform!int());
       _persist = new PersistFlag;
       _ended.initialize("_ended", this);
       _endedTree.initialize("_endedTree", this);
@@ -6351,6 +6309,7 @@ abstract class Process: Procedure, HierComp, EventClient
       _procID = _procCount++;
     }
     synchronized(this) {
+      _randGen = new _esdl__RandGen(uniform!int);
       _persist = new PersistFlag;
       _ended.initialize("_ended", this);
       _endedTree.initialize("_endedTree", this);
@@ -6541,12 +6500,12 @@ abstract class Process: Procedure, HierComp, EventClient
     assert(false, "A task can have only processes as childObjs");
   }
 
-  @_esdl__ignore Random _randGen;
+  @_esdl__ignore _esdl__RandGen _randGen;
   uint _randSeed;
 
   private final void setRandSeed() {
     synchronized(this) {
-      _randSeed = urandom();
+      _randSeed = urandom!uint();
       this._randGen.seed(_randSeed);
     }
   }
@@ -6564,10 +6523,8 @@ abstract class Process: Procedure, HierComp, EventClient
     }
   }
   
-  final override ref Random getRandGen() {
-    synchronized(this) {
-      return _randGen;
-    }
+  final override _esdl__RandGen getRandGen() {
+    return _randGen;
   }
 
   // For all the timed-waits during the execution of the process, use
@@ -6682,8 +6639,8 @@ abstract class Process: Procedure, HierComp, EventClient
       }
       // freeLock();
       exit(22);
-      this.caughtException();
-      throw(e);
+      // this.caughtException();
+      // throw(e);
     }
     this.cleanup();
   }
@@ -6731,15 +6688,15 @@ abstract class Process: Procedure, HierComp, EventClient
       debug(PROC) {
 	stderr.writefln("Thread threw exception %s", e);
       }
-      exit(22);
       // stderr.writeln(e);
       debug(PROC) {
 	import std.stdio;
 	stderr.writeln("Process ending with exception   : ", Process.procID);
       }
+      exit(22);
       // freeLock();
-      this.caughtException();
-      throw(e);
+      // this.caughtException();
+      // throw(e);
     }
     this.cleanup();
   }
@@ -7329,7 +7286,7 @@ class Fork
     }
   }
 
-  final void setAffinity(ParContext context) {
+  final void setThreadAffinity(ParContext context) {
     foreach(proc; _procs) {
       assert(proc.state() == ProcState.STARTING);
       auto pconf = context._esdl__getHierMulticoreConfig();
@@ -7337,6 +7294,15 @@ class Fork
       proc._esdl__multicoreConfig = pconf;
     }
   }
+
+  final void setThreadAffinity(size_t poolIdx) {
+    foreach (proc; _procs) {
+      assert(proc.state() == ProcState.STARTING);
+      proc._esdl__poolIndex = poolIdx;
+    }
+  }
+
+  alias set_thread_affinity = setThreadAffinity;
 }
 
 interface ChannelIF
@@ -7396,6 +7362,8 @@ class Channel: ChannelIF, NamedComp // Primitive Channel
 
 class RootThread: Procedure
 {
+  import esdl.base.rand: _esdl__RandGen;
+
   mixin NamedMixin;
 
   EsdlThread _thread;
@@ -7421,6 +7389,7 @@ class RootThread: Procedure
   this(RootEntity root, void function() fn,
        size_t fcore=0, size_t sz = 0 ) {
     synchronized(this) {
+      _randGen = new _esdl__RandGen(uniform!int());
       if(sz is 0) {
 	_thread = new EsdlThread(root, () {fn_wrap(fn, fcore);});
       }
@@ -7433,6 +7402,7 @@ class RootThread: Procedure
   this(RootEntity root, void delegate() dg,
        size_t fcore=0, size_t sz = 0 ) {
     synchronized(this) {
+      _randGen = new _esdl__RandGen(uniform!int());
       if(sz is 0) {
 	_thread = new EsdlThread(root, () {dg_wrap(dg, fcore);});
       }
@@ -7448,7 +7418,7 @@ class RootThread: Procedure
   }
 
 
-  @_esdl__ignore Random _randGen;
+  @_esdl__ignore _esdl__RandGen _randGen;
   uint _randSeed;
 
   final override void setRandSeed(uint seed) {
@@ -7464,10 +7434,8 @@ class RootThread: Procedure
     }
   }
   
-  final override ref Random getRandGen() {
-    synchronized(this) {
-      return _randGen;
-    }
+  final override _esdl__RandGen getRandGen() {
+    return _randGen;
   }
 
   final override bool isDynamic() {
@@ -7625,6 +7593,7 @@ enum SimPhase : byte
       CONFIGURE,
       BINDEXEPORTS,
       BINDPORTS,
+      INIT,			// like PAUSE, but simulation has not started
       SIMULATE,
       PAUSE,
       SIMULATION_DONE,
@@ -7739,7 +7708,7 @@ void execElab(T)(T t)
 	t.getSimulator._executor.initPoolThreads();
 	t.getSimulator._executor._poolThreadInitBarrier.wait();
 
-	t.getSimulator.setPhase = SimPhase.PAUSE;
+	t.getSimulator.setPhase = SimPhase.INIT;
 	t.getSimulator._executor.resetStage();
 	t.message("Start of Simulation");
 	t._esdl__start();
@@ -7920,7 +7889,14 @@ class EsdlExecutor: EsdlExecutorIf
 	  }
 	  if (proc.isRunnableTask) {
 	    this._executableTasks ~= proc;
-	    this._runnableTasksGroups[proc._esdl__multicoreConfig.getPoolThreadIndex()] ~= proc;
+	    // determine the pool index -- _esdl__poolIndex if set overrides
+	    if (proc._esdl__poolIndex != -1) {
+	      this._runnableTasksGroups[proc._esdl__poolIndex %
+					_simulator.getRoot().getThreadCoreList().length] ~= proc;
+	    }
+	    else {
+	      this._runnableTasksGroups[proc._esdl__multicoreConfig.getPoolThreadIndex()] ~= proc;
+	    }
 	  }
 	}
       }
@@ -7929,23 +7905,29 @@ class EsdlExecutor: EsdlExecutorIf
     _registeredProcesses[_stageIndex].length = 0;
   }
 
-  final void addRunnableProcess(Process p) {
-    if(p.isRunnableWork) {
-      this._runnableWorks ~= p;
+  final void addRunnableProcess(Process proc) {
+    if(proc.isRunnableWork) {
+      this._runnableWorks ~= proc;
     }
-    if(p.isRunnableTask) {
-      this._executableTasks ~= p;
-      this._runnableTasksGroups[p._esdl__multicoreConfig.getPoolThreadIndex()] ~= p;
+    if(proc.isRunnableTask) {
+      this._executableTasks ~= proc;
+      if (proc._esdl__poolIndex != -1) {
+	this._runnableTasksGroups[proc._esdl__poolIndex %
+				  _simulator.getRoot().getThreadCoreList().length] ~= proc;
+      }
+      else {
+	this._runnableTasksGroups[proc._esdl__multicoreConfig.getPoolThreadIndex()] ~= proc;
+      }
     }
   }
 
-  final void addTerminalProcess(Process p) {
-    if(p.isTerminalWork) {
-      this._terminalWorks ~= p;
+  final void addTerminalProcess(Process proc) {
+    if(proc.isTerminalWork) {
+      this._terminalWorks ~= proc;
     }
-    if(p.isTerminalTask) {
-      this._executableTasks ~= p;
-      this._terminalTasksGroups[p._esdl__multicoreConfig.getPoolThreadIndex()] ~= p;
+    if(proc.isTerminalTask) {
+      this._executableTasks ~= proc;
+      this._terminalTasksGroups[proc._esdl__multicoreConfig.getPoolThreadIndex()] ~= proc;
     }
   }
 
@@ -9090,6 +9072,8 @@ interface RootEntityIntf: EntityIntf
 
   SimTime getSimTime();
 
+  ulong getRunTime();
+
   uint getNumPoolThreads();
 
   uint[] getThreadCoreList();
@@ -9409,6 +9393,10 @@ abstract class RootEntity: RootEntityIntf
     return _esdl__root.simulator().simTime();
   }
 
+  final override ulong getRunTime() {
+    return _esdl__root.simulator().runTime();
+  }
+
   final override uint getNumPoolThreads() {
     return cast(uint) _esdl__root.simulator()._executor._poolThreads.length;
   }
@@ -9478,22 +9466,27 @@ abstract class RootEntity: RootEntityIntf
     return this._simulator.getMode();
   }
 
+  alias set_async_mode = setAsyncMode;
   void setAsyncMode() {
     this._simulator.setMode(SchedMode.ASYNC);
   }
 
+  alias set_vpi_mode = setVpiMode;
   void setVpiMode() {
     this._simulator.setMode(SchedMode.VPI);
   }
 
+  alias set_vhpi_mode = setVhpiMode;
   void setVhpiMode() {
     this._simulator.setMode(SchedMode.VHPI);
   }
 
+  alias set_fli_mode = setFliMode;
   void setFliMode() {
     this._simulator.setMode(SchedMode.FLI);
   }
 
+  alias set_master_mode = setMasterMode;
   void setMasterMode() {
     this._simulator.setMode(SchedMode.MASTER);
   }
@@ -9510,11 +9503,14 @@ enum SchedMode: byte {
 
 class EsdlSimulator: EntityIntf
 {
+  import std.datetime.stopwatch: StopWatch, AutoStart;
   mixin Elaboration;
 
   SchedMode _schedMode;
 
   AsyncLock[] _asyncLocks;
+
+  StopWatch _sw = StopWatch(AutoStart.no);
 
   void setMode(SchedMode mode) {
     synchronized(this) {
@@ -9689,6 +9685,13 @@ class EsdlSimulator: EntityIntf
       import std.conv: to;
       // elabDoneLock.wait();
       switch(phase) {
+      case SimPhase.INIT:
+	_sw.start();
+	// start wallclock timer
+	runFor(runTime);
+	this.setPhase(SimPhase.SIMULATE);
+	simStepLock.notify();
+	break;
       case SimPhase.PAUSE:
 	runFor(runTime);
 	this.setPhase(SimPhase.SIMULATE);
@@ -9716,12 +9719,14 @@ class EsdlSimulator: EntityIntf
   }
 
   final void notifyDone() {
+    import std.format: format;
     simStepLock.notify();
     finalize();
     getRoot.message("Shutting down all the active Tasks");
     // this._executor.terminateProcs(getRoot().getChildProcsHier());
     // this._executor.joinSimThreads();
     getRoot.message("Simulation Complete");
+    getRoot.message(format("Total Run Time: %0.6f.sec", runTime()/1000000.0));
     RootEntity.delRoot(getRoot());
     getRoot._esdl__finish();
     simTermLock.notify();
@@ -10009,6 +10014,10 @@ class EsdlSimulator: EntityIntf
     }
   }
 
+  final ulong runTime() {
+    return _sw.peek.total!"usecs";
+  }
+  
   this(RootEntity _root) {
     synchronized(this) {
       this._esdl__root = _root;
@@ -10109,6 +10118,10 @@ RootEntity getRootEntity() {
 
 SimTime getSimTime() {
   return getRootEntity().getSimTime();
+}
+
+ulong getRunTime() {
+  return getRootEntity().getRunTime();
 }
 
 EsdlSimulator getSimulator() {

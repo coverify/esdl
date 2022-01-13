@@ -112,13 +112,19 @@ CheckResult toCheckResult(Z3_lbool l) {
 class Context
 {
   bool       _m_enable_exceptions;
+  bool       _isContextActive;
   RoundingMode _m_rounding_mode;
   Z3_context _m_ctx;
 
   alias _m_ctx this;
   
+  private bool isContextActive() {
+    return _isContextActive;
+  }
+
   private void init(Config c) {
     _m_ctx = Z3_mk_context_rc(c);
+    _isContextActive = true;
     _m_enable_exceptions = true;
     _m_rounding_mode = RoundingMode.RNA;
     Z3_set_error_handler(_m_ctx, null);
@@ -135,6 +141,7 @@ class Context
   }
 
   ~this() {
+    _isContextActive = false;
     Z3_del_context(_m_ctx);
   }
 
@@ -769,7 +776,10 @@ struct AstVectorTpl(T)
   // }
 
   ~this() {
-    Z3_ast_vector_dec_ref(context(), _m_vector);
+    if (context() !is null && context().isContextActive() &&
+	_m_vector !is null) {
+      Z3_ast_vector_dec_ref(context(), _m_vector);
+    }
   }
 
   alias length = size;
@@ -951,34 +961,46 @@ struct ParamDescrs
     setContext(rhs.context);
     return this;
   }
+
   ~this() {
-    Z3_param_descrs_dec_ref(context(), _m_descrs);
+    if (context() !is null && context().isContextActive() &&
+	_m_descrs !is null) {
+      Z3_param_descrs_dec_ref(context(), _m_descrs);
+    }
   }
+
   static ParamDescrs simplifyParamDescrs(Context c)
   {
     return ParamDescrs(c, Z3_simplify_get_param_descrs(c));
   }
+
   uint size() {
     return Z3_param_descrs_size(context(), _m_descrs);
   }
+
   Symbol name(uint i) {
     return Symbol(context(), Z3_param_descrs_get_name(context(), _m_descrs, i));
   }
+
   Z3_param_kind kind()(auto ref Symbol s) {
     return Z3_param_descrs_get_kind(context(), _m_descrs, s);
   }
+
   string documentation()(auto ref Symbol s) {
     auto r = Z3_param_descrs_get_documentation(context(), _m_descrs, s);
     checkError();
     return cast(string) r[0..r.strlen];
   }
+
   string toString() {
     auto r = Z3_param_descrs_to_string(context(), _m_descrs);
     return cast(string) r[0..r.strlen];
   }
+
   V to(V)() if (is(V == string)) {
     return this.toString();
   }
+
 }
 
 struct Params
@@ -1008,12 +1030,18 @@ struct Params
     _m_params = rhs._m_params;
     return this;
   }
+
   ~this() {
-    Z3_params_dec_ref(context(), _m_params);
+    if (context() !is null && context().isContextActive() &&
+	_m_params !is null) {
+      Z3_params_dec_ref(context(), _m_params);
+    }
   }
+
   Z3_params native() {
     return _m_params;
   }
+
   alias native this;
   T opCast(T)() if (is (T == Z3_params)) {
       return _m_params;
@@ -1022,25 +1050,32 @@ struct Params
   void set(string k, bool b) {
     Z3_params_set_bool(context(), _m_params, context().strSymbol(k), b);
   }
+
   void set(string k, uint n) {
     Z3_params_set_uint(context(), _m_params, context().strSymbol(k), n);
   }
+
   void set(string k, double n) {
     Z3_params_set_double(context(), _m_params, context().strSymbol(k), n);
   }
+
   void set()(string k, auto ref Symbol s) {
     Z3_params_set_symbol(context(), _m_params, context().strSymbol(k), s);
   }
+
   void set()(string k, auto ref string s) {
     Z3_params_set_symbol(context(), _m_params, context().strSymbol(k), context().strSymbol(s));
   }
+
   string toString() {
     auto r =  Z3_params_to_string(context(), this);
     return cast(string) r[0..r.strlen];
   }
+
   V to(V)() if (is(V == string)) {
     return this.toString();
   }
+
 }
 
 struct AST
@@ -1083,15 +1118,22 @@ struct AST
     Z3_inc_ref(context(), _m_ast);
     return this;
   }
+
   ~this() {
-    if (context !is null) Z3_dec_ref(context, _m_ast);
+    if (context() !is null && context().isContextActive() &&
+	_m_ast !is null) {
+      Z3_dec_ref(context, _m_ast);
+    }
   }
+
   Z3_ast native() {
     return _m_ast;
   }
+
   T opCast(T)() if (is (T == Z3_ast)) {
     return _m_ast;
   }
+
   alias native this;
 
   T opCast(T)() if(isBoolean!T) {
@@ -1103,15 +1145,18 @@ struct AST
     checkError();
     return r;
   }
+
   uint hash() {
     uint r = Z3_get_ast_hash(context(), _m_ast);
     checkError();
     return r;
   }
+
   string toString() {
     auto r =  Z3_ast_to_string(context(), _m_ast);
     return cast(string) r[0..r.strlen];
   }
+
   V to(V)() if (is(V == string)) {
     return this.toString();
   }
@@ -2455,7 +2500,10 @@ struct FuncEntry
   // }
 
   ~this() {
-    Z3_func_entry_dec_ref(context(), _m_entry);
+    if (context() !is null && context().isContextActive() &&
+	_m_entry !is null) {
+      Z3_func_entry_dec_ref(context(), _m_entry);
+    }
   }
 
   Z3_func_entry native() {
@@ -2517,8 +2565,12 @@ struct FuncInterp
   // }
 
   ~this() {
-    Z3_func_interp_dec_ref(context(), _m_interp);
+    if (context() !is null && context().isContextActive() &&
+	_m_interp !is null) {
+      Z3_func_interp_dec_ref(context(), _m_interp);
+    }
   }
+
   Z3_func_interp native() {
     return _m_interp;
   }
@@ -2602,7 +2654,10 @@ struct Model
   }
 
   ~this() {
-    Z3_model_dec_ref(context(), _m_model);
+    if (context() !is null && context().isContextActive() &&
+	_m_model !is null) {
+      Z3_model_dec_ref(context(), _m_model);
+    }
   }
 
   Z3_model native() {
@@ -2733,7 +2788,10 @@ struct Stats
   // }
 
   ~this() {
-    if (_m_stats) Z3_stats_dec_ref(context(), _m_stats);
+    if (context() !is null && context().isContextActive() &&
+	_m_stats !is null) {
+      if (_m_stats) Z3_stats_dec_ref(context(), _m_stats);
+    }
   }
 
   Z3_stats native() {
@@ -2832,8 +2890,12 @@ struct Solver {
   //   init(s._m_solver);
   // }
   ~this() {
-    Z3_solver_dec_ref(context(), _m_solver);
+    if (context() !is null && context().isContextActive() &&
+	_m_solver !is null) {
+      Z3_solver_dec_ref(context(), _m_solver);
+    }
   }
+
   Z3_solver native() {
     return _m_solver;
   }
@@ -3187,7 +3249,10 @@ struct Goal
   // }
 
   ~this() {
-    Z3_goal_dec_ref(context(), _m_goal);
+    if (context() !is null && context().isContextActive() &&
+	_m_goal !is null) {
+      Z3_goal_dec_ref(context(), _m_goal);
+    }
   }
 
   Z3_goal native() {
@@ -3310,12 +3375,17 @@ struct ApplyResult
   //   init(s._m_apply_result);
   // }
   ~this() {
-    Z3_apply_result_dec_ref(context(), _m_apply_result);
+    if (context() !is null && context().isContextActive() &&
+	_m_apply_result !is null) {
+      Z3_apply_result_dec_ref(context(), _m_apply_result);
+    }
   }
+
   Z3_apply_result native() {
     return _m_apply_result;
   }
   alias native this;
+
   ref ApplyResult opAssign(ref ApplyResult s) return {
     Z3_apply_result_inc_ref(s.context(), s._m_apply_result);
     Z3_apply_result_dec_ref(context(), _m_apply_result);
@@ -3323,22 +3393,27 @@ struct ApplyResult
     _m_apply_result = s._m_apply_result;
     return this;
   }
+
   uint size() {
     return Z3_apply_result_get_num_subgoals(context(), _m_apply_result);
   }
+
   Goal opIndex(int i) {
     assert(0 <= i);
     Z3_goal r = Z3_apply_result_get_subgoal(context(), _m_apply_result, i);
     checkError();
     return Goal(context(), r);
   }
+
   string toString() {
     auto str = Z3_apply_result_to_string(context(), this);
     return cast(string) str[0..str.strlen];
   }
+
   V to(V)() if (is(V == string)) {
     return this.toString();
   }
+
 }
 
 
@@ -3351,15 +3426,18 @@ struct Tactic
     _m_tactic = s;
     Z3_tactic_inc_ref(context(), _m_tactic);
   }
+
   this(Context c, string name) {
     setContext(c);
     Z3_tactic r = Z3_mk_tactic(c, name.toStringz);
     checkError(); init(r);
   }
+
   this(Context c, Z3_tactic s) {
     setContext(c);
     init(s);
   }
+
   this(this) {
     assert (context() !is null);
     Z3_tactic_inc_ref(context(), _m_tactic);
@@ -3369,12 +3447,17 @@ struct Tactic
   //   init(s._m_tactic);
   // }
   ~this() {
-    Z3_tactic_dec_ref(context(), _m_tactic);
+    if (context() !is null && context().isContextActive() &&
+	_m_tactic !is null) {
+      Z3_tactic_dec_ref(context(), _m_tactic);
+    }
   }
+
   Z3_tactic native() {
     return _m_tactic;
   }
   alias native this;
+
   ref Tactic opAssign(ref Tactic s) return {
     Z3_tactic_inc_ref(s.context(), s._m_tactic);
     Z3_tactic_dec_ref(context(), _m_tactic);
@@ -3382,6 +3465,7 @@ struct Tactic
     _m_tactic = s._m_tactic;
     return this;
   }
+
   Solver mkSolver() {
     Z3_solver r = Z3_mk_solver_from_tactic(context(), _m_tactic);
     checkError();
@@ -3408,6 +3492,7 @@ struct Tactic
   ParamDescrs getParamDescrs() {
     return ParamDescrs(context(), Z3_tactic_get_param_descrs(context(), _m_tactic));
   }
+
 }
 
 Tactic and()(auto ref Tactic t1, auto ref Tactic t2) {
@@ -3477,16 +3562,19 @@ struct Probe
     checkError();
     init(r);
   }
+
   this(Context c, double val) {
     setContext(c);
     Z3_probe r = Z3_probe_const(c, val);
     checkError();
     init(r);
   }
+
   this(Context c, Z3_probe s) {
     setContext(c);
     init(s);
   }
+
   this(this) {
     assert (context() !is null);
     Z3_probe_inc_ref(context(), _m_probe);
@@ -3495,9 +3583,14 @@ struct Probe
   //   setContext(s.context());
   //   init(s._m_probe);
   // }
+
   ~this() {
-    Z3_probe_dec_ref(context(), _m_probe);
+    if (context() !is null && context().isContextActive() &&
+	_m_probe !is null) {
+      Z3_probe_dec_ref(context(), _m_probe);
+    }
   }
+
   Z3_probe native() {
     return _m_probe;
   }
@@ -3516,6 +3609,7 @@ struct Probe
     checkError();
     return r;
   }
+
   double opCall()(auto ref Goal g) {
     return apply(g);
   }
@@ -3546,72 +3640,89 @@ Probe le()(auto ref Probe p1, auto ref Probe p2) {
   p1.checkError();
   return Probe(p1.context(), r);
 }
+
 Probe le()(auto ref Probe p1, double p2) {
   return le(p1, Probe(p1.context(), p2).byRef());
 }
+
 Probe le()(double p1, auto ref Probe p2) {
   return le(Probe(p2.context(), p1).byRef, p2);
 }
+
 Probe ge()(auto ref Probe p1, auto ref Probe p2) {
   checkContext(p1, p2);
   Z3_probe r = Z3_probe_ge(p1.context(), p1, p2);
   p1.checkError();
   return Probe(p1.context(), r);
 }
+
 Probe ge()(auto ref Probe p1, double p2) {
   return ge(p1, Probe(p1.context(), p1).byRef);
 }
+
 Probe ge()(double p1, auto ref Probe p2) {
   return ge(Probe(p2.context(), p1).byRef, p2);
 }
+
 Probe lt()(auto ref Probe p1, auto ref Probe p2) {
   checkContext(p1, p2);
   Z3_probe r = Z3_probe_lt(p1.context(), p1, p2);
   p1.checkError();
   return Probe(p1.context(), r);
 }
+
 Probe lt()(auto ref Probe p1, double p2) {
   return lt(p1, Probe(p1.context(), p1).byRef);
 }
+
 Probe lt()(double p1, auto ref Probe p2) {
   return lt(Probe(p2.context(), p1).byRef, p2);
 }
+
 Probe gt()(auto ref Probe p1, auto ref Probe p2) {
   checkContext(p1, p2);
   Z3_probe r = Z3_probe_gt(p1.context(), p1, p2);
   p1.checkError();
   return Probe(p1.context(), r);
 }
+
 Probe gt()(auto ref Probe p1, double p2) {
   return gt(p1, Probe(p1.context(), p1).byRef);
 }
+
 Probe gt()(double p1, auto ref Probe p2) {
   return gt(Probe(p2.context(), p1).byRef, p2);
 }
+
 Probe eq()(auto ref Probe p1, auto ref Probe p2) {
   checkContext(p1, p2);
   Z3_probe r = Z3_probe_eq(p1.context(), p1, p2);
   p1.checkError();
   return Probe(p1.context(), r);
 }
+
 Probe eq()(auto ref Probe p1, double p2) {
   return eq(p1, Probe(p1.context(), p1).byRef);
 }
+
 Probe eq()(double p1, auto ref Probe p2) {
   return eq(Probe(p2.context(), p1).byRef, p2);
 }
+
 Probe and()(auto ref Probe p1, auto ref Probe p2) {
   checkContext(p1, p2);
   Z3_probe r = Z3_probe_and(p1.context(), p1, p2);
   p1.checkError();
   return Probe(p1.context(), r);
 }
+
 Probe or()(auto ref Probe p1, auto ref Probe p2) {
   checkContext(p1, p2);
   Z3_probe r = Z3_probe_or(p1.context(), p1, p2);
   p1.checkError();
   return Probe(p1.context(), r);
 }
+
 Probe not()(auto ref Probe p) {
   Z3_probe r = Z3_probe_not(p.context(), p);
   p.checkError();
@@ -3655,7 +3766,11 @@ struct Optimize
   }
 
   ~this() {
-    Z3_optimize_dec_ref(context(), _m_opt);
+    import std.stdio;
+    if (context() !is null && context().isContextActive() &&
+	_m_opt !is null) {
+      Z3_optimize_dec_ref(context(), _m_opt);
+    }
   }
   
   Z3_optimize native() {
@@ -3806,9 +3921,14 @@ struct Fixedpoint
     _m_fp = Z3_mk_fixedpoint(c);
     Z3_fixedpoint_inc_ref(c, _m_fp);
   }
+
   ~this() {
-    Z3_fixedpoint_dec_ref(context(), _m_fp);
+    if (context() !is null && context().isContextActive() &&
+	_m_fp !is null) {
+      Z3_fixedpoint_dec_ref(context(), _m_fp);
+    }
   }
+
   Z3_fixedpoint native() {
     return _m_fp;
   }
@@ -3818,97 +3938,119 @@ struct Fixedpoint
     Z3_fixedpoint_from_string(context(), _m_fp, s.toStringz);
     checkError();
   }
+
   void fromFile(string s) {
     Z3_fixedpoint_from_file(context(), _m_fp, s.toStringz);
     checkError();
   }
+
   void addRule()(auto ref Expr rule, auto ref Symbol name) {
     Z3_fixedpoint_add_rule(context(), _m_fp, rule.getAST, name);
     checkError();
   }
+
   void addFact()(auto ref FuncDecl f, uint[] args) {
     Z3_fixedpoint_add_fact(context(), _m_fp, f, f.arity(), args.ptr);
     checkError();
   }
+
   CheckResult query()(auto ref Expr q) {
     Z3_lbool r = Z3_fixedpoint_query(context(), _m_fp, q.getAST);
     checkError();
     return toCheckResult(r);
   }
+
   CheckResult query()(auto ref FuncDeclVector relations) {
     Z3_func_decl[] rs = relations.toArray!Z3_func_decl();
     Z3_lbool r = Z3_fixedpoint_query_relations(context(), _m_fp, cast(uint) rs.length, rs.ptr);
     checkError();
     return toCheckResult(r);
   }
+
   Expr getAnswer() {
     Z3_ast r = Z3_fixedpoint_get_answer(context(), _m_fp);
     checkError();
     return Expr(context(), r);
   }
+
   string reasonUnknown() {
     auto r = Z3_fixedpoint_get_reason_unknown(context(), _m_fp);
     return cast(string) r[0..r.strlen()];
   }
+
   void updateRule()(auto ref Expr rule, auto ref Symbol name) {
     Z3_fixedpoint_update_rule(context(), _m_fp, rule.getAST, name);
     checkError();
   }
+
   uint getNumLevels()(auto ref FuncDecl p) {
     uint r = Z3_fixedpoint_get_num_levels(context(), _m_fp, p);
     checkError();
     return r;
   }
+
   Expr getCoverDelta(int level, FuncDecl p) {
     Z3_ast r = Z3_fixedpoint_get_cover_delta(context(), _m_fp, level, p);
     checkError();
     return Expr(context(), r);
   }
+
   void addCover()(int level, auto ref FuncDecl p, auto ref Expr property) {
     Z3_fixedpoint_add_cover(context(), _m_fp, level, p, property.getAST);
     checkError();
   }
+
   Stats statistics() {
     Z3_stats r = Z3_fixedpoint_get_statistics(context(), _m_fp);
     checkError();
     return Stats(context(), r);
   }
+
   void registerRelation()(auto ref FuncDecl p) {
     Z3_fixedpoint_register_relation(context(), _m_fp, p);
   }
+
   ExprVector assertions() {
     Z3_ast_vector r = Z3_fixedpoint_get_assertions(context(), _m_fp);
     checkError();
     return ExprVector(context(), r);
   }
+
   ExprVector rules() {
     Z3_ast_vector r = Z3_fixedpoint_get_rules(context(), _m_fp);
     checkError();
     return ExprVector(context(), r);
   }
+
   void set()(auto ref Params p) {
     Z3_fixedpoint_set_params(context(), _m_fp, p);
     checkError();
   }
+
   string help() {
     auto r = Z3_fixedpoint_get_help(context(), _m_fp);
     return cast(string) r[0..r.strlen()];
   }
+
   ParamDescrs getParamDescrs() {
     return ParamDescrs(context(), Z3_fixedpoint_get_param_descrs(context(), _m_fp));
   }
+
   string toString() {
     auto str = Z3_fixedpoint_to_string(context(), this, 0, null);
     return cast(string) str[0..str.strlen];
   }
+
   V to(V)() if (is(V == string)) {
     return this.toString();
   }
+
   string toString()(auto ref ExprVector queries) {
     Z3_ast[] qs = queries.toArray!Z3_ast();
     auto str = Z3_fixedpoint_to_string(context(), _m_fp, cast(uint) qs.length, qs.ptr);
     return cast(string) str[0..str.strlen];
   }
+
 }
 
 /**
@@ -5328,29 +5470,34 @@ Expr setSubset()(auto ref Expr a, auto ref Expr b) {
 //     // union is +
 //     // concat is overloaded to handle sequences and regular Expressions
 
+
 Expr empty()(auto ref Sort s) {
   Z3_ast r = Z3_mk_seq_empty(s.context(), s);
   s.checkError();
   return Expr(s.context(), r);
 }
+
 Expr suffixof()(auto ref Expr a, auto ref Expr b) {
   checkContext(a, b);
   Z3_ast r = Z3_mk_seq_suffix(a.context(), a.getAST, b.getAST);
   a.checkError();
   return Expr(a.context(), r);
 }
+
 Expr prefixof()(auto ref Expr a, auto ref Expr b) {
   checkContext(a, b);
   Z3_ast r = Z3_mk_seq_prefix(a.context(), a.getAST, b.getAST);
   a.checkError();
   return Expr(a.context(), r);
 }
+
 Expr indexof()(auto ref Expr s, auto ref Expr substr, auto ref Expr offset) {
   checkContext(s, substr); checkContext(s, offset);
   Z3_ast r = Z3_mk_seq_index(s.context(), s.getAST, substr.getAST, offset.getAST);
   s.checkError();
   return Expr(s.context(), r);
 }
+
 Expr lastIndexof()(auto ref Expr s, auto ref Expr substr) {
   checkContext(s, substr); 
   Z3_ast r = Z3_mk_seq_last_index(s.context(), s.getAST, substr.getAST);
@@ -5358,13 +5505,13 @@ Expr lastIndexof()(auto ref Expr s, auto ref Expr substr) {
   return Expr(s.context(), r);
 }
 
-
 Expr toRe()(auto ref Expr s) {
   // MK_EXPR1(Z3_mk_seq_to_re, s);
   Z3_ast r = Z3_mk_seq_to_re(s.context(), s.getAST);
   s.checkError();
   return Expr(s.context(), r);
 }
+
 Expr inRe()(auto ref Expr s, auto ref Expr re) {
   // MK_EXPR2(Z3_mk_seq_in_re, s, re);
   checkContext(s, re);
@@ -5372,34 +5519,40 @@ Expr inRe()(auto ref Expr s, auto ref Expr re) {
   s.checkError();
   return Expr(s.context(), r);
 }
+
 Expr plus()(auto ref Expr re) {
   // MK_EXPR1(Z3_mk_re_plus, re);
   Z3_ast r = Z3_mk_re_plus(re.context(), re.getAST);
   re.checkError();
   return Expr(re.context(), r);
 }
+
 Expr option()(auto ref Expr re) {
   // MK_EXPR1(Z3_mk_re_option, re);
   Z3_ast r = Z3_mk_re_option(re.context(), re.getAST);
   re.checkError();
   return Expr(re.context(), r);
 }
+
 Expr star()(auto ref Expr re) {
   // MK_EXPR1(Z3_mk_re_star, re);
   Z3_ast r = Z3_mk_re_star(re.context(), re.getAST);
   re.checkError();
   return Expr(re.context(), r);
 }
+
 Expr reEmpty()(auto ref Sort s) {
   Z3_ast r = Z3_mk_re_empty(s.context(), s);
   s.checkError();
   return Expr(s.context(), r);
 }
+
 Expr reFull()(auto ref Sort s) {
   Z3_ast r = Z3_mk_re_full(s.context(), s);
   s.checkError();
   return Expr(s.context(), r);
 }
+
 Expr reIntersect()(auto ref ExprVector args) {
   assert(args.size() > 0);
   Z3_ast[] _args = args.toArray!Z3_ast;
@@ -5408,6 +5561,7 @@ Expr reIntersect()(auto ref ExprVector args) {
   args.context().checkError();
   return Expr(args.context(), r);
 }
+
 Expr reComplement()(auto ref Expr a) {
   // MK_EXPR1(Z3_mk_re_complement, a);
   Z3_ast r = Z3_mk_re_complement(a.context(), a.getAST);

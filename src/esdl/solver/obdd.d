@@ -21,6 +21,8 @@ import std.string: format;
 // import core.memory: GC;
 import core.stdc.string: memset;
 
+import esdl.data.bvec: ubvec;
+
 import core.memory: pureMalloc, pureRealloc, pureFree;
 alias malloc = pureMalloc;
 alias free = pureFree;
@@ -30,6 +32,8 @@ alias bdd = int;
 
 enum uint BddTrue = 1;		// kernel.c:66
 enum uint BddFalse = 0;		// kernel.c: 76
+
+enum uint MAXBDDLEVELS = 64;
 
 enum BddOp : ubyte {		// bdd.h:50
     AND = 0,
@@ -95,7 +99,7 @@ struct BddDomain // fdd.c:52
   }
 
   BDD var() {
-    return var;
+    return _var;
   }
 
 
@@ -445,6 +449,70 @@ struct BddDomain // fdd.c:52
 
 }
 
+struct bddvec
+{
+  private bdd[] _bitvec;
+
+  private bool _signed = false;
+
+  Buddy _buddy;
+  
+  bdd[] bitvec() {
+    return _bitvec;
+  }
+  
+  this(ref BddVec other) {
+    _buddy = other._buddy;
+    _signed = other._signed;
+    _bitvec = other._bitvec;
+    // this.addRef();
+  }
+
+  void addRef() {
+    if (_buddy !is null) {
+      foreach (b; _bitvec) {
+	// import std.stdio;
+	// writeln("bitvec addRef: ", b);
+	_buddy.addRef(b);
+      }
+    }
+  }
+
+  void delRef() {
+    if (_buddy !is null) {
+      foreach (b; _bitvec) {
+	// import std.stdio;
+	// writeln("bitvec addRef: ", b);
+	_buddy.delRef(b);
+      }
+    }
+  }
+  
+  ref bddvec opAssign(ref BddVec other) return {
+    // this.delRef();
+    _buddy = other._buddy;
+    _signed = other._signed;
+    _bitvec = other._bitvec;
+    // this.addRef();
+    return this;
+  }
+  
+  bool isNull() {
+    return (_bitvec.length == 0);
+  }
+
+  size_t length()
+  {
+    return _bitvec.length;
+  }
+
+  bool signed()
+  {
+    return _signed;
+  }
+
+}
+
 struct BddVec
 {
 
@@ -486,7 +554,7 @@ struct BddVec
   }
 
   this(this) {
-    foreach (b; _bitvec) _buddy.addRef(b);
+    this.addRef();
   }
 
   // this copy constructor does not get called,
@@ -495,36 +563,50 @@ struct BddVec
     _buddy = other._buddy;
     _signed = other._signed;
     _bitvec = other._bitvec;
-    foreach (b; _bitvec) {
-      // import std.stdio;
-      // writeln("bitvec addRef: ", b);
-      _buddy.addRef(b);
-    }
+    this.addRef();
   }
 
-  ref BddVec opAssign(ref BddVec other) return {
-    if (_buddy !is null) {
-      foreach (b; _bitvec) _buddy.delRef(b);
-    }
+  this(ref bddvec other) {
+    this.delRef();
     _buddy = other._buddy;
     _signed = other._signed;
     _bitvec = other._bitvec;
-    if (_buddy !is null) {
-      foreach (b; _bitvec) _buddy.addRef(b);
-    }
+    this.addRef();
+  }
+
+  ref BddVec opAssign(ref BddVec other) return {
+    this.delRef();
+    _buddy = other._buddy;
+    _signed = other._signed;
+    _bitvec = other._bitvec;
+    this.addRef();
     return this;
   }
   
   ~this() {
+    this.delRef();
+  }
+
+  void addRef() {
     if (_buddy !is null) {
       foreach (b; _bitvec) {
 	// import std.stdio;
-	// writeln("bitvec delRef: ", b);
-	_buddy.delRef(b);
+	// writeln("bitvec addRef: ", b);
+	_buddy.addRef(b);
       }
     }
   }
 
+  void delRef() {
+    if (_buddy !is null) {
+      foreach (b; _bitvec) {
+	// import std.stdio;
+	// writeln("bitvec addRef: ", b);
+	_buddy.delRef(b);
+      }
+    }
+  }
+  
 
   void buildVec(T)(T val)
   {
@@ -854,15 +936,15 @@ struct BddVec
     _bitvec = null;
   }
 
-  // bvec addref(bvec v)
+  // bvec addRef(bvec v)
   // {
-  //   foreach(ref b; _bitvec) b.addref();
+  //   foreach(ref b; _bitvec) b.addRef();
   //   return v;
   // }
 
-  // bvec delref(bvec v)
+  // bvec delRef(bvec v)
   // {
-  //   foreach(ref b; _bitvec) b.delref();
+  //   foreach(ref b; _bitvec) b.delRef();
   //   return v;
   // }
 
@@ -1660,7 +1742,7 @@ struct BDD
   // TODO -- explicit delete
   ~this()
   {
-    if (_index !is 0 &&	_buddy !is null) {
+    if (Buddy.GC_ENABLED && _index !is 0) {
       _buddy.delRef(_index);
     }
   }
@@ -2020,6 +2102,13 @@ struct BDD
   {
     return makeBdd(buddy.bdd_randsatone(rand, dist, _index));
   }
+
+  int getRandSat(ref ubvec!MAXBDDLEVELS vec, double rand, double[uint] dist)
+  {
+    return buddy.bdd_getrandsat(vec, rand, dist, _index);
+  }
+
+
 
   BDD fullSatOne()
   {
@@ -2562,6 +2651,11 @@ class Buddy
 {
   // VERIFY_ASSERTIONS would be handled as a debug behavior
 
+  static bool GC_ENABLED = true;
+
+  static void enableBddGC() {GC_ENABLED = true;}
+  static void disableBddGC() {GC_ENABLED = false;}
+  
   enum string REVISION = "$Revision: 1.0 $";
   
   bool gbc_enabled = true;
@@ -3768,6 +3862,14 @@ class Buddy
 	if(r == 1)
 	  return 1;
 	break;
+      case BddOp.BIIMP :
+	if(l == r)
+	  return 1;
+	if(l == 1)
+	  return r;
+	if(r == 1)
+	  return l;
+	break;
       default:
 	assert(applyop != BddOp.NOT && applyop != BddOp.SIMPLIFY);
 	// assert(false);
@@ -4881,7 +4983,7 @@ class Buddy
     for (n = supportMax; n >= supportMin; --n) {
       if (supportSet[n] == supportID) {
 	int tmp;
-	// res is an int -- so delref and addref are required
+	// res is an int -- so delRef and addRef are required
 	addRef(res);
 	tmp = bdd_makenode(n, 0, res);
 	delRef(res);
@@ -5134,6 +5236,66 @@ class Buddy
 
   }
 
+  int bdd_getrandsat(ref ubvec!MAXBDDLEVELS vec, double rnd, double[uint] dist, int index)
+  {
+    CHECKa(index, BddFalse);
+    if (index == 0)
+      return false;
+
+    int res;
+
+    bdd_disable_reorder();
+
+    INITREF();
+    res = getrandsat_rec(vec, rnd, dist, index);
+
+    bdd_enable_reorder();
+
+    checkresize();
+    return res;
+  }
+
+  int getrandsat_rec(ref ubvec!MAXBDDLEVELS vec, double rnd, ref double[uint] dist, int r)
+  {
+    if(r < 2)
+      return r;
+
+    double limit = dist[r];
+    uint level = LEVEL(r);
+    assert (level < MAXBDDLEVELS);
+    
+    if (rnd < limit)
+      {
+	if (LOW(r) != 0)
+	  {
+	    // writeln("LL r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", level);
+	    vec[level] = false;
+	    int res = getrandsat_rec(vec, rnd/limit, dist, LOW(r));
+	    return res;
+	  }
+	else
+	  {
+	    writeln("-- r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", level);
+	    assert(false, "dist table gives wrong path");
+	  }
+      }
+    else
+      {
+	if (HIGH(r) != 0)
+	  {
+	    // writeln("HH r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", level);
+	    vec[level] = true;
+	    int res = getrandsat_rec(vec, (rnd - limit)/(1.0 - limit), dist, HIGH(r));
+	    return res;
+	  }
+	else
+	  {
+	    writeln("++ r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", level);
+	    assert(false, "dist table gives wrong path");
+	  }
+      }
+  }
+
   // 
   int bdd_randsatone(double rnd, ref double[uint] dist, int r)
   {
@@ -5168,13 +5330,13 @@ class Buddy
       {
 	if(LOW(r) != 0)
 	  {
-	    // writeln("LL r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd);
+	    // writeln("LL r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", LEVEL(r));
 	    int res = randsatone_rec(rnd/limit, dist, LOW(r));
 	    return PUSHREF(bdd_makenode(LEVEL(r), res, 0));
 	  }
 	else
 	  {
-	    writeln("-- r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd);
+	    writeln("-- r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", LEVEL(r));
 	    assert(false, "dist table gives wrong path");
 	  }
       }
@@ -5182,15 +5344,14 @@ class Buddy
       {
 	if(HIGH(r) != 0)
 	  {
-
-	    // writeln("HH r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd);
+	    // writeln("HH r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", LEVEL(r));
 	    int res = randsatone_rec((rnd - limit)/(1.0 - limit),
 				     dist, HIGH(r));
 	    return PUSHREF(bdd_makenode(LEVEL(r), 0, res));
 	  }
 	else
 	  {
-	    writeln("++ r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd);
+	    writeln("++ r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", LEVEL(r));
 	    assert(false, "dist table gives wrong path");
 	  }
       }
@@ -5772,6 +5933,18 @@ class Buddy
     return root;
   }
 
+  void delRef(bddvec vec) {
+    foreach (bit; vec._bitvec) {
+      delRef(bit);
+    }
+  }
+
+  void addRef(bddvec vec) {
+    foreach (bit; vec._bitvec) {
+      addRef(bit);
+    }
+  }
+
   void bdd_mark(int i)
   {
 
@@ -6328,7 +6501,7 @@ class Buddy
     if (newvar < 0 || newvar > _varNum - 1) {
       bdd_error(BddError.BDD_VAR);
     }
-    // delref is required
+    // delRef is required
     // BddPair.result is an array of ints
     delRef(pair.result[_var2Level[oldvar]]);
     pair.result[_var2Level[oldvar]] = bdd_ithvar(newvar);
@@ -6353,7 +6526,7 @@ class Buddy
     }
     int oldlevel = _var2Level[oldvar];
 
-    // delref is required
+    // delRef is required
     // BddPair.result is an array of ints
     delRef(pair.result[oldlevel]);
     // newvar is an int
@@ -8423,8 +8596,8 @@ class Buddy
 	dep[VARr(n)] = true;
 	levels[VARr(n)].nodenum++;
 
-	addref_rec(LOW(n), dep);
-	addref_rec(HIGH(n), dep);
+	addRef_rec(LOW(n), dep);
+	addRef_rec(HIGH(n), dep);
 
 	addDependencies(dep);
       }
@@ -8458,7 +8631,7 @@ class Buddy
     return mtx;
   }
 
-  void addref_rec(int r, bool* dep)
+  void addRef_rec(int r, bool* dep)
   {
     if(r < 2)
       return;
@@ -8473,8 +8646,8 @@ class Buddy
 	/* Make sure the nodenum field is updated. Used in the initial GBC */
 	levels[VARr(r) & ~(BddNode.MARK_MASK)].nodenum++;
 
-	addref_rec(LOW(r), dep);
-	addref_rec(HIGH(r), dep);
+	addRef_rec(LOW(r), dep);
+	addRef_rec(HIGH(r), dep);
       } else {
       int n;
 
@@ -9247,7 +9420,10 @@ class Buddy
     return BddDomain(this, a, b);
   }
 
-  alias createDomain = Domain_create;
+  BDD createDomain() {
+    uint di = extDomain(1);
+    return _domains[di].var();
+  }
 
   BddVec createDomVec(uint domainSize, bool signed) {
     BddVec dom;
