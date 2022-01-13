@@ -1957,9 +1957,9 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	 && !V.IS4STATE && !V.ISSIGNED) {
 	auto rhs = cast(UBitVec!SIZE) other;
 	for(size_t i=0; i!=STORESIZE; ++i) {
-	  this._aval[i] &= ~rhs._aval[i];
+	  this._aval[i] &= ! (rhs._aval[i]);
 	  static if(L) {
-	    this._bval[i] &= ~rhs._aval[i];
+	    this._bval[i] &= ! (rhs._aval[i]);
 	  }
 	  if(this.aValMSB) this._aval[$-1] |= SMASK;
 	  else                this._aval[$-1] &= UMASK;
@@ -5829,6 +5829,26 @@ uint clog2(BV)(const BV bv) {
   while (bv > one) {
     count += 1;
     one <<= 1;
+  }
+  return count;
+}
+
+// just like clog2 -- but uses floor instead of ceil
+uint flog2(BV)(const BV bv) {
+  static if (isBitVector!BV && BV.IS4STATE) {
+    assert (! isunknown(bv));
+  }
+  BV one = true;
+  BV zero = false;
+
+  BV val = bv;
+
+  assert (bv > zero);
+  uint count = 0;
+
+  while (val > one) {
+    count += 1;
+    val >>= 1;
   }
   return count;
 }
