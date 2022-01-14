@@ -1650,8 +1650,8 @@ struct _esdl__InlineRandomize(AA...)
     }
   }
 
-  void constrain(string C, string FILE=__FILE__,
-		 size_t LINE=__LINE__, ARGS...)(ARGS values) {
+  void constraint(string C, string FILE=__FILE__,
+		  size_t LINE=__LINE__, ARGS...)(ARGS values) {
     randomizeWith!(C, FILE, LINE, typeof(this), ARGS)(this, values);
   }
 
