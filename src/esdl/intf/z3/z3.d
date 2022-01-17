@@ -1111,7 +1111,7 @@ struct AST
   //   _m_ast = rhs._m_ast;
   //   Z3_inc_ref(context(), _m_ast);
   // }
-  ref AST opAssign(ref scope return AST rhs) {
+  ref AST opAssign(ref scope return AST rhs) return {
     if (_m_ast !is null) Z3_dec_ref(context(), _m_ast);
     setContext(rhs.context());
     _m_ast = rhs._m_ast;

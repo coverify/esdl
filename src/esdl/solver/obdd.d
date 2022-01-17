@@ -164,7 +164,7 @@ struct BddDomain // fdd.c:52
     this._var = buddy.one();
   }
 
-  ref BddDomain opAssign(ref return scope BddDomain other) {
+  ref BddDomain opAssign(ref return scope BddDomain other) return {
     assert (_buddy is null); 	// default constructor initialization
     this._index = other._index;
     this._realsize = other._realsize;
