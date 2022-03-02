@@ -5150,6 +5150,18 @@ interface EntityIntf: ElabContext, SimContext
 	   " a non-simulation thread");
     EntityIntf._esdl__threadContext = this;
   }
+  final void execInContext(DelegateThunk thunk) {
+    EntityIntf savedThreadContext = getThreadContext();
+    this.setThreadContext();
+    thunk();
+    _esdl__threadContext = savedThreadContext;
+  }
+  final void execInContext(FunctionThunk thunk) {
+    EntityIntf savedThreadContext = getThreadContext();
+    this.setThreadContext();
+    thunk();
+    _esdl__threadContext = savedThreadContext;
+  }
   static EntityIntf getThreadContext() {
     return _esdl__threadContext;
   }
