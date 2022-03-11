@@ -220,7 +220,7 @@ void _esdl__doInitRandObjectElems(P, int I=0)(P p) {
       // pragma(msg, p.tupleof[I].stringof);
       if (t !is null) {
 	alias M = typeof(t.tupleof[Q._esdl__INDEX]);
-	static if (is (M == class) ||
+	static if ((is (M == class) && is (M: Object)) ||
 		   (is (M == U*, U) && is (U == struct))) { // class or struct*
 	  p.tupleof[I] = new Q(NAME, p, t.tupleof[Q._esdl__INDEX]);
 	}
@@ -913,8 +913,8 @@ mixin template Randomization()
 }
 
 class _esdl__ProxyNoRand(_esdl__T)
-  if (is (_esdl__T == class) ||
-      (is (_esdl__T == U*, U) && is (U == struct))):
+   if ((is (_esdl__T == class) && is (_esdl__T: Object)) ||
+       (is (_esdl__T == U*, U) && is (U == struct))):
     _esdl__ProxyBase!_esdl__T
       {
 	mixin _esdl__ProxyMixin!_esdl__T;
@@ -1363,7 +1363,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       }
       else {
 	alias M = typeof(p._esdl__outer.tupleof[L._esdl__INDEX]);
-	static if (is (M == class) ||
+	static if ((is (M == class) && is (M: Object)) ||
 		   (is (M == U*, U) && is (U == struct))) {
 	  V = new L(name, parent, p._esdl__outer.tupleof[L._esdl__INDEX]);
 	}
@@ -1398,7 +1398,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       }
     }
   }
-  else static if (is (L == class) || (is (L == struct) && !isQueue!L) ||
+  else static if ((is (L == class) && is (L: Object)) || (is (L == struct) && !isQueue!L) ||
 		  (is (L == U*, U) && is (U == struct))) {
     // pragma(msg, "inside: ", NAME);
     static if (is (L == class) || is (L == struct)) {

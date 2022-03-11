@@ -251,6 +251,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     this(parent, obj);
   }
 
+  this(T)(_esdl__Proxy parent, CstObjectIntf obj, T outer) {
+    this(parent, obj);
+  }
+
   this(_esdl__Proxy parent, CstObjectIntf obj) {
     if (parent is null) _esdl__root = this;
     else _esdl__root = parent._esdl__getRootProxy();

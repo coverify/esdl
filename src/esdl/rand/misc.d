@@ -189,8 +189,8 @@ template isRandObjectSet(T) {
   enum bool isRandObjectSet = isRandObjectAssoc!T || isRandObjectArray!T;
 }
 
-template isRandObject(T) {
-  static if (is (T == class) ||
+template isRandObject(T) {	// exclude extern C++ classes using is (T: Object)
+  static if ((is (T == class) && is (T: Object)) ||
 	     (is (T == struct) && !isQueue!T)) {
     enum bool isRandObject = ! _esdl__TypeHasRandBarrier!T;
   }
