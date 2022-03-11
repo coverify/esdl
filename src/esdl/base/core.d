@@ -611,7 +611,7 @@ interface NamedComp: EsdlObj, TimeContext
     // Process
     private static NamedComp _esdl__getParentProc() {
       NamedComp p = Process.self;
-      if(p is null) {
+      if (p is null) {
 	p = EntityIntf.getThreadContext();
       }
       return p;
@@ -2818,7 +2818,7 @@ class EventObj: EventAgent, NamedComp
   }
 
   final void wait() {
-    if(Process.self is null) {
+    if (Process.self is null) {
       assert(false, "Wait can be called only from a Process");
     }
     else {
@@ -3965,7 +3965,7 @@ private class TimedEvent: SimEvent
 	stderr.writefln("Immediate notification for %s at time %s",
 			_eventObj.getFullName(), _eventObj.getRoot.getSimTime());
       }
-      if(Procedure.self is null) { // async notify
+      if (EntityIntf.getContextParent() is null) { // async notify
 	assert(this._getObj().isAsync is true);
 	if(this._schedule != Schedule.ASYNC) {
 	  cancel();
@@ -3975,8 +3975,8 @@ private class TimedEvent: SimEvent
 	}
       }
       else {			// immediate notify
-	if(this._schedule != Schedule.NOW &&
-	   this._schedule != Schedule.ASYNC) {
+	if (this._schedule != Schedule.NOW &&
+	    this._schedule != Schedule.ASYNC) {
 	  cancel();
 	  this._schedule = Schedule.NOW;
 	  this._eventQueueIndex =
@@ -4803,8 +4803,8 @@ void waitDelta() {
 
 void waitForks() {
   // get the thread this call is made from
-  if(Process.self is null) {
-    assert(false, "waitForks can only be called from inside a Process");
+  if (Process.self is null) {
+    assert (false, "waitForks can only be called from inside a Process");
   }
   Process[] procs = Process.self._esdl__getChildProcsHier();
   EventObj[] events;
@@ -5140,8 +5140,10 @@ class Routine(T, alias F, int R=0): Routine!(F, R)
 interface EntityIntf: ElabContext, SimContext
 {
   static EntityIntf _esdl__threadContext;
+  static bool       _esdl__contextIsTemp;
   static void resetThreadContext() {
     _esdl__threadContext = null;
+    _esdl__contextIsTemp = false;
   }
   final void setThreadContext() {
     auto proc = Process.self();
@@ -5151,57 +5153,68 @@ interface EntityIntf: ElabContext, SimContext
     EntityIntf._esdl__threadContext = this;
   }
   final void execInContext(DelegateThunk thunk) {
-    EntityIntf savedThreadContext = getThreadContext();
+    EntityIntf savedThreadContext = _esdl__threadContext;
+    bool       savedContextIsTemp = _esdl__contextIsTemp;
     this.setThreadContext();
+    _esdl__contextIsTemp = true;
     thunk();
     _esdl__threadContext = savedThreadContext;
+    _esdl__contextIsTemp = savedContextIsTemp;
   }
   final void execInContext(FunctionThunk thunk) {
-    EntityIntf savedThreadContext = getThreadContext();
+    EntityIntf savedThreadContext = _esdl__threadContext;
+    bool       savedContextIsTemp = _esdl__contextIsTemp;
     this.setThreadContext();
+    _esdl__contextIsTemp = true;
     thunk();
     _esdl__threadContext = savedThreadContext;
+    _esdl__contextIsTemp = savedContextIsTemp;
   }
   static EntityIntf getThreadContext() {
     return _esdl__threadContext;
   }
+  static bool isContextSet() {
+    return _esdl__threadContext !is null;
+  }
+  static bool isContextTemp() {
+    return _esdl__contextIsTemp;
+  }
   static RootEntity getContextRoot() {
-    EntityIntf parent;
-    auto process = Process.self();
-    if(process !is null) {
-      parent = process.getParentEntity();
-    }
-    else {
-      parent = getThreadContext();
+    EntityIntf parent = getThreadContext();
+    if (parent is null) {
+      auto process = Process.self();
+      if (process !is null) {
+	parent = process.getParentEntity();
+      }
     }
     if (parent !is null) {
       return parent.getRoot();
     }
-    else {
-      return null;
-    }
+    else return null;
   }
   static EntityIntf getContextEntity() {
-    EntityIntf parent;
-    auto process = Process.self();
-    if(process !is null) {
-      parent = process.getParentEntity();
+    EntityIntf parent = getThreadContext();
+    if (parent is null) {
+      Process process = Process.self();
+      if (process !is null) {
+	parent = process.getParentEntity();
+      }
     }
-    else {
-      parent = getThreadContext();
+    if (parent !is null) {
+      return parent;
     }
-    return parent;
+    else return null;
   }
   static NamedComp getContextParent() {
-    NamedComp parent;
-    auto process = Process.self();
-    if(process !is null) {
+    NamedComp parent = getThreadContext();
+    if (parent is null) {
+      auto process = Process.self();
       parent = process;
     }
-    else {
-      parent = getThreadContext();
+    if (parent !is null) {
+      return parent;
     }
-    return parent;
+    else return null;
   }
 
   // EntityIntf Constructor
