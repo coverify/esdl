@@ -13,42 +13,46 @@ import std.traits;
 import std.stdio;
 import core.memory: GC;
 
+import std.traits: isIntegral, isBoolean;
 import esdl.data.bvec: isBitVector;
 
 // Given a type (class or interface), this template function finds out
 // whether the type has a member function by name event that
 // returns an Event when called with no arguments
 package template hasEventMethod(T, string NAME) {
-  static if(__traits(hasMember, T, NAME)) {
-    static if(isEventMethod!(MemberFunctionsTuple!(T, NAME))) {
+  static if (__traits(hasMember, T, NAME)) {
+    static if (isEventMethod!(__traits(getOverloads, T, NAME))) {
       enum bool hasEventMethod = true;
-    } else {
+    }
+    else {
       enum bool hasEventMethod = false;
     }
-  } else {
+  }
+  else {
     enum bool hasEventMethod = false;
   }
 }
 
 // Auxilliary function used by hasEventMethod
 private template isEventMethod(ML...) {
-  static if(ML.length == 0) {
+  static if (ML.length == 0) {
     enum bool isEventMethod = false;
-  } else {
-    static if((is(ReturnType!(ML[0]) == Event) ||
-	       is(ReturnType!(ML[0]) : EventObj))) {
-      enum bool isEventMethod = true;
-    } else {
-      enum bool isEventMethod = isEventMethod!(ML[1..$]);
-    }
+  }
+  else static if ((is (ReturnType!(ML[0]) == Event) ||
+		   is (ReturnType!(ML[0]) : EventObj))) {
+    enum bool isEventMethod = true;
+  }
+  else {
+    enum bool isEventMethod = isEventMethod!(ML[1..$]);
   }
 }
 
 package template hasRegisterMethod(T, string NAME, P=void) {
-  static if(__traits(hasMember, T, NAME)) {
-    static if(hasRegisterMethod!(MemberFunctionsTuple!(T, NAME))) {
+  static if (__traits(hasMember, T, NAME)) {
+    static if (hasRegisterMethod!(MemberFunctionsTuple!(T, NAME))) {
       enum bool hasRegisterMethod = true;
-    } else {
+    }
+    else {
       enum bool hasRegisterMethod = false;
     }
   }
@@ -56,12 +60,14 @@ package template hasRegisterMethod(T, string NAME, P=void) {
 
 // Auxilliary function used by hasRegisterMethod
 private template hasRegisterMethod(ML...) {
-  static if(ML.length == 0) {
+  static if (ML.length == 0) {
     enum bool hasRegisterMethod = false;
-  } else {
-    static if(isCallable!(ML[0]) && ParameterTypeTuple!(ML[0]).length == 0) {
+  }
+  else {
+    static if (isCallable!(ML[0]) && ParameterTypeTuple!(ML[0]).length == 0) {
       enum bool hasRegisterMethod = true;
-    } else {
+    }
+    else {
       enum bool hasRegisterMethod = hasRegisterMethod!(ML[1..$]);
     }
   }
@@ -126,9 +132,9 @@ string declareWait(IF, string E, string CHANNEL)() {
   }
 
   public PortObj!(IF,N,M) _esdl__obj() {
-    if(this._portObj is null) {
+    if (this._portObj is null) {
       synchronized(typeid(Port!(IF,N,M))) {
-	if(this._portObj is null) {
+	if (this._portObj is null) {
 	  this._portObj = new PortObj!(IF,N,M)();
 	}
       }
@@ -136,104 +142,26 @@ string declareWait(IF, string E, string CHANNEL)() {
     return this._portObj;
   }
 
-  alias _esdl__obj this;
-  alias _esdl__obj get;
+  T opCast(T:bool)() {
+    return this.read() != 0;
+  }  
 
-  // void opCall(IF channel) {
-  //   _esdl__obj.bind(channel);
-  // }
-
-  // void opAssign(IF channel) {
-  //   _esdl__obj.bind(channel);
-  // }
-
-  // Disallow Port assignment
-  @disable private void opAssign(Port e);
-
-  // Special case of Signals
-  static if(is(IF unused == SignalOutIF!T, T)) {
-    import std.traits: isAssignable, isIntegral;
-    import esdl.data.bvec: isBitVector;
-    
-    public final void opAssign(T val) {
-      this._portObj.channel.write(val);
-    }
-
-    public final void opAssign(V) (V val)
-      if(isAssignable!(T, V) &&
-	 !is(T == V) &&
-	 !(isBitVector!T && (isIntegral!V || is(V == bool)))) {
-	this._portObj.channel.write(cast(T) val);
-      }
-
-    static if(isBitVector!T) {
-      static if(T.SIZE >= 1) {
-	public void opAssign(bool val) {
-	  this._portObj.channel.write(cast(T) val);
-	}
-      }
-      static if(T.SIZE >= 8 && T.ISSIGNED) {
-	public void opAssign(byte val) {
-	  this._portObj.channel.write(cast(T) val);
-	}
-      }
-      static if(T.SIZE >= 8 && !T.ISSIGNED) {
-	public void opAssign(ubyte val) {
-	  this._portObj.channel.write(cast(T) val);
-	}
-      }
-      static if(T.SIZE >= 16 && T.ISSIGNED) {
-	public void opAssign(short val) {
-	  this._portObj.channel.write(cast(T) val);
-	}
-      }
-      static if(T.SIZE >= 16 && !T.ISSIGNED) {
-	public void opAssign(ushort val) {
-	  this._portObj.channel.write(cast(T) val);
-	}
-      }
-      static if(T.SIZE >= 32 && T.ISSIGNED) {
-	public void opAssign(int val) {
-	  this._portObj.channel.write(cast(T) val);
-	}
-      }
-      static if(T.SIZE >= 32 && !T.ISSIGNED) {
-	public void opAssign(uint val) {
-	  this._portObj.channel.write(cast(T) val);
-	}
-      }
-      static if(T.SIZE >= 64 && T.ISSIGNED) {
-	public void opAssign(long val) {
-	  this._portObj.channel.write(cast(T) val);
-	}
-      }
-      static if(T.SIZE >= 64 && !T.ISSIGNED) {
-	public void opAssign(ulong val) {
-	  this._portObj.channel.write(cast(T) val);
-	}
-      }
-    }
-
-    S to(S)() if(is(S == string)) {
-      return this._portObj.channel.read.to!S();
-    }
-
-    public string toString() {
-      import std.conv;
-      return to!string(this._portObj.channel.read);
-    }
-
+  final void opCall(IF channel) {
+    _esdl__obj.bind(channel);
   }
 
+  alias _esdl__obj this;
+  alias get = _esdl__obj;
+
   public final void initialize() {
-    if(_portObj is null) {
+    if (_portObj is null) {
       _portObj = new PortObj!(IF,N,M);
       // writeln("Building Port");
     }
   }
 
   static void _esdl__inst(size_t I=0, T, L)(T t, ref L l) {
-    l._esdl__objRef._esdl__inst!I(t, l._esdl__objRef);
+    l._esdl__obj._esdl__inst!I(t, l._esdl__objRef);
   }
 
   static void _esdl__elab(size_t I, T, L)(T t, ref L l, uint[] indices=null)
@@ -242,15 +170,282 @@ string declareWait(IF, string E, string CHANNEL)() {
     static assert(is(T unused: ElabContext),
 		  "Only ElabContext components are allowed to have ports");
     synchronized(l.get) {
-      l._esdl__nomenclate!I(t, indices);
+      l.get()._esdl__nomenclate!I(t, indices);
       t._esdl__addPort(l.get);
+      l.get()._esdl__setParent(t);
+    }
+  }
+}
+
+@_esdl__component struct Export(IF, size_t N=1, size_t M=N) if(N == 1)
+  {
+    // enum bool _thisIsExport = true;
+    public ExportObj!(IF) _exportObj = void;
+
+    package ref ExportObj!(IF) _esdl__objRef() {
+      return _exportObj;
+    }
+
+    public ExportObj!(IF) _esdl__obj() {
+      return _exportObj;
+    }
+
+    alias _esdl__obj this;
+    alias _esdl__obj get;
+
+    final bool opCast(C)() if (isBoolean!C) {
+      return this.read != 0;
+    }
+
+    // final void opCall(IF channel) {
+    //   _esdl__obj.bind(channel);
+    // }
+
+    // Disallow Export assignment
+    // @disable private void opAssign(Export e);
+
+    // public final void initialize() {
+    //   if(_exportObj is null) {
+    //     _exportObj = new ExportObj!(IF);
+    //     // writeln("Building Export");
+    //   }
+    // }
+
+    static void _esdl__inst(size_t I=0, T, L)(T t, ref L l) {
+      l._esdl__obj._esdl__inst!I(t, l._esdl__objRef);
+    }
+
+    static void _esdl__elab(size_t I, T, L)(T t, ref L l, uint[] indices=null)
+    {
+      l._esdl__inst!I(t, l);
+      static assert(is(T unused: ElabContext),
+		    "Only ElabContext components are allowed to have ports");
+      synchronized(l.get) {
+	l._esdl__nomenclate!I(t, indices);
+	t._esdl__addExport(l.get);
+	l._esdl__setParent(t);
+      }
+    }
+}
+
+public class PortObj(IF, size_t N=1, size_t M=N) if(N == 1) : BasePort
+{
+  static assert(N == 0 || N >= M);
+  public IF _channel = void;
+
+  // disable auto instatiation during the elaboration process
+  @disable package ref IF _esdl__objRef() {
+    return _channel;
+  }
+
+  public IF channel() {
+    // synchronized(this) {
+    return _channel;
+    // }
+  }
+
+  alias channel this;
+  alias channel _esdl__obj;
+
+  public void _esdl__portIsBound() {
+    synchronized(this) {
+      if (M != 0 && _channel is null) {
+	writeln("Error: port '" ~ this.getFullName ~
+		"' is not bound to any channel");
+	this.getRoot._esdl__unboundPorts();
+      }
+    }
+  }
+
+  // Events associated with this port
+  static if (hasEventMethod!(IF, "defaultEvent")) {
+    // static sensitivity lists will get bound to this Event by default
+    // and this event will in turn get bound to the channels event when
+    // the channel is bound to this port
+    // public Event event;
+
+    // define a wait method that gets called if a user waits for this port
+    final void wait() {
+      import esdl.base.core;
+      _channel.defaultEvent().wait();
+    }
+  }
+
+  // If the corresponding channel provides methods(by any name) that
+  // does not take any arguments and returns an Event or an EventObj
+  //(or its derived class object), create ProxyEvents by the same
+  // name on the port. These events would then be bound to the events
+  // returned by the corresponding channel at the time of the channel
+  // itself getting bound to the port
+  // mixin(declareProxyEvents!IF());
+
+  // This should get simplified one DMD bug 9618 is taken care of
+  // http://d.puremagic.com/issues/show_bug.cgi?id=9618
+  static if (is (IF unused: SignalInIF!S, S) ||
+	     is (IF unused: SignalOutIF!S, S) ||
+	     is (IF unused: SignalWriteIF!S, S) ||
+	     is (IF unused: SignalInOutIF!S, S))
+    {
+      // bind method for signals
+      void bind(U)(U channel)
+	if (is (U unused == Signal!(S, M), S, bool M)) {
+	  // if (simPhase == SimPhase.BINDPORTS) {
+	  import std.exception;
+	  enforce(this._channel is null, "Re-binding a port if not allowed: " ~
+		  this.getFullName);
+	  synchronized(this) {
+	    this._channel = channel;
+	  }
+	  // Bind all Proxy Events
+	  //    mixin(bindProxyEvents!(IF, "_channel")());
+	  // static if(hasRegisterMethod!(IF, "registerPort")) {
+	  static if(__traits(compiles, _channel.registerPort(this))) {
+	    _channel.registerPort(this);
+	  }
+	  // static if(hasRegisterMethod!(IF, "registerPort", Port!(IF, N))) {
+	  //   _channel.registerPort();
+	  // }
+	  // }
+	}
+      void opCall(U)(U channel)
+	if(is(U unused == Signal!(S, M), S, bool M)) {
+	  this.bind(channel);
+	}
+    }
+  else
+    {
+      // bind method
+      final void bind(IF channel) {
+	// if (simPhase == SimPhase.BINDPORTS) {
+	// import std.exception;
+	// enforce(this._channel is null, "Re-binding a port if not allowed: " ~
+	// 	this.getFullName);
+	synchronized(this) {
+	  this._channel = channel;
+	}
+	// Bind all Proxy Events
+	//    mixin(bindProxyEvents!(IF, "_channel")());
+	// static if(hasRegisterMethod!(IF, "registerPort")) {
+	static if(__traits(compiles, _channel.registerPort(this))) {
+	  _channel.registerPort(this);
+	}
+	// static if(hasRegisterMethod!(IF, "registerPort", Port!(IF, N))) {
+	//   _channel.registerPort();
+	// }
+	// }
+      }
+
+
+      final void opCall(IF channel) {
+	this.bind(channel);
+      }
+    }
+
+  // Special case of Signals
+  static if (is (IF unused == SignalOutIF!T, T)) {
+    import std.traits: isAssignable, isIntegral;
+    import esdl.data.bvec: isBitVector;
+    
+    // Disallow Port assignment
+    public void opAssign(ref PortObj!(IF, N, M) e) {
+      this.channel.write(e.channel.read());
+    }
+    
+    public final void opAssign(T val) {
+      this.channel.write(val);
+    }
+
+    public final void opAssign(V) (V val)
+      if(isAssignable!(T, V) &&
+	 !is(T == V) &&
+	 !(isBitVector!T && (isIntegral!V || is(V == bool)))) {
+	this.channel.write(cast(T) val);
+      }
+
+    static if(isBitVector!T) {
+      static if(T.SIZE >= 1) {
+	public void opAssign(bool val) {
+	  this.channel.write(cast(T) val);
+	}
+      }
+      static if(T.SIZE >= 8 && T.ISSIGNED) {
+	public void opAssign(byte val) {
+	  this.channel.write(cast(T) val);
+	}
+      }
+      static if(T.SIZE >= 8 && !T.ISSIGNED) {
+	public void opAssign(ubyte val) {
+	  this.channel.write(cast(T) val);
+	}
+      }
+      static if(T.SIZE >= 16 && T.ISSIGNED) {
+	public void opAssign(short val) {
+	  this.channel.write(cast(T) val);
+	}
+      }
+      static if(T.SIZE >= 16 && !T.ISSIGNED) {
+	public void opAssign(ushort val) {
+	  this.channel.write(cast(T) val);
+	}
+      }
+      static if(T.SIZE >= 32 && T.ISSIGNED) {
+	public void opAssign(int val) {
+	  this.channel.write(cast(T) val);
+	}
+      }
+      static if(T.SIZE >= 32 && !T.ISSIGNED) {
+	public void opAssign(uint val) {
+	  this.channel.write(cast(T) val);
+	}
+      }
+      static if(T.SIZE >= 64 && T.ISSIGNED) {
+	public void opAssign(long val) {
+	  this.channel.write(cast(T) val);
+	}
+      }
+      static if(T.SIZE >= 64 && !T.ISSIGNED) {
+	public void opAssign(ulong val) {
+	  this.channel.write(cast(T) val);
+	}
+      }
+    }
+
+    S to(S)() if(is(S == string)) {
+      return this.channel.read().to!S();
+    }
+
+    public string toString() {
+      import std.conv;
+      return to!string(this.channel.read());
+    }
+
+  }
+
+  // Hierarchy
+  mixin NamedMixin;
+
+  static void _esdl__inst(size_t I=0, U, L)(U u, ref L l)
+  {
+    synchronized(u) {
+      if(l is null) l = new L();
+    }
+  }
+
+  static void _esdl__elab(size_t I, T, L)(T t, ref L l, uint[] indices=null)
+  {
+    l._esdl__inst!I(t, l);
+    static assert(is(T unused: ElabContext),
+		  "Only ElabContext components are allowed to have ports");
+    synchronized(l) {
+      l._esdl__nomenclate!I(t, indices);
+      t._esdl__addPort(l);
       l._esdl__setParent(t);
     }
   }
 }
 
-public class ExePortObj(IF, size_t N=1, size_t M=N)
-  if(N == 1) : BaseExePort
+public class ExportObj(IF, size_t N=1, size_t M=N)
+  if(N == 1) : BaseExport
 {
   static assert(N == 0 || N >= M);
   public IF _channel = void;
@@ -266,34 +461,34 @@ public class ExePortObj(IF, size_t N=1, size_t M=N)
 
   alias _esdl__obj this;
 
-  public void _esdl__exeportIsBound() {
-    if(M != 0 && _channel is null) {
-      writeln("Error: ExePort '" ~ this.getFullName ~
+  public void _esdl__exportIsBound() {
+    if (M != 0 && _channel is null) {
+      writeln("Error: Export '" ~ this.getFullName ~
 	      "' is not bound to any channel");
-      this.getRoot._esdl__unboundExePorts();
+      this.getRoot._esdl__unboundExports();
     }
   }
 
-  // Events associated with this exeport
-  static if(hasEventMethod!(IF, "defaultEvent")) {
+  // Events associated with this export
+  static if (hasEventMethod!(IF, "defaultEvent")) {
     // static sensitivity lists will get bound to this Event by default
     // and this event will in turn get bound to the channels event when
-    // the channel is bound to this exeport
+    // the channel is bound to this export
     // public Event event;
 
-    // define a wait method that gets called if a user waits for this exeport
+    // define a wait method that gets called if a user waits for this export
     final void wait() {
       import esdl.base.core;
-      wait(_channel.defaultEvent());
+      _channel.defaultEvent().wait();
     }
   }
 
   // If the corresponding channel provides methods(by any name) that
   // does not take any arguments and returns an Event or an EventObj
   //(or its derived class object), create ProxyEvents by the same
-  // name on the exeport. These events would then be bound to the events
+  // name on the export. These events would then be bound to the events
   // returned by the corresponding channel at the time of the channel
-  // itself getting bound to the exeport
+  // itself getting bound to the export
   // mixin(declareProxyEvents!IF());
 
   // This should get simplified one DMD bug 9618 is taken care of
@@ -306,19 +501,19 @@ public class ExePortObj(IF, size_t N=1, size_t M=N)
       // bind method for signals
       final void bind(U)(U channel)
 	if(is(U unused == Signal!(S, M), S, bool M)) {
-	  if(simPhase == SimPhase.BINDEXEPORTS) {
+	  if(simPhase == SimPhase.BINDEXPORTS) {
 	    import std.exception;
-	    enforce(_channel is null, "Re-binding a exeport if not allowed: " ~
+	    enforce(_channel is null, "Re-binding a export if not allowed: " ~
 		    this.getFullName);
 	    this._channel = channel._esdl__objRef;
 	    // Bind all Proxy Events
 	    //    mixin(bindProxyEvents!(IF, "_channel")());
-	    // static if(hasRegisterMethod!(IF, "registerExePort")) {
-	    static if(__traits(compiles, _channel.registerExePort(this))) {
-	      _channel.registerExePort(this);
+	    // static if(hasRegisterMethod!(IF, "registerExport")) {
+	    static if(__traits(compiles, _channel.registerExport(this))) {
+	      _channel.registerExport(this);
 	    }
-	    // static if(hasRegisterMethod!(IF, "registerExePort", ExePort!(IF, N))) {
-	    //   channel.registerExePort();
+	    // static if(hasRegisterMethod!(IF, "registerExport", Export!(IF, N))) {
+	    //   channel.registerExport();
 	    // }
 	  }
 	}
@@ -331,19 +526,19 @@ public class ExePortObj(IF, size_t N=1, size_t M=N)
   else
   {
     final void bind(IF channel) {
-      if(simPhase == SimPhase.BINDEXEPORTS) {
+      if(simPhase == SimPhase.BINDEXPORTS) {
 	import std.exception;
-	enforce(_channel is null, "Re-binding a exeport if not allowed: " ~
+	enforce(_channel is null, "Re-binding a export if not allowed: " ~
 		this.getFullName);
 	this._channel = channel;
 	// Bind all Proxy Events
 	//    mixin(bindProxyEvents!(IF, "_channel")());
-	// static if(hasRegisterMethod!(IF, "registerExePort")) {
-	static if(__traits(compiles, _channel.registerExePort(this))) {
-	  _channel.registerExePort(this);
+	// static if(hasRegisterMethod!(IF, "registerExport")) {
+	static if(__traits(compiles, _channel.registerExport(this))) {
+	  _channel.registerExport(this);
 	}
-	// static if(hasRegisterMethod!(IF, "registerExePort", ExePort!(IF, N))) {
-	//   channel.registerExePort();
+	// static if(hasRegisterMethod!(IF, "registerExport", Export!(IF, N))) {
+	//   channel.registerExport();
 	// }
       }
     }
@@ -353,13 +548,83 @@ public class ExePortObj(IF, size_t N=1, size_t M=N)
     }
   }
 
+  // Special case of Signals
+  static if (is (IF unused == SignalOutIF!T, T)) {
+    import std.traits: isAssignable, isIntegral;
+    import esdl.data.bvec: isBitVector;
+    
+    // Disallow Port assignment
+    public void opAssign(ref PortObj!(IF, N, M) e) {
+      this.channel.write(e.channel.read());
+    }
+    
+    public final void opAssign(T val) {
+      this.channel.write(val);
+    }
+
+    public final void opAssign(V) (V val)
+      if(isAssignable!(T, V) &&
+	 !is(T == V) &&
+	 !(isBitVector!T && (isIntegral!V || is(V == bool)))) {
+	this.channel.write(cast(T) val);
+      }
+
+    static if(isBitVector!T) {
+      static if(T.SIZE >= 1) {
+	public void opAssign(bool val) {
+	  this.channel.write(cast(T) val);
+	}
+      }
+      static if(T.SIZE >= 8 && T.ISSIGNED) {
+	public void opAssign(byte val) {
+	  this.channel.write(cast(T) val);
+	}
+      }
+      static if(T.SIZE >= 8 && !T.ISSIGNED) {
+	public void opAssign(ubyte val) {
+	  this.channel.write(cast(T) val);
+	}
+      }
+      static if(T.SIZE >= 16 && T.ISSIGNED) {
+	public void opAssign(short val) {
+	  this.channel.write(cast(T) val);
+	}
+      }
+      static if(T.SIZE >= 16 && !T.ISSIGNED) {
+	public void opAssign(ushort val) {
+	  this.channel.write(cast(T) val);
+	}
+      }
+      static if(T.SIZE >= 32 && T.ISSIGNED) {
+	public void opAssign(int val) {
+	  this.channel.write(cast(T) val);
+	}
+      }
+      static if(T.SIZE >= 32 && !T.ISSIGNED) {
+	public void opAssign(uint val) {
+	  this.channel.write(cast(T) val);
+	}
+      }
+      static if(T.SIZE >= 64 && T.ISSIGNED) {
+	public void opAssign(long val) {
+	  this.channel.write(cast(T) val);
+	}
+      }
+      static if(T.SIZE >= 64 && !T.ISSIGNED) {
+	public void opAssign(ulong val) {
+	  this.channel.write(cast(T) val);
+	}
+      }
+    }
+  }
+  
   // Hierarchy
   mixin NamedMixin;
 
   static void _esdl__inst(size_t I=0, U, L)(U u, ref L l)
   {
     synchronized(u) {
-      if(l is null) l = new L();
+      if (l is null) l = new L();
     }
   }
 
@@ -368,186 +633,25 @@ public class ExePortObj(IF, size_t N=1, size_t M=N)
     l._esdl__inst!I(t, l);
     static assert(is(T unused: ElabContext),
 		  "Only ElabContext components are allowed to have ports");
-    synchronized(l.get) {
+    synchronized(l) {
       l._esdl__nomenclate!I(t, indices);
-      t._esdl__addExePort(l.get);
+      t._esdl__addExport(l);
       l._esdl__setParent(t);
     }
   }
 
 }
 
-@_esdl__component struct ExePort(IF, size_t N=1, size_t M=N) if(N == 1)
-  {
-    // enum bool _thisIsExePort = true;
-    public ExePortObj!(IF) _exeportObj = void;
-
-    package ref ExePortObj!(IF) _esdl__objRef() {
-      return _exeportObj;
-    }
-
-    public ExePortObj!(IF) _esdl__obj() {
-      return _exeportObj;
-    }
-
-    alias _esdl__obj this;
-    alias _esdl__obj get;
-
-    final void opCall(IF channel) {
-      _esdl__obj.bind(channel);
-    }
-
-    // Disallow ExePort assignment
-    @disable private void opAssign(ExePort e);
-
-    // public final void initialize() {
-    //   if(_exeportObj is null) {
-    //     _exeportObj = new ExePortObj!(IF);
-    //     // writeln("Building ExePort");
-    //   }
-    // }
-
-    static void _esdl__inst(size_t I=0, T, L)(T t, ref L l) {
-      l._esdl__objRef._esdl__inst!I(t, l._esdl__objRef);
-    }
-}
-
-alias ExePort ExPort;
-
 public interface BasePort: NamedComp {
   public void _esdl__portIsBound();
 }
 
-public interface BaseExePort: NamedComp {
-  public void _esdl__exeportIsBound();
+public interface BaseExport: NamedComp {
+  public void _esdl__exportIsBound();
 }
 
 // N is the number of channels that can connect
 // M represents the minimum number of channels that must connect
-public class PortObj(IF, size_t N=1, size_t M=N) if(N == 1) : BasePort
-{
-  static assert(N == 0 || N >= M);
-  public IF _channel = void;
-
-  // disable auto instatiation during the elaboration process
-  @disable package ref IF _esdl__objRef() {
-    return _channel;
-  }
-
-  public IF channel() {
-    synchronized(this) {
-      return _channel;
-    }
-  }
-
-  alias channel this;
-  alias channel _esdl__obj;
-
-  public void _esdl__portIsBound() {
-    synchronized(this) {
-      if(M != 0 && _channel is null) {
-	writeln("Error: port '" ~ this.getFullName ~
-		"' is not bound to any channel");
-	this.getRoot._esdl__unboundPorts();
-      }
-    }
-  }
-
-  // Events associated with this port
-  static if(hasEventMethod!(IF, "defaultEvent")) {
-    // static sensitivity lists will get bound to this Event by default
-    // and this event will in turn get bound to the channels event when
-    // the channel is bound to this port
-    // public Event event;
-
-    // define a wait method that gets called if a user waits for this port
-    final void wait() {
-      import esdl.base.core;
-      wait(channel.defaultEvent());
-    }
-  }
-
-  // If the corresponding channel provides methods(by any name) that
-  // does not take any arguments and returns an Event or an EventObj
-  //(or its derived class object), create ProxyEvents by the same
-  // name on the port. These events would then be bound to the events
-  // returned by the corresponding channel at the time of the channel
-  // itself getting bound to the port
-  // mixin(declareProxyEvents!IF());
-
-  // This should get simplified one DMD bug 9618 is taken care of
-  // http://d.puremagic.com/issues/show_bug.cgi?id=9618
-  static if(is(IF unused: SignalInIF!S, S) ||
-	    is(IF unused: SignalOutIF!S, S) ||
-	    is(IF unused: SignalWriteIF!S, S) ||
-	    is(IF unused: SignalInOutIF!S, S))
-    {
-      // bind method for signals
-      void bind(U)(U channel)
-	if(is(U unused == Signal!(S, M), S, bool M)) {
-	  if(simPhase == SimPhase.BINDPORTS) {
-	    import std.exception;
-	    enforce(this._channel is null, "Re-binding a port if not allowed: " ~
-		    this.getFullName);
-	    synchronized(this) {
-	      this._channel = channel._esdl__objRef;
-	    }
-	    // Bind all Proxy Events
-	    //    mixin(bindProxyEvents!(IF, "_channel")());
-	    // static if(hasRegisterMethod!(IF, "registerPort")) {
-	    static if(__traits(compiles, _channel.registerPort(this))) {
-	      _channel.registerPort(this);
-	    }
-	    // static if(hasRegisterMethod!(IF, "registerPort", Port!(IF, N))) {
-	    //   _channel.registerPort();
-	    // }
-	  }
-	}
-      void opCall(U)(U channel)
-	if(is(U unused == Signal!(S, M), S, bool M)) {
-	  this.bind(channel);
-	}
-    }
-  else
-  {
-    // bind method
-    final void bind(IF channel) {
-      if(simPhase == SimPhase.BINDPORTS) {
-	import std.exception;
-	enforce(this._channel is null, "Re-binding a port if not allowed: " ~
-		this.getFullName);
-	synchronized(this) {
-	  this._channel = channel;
-	}
-	// Bind all Proxy Events
-	//    mixin(bindProxyEvents!(IF, "_channel")());
-	// static if(hasRegisterMethod!(IF, "registerPort")) {
-	static if(__traits(compiles, _channel.registerPort(this))) {
-	  _channel.registerPort(this);
-	}
-	// static if(hasRegisterMethod!(IF, "registerPort", Port!(IF, N))) {
-	//   _channel.registerPort();
-	// }
-      }
-    }
-
-
-    final void opCall(IF channel) {
-      this.bind(channel);
-    }
-  }
-
-  // Hierarchy
-  mixin NamedMixin;
-
-  static void _esdl__inst(size_t I=0, U, L)(U u, ref L l)
-  {
-    synchronized(u) {
-      if(l is null) l = new L();
-    }
-  }
-}
-
 // public class PortObj(IF, size_t N=1, size_t M=N) if(N != 1) : BasePort
 // {
 //   static assert(N == 0 || N >= M);
@@ -987,7 +1091,7 @@ class SemaphoreObj: SemaphoreIF, NamedComp
   }
 
   static void _esdl__inst(size_t I=0, T, L)(T t, ref L l) {
-    l._esdl__objRef._esdl__inst!I(t, l._esdl__objRef);
+    l._esdl__obj._esdl__inst!I(t, l._esdl__objRef);
   }
 
   static void _esdl__elab(size_t I, U, L)(U u, ref L l, uint[] indices=null) {
@@ -1356,7 +1460,7 @@ class FifoObj(T, size_t N=0): Channel, FifoInIF!T, FifoOutIF!T
   }
 
   static void _esdl__inst(size_t I=0, U, L)(U u, ref L l) {
-    l._esdl__objRef._esdl__inst!I(u, l._esdl__objRef);
+    l._esdl__obj._esdl__inst!I(u, l._esdl__objRef);
   }
 
   static void _esdl__elab(size_t I, U, L)(U u, ref L l, uint[] indices=null) {
@@ -1413,12 +1517,11 @@ class SignalObj(T, bool MULTI_DRIVER = false): Channel, SignalInOutIF!T
 
   alias read this;
   // FIXME -- http://d.puremagic.com/issues/show_bug.cgi?id=9249
-  // S opCast(S)() if(is(S == string)) {
-  //   synchronized(this)
-  //     {
-  //	return _curVal.to!S();
-  //     }
-  // }
+  S opCast(S)() if (is (S == string)) {
+    synchronized(this) {
+      return _curVal.to!S();
+    }
+  }
 
   public this() {
     synchronized(this) {
@@ -1616,6 +1719,30 @@ class SignalObj(T, bool MULTI_DRIVER = false): Channel, SignalInOutIF!T
     }
   }
 
+  static void _esdl__elab(size_t I, U, L)(U u, ref L l, uint[] indices=null) {
+    l._esdl__inst!I(u, l);
+    synchronized(l) {
+      static if(is(U unused: ElabContext)) {
+	u._esdl__addChildObj(l);
+      }
+      l._esdl__nomenclate!I(u, indices);
+      l._esdl__setParent(u);
+      _esdl__elabMems(l);
+    }
+  }
+
+  public int opCmp(string file = __FILE__,
+		   size_t line = __LINE__, V)(const V other) const
+    if(isIntegral!V || isBitVector!V || isBoolean!V) {
+      return this.read().opCmp(other);
+    }
+
+  public bool opEquals(string file = __FILE__,
+		       size_t line = __LINE__, V)(const V other)
+    if(isIntegral!V || isBitVector!V || isBoolean!V) {
+      return this.read().opEquals(other);
+    }
+
 }
 
 template Signal(uint WIDTH) {
@@ -1635,22 +1762,22 @@ template Signal(uint WIDTH) {
   }
 
   public SignalObj!(T, MULTI_DRIVER) _esdl__obj() {
-    if(this._signalObj is null) {
+    if (this._signalObj is null) {
       synchronized(typeid(Signal!(T, MULTI_DRIVER))) { //(this)
-	if(_signalObj is null) {
+	if (_signalObj is null) {
 	  _signalObj = new SignalObj!(T, MULTI_DRIVER);
 
 	  // Construct these event objects here
 	  // otherwise these get autoconstructed in the update phase
 	  // where the parent object is not visible
 	
-	  _signalObj._changeEvent.initialize();
+	  _signalObj._changeEvent.initialize("_changeEvent", _signalObj);
 
 	  import esdl.data.bvec;
 
-	  static if(is(T == bool) || (isBitVector!T && T.SIZE == 1)) {
-	    _signalObj._posedgeEvent.initialize("_posedgeEvent");
-	    _signalObj._negedgeEvent.initialize("_negedgeEvent");
+	  static if (is(T == bool) || (isBitVector!T && T.SIZE == 1)) {
+	    _signalObj._posedgeEvent.initialize("_posedgeEvent", _signalObj);
+	    _signalObj._negedgeEvent.initialize("_negedgeEvent", _signalObj);
 	  }
 	}
       }
@@ -1659,6 +1786,10 @@ template Signal(uint WIDTH) {
   }
 
   alias _esdl__obj this;
+
+  final bool opCast(C)() if (isBoolean!C) {
+    return this.read != 0;
+  }
 
   private auto opAssign(S)(S e)
     if(is(S unused: SignalObj!(T, M), bool M))
@@ -1736,14 +1867,12 @@ template Signal(uint WIDTH) {
 
   public final void initialize() {
     synchronized(typeid(Signal!(T, MULTI_DRIVER))) {
-      if(_signalObj is null) {
-	_signalObj = new SignalObj!(T, MULTI_DRIVER);
-      }
+      if(_signalObj is null) { _esdl__obj(); }
     }
   }
 
   static void _esdl__inst(size_t I=0, U, L)(U u, ref L l) {
-    l._esdl__objRef._esdl__inst!I(u, l._esdl__objRef);
+    l._esdl__obj._esdl__inst!I(u, l._esdl__objRef);
   }
 
   static void _esdl__elab(size_t I, U, L)(U u, ref L l, uint[] indices=null) {
@@ -1988,6 +2117,10 @@ template HdlSignal(uint WIDTH) {
 
   alias _esdl__obj this;
 
+  final bool opCast(C)() if (isBoolean!C) {
+    return this.read != 0;
+  }
+
   private auto opAssign(S)(S e)
     if(is(S unused: HdlSignalObj!(T, M), bool M))
       {
@@ -2071,7 +2204,7 @@ template HdlSignal(uint WIDTH) {
   }
 
   static void _esdl__inst(size_t I=0, U, L)(U u, ref L l) {
-    l._esdl__objRef._esdl__inst!I(u, l._esdl__objRef);
+    l._esdl__obj._esdl__inst!I(u, l._esdl__objRef);
   }
 
   static void _esdl__elab(size_t I, U, L)(U u, ref L l, uint[] indices=null) {
