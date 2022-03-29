@@ -1325,30 +1325,26 @@ void _esdl__elabArray(size_t I, T, L)(T t, ref L l, uint[] indices=null)
 // ports are bound sanely by the user.
 void _esdl__connect(T)(T t) {
   synchronized(t) {
-    // t._phase = SimPhase.CONFIGURE;
-    // static if(__traits(compiles, t.doConnect()))
-    // {
-    t.doConnect();
-    // }
-    foreach(ref port; t.getPorts) {
-      // import std.stdio: stderr;
-      // stderr.writeln("Checking connectivity for port", port);
-      if(t.simPhase == SimPhase.BINDPORTS) {
-	port._esdl__portIsBound();
-      }
-    }
-    foreach(ref exeport; t.getExePorts) {
-      // import std.stdio: stderr;
-      // stderr.writeln("Checking connectivity for exeport", exeport);
-      if(t.simPhase == SimPhase.BINDEXEPORTS) {
-	exeport._esdl__exeportIsBound();
-      }
-    }
-    // _esdl__connectIterSuper(t);
+    // Connect phase is bottom up
     foreach(child; t.getChildObjs()) {
       ElabContext hChild = cast(ElabContext) child;
-      if(hChild !is null) {
+      if (hChild !is null) {
 	_esdl__connect(hChild);
+      }
+    }
+    if (t.simPhase == SimPhase.BINDEXPORTS) {
+      t.doConnect();
+    }
+    if (t.simPhase == SimPhase.BINDPORTS) {
+      foreach(ref xport; t.getExports) {
+	// import std.stdio: stderr;
+	// stderr.writeln("Checking connectivity for export", xport);
+	xport._esdl__exportIsBound();
+      }
+      foreach(ref port; t.getPorts) {
+	// import std.stdio: stderr;
+	// stderr.writeln("Checking connectivity for port", port);
+	port._esdl__portIsBound();
       }
     }
   }
@@ -1579,10 +1575,10 @@ interface ElabContext: HierComp
 
 
   void _esdl__addPort(BasePort port);
-  void _esdl__addExePort(BaseExePort port);
+  void _esdl__addExport(BaseExport port);
 
   BasePort[] getPorts();
-  BaseExePort[] getExePorts();
+  BaseExport[] getExports();
 
   NamedComp[] getChildObjs();
   NamedComp[] getChildObjsHier();
@@ -1736,8 +1732,8 @@ interface ElabContext: HierComp
       @_esdl__ignore BasePort[] _esdl__ports;
     }
 
-    static if(!__traits(compiles, _esdl__exePorts)) {
-      @_esdl__ignore BaseExePort[] _esdl__exePorts;
+    static if(!__traits(compiles, _esdl__exports)) {
+      @_esdl__ignore BaseExport[] _esdl__exports;
     }
 
 
@@ -1772,13 +1768,13 @@ interface ElabContext: HierComp
     }
 
 
-    // _esdl__ports and _esdl__exePorts are effectively immutable
+    // _esdl__ports and _esdl__exports are effectively immutable
     // and therefor no sync guards are required.
     final BasePort[] getPorts() {
       return this._esdl__ports;
     }
-    final BaseExePort[] getExePorts() {
-      return this._esdl__exePorts;
+    final BaseExport[] getExports() {
+      return this._esdl__exports;
     }
 
     final override void _esdl__addPort(BasePort port) {
@@ -1796,18 +1792,18 @@ interface ElabContext: HierComp
       }
     }
 
-    final override void _esdl__addExePort(BaseExePort exeport) {
+    final override void _esdl__addExport(BaseExport xport) {
       synchronized(this) {
 	bool add = true;
 	debug(DUPLICATE_CHILD) {
-	  foreach(ref _exeport; this._esdl__exePorts) {
-	    if(exeport is _exeport) {
+	  foreach(ref _export; this._esdl__exports) {
+	    if(xport is _export) {
 	      add = false;
 	      break;
 	    }
 	  }
 	}
-	if(add) this._esdl__exePorts ~= exeport;
+	if(add) this._esdl__exports ~= xport;
       }
     }
 
@@ -4660,7 +4656,7 @@ void wait(IF, size_t N, size_t M)(Port!(IF, N, M) e) {
 }
 
 void wait(T, bool M)(ref Signal!(T, M) e) {
-  e.initialize();
+  // e.initialize();
   auto event = getEventObj(e);
   waitForEvent(event);
 }
@@ -7616,7 +7612,7 @@ enum SimPhase : byte
   {   NONE = 0,
       BUILD,
       CONFIGURE,
-      BINDEXEPORTS,
+      BINDEXPORTS,
       BINDPORTS,
       INIT,			// like PAUSE, but simulation has not started
       SIMULATE,
@@ -7721,10 +7717,10 @@ void execElab(T)(T t)
 	// information read in during the configurarion is consolidated and
 	// reflected at the EsdlSimulator level.
 	t.message("Starting Phase: BIND");
-	t.getSimulator.setPhase = SimPhase.BINDEXEPORTS;
+	t.getSimulator.setPhase = SimPhase.BINDEXPORTS;
 	// _esdl__connect!0(t);
 	_esdl__connect(t);
-	enforce(t._esdl__noUnboundExePorts, "Error: There are unbound exeports");
+	enforce(t._esdl__noUnboundExports, "Error: There are unbound exports");
 	t.getSimulator.setPhase = SimPhase.BINDPORTS;
 	// _esdl__connect!0(t);
 	_esdl__connect(t);
@@ -9045,7 +9041,7 @@ interface RootEntityIntf: EntityIntf
   void addSimHook(SimPhase phase, DelegateThunk thunk);
 
   void _esdl__unboundPorts();
-  void _esdl__unboundExePorts();
+  void _esdl__unboundExports();
 
   void setMasterMode();
   
@@ -9348,7 +9344,7 @@ abstract class RootEntity: RootEntityIntf
   
   
   protected bool _esdl__noUnboundPorts = true;
-  protected bool _esdl__noUnboundExePorts = true;
+  protected bool _esdl__noUnboundExports = true;
 
   private Time _timingPrecision;
   private bool _timingPrecisionSet = false;
@@ -9391,8 +9387,8 @@ abstract class RootEntity: RootEntityIntf
     _esdl__noUnboundPorts = false;
   }
 
-  final override void _esdl__unboundExePorts() {
-    _esdl__noUnboundExePorts = false;
+  final override void _esdl__unboundExports() {
+    _esdl__noUnboundExports = false;
   }
 
   void addArgv(string[] argv) {
@@ -9580,7 +9576,7 @@ class EsdlSimulator: EntityIntf
   }
 
   // Phase is defined in the SimContext interface class
-  // enum SimPhase : byte {NONE, BUILD, CONFIGURE, BINDEXEPORTS, BINDPORTS, SIMULATE}
+  // enum SimPhase : byte {NONE, BUILD, CONFIGURE, BINDEXPORTS, BINDPORTS, SIMULATE}
   @_esdl__ignore private long _updateCount = 0;	// increments each time update happens
 
   private RootThread _rootThread;
