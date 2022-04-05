@@ -230,7 +230,7 @@ public class VlExportObj(IF, size_t N=1, size_t M=N)
       
 
     // Disallow VlExport assignment
-    @disable private void opAssign(VlExport e);
+    @disable private void opAssign(typeof(this) e);
 
     // public final void initialize() {
     //   if (_exportObj is null) {
@@ -282,7 +282,7 @@ template VlPort(T) if (isIntegral!T)
   }  
 
   // Disallow VlPort assignment
-  @disable private void opAssign(VlPort e);
+  // @disable private void opAssign(typeof(this) e);
 
   // Special case of Signals
   public final void initialize() {
@@ -307,6 +307,20 @@ template VlPort(T) if (isIntegral!T)
       l._esdl__setParent(t);
     }
   }
+
+  static if (is (IF == VlSignal!T, T) && isIntegral!T) {
+    final void opAssign(T val) {
+      _portObj._channel = val;
+    }
+    final T read() {
+      return _portObj._channel;
+    }
+
+    final bool opCast(C)() if (isBoolean!C) {
+      return this.read != 0;
+    }
+  }
+  
 }
 
 // N is the number of channels that can connect
@@ -442,9 +456,8 @@ struct VlSignal(T)
 
   void read(ref T val) { val = *_sig; }
 
-  ref T opAssign(T val) {
+  void opAssign(T val) {
     *_sig = val;
-    return *_sig;
   }
 
   void opAssign(T* sig) { _sig = sig; }
