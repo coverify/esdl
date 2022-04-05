@@ -104,7 +104,7 @@ struct BitString(bool L)
   in {
     assert(i < len);
   }
-  body {
+  do {
     static if(L) {
       if(bt(bptr, i)) {
         if(bt(aptr, i)) return LOGIC_X;
@@ -141,7 +141,7 @@ struct BitString(bool L)
     in {
       assert(i < len);
     }
-  body {
+  do {
     static if(L) btr(bptr, i);
     if (b)       bts(aptr, i);
     else         btr(aptr, i);
@@ -153,7 +153,7 @@ struct BitString(bool L)
     in {
       assert(i < len);
     }
-  body {
+  do {
     static if(L) {
       if (b.getValueVec) bts(bptr, i);
       else        btr(bptr, i);
@@ -301,7 +301,7 @@ struct BitString(bool L)
   out (result) {
     assert(result == this);
   }
-  body {
+  do {
     if (len >= 2) {
       size_t lo, hi;
       lo = 0;

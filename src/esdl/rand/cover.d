@@ -81,7 +81,7 @@ struct CoverPoint(alias t, string BINS="") {
   }
 }
 
-class CoverGroup: _esdl__Norand {		// Base Class
+class CoverGroup: rand.disable {		// Base Class
   bool _isInitialized;		// true if the CoverGroup has been initialized
 }
 

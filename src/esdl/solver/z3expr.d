@@ -20,7 +20,7 @@ T StaticCast(T, F)(const F from)
       // assert statement will not be compiled for production release
       assert((from is null) || cast(T)from !is null);
     }
-body {
+do {
   return cast(T) cast(void*) from;
  }
 
@@ -752,6 +752,12 @@ BoolExpr eq()(auto ref BvExpr a, auto ref BvExpr b) {
   return BoolExpr(lhs.context(), r);
 }
 
+BoolExpr eq()(auto ref BoolExpr a, auto ref BoolExpr b) {
+  Z3_ast r = Z3_mk_eq(a.context(), a.getAST, b.getAST);
+  a.checkError();
+  return BoolExpr(a.context(), r);
+}
+
 // // friend expr operator==(expr & a, int b);
 // BoolExpr eq()(auto ref BvExpr a, int b) {
 //   assert (a.isBv());
@@ -1211,7 +1217,7 @@ struct BoolExpr
     _ast = AST(c);
   }
 
-  this(Context c, string name, bool fresh=false) {
+  this(Context c, string name, bool fresh=true) {
     Z3_ast r;
     if (fresh) r = Z3_mk_fresh_const(c, name.toStringz(), c.boolSort());
     else r = Z3_mk_const(c, c.strSymbol(name), c.boolSort());
@@ -1346,6 +1352,12 @@ struct BoolExpr
     return Z3_get_bool_value(context(), getAST);
   }
 
+  bool getBool() {
+    Z3_lbool val = boolValue();
+    assert (val != Z3_lbool.Z3_L_UNDEF);
+    return (val == Z3_lbool.Z3_L_TRUE);
+  }
+  
   T opCast(T)() if (is (T == Z3_app)) {
     assert (isApp());
     return cast (Z3_app) this;
@@ -1496,6 +1508,16 @@ struct BoolExpr
 	    Z3_get_ast_kind(c, a) == Z3_ast_kind.Z3_QUANTIFIER_AST ||
 	    Z3_get_ast_kind(c, a) == Z3_ast_kind.Z3_VAR_AST);
     return BoolExpr(c, a);
+  }
+
+  BoolExpr mapTo(ref Model m, bool model_completion=false) {
+    checkContext(this, m);
+    Z3_ast r = null;
+    bool status = Z3_model_eval(context(), m, this.getAST, model_completion, &r);
+    checkError();
+    if (status == false && context().enableExceptions())
+      throw(new Exception("failed to evaluate expression"));
+    return BoolExpr(context(), r);
   }
 }
 

@@ -1,7 +1,11 @@
 module esdl.solver.base;
-import esdl.rand.base;
-import esdl.rand.expr;
+
+// import esdl.rand.base;
+
 import esdl.rand.misc;
+import esdl.base.rand: _esdl__RandGen;
+import esdl.rand.agent: CstSolverAgent;
+import esdl.rand.base: CstDomBase, CstVecValueBase;
 
 abstract class CstSolver
 {
@@ -20,19 +24,23 @@ abstract class CstSolver
     // writeln(this.describe());
   }
 
+  final string signature() {
+    return _signature;
+  }
+  
   string describe() {
     import std.conv: to;
     return "\nID: " ~ _id.to!string ~ "\nSignature: " ~ _signature;
   }
 
-  // abstract void registerDomain(CstDomain domain);
-  // abstract void registerValue(CstValue value);
+  // abstract void registerDomain(CstDomBase domain);
+  // abstract void registerValue(CstVecValueBase value);
 
-  abstract bool solve(CstPredGroup group);
+  abstract bool solve(CstSolverAgent agent);
 
   // abstract void pushToEvalStack();
-  abstract void pushToEvalStack(CstDomain domain);
-  abstract void pushToEvalStack(CstValue value);
+  abstract void pushToEvalStack(CstDomBase domain);
+  abstract void pushToEvalStack(CstVecValueBase value);
 
   abstract void pushToEvalStack(ulong value, uint bitcount, bool signed);
   abstract void pushToEvalStack(bool value);
@@ -47,4 +55,11 @@ abstract class CstSolver
   abstract void processEvalStack(CstVectorOp op);
   abstract void processEvalStack(CstInsideOp op);
   abstract void processEvalStack(CstUniqueOp op);
+}
+
+abstract class CstDistSolverBase {
+  abstract CstDomBase getDomain();
+  abstract void purge(long item);
+  abstract void uniform(CstDomBase dom, _esdl__RandGen randGen);
+  abstract void reset();
 }

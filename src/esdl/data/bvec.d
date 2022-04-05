@@ -463,23 +463,23 @@ template _vecCmpT(T, U)	// return true if T >= U
 }
 
 template _bvec(T, U, string OP)
-  if((isBitVector!T || isIntegral!T || isSomeChar!T) &&
-     (isBitVector!U || isIntegral!U || isSomeChar!U)) {
-  static if (isIntegral!U || isSomeChar!U) alias UU = _bvec!U;
+  if((isBitVector!T || isIntegral!T || isSomeChar!T || isBoolean!T) &&
+     (isBitVector!U || isIntegral!U || isSomeChar!U || isBoolean!U)) {
+  static if (isIntegral!U || isSomeChar!U || isBoolean!U) alias UU = _bvec!U;
   else alias UU = U;
-  static if (isIntegral!T || isSomeChar!T) alias TT = _bvec!T;
+  static if (isIntegral!T || isSomeChar!T || isBoolean!T) alias TT = _bvec!T;
   else alias TT = T;
   static if(TT.ISSIGNED && UU.ISSIGNED) {enum bool S = true;}
   else                                  {enum bool S = false;}
   static if(TT.IS4STATE || UU.IS4STATE) {enum bool L = true;}
   else                                  {enum bool L = false;}
 
-  static if(OP == "~") {
+  static if (OP == "~") {
     alias _bvec!(TT.ISSIGNED, L, TT.SIZE + UU.SIZE) _bvec;
   }
   else {
-    static if(TT.SIZE > UU.SIZE)        {enum size_t N = TT.SIZE;}
-    else                                {enum size_t N = UU.SIZE;}
+    static if (TT.SIZE > UU.SIZE)        {enum size_t N = TT.SIZE;}
+    else                                 {enum size_t N = UU.SIZE;}
 
     alias _bvec = _bvec!(S, L, N);
   }
@@ -692,19 +692,11 @@ auto toBit(alias N)() if (isIntegral!(typeof(N))) {
 
 enum UBit!1 BIT_0   = UBit!1(0);
 enum UBit!1 BIT_1   = UBit!1(1);
-alias _0 = BIT_0;
-alias _1 = BIT_1;
 
 enum ULogic!1 LOGIC_0 = ULogic!1(0);
 enum ULogic!1 LOGIC_1 = ULogic!1(1);
 enum ULogic!1 LOGIC_X = cast(ULogic!1)bin!"X";
 enum ULogic!1 LOGIC_Z = cast(ULogic!1)bin!"Z";
-
-alias _X = LOGIC_X;
-alias _Z = LOGIC_Z;
-
-alias _x = LOGIC_X;
-alias _z = LOGIC_Z;
 
 public auto bin(string VAL)() {
   enum bool L = isStr4State(VAL);
@@ -727,19 +719,19 @@ public auto hex(string VAL)() {
   return result;
 }
 
-template _bvec(T) if(is(T == bool)) {
-  alias _bvec = _bvec!(false, false, 1);
+template _bvec(T) if (isBoolean!T) {
+  alias _bvec = UBit!1;
 }
 
-template _bvec(T) if(isIntegral!T) {
+template _bvec(T) if (isIntegral!T) {
   alias _bvec = _bvec!(isSigned!T, false, T.sizeof*8);
 }
 
-template _bvec(T) if(isSomeChar!T) {
+template _bvec(T) if (isSomeChar!T) {
   alias _bvec = _bvec!(false, false, T.sizeof*8);
 }
 
-template _bvec(T) if(isBitVector!T) {
+template _bvec(T) if (isBitVector!T) {
   alias _bvec = T;
 }
 
@@ -1275,6 +1267,26 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	}
       }
 
+    public void assign(V)(V other)
+      if(isIntegral!V || isSomeChar!V) {
+	static if(isSigned!V) long rhs = other;
+	else                  ulong rhs = other;
+	_aval[0] = cast(store_t) rhs;
+	static if(L) _bval[0] = 0;
+	static if(STORESIZE > 1) {
+	  for(size_t i=1; i != STORESIZE; ++i) {
+	    rhs >>= store_t.sizeof*8; // '>>' is sign-extending shift
+	    _aval[i] = cast(store_t) rhs;
+	    static if(L) _bval[i] = 0;
+	  }
+	}
+	// In case the vector is not signed, mask the extended sign bits if eny
+	static if(!S && STORESIZE*store_t.sizeof*8 > SIZE) {
+	  _aval[$-1] &= UMASK;
+	  static if(L) _bval[$-1] &= UMASK;
+	}
+      }
+
     // public void opAssign(V)(V other)
     //   if(isBoolean!V)
     //	{
@@ -1297,10 +1309,58 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	}
       }
 
+    public void assign(V)(V other)
+      if(isBoolean!V) {
+	_aval[0] = cast(store_t) other;
+	static if(L) _bval[0] = 0;
+	static if(STORESIZE > 1) {
+	  for(size_t i=1; i != STORESIZE; ++i) {
+	    _aval[i] = 0;
+	    static if(L) _bval[i] = 0;
+	  }
+	}
+      }
+
     private void _from(V)(V other)
       if(isBitVector!V ||
 	 is(V == _bvec!(_S, _L, _VAL, _RADIX), bool _S, bool _L, string _VAL, size_t _RADIX)) {
 	static assert(NO_CHECK_SIZE || SIZE >= V.SIZE);
+	static assert(IS4STATE || !V.IS4STATE,
+		      "Can not implicitly convert LogicVec to BitVec");
+	enum bool _L = V.IS4STATE;
+	for(size_t i=0; i != V.STORESIZE; ++i) {
+	  this._aval[i] = cast(store_t) other._aval[i];
+	  static if(L) {
+	    static if(_L) this._bval[i] =
+			    cast(store_t) other._bval[i];
+	    else           this._bval[i] = 0;
+	  }
+	}
+	for(size_t i=V.STORESIZE; i != STORESIZE; ++i) {
+	  // if RHS is signed, extend its sign
+	  if(other.aValMSB && ISSIGNED) this._aval[i] = cast(store_t) -1;
+	  else                  this._aval[i] = 0;
+	  static if(L) {
+	    static if(_L) {
+	      if(other.bValMSB && ISSIGNED) this._bval[i] = cast(store_t) -1;
+	      else                  this._bval[i] = 0;
+	    }
+	    else {
+	      this._bval[i] = 0;
+	    }
+	  }
+	}
+	if(aValMSB && ISSIGNED) this._aval[$-1] |= SMASK;
+	else           this._aval[$-1] &= UMASK;
+	static if(L) {
+	  if(bValMSB && ISSIGNED) this._bval[$-1] |= SMASK;
+	  else           this._bval[$-1] &= UMASK;
+	}
+      }
+
+    public void assign(V)(V other)
+      if(isBitVector!V ||
+	 is(V == _bvec!(_S, _L, _VAL, _RADIX), bool _S, bool _L, string _VAL, size_t _RADIX)) {
 	static assert(IS4STATE || !V.IS4STATE,
 		      "Can not implicitly convert LogicVec to BitVec");
 	enum bool _L = V.IS4STATE;
@@ -1377,6 +1437,23 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       }
     }
 
+    public void assign() (s_vpi_vecval[] other) {
+      static if(WORDSIZE is 32) {
+	for (size_t i=0; i!=(SIZE+31)/32; ++i) {
+	  this._aval[i] = other[i].aval;
+	  static if(IS4STATE) {
+	    this._bval[i] = other[i].bval;
+	  }
+	}
+      }
+      else {
+	this._aval[0] = cast(store_t) other[0].aval;
+	static if(IS4STATE) {
+	  this._bval[0] = cast(store_t) other[0].bval;
+	}
+      }
+    }
+    
     // It is the responsibility of the caller to make sure that
     // there is enough space available at other to write down the
     // required bits
@@ -1587,7 +1664,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       in {
 	assert(i < SIZE);
       }
-    body {
+    do {
       _bvec!(false, L, cast(size_t) 1) retval;
       static if(STORESIZE == 1) {
 	retval._aval[0] = cast(ubyte)((this._aval[0] >>> i) & 1LU);
@@ -1624,7 +1701,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       in {
 	assert(i < SIZE);
       }
-    body {
+    do {
       static if(STORESIZE == 1) {
 	if(b) this._aval[0] |= (1LU << i);
 	else   this._aval[0] &= ~(1LU << i);
@@ -1654,25 +1731,25 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	in {
 	  assert(i < SIZE);
 	}
-    body {
-      static if(STORESIZE == 1) {
-	static if(other.IS4STATE) {
-	  static if(L) {
-	    if(other.aVal) this._aval[0] |=(1L << i);
+    do {
+      static if (STORESIZE == 1) {
+	static if (other.IS4STATE) {
+	  static if (L) {
+	    if (other.aVal[0]) this._aval[0] |= (1L << i);
 	    else this._aval[0] &= ~(1L << i);
-	    if(other.bVal) this._bval[0] |=(1L << i);
+	    if (other.bVal[0]) this._bval[0] |= (1L << i);
 	    else this._bval[0] &= ~(1L << i);
 	  }
 	  else {
-	    if(other.aVal && !(other.bVal)) this._aval[0] |=(1L << i);
+	    if (other.aVal[0] && !(other.bVal[0])) this._aval[0] |= (1L << i);
 	    else this._aval[0] &= ~(1L << i);
 	  }
 	}
 	else {
-	  if(other.aVal)
-	    this._aval[0] |=(1L << i);
+	  if (other.aVal[0])
+	    this._aval[0] |= (1L << i);
 	  else this._aval[0] &= ~(1L << i);
-	  static if(L) {
+	  static if (L) {
 	    this._bval[0] &= ~(1L << i);
 	  }
 	}
@@ -1682,19 +1759,19 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	auto j_ = i / WORDSIZE;
 	static if(other.IS4STATE) {
 	  static if(L) {
-	    if(other.aVal) this._aval[j_] |=(1L << i_);
+	    if (other.aVal[0]) this._aval[j_] |= (1L << i_);
 	    else this._aval[j_] &= ~(1L << i_);
-	    if(other.bVal) this._bval[j_] |=(1L << i_);
+	    if (other.bVal[0]) this._bval[j_] |= (1L << i_);
 	    else this._bval[j_] &= ~(1L << i_);
 	  }
 	  else {
-	    if(other.aVal && !(other.bVal)) this._aval[j_] |=(1L << i_);
+	    if (other.aVal[0] && !(other.bVal[0])) this._aval[j_] |= (1L << i_);
 	    else this._aval[j_] &= ~(1L << i_);
 	  }
 	}
 	else {
-	  if(other.aVal)
-	    this._aval[j_] |=(1L << i_);
+	  if (other.aVal[0])
+	    this._aval[j_] |= (1L << i_);
 	  else this._aval[j_] &= ~(1L << i_);
 	  static if(L) {
 	    this._bval[j_] &= ~(1L << i_);
@@ -1725,8 +1802,19 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       return other;
     }
 
-    public auto opBinary(string op, V)(V other) const if(isIntegral!V) {
+    public auto opBinary(string op, V)(V other) const if (isIntegral!V) {
       return this.opBinary!op(other.toBitVec());
+    }
+
+    public auto opBinary(string op, V)(V other) const if (isBoolean!V) {
+      return this.opBinary!op(other.toBitVec());
+    }
+    
+    public auto opBinary(string op, V)(V other) const if (isBitVector!V && (op == "~"))  {
+      _bvec!(T, V, "~") result = this;
+      result <<= V.SIZE;
+      result[0..V.SIZE] = other;
+      return result;
     }
 
     // public auto opBinaryRight(string op, V)(V other) const if(isIntegral!V) {
@@ -1869,9 +1957,9 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	 && !V.IS4STATE && !V.ISSIGNED) {
 	auto rhs = cast(UBitVec!SIZE) other;
 	for(size_t i=0; i!=STORESIZE; ++i) {
-	  this._aval[i] &= ~rhs._aval[i];
+	  this._aval[i] &= ! (rhs._aval[i]);
 	  static if(L) {
-	    this._bval[i] &= ~rhs._aval[i];
+	    this._bval[i] &= ! (rhs._aval[i]);
 	  }
 	  if(this.aValMSB) this._aval[$-1] |= SMASK;
 	  else                this._aval[$-1] &= UMASK;
@@ -2148,7 +2236,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
         assert(i < SIZE && i >= 0 && j <= SIZE && j >= 0);
         assert(i < j);
       }
-    body {
+    do {
       T result = this >>> i;
       result &= ones(j - i);
       return result;
@@ -2745,38 +2833,147 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 
 
     // Concatenation
-    public auto opBinary(string op, V)(V other) const
-      if(isBitVector!V && (op == "~")) {
-	_bvec!(T, V, "~") result = this;
-	result <<= V.SIZE;
-	result[0..V.SIZE] = other;
+    // public auto opBinary(string op, V)(V other) const if (op == "~" && isBitVector!V) {
+    //   _bvec!(T, V, "~") result = this;
+    //   result <<= V.SIZE;
+    //   result[0..V.SIZE] = other;
+    //   return result;
+    // }
+
+    // public auto opBinary(string op, V)(V other) const if (op == "~" && isIntegral!V) {
+    //   enum OSIZE = V.sizeof * 8;
+    //   alias VV = ubvec!OSIZE;
+    //   VV other_ = other.toubvec!OSIZE;
+    //   _bvec!(T, VV, "~") result = this;
+    //   result <<= OSIZE;
+    //   result[0..OSIZE] = other_;
+    //   return result;
+    // }
+
+    // public auto opBinary(string op, V)(V other) const if (op == "~" && isBoolean!V) {
+    //   alias VV = ubvec!1;
+    //   VV other_ = other.toubvec!1;
+    //   _bvec!(T, VV, "~") result = this;
+    //   result <<= 1;
+    //   result[0..1] = other_;
+    //   return result;
+    // }
+
+    // public auto opBinary(string op, V)(V other) if (op == "~")  {
+    //   static if (isBitVector!V) {
+    // 	_bvec!(T, V, "~") result = this;
+    // 	result <<= V.SIZE;
+    // 	result[0..V.SIZE] = other;
+    // 	return result;
+    //   }
+    //   else static if (isIntegral!V) {
+    // 	enum OSIZE = V.sizeof * 8;
+    // 	ubvec!OSIZE other_ = other.toubvec!OSIZE;
+    // 	_bvec!(T, ubvec!OSIZE, "~") result = this;
+    // 	result <<= OSIZE;
+    // 	result[0..OSIZE] = other_;
+    // 	return result;
+    //   }
+    //   else static if (isBoolean!V) {
+    // 	ubvec!1 other_ = other.toubvec!1;
+    // 	_bvec!(T, ubvec!1, "~") result = this;
+    // 	result <<= 1;
+    // 	result[0..1] = other_;
+    // 	return result;
+    //   }
+    //   else static assert ("Unable to concat value of type: " ~ V.stringof);
+    // }
+
+    // int opApply(scope int delegate(bool) dg)
+    static if (L) {
+      int opApply(scope int delegate(ULogic!1) dg) const {
+	int result = 0;
+	for (size_t i = 0; i < SIZE; i++) {
+	  ULogic!1 b = this[i];
+	  result = dg(b);
+	  if (result) break;
+	}
 	return result;
       }
 
-    // int opApply(scope int delegate(ref bool) dg)
-    // int opApply(scope int delegate(ref bit) dg) {
-    //   int result = 0;
-    //   for(size_t i = 0; i < SIZE; i++) {
-    //     bit b = this.opIndex(i);
-    //     result = dg(b);
-    //     this[i] = b;
-    //     if(result) break;
-    //   }
-    //   return result;
-    // }
+      int opApply(scope int delegate(ref size_t, ULogic!1) dg) const {
+	int result = 0;
+	for (size_t i = 0; i < SIZE; i++) {
+	  ULogic!1 b = this[i];
+	  result = dg(i, b);
+	  if(result) break;
+	}
+	return result;
+      }
 
-    /** ditto */
-    // int opApply(scope int delegate(ref size_t, ref bool) dg)
-    // int opApply(int delegate(ref size_t, ref bit) dg) {
-    //   int result = 0;
-    //   for(size_t i = 0; i < SIZE; i++) {
-    //     bit b = this.opIndex(i);
-    //     result = dg(i, b);
-    //     this[i] = b;
-    //     if(result) break;
-    //   }
-    //   return result;
-    // }
+      int opApply(scope int delegate(ref ULogic!1) dg) {
+	int result = 0;
+	for (size_t i = 0; i < SIZE; i++) {
+	  ULogic!1 b = this[i];
+	  result = dg(b);
+	  this[i] = b;
+	  if(result) break;
+	}
+	return result;
+      }
+
+      int opApply(scope int delegate(ref size_t, ref ULogic!1) dg) {
+	int result = 0;
+	for (size_t i = 0; i < SIZE; i++) {
+	  ULogic!1 b = this[i];
+	  result = dg(i, b);
+	  this[i] = b;
+	  if(result) break;
+	}
+	return result;
+      }
+    }
+    else {
+      int opApply(scope int delegate(UBit!1) dg) const {
+	int result = 0;
+	for (size_t i = 0; i < SIZE; i++) {
+	  UBit!1 b = this[i];
+	  result = dg(b);
+	  if (result) break;
+	}
+	return result;
+      }
+
+      // int opApply(scope int delegate(ref size_t, ref UBit!1) dg)
+      int opApply(scope int delegate(ref size_t, UBit!1) dg) const {
+	int result = 0;
+	for (size_t i = 0; i < SIZE; i++) {
+	  UBit!1 b = this[i];
+	  result = dg(i, b);
+	  if(result) break;
+	}
+	return result;
+      }
+
+      // int opApply(scope int delegate(ref UBit!1) dg)
+      int opApply(scope int delegate(ref UBit!1) dg) {
+	int result = 0;
+	for(size_t i = 0; i < SIZE; i++) {
+	  UBit!1 b = this[i];
+	  result = dg(b);
+	  this[i] = b;
+	  if(result) break;
+	}
+	return result;
+      }
+
+      // int opApply(scope int delegate(ref size_t, ref UBit!1) dg)
+      int opApply(scope int delegate(ref size_t, ref UBit!1) dg) {
+	int result = 0;
+	for (size_t i = 0; i < SIZE; i++) {
+	  UBit!1 b = this[i];
+	  result = dg(i, b);
+	  this[i] = b;
+	  if(result) break;
+	}
+	return result;
+      }
+    }
 }
 
 public auto toBitVec(T)(T t) if(isIntegral!T) {
@@ -2786,6 +2983,12 @@ public auto toBitVec(T)(T t) if(isIntegral!T) {
   else {
     alias R = UBitVec!(8*T.sizeof);
   }
+  R res = t;
+  return res;
+ }
+
+public auto toBitVec(T)(T t) if(isBoolean!T) {
+  alias R = UBitVec!(1);
   R res = t;
   return res;
  }
@@ -2836,6 +3039,20 @@ public auto mapToUBits(T)(T t) if(isFloatingPoint!T) {
   return u.b;
  }
 
+alias tobvec = toBit;
+
+public auto to(B, T)(T t) if(isIntegral!T && isBitVector!B) {
+  static if (isSigned!T) {
+    alias R = BitVec!(8*T.sizeof);
+  }
+  else {
+    alias R = UBitVec!(8*T.sizeof);
+  }
+  R tmp = t;
+  B res = cast(B) tmp;
+  return res;
+ }
+
 public auto toBit(size_t N, T)(T t) if(isIntegral!T) {
   static if(isSigned!T) {
     alias R = BitVec!(8*T.sizeof);
@@ -2849,6 +3066,8 @@ public auto toBit(size_t N, T)(T t) if(isIntegral!T) {
   return res;
  }
 
+alias toubvec = toUBit;
+
 public auto toUBit(size_t N, T)(T t) if(isIntegral!T) {
   static if(isSigned!T) {
     alias R = BitVec!(8*T.sizeof);
@@ -2856,6 +3075,14 @@ public auto toUBit(size_t N, T)(T t) if(isIntegral!T) {
   else {
     alias R = UBitVec!(8*T.sizeof);
   }
+  alias B = UBit!(N);
+  R tmp = t;
+  B res = cast(B) tmp;
+  return res;
+ }
+
+public auto toUBit(size_t N, T)(T t) if(isBoolean!T) {
+  alias R = UBitVec!1;
   alias B = UBit!(N);
   R tmp = t;
   B res = cast(B) tmp;
@@ -2986,10 +3213,16 @@ public void fromBits(T, B)(ref T val, B bv)
   }
 
 
-alias BitVec Bit;
-alias UBitVec UBit;
-alias LogicVec Logic;
-alias ULogicVec ULogic;
+alias Bit = BitVec;
+alias UBit = UBitVec;
+alias Logic = LogicVec;
+alias ULogic = ULogicVec;
+
+alias bvec = BitVec;
+alias ubvec = UBitVec;
+alias lvec = LogicVec;
+alias ulvec = ULogicVec;
+
 
 /*    */
 unittest {
@@ -5567,3 +5800,149 @@ void setByte(T)(ref T data, size_t n, ubyte b) if (isIntegral!T) {
   data &= ~mask;
   data |= byt;
  }
+
+// Implementation of SystemVerilog int and bitvector system calls
+
+// $clog2
+//
+// The system function $clog2 shall return the ceiling of the log base
+// 2 of the argument (the log rounded up to an integer value). The
+// argument can be an integer or an arbitrary sized vector value. The
+// argument shall be treated as an unsigned value, and an argument
+// value of 0 shall produce a result of 0.  This system function can
+// be used to compute the minimum address width necessary to address a
+// memory of a given size or the minimum vector width necessary to
+// represent a given number of states.
+// 
+// For example:
+// integer result;
+// result = $clog2(n);
+
+uint clog2(BV)(const BV bv) {
+  static if (isBitVector!BV && BV.IS4STATE) {
+    assert (! isunknown(bv));
+  }
+  BV one = true;
+  BV zero = false;
+  if (bv == zero) return 0;
+  uint count = 0;
+  while (bv > one) {
+    count += 1;
+    one <<= 1;
+  }
+  return count;
+}
+
+// just like clog2 -- but uses floor instead of ceil
+uint flog2(BV)(const BV bv) {
+  static if (isBitVector!BV && BV.IS4STATE) {
+    assert (! isunknown(bv));
+  }
+  BV one = true;
+  BV zero = false;
+
+  BV val = bv;
+
+  assert (bv > zero);
+  uint count = 0;
+
+  while (val > one) {
+    count += 1;
+    val >>= 1;
+  }
+  return count;
+}
+
+uint isunknown(BV)(const BV bv) {
+  static if (isBitVector!BV) return bv.isUnkown();
+  static if (isIntegral!BV) return false;
+}
+
+
+// $countbits
+//
+// The function $countbits counts the number of bits that have a
+// specific set of values (e.g., 0, 1, X, Z) in a bit vector.
+//
+// $countbits ( expression , control_bit { , control_bit } )
+
+uint countbits(B, BV)(const BV bv, const B b) {
+  static if (is (B == ULogic!1) && isBitVector!BV && BV.IS4STATE) {
+    uint count;
+    foreach (bb; bv) {
+      if (b is bb) count += 1;
+    }
+    return count;
+  }
+  else static if (is (B == UBit!1) && isBitVector!BV && ! BV.IS4STATE) {
+    uint count;
+    foreach (bb; bv) {
+      if (b is bb) count += 1;
+    }
+    return count;
+  }
+  else static if (is (B == bool) && isBitVector!BV && ! BV.IS4STATE) {
+    uint count;
+    foreach (bb; bv) {
+      if (b == bb) count += 1;
+    }
+    return count;
+  }
+  else static if (is (B == UBit!1) && isIntegral!BV) {
+    enum SIZE = BV.sizeof * 8;
+    UBit!SIZE ibv = bv;
+    uint count;
+    foreach (bb; ibv) {
+      if (b is bb) count += 1;
+    }
+    return count;
+  }
+  else static if (is (B == bool) && isIntegral!BV) {
+    enum SIZE = BV.sizeof * 8;
+    UBit!SIZE ibv = bv;
+    uint count;
+    foreach (bb; ibv) {
+      if (b == bb) count += 1;
+    }
+    return count;
+  }
+  else {
+    static assert (false);
+  }
+}
+
+// $countones
+//
+// is equivalent to $countbits(expression,'1).
+uint countones(T)(T t) {
+  static if (isBitVector!T && T.IS4STATE) {
+    return countbits(t, LOGIC_1);
+  }
+  static if (isBitVector!T && ! T.IS4STATE) {
+    return countbits(t, BIT_1);
+  }
+  static if (isIntegral!T) {
+    return countbits(t, true);
+  }
+}
+
+
+// $onehot
+// 
+// $onehot ( expression ) returns true (1'b1) if
+// $countbits(expression,'1)==1, otherwise it returns false (1'b0).
+
+bool onehot(T)(T t) {
+  return countones(t) == 1;
+}
+
+
+// $onehot0
+// 
+// $onehot0 ( expression ) returns true (1'b1) if
+// $countbits(expression,'1)<=1, otherwise it returns false (1'b0).
+
+bool onehot0(T)(T t) {
+  return countones(t) <= 1;
+}
+
