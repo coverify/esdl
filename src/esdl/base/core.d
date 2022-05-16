@@ -4405,7 +4405,8 @@ final class EventNotice
     }
   }
 
-  private final int opCmp(EventNotice rhs) {
+  // private
+  final int opCmp(EventNotice rhs) {
     // if (rhs is null) return -1;
     // if (this is null) return 1;
     // time is effectively immutable
