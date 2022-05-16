@@ -5,114 +5,20 @@ import esdl.base.core: _esdl__component, NamedComp, _esdl__ignore,
   getRootEntity, EntityIntf, ElabContext, BaseExport, Entity,
   BasePort;
 import std.traits: isIntegral, isBoolean;
-import esdl.data.bvec: isBitVector;
+import esdl.data.bvec: isBitVector, ubvec;
 
-extern (C++) {
-  import core.stdcpp.string: basic_string;
-
-  class VerilatedVcdFile {
-  private:
-    int m_fd = 0;  // File descriptor we're writing to
-    @disable this();
-  public:
-    // METHODS
-    /// Construct a (as yet) closed file
-    // VerilatedVcdFile() = default;
-    /// Close and destruct
-
-    // virtual ~VerilatedVcdFile() = default;
-    ~this();
-    /// Open a file with given filename
-    bool open(ref const(basic_string!char) name);
-    /// Close object's file
-    void close();
-    /// Write data to file (if it is open)
-    ulong write(const(char*) bufp, long len);
-    // final ulong write(string bufp, long len) {
-    //   import std.string: toStringz;
-    //   return this.write(bufp.toStringz(), len);
-    // }
-  }
-
-  // blind struct
-  struct VerilatedContext {
-    final void traceEverOn(bool flag);
-  };
-  class VerilatedVcdC;
-  
-  class ESDLVerilatedVcdD {
-    private @disable this();
-
-    VerilatedVcdC m_vcd_c;
-    
-    ~this();
-    final bool isOpen() const;
-    /// Open a new VCD file
-    /// This includes a complete header dump each time it is called,
-    /// just as if this object was deleted and reconstructed.
-    void open(const(char) *filename);
-    // final void open(string filename) {
-    //   import std.string: toStringz;
-    //   this.open(filename.toStringz());
-    // }
-    
-    /// Continue a VCD dump by rotating to a new file name
-    /// The header is only in the first file created, this allows
-    /// "cat" to be used to combine the header plus any number of data files.
-    final void openNext(bool incFilename = true);
-    /// Set size in megabytes after which new file should be created
-    final void rolloverMB(size_t rMB);
-    /// Close dump
-    final void close();
-    /// Flush dump
-    final void flush();
-    /// Write one cycle of dump data
-    /// Call with the current context's time just after eval'ed,
-    /// e.g. ->dump(contextp->time())
-    final void dump(ulong timeui);
-    /// Write one cycle of dump data - backward compatible and to reduce
-    /// conversion warnings.  It's better to use a vluint64_t time instead.
-    final void dump(double timestamp);
-    final void dump(uint timestamp);
-    final void dump(int timestamp);
-
-    // METHODS - Internal/backward compatible
-    // \protectedsection
-
-    // Set time units (s/ms, defaults to ns)
-    // Users should not need to call this, as for Verilated models, these
-    // propage from the Verilated default timeunit
-    final void set_time_unit(const(char*) unit);
-    // final void set_time_unit(string unit) {
-    //   import std.string: toStringz;
-    //   this.set_time_unit(unit.toStringz());
-    // }
-    final void set_time_unit(ref const(basic_string!char) unit);
-
-    // Set time resolution (s/ms, defaults to ns)
-    // Users should not need to call this, as for Verilated models, these
-    // propage from the Verilated default timeprecision
-    final void set_time_resolution(const(char*) unit);
-    // final void set_time_resolution(string unit) {
-    //   import std.string: toStringz;
-    //   this.set_time_resolution(unit.toStringz());
-    // }
-
-    final void set_time_resolution(ref const(basic_string!char) unit);
-
-    final VerilatedVcdC getVcdC();
-  }
-
-  VerilatedVcdFile createVcdFile();
-
-  ESDLVerilatedVcdD createVcdD(VerilatedVcdFile filep = null);
-
-}
-
-public class VlExportObj(IF, size_t N=1, size_t M=N)
-     if (N == 1 && is (IF == VlSignal!T, T)) : BaseExport
+public class VlExportObj(IF)
+     if (is (IF == VlSignal!T, T)) : BaseExport
 {
-  static assert(N == 0 || N >= M);
+  static if (is (IF == VlSignal!VV, VV)) {
+    alias VAL_TYPE = VV;
+
+    final VV read() {
+      return _channel.read();
+    }
+
+  }
+
   public IF _channel = void;
 
   // disable auto instantiation of the channel during the elaboration
@@ -127,7 +33,7 @@ public class VlExportObj(IF, size_t N=1, size_t M=N)
   alias _esdl__obj this;
 
   public void _esdl__exportIsBound() {
-    if (M != 0 && _channel.isNull()) {
+    if (_channel.isNull()) {
       import std.stdio: writeln;
       writeln("Error: VlExport '" ~ this.getFullName ~
 	      "' is not bound to any channel");
@@ -145,7 +51,7 @@ public class VlExportObj(IF, size_t N=1, size_t M=N)
 
   // This should get simplified one DMD bug 9618 is taken care of
   // http://d.puremagic.com/issues/show_bug.cgi?id=9618
-  final void bind(IF channel) {
+  final void bind(ref IF channel) {
     // if (simPhase == SimPhase.BINDEXPORTS) {
     import std.exception;
     enforce(_channel.isNull, "Re-binding a export if not allowed: " ~
@@ -157,15 +63,11 @@ public class VlExportObj(IF, size_t N=1, size_t M=N)
     static if (__traits(compiles, _channel.registerExport(this))) {
       _channel.registerExport(this);
     }
-    // static if (hasRegisterMethod!(IF, "registerVlExport", VlExport!(IF, N))) {
-    //   channel.registerVlExport();
-    // }
-    // }
   }
 
-    final void opCall(IF channel) {
-      this.bind(channel);
-    }
+  final void opCall(IF channel) {
+    this.bind(channel);
+  }
 
   // Hierarchy
   mixin NamedMixin;
@@ -191,9 +93,29 @@ public class VlExportObj(IF, size_t N=1, size_t M=N)
 
 }
 
-@_esdl__component struct VlExport(IF, size_t N=1, size_t M=N)
-     if (N == 1 && is (IF == VlSignal!T, T))
+@_esdl__component struct VlExport(IF)
+     if (is (IF == VlSignal!T, T))
   {
+    static if (is (IF == VlSignal!VV, VV)) {
+      import std.traits: isAssignable;
+      alias VAL_TYPE = VV;
+      
+      final void opCall(VV* val) {
+	VlSignal!VV sig = val;
+	_esdl__obj.bind(sig);
+      }
+      final void opAssign(V)(V val) if (isAssignable!(IF, V)) {
+	_exportObj._channel = val;
+      }
+
+      final VV read() {
+	return _exportObj._channel.read();
+      }
+
+      final bool opCast(C)() if (isBoolean!C) {
+	return this.read != 0;
+      }
+    }
     // enum bool _thisIsVlExport = true;
     public VlExportObj!(IF) _exportObj = void;
 
@@ -212,22 +134,6 @@ public class VlExportObj(IF, size_t N=1, size_t M=N)
       _esdl__obj.bind(channel);
     }
 
-    static if (is (IF == VlSignal!T, T) && isIntegral!T) {
-      final void opCall(T* val) {
-	_esdl__obj.bind(VlSignal!T(val));
-      }
-      final void opAssign(T val) {
-	_exportObj._channel = val;
-      }
-      final T read() {
-	return _exportObj._channel;
-      }
-
-      final bool opCast(C)() if (isBoolean!C) {
-	return this.read != 0;
-      }
-    }
-      
 
     // Disallow VlExport assignment
     @disable private void opAssign(typeof(this) e);
@@ -244,32 +150,54 @@ public class VlExportObj(IF, size_t N=1, size_t M=N)
     }
 }
 
-template VlExport(T) if (isIntegral!T)
+template VlExport(int N)
 {
-  alias VlExport = VlExport!(VlSignal!T);
+  alias VlExport = VlExport!(VlSignal!N);
 }
 
-template VlPort(T) if (isIntegral!T)
+template VlPort(int N)
 {
-  alias VlPort = VlPort!(VlSignal!T);
+  alias VlPort = VlPort!(VlSignal!N);
 }
 
-@_esdl__component struct VlPort(IF, size_t N=1, size_t M=N)
+@_esdl__component struct VlPort(IF)
+     if (is (IF == VlSignal!T, T))  
 {
+  static if (is (IF == VlSignal!VV, VV)) {
+    import std.traits: isAssignable;
+    alias VAL_TYPE = VV;
+
+    // final void opAssign(VV val) {
+    //   _portObj._channel = val;
+    // }
+    final void opAssign(V)(V val) if (isAssignable!(IF, V)) {
+      _portObj._channel = val;
+    }
+
+    final VV read() {
+      return _portObj._channel.read();
+    }
+
+    final bool opCast(C)() if (isBoolean!C) {
+      return this.read != 0;
+    }
+  }
+
+  
   // enum bool _thisIsPort = true;
-  public VlPortObj!(IF,N,M) _portObj = void;
+  public VlPortObj!(IF) _portObj = void;
 
-  package ref VlPortObj!(IF,N,M) _esdl__objRef() {
+  package ref VlPortObj!(IF) _esdl__objRef() {
     return _portObj;
   }
 
-  public VlPortObj!(IF,N,M) _esdl__obj() {
-    if(this._portObj is null) {
-      synchronized(typeid(VlPort!(IF,N,M))) {
-	if(this._portObj is null) {
-	  this._portObj = new VlPortObj!(IF,N,M)();
-	}
+  public VlPortObj!(IF) _esdl__obj() {
+    if (this._portObj is null) {
+      // synchronized(typeid(VlPort!(IF))) {
+      if (this._portObj is null) {
+	this._portObj = new VlPortObj!(IF)();
       }
+      // }
     }
     return this._portObj;
   }
@@ -287,7 +215,7 @@ template VlPort(T) if (isIntegral!T)
   // Special case of Signals
   public final void initialize() {
     if(_portObj is null) {
-      _portObj = new VlPortObj!(IF,N,M);
+      _portObj = new VlPortObj!(IF);
       // writeln("Building VlPort");
     }
   }
@@ -308,31 +236,28 @@ template VlPort(T) if (isIntegral!T)
     }
   }
 
-  static if (is (IF == VlSignal!T, T) && isIntegral!T) {
-    final void opAssign(T val) {
-      _portObj._channel = val;
-    }
-    final T read() {
-      return _portObj._channel;
-    }
-
-    final bool opCast(C)() if (isBoolean!C) {
-      return this.read != 0;
-    }
-  }
-  
 }
 
-// N is the number of channels that can connect
-// M represents the minimum number of channels that must connect
-public class VlPortObj(IF, size_t N=1, size_t M=N)
-     if (N == 1 && is (IF == VlSignal!T, T)) : BasePort
+public class VlPortObj(IF)
+     if (is (IF == VlSignal!T, T)) : BasePort
 {
-  static assert(N == 0 || N >= M);
+  static if (is (IF == VlSignal!VV, VV)) {
+    alias VAL_TYPE = VV;
+
+    final VV read() {
+      return _channel.read();
+    }
+
+  }
+
   public IF _channel = void;
 
   // disable auto instatiation during the elaboration process
   @disable package ref IF _esdl__objRef() {
+    return _channel;
+  }
+
+  package ref IF _esdl__obj() {
     return _channel;
   }
 
@@ -347,7 +272,7 @@ public class VlPortObj(IF, size_t N=1, size_t M=N)
 
   public void _esdl__portIsBound() {
     synchronized(this) {
-      if (M != 0 && _channel.isNull()) {
+      if (_channel.isNull()) {
 	import std.stdio: writeln;
 	writeln("Error: VlPort '" ~ this.getFullName ~
 		"' is not bound to any channel");
@@ -403,10 +328,6 @@ public class VlPortObj(IF, size_t N=1, size_t M=N)
     static if (__traits(compiles, _channel.registerPort(this))) {
       _channel.registerPort(this);
     }
-    // static if(hasRegisterMethod!(IF, "registerPort", VlPort!(IF, N))) {
-    //   _channel.registerPort();
-    // }
-    // }
   }
 
 
@@ -442,8 +363,15 @@ public class VlPortObj(IF, size_t N=1, size_t M=N)
 
 abstract class VlInterface: Entity { }
 
+template VlSignal(int N)
+{
+  alias VlSignal = VlSignal!(ubvec!N);
+}
+
 struct VlSignal(T)
 {
+  import std.traits: isAssignable, isPointer;
+  
   T* _sig;
 
   alias get this;
@@ -456,13 +384,19 @@ struct VlSignal(T)
 
   void read(ref T val) { val = *_sig; }
 
-  void opAssign(T val) {
+  void opAssign(V)(V val) if (isAssignable!(T, V) && (! isPointer!V)) {
     *_sig = val;
+  }
+
+  void opAssign(ref VlSignal!T t) {
+    _sig = t._sig;
   }
 
   void opAssign(T* sig) { _sig = sig; }
 
-  this(T* sig) { _sig = sig; }
+  this(T* sig) {
+    _sig = sig;
+  }
 
   void bind(T* sig) { _sig = sig; }
 
@@ -481,62 +415,5 @@ struct VlSignal(T)
        if(isIntegral!V || isBitVector!V || isBoolean!V) {
 	 return *_sig == other;
        }
-}
-
-class VerilatedVcdD {
-  ESDLVerilatedVcdD _vcd_d;
-
-  this(VerilatedVcdFile filep = null) {
-    _vcd_d = createVcdD(filep);
-  }
-  
-  final bool isOpen() const { return _vcd_d.isOpen(); }
-
-  final void open(const(char) *filename) { _vcd_d.open(filename); }
-  final void open(string filename) {
-    import std.string: toStringz;
-    _vcd_d.open(filename.toStringz());
-  }
-
-  final void openNext(bool incFilename = true) { _vcd_d.openNext(incFilename); }
-  final void rolloverMB(size_t rMB) { _vcd_d.rolloverMB(rMB); }
-  final void close() { _vcd_d.close(); }
-  final void flush() { _vcd_d.flush(); }
-  final void dump(ulong timeui) { _vcd_d.dump(timeui); }
-  final void dump(double timestamp) { _vcd_d.dump(timestamp); }
-  final void dump(uint timestamp) { _vcd_d.dump(timestamp); }
-  final void dump(int timestamp) { _vcd_d.dump(timestamp); }
-
-  final void set_time_unit(const(char*) unit) { _vcd_d.set_time_unit(unit); }
-  final void set_time_unit(string unit) {
-    import std.string: toStringz;
-    _vcd_d.set_time_unit(unit.toStringz());
-  }
-  final void set_time_unit(ref const(basic_string!char) unit) { _vcd_d.set_time_unit(unit); }
-  final void set_time_resolution(const(char*) unit) { _vcd_d.set_time_resolution(unit); }
-  final void set_time_resolution(string resolution) {
-    import std.string: toStringz;
-    _vcd_d.set_time_resolution(resolution.toStringz());
-  }
-  final void set_time_resolution(ref const(basic_string!char) unit) { _vcd_d.set_time_resolution(unit); }
-
-  final VerilatedVcdC getVcdC() { return _vcd_d.getVcdC(); }
-
-}
-
-class VerilatedVcdFileD {
-  VerilatedVcdFile _file;
-
-  this() {
-    _file = createVcdFile();
-  }
-  
-  final bool open(ref const(basic_string!char) name) { return _file.open(name); }
-  final void close() { _file.close(); }
-  final ulong write(const(char*) bufp, long len) { return _file.write(bufp, len); }
-  final ulong write(string bufp, long len) {
-    import std.string: toStringz;
-    return _file.write(bufp.toStringz(), len);
-  }
 }
 

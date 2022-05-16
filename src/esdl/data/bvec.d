@@ -26,6 +26,7 @@ import core.bitop;
 import core.exception;
 import esdl.base.comm;
 import esdl.base.core: SimTime;
+import esdl.intf.verilator.verilated;
 
 static import std.algorithm; 	// required for min, max
 
@@ -463,8 +464,8 @@ template _vecCmpT(T, U)	// return true if T >= U
 }
 
 template _bvec(T, U, string OP)
-  if((isBitVector!T || isIntegral!T || isSomeChar!T || isBoolean!T) &&
-     (isBitVector!U || isIntegral!U || isSomeChar!U || isBoolean!U)) {
+  if ((isBitVector!T || isIntegral!T || isSomeChar!T || isBoolean!T) &&
+      (isBitVector!U || isIntegral!U || isSomeChar!U || isBoolean!U)) {
   static if (isIntegral!U || isSomeChar!U || isBoolean!U) alias UU = _bvec!U;
   else alias UU = U;
   static if (isIntegral!T || isSomeChar!T || isBoolean!T) alias TT = _bvec!T;
@@ -1045,9 +1046,20 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	this._from(other);
       }
 
+    public void opAssign(V)(V other) if(isBitVector!V) {
+      this._from(other);
+    }
+	     
+    // public void opAssign(this_type other) {
+    //   this._from(other);
+    // }
+
     public void opAssign(V)(V other)
       if((is(V: SignalObj!VV, VV) || is(V: HdlSignal!VV, VV) ||
-	  is(V: HdlSignalObj!VV, VV) || is(V: Signal!VV, VV)) &&
+	  is(V: HdlSignalObj!VV, VV) || is(V: Signal!VV, VV) ||
+	  is(V: VlExportObj!VV, VV) || is(V: VlExport!VV, VV) ||
+	  is(V: VlPortObj!VV, VV) || is(V: VlPort!VV, VV) ||
+	  is(V: VlSignal!VV, VV)) &&
 	 isAssignable!(typeof(this), V.VAL_TYPE)) {
 	this._from(other.read());
       }
@@ -2635,7 +2647,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 
     public auto opBinary(string op, string file= __FILE__,
 			 size_t line = __LINE__, V)(V other) const
-      if(isBitVector!V && (op == "*")) {
+      if (isBitVector!V && (op == "*")) {
 	reportX!(file, line)(other);
 	alias R = _bvec!(this_type, V, "*");
 	R result = 0;
@@ -2694,7 +2706,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 
     public auto opBinary(string op, string file= __FILE__,
 			 size_t line = __LINE__, V)(V other) const
-      if(isBitVector!V && (op == "/")) {
+      if (isBitVector!V && (op == "/")) {
 	reportX!(file, line)(other);
 	alias R = _bvec!(this_type, V, "/");
 	R result = 0;
@@ -2715,7 +2727,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
     
     public auto opBinary(string op, string file= __FILE__,
 			 size_t line = __LINE__, V)(V other) const
-      if(isBitVector!V && (op == "%")) {
+      if (isBitVector!V && (op == "%")) {
 	reportX!(file, line)(other);
 	alias R = _bvec!(this_type, V, "%");
 	R result = 0;
