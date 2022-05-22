@@ -16,7 +16,7 @@ import esdl.rand.agent: CstSolverAgent;
 import esdl.rand.func;
 
 import esdl.data.bvec: isBitVector, toBitVec;
-import esdl.data.folder: Charbuf;
+import esdl.data.deck: Charbuf;
 import std.traits: isIntegral, isBoolean, isStaticArray,
   isSomeChar, EnumMembers, isSigned, OriginalType;
 import std.algorithm: canFind;

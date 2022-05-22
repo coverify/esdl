@@ -9,7 +9,7 @@ import esdl.rand.agent: CstSolverAgent;
 import esdl.rand.cstr: _esdl__ConstraintBase;
 import esdl.solver.dist: CstDistPredSolver;
 import esdl.rand.misc;
-import esdl.data.folder;
+import esdl.data.deck;
 
 import std.algorithm.searching: canFind;
 import esdl.rand.parser: CstParseData, CstParser;
@@ -119,7 +119,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     else return null;
   }
 
-  Folder!(_esdl__ConstraintBase, "globalVisitors") _esdl__globalVisitors;
+  Deck!(_esdl__ConstraintBase, "globalVisitors") _esdl__globalVisitors;
 
   void _esdl__addGlobalVisitor(_esdl__ConstraintBase visitor) {
     _esdl__globalVisitors ~= visitor;
@@ -136,7 +136,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     return _esdl__globalVisitors[];
   }
 
-  Folder!(_esdl__ConstraintBase, "argVisitors") _esdl__argVisitors;
+  Deck!(_esdl__ConstraintBase, "argVisitors") _esdl__argVisitors;
 
   void _esdl__addArgVisitor(_esdl__ConstraintBase visitor) {
     _esdl__argVisitors ~= visitor;
@@ -224,7 +224,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   abstract void _esdl__doRandomize(_esdl__RandGen randGen);
   abstract void _esdl__doConstrain(_esdl__CstProcessor proc, bool callPreRandomize);
 
-  Folder!(CstVecNodeIntf, "lambdaCstDoms") _esdl__lambdaCstDoms;
+  Deck!(CstVecNodeIntf, "lambdaCstDoms") _esdl__lambdaCstDoms;
 
   final void _esdl__addLambdaCstDom(CstVecNodeIntf dom) {
     _esdl__lambdaCstDoms ~= dom;
@@ -343,7 +343,7 @@ class _esdl__CstProcessor
     return _distPredSolver;
   }
 
-  Folder!(CstPredicate, "unrolledNewPreds") _unrolledNewPreds;
+  Deck!(CstPredicate, "unrolledNewPreds") _unrolledNewPreds;
 
   void addUnrolledNewPredicate(CstPredicate pred) {
     _unrolledNewPreds ~= pred;
@@ -355,44 +355,44 @@ class _esdl__CstProcessor
     _unrolledNewPreds.reset();
   }
 
-  // Folder!(CstPredicate, "predsThatUnrolled") _predsThatUnrolled;
+  // Deck!(CstPredicate, "predsThatUnrolled") _predsThatUnrolled;
   // void registerUnrolled(CstPredicate pred) {
   //   _predsThatUnrolled ~= pred;
   // }
 
-  Folder!(CstPredicate, "newPreds") _newPreds;
-  Folder!(CstPredicate, "toNewPreds") _toNewPreds;
-  // Folder!(CstPredicate, "unrolledPreds") _unrolledPreds;
-  // Folder!(CstPredicate, "toUnrolledPreds") _toUnrolledPreds;
+  Deck!(CstPredicate, "newPreds") _newPreds;
+  Deck!(CstPredicate, "toNewPreds") _toNewPreds;
+  // Deck!(CstPredicate, "unrolledPreds") _unrolledPreds;
+  // Deck!(CstPredicate, "toUnrolledPreds") _toUnrolledPreds;
   
-  Folder!(CstPredicate, "rolledPreds") _rolledPreds;
-  Folder!(CstPredicate, "toRolledPreds") _toRolledPreds;
+  Deck!(CstPredicate, "rolledPreds") _rolledPreds;
+  Deck!(CstPredicate, "toRolledPreds") _toRolledPreds;
 
-  Folder!(CstPredicate, "resolvedPreds") _resolvedPreds;
-  Folder!(CstPredicate, "toResolvedPreds") _toResolvedPreds;
+  Deck!(CstPredicate, "resolvedPreds") _resolvedPreds;
+  Deck!(CstPredicate, "toResolvedPreds") _toResolvedPreds;
 
-  Folder!(CstPredicate, "resolvedDistPreds") _resolvedDistPreds;
-  Folder!(CstPredicate, "toResolvedDistPreds") _toResolvedDistPreds;
+  Deck!(CstPredicate, "resolvedDistPreds") _resolvedDistPreds;
+  Deck!(CstPredicate, "toResolvedDistPreds") _toResolvedDistPreds;
 
-  Folder!(CstPredicate, "solvePreds") _solvePreds;
+  Deck!(CstPredicate, "solvePreds") _solvePreds;
 
-  Folder!(CstPredicate, "unresolvedPreds") _unresolvedPreds;
-  Folder!(CstPredicate, "toUnresolvedPreds") _toUnresolvedPreds;
+  Deck!(CstPredicate, "unresolvedPreds") _unresolvedPreds;
+  Deck!(CstPredicate, "toUnresolvedPreds") _toUnresolvedPreds;
 
-  Folder!(CstPredicate, "predGuards") _predGuards;
+  Deck!(CstPredicate, "predGuards") _predGuards;
 
-  Folder!(CstDomBase, "solvedDomains") _solvedDomains;
-  Folder!(CstDomSet, "solvedDomainArrs") _solvedDomainArrs;
+  Deck!(CstDomBase, "solvedDomains") _solvedDomains;
+  Deck!(CstDomSet, "solvedDomainArrs") _solvedDomainArrs;
   
-  // Folder!(CstSolverAgent, "solvedSolvers") _solvedSolvers;
+  // Deck!(CstSolverAgent, "solvedSolvers") _solvedSolvers;
 
   
-  Folder!(CstPredicate, "collatedPredicates") _collatedPredicates;
-  Folder!(CstDomBase, "collatedDomains") _collatedDomains;
-  Folder!(CstDomSet, "collatedDomArrs") _collatedDomArrs;
+  Deck!(CstPredicate, "collatedPredicates") _collatedPredicates;
+  Deck!(CstDomBase, "collatedDomains") _collatedDomains;
+  Deck!(CstDomSet, "collatedDomArrs") _collatedDomArrs;
   
-  Folder!(CstVarNodeIntf, "beforeSolve") _beforeSolve;
-  Folder!(CstVarNodeIntf, "afterSolve") _afterSolve;
+  Deck!(CstVarNodeIntf, "beforeSolve") _beforeSolve;
+  Deck!(CstVarNodeIntf, "afterSolve") _afterSolve;
 
   void collatePredicate (CstPredicate pred){
     _collatedPredicates ~= pred;
@@ -412,7 +412,7 @@ class _esdl__CstProcessor
     domArr._state = CstDomSet.State.COLLATED;
   }
 
-  Folder!(CstIterator, "itersWithCbs") _itersWithCbs;
+  Deck!(CstIterator, "itersWithCbs") _itersWithCbs;
 
   void printSolver (){
     import std.stdio;

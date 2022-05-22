@@ -20,7 +20,7 @@ import esdl.rand.misc: CstVectorOp, CstLogicOp, CstCompareOp,
 import esdl.base.rand: _esdl__RandGen, getRandGen;
 
 import esdl.data.bvec: isBitVector;
-import esdl.data.folder;
+import esdl.data.deck;
 
 interface CstVarNodeIntf {
   bool _esdl__isRand();
@@ -499,11 +499,11 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   
 
   // Callbacks
-  Folder!(CstDepCallback, "depCbs") _depCbs;
+  Deck!(CstDepCallback, "depCbs") _depCbs;
 
-  Folder!(CstPredicate, "resolvedDomainPreds") _resolvedDomainPreds;
-  Folder!(CstPredicate, "unresolvedDomainPreds") _unresolvedDomainPreds;
-  Folder!(CstPredicate, "lambdaDomainPreds") _lambdaDomainPreds;
+  Deck!(CstPredicate, "resolvedDomainPreds") _resolvedDomainPreds;
+  Deck!(CstPredicate, "unresolvedDomainPreds") _unresolvedDomainPreds;
+  Deck!(CstPredicate, "lambdaDomainPreds") _lambdaDomainPreds;
 
   final void addResolvedPred(CstPredicate pred) {
     _resolvedDomainPreds ~= pred;
@@ -810,7 +810,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   }
 
   // Callbacks
-  Folder!(CstDepCallback, "depCbs") _depCbs;
+  Deck!(CstDepCallback, "depCbs") _depCbs;
 
   // Dependencies
   CstDepIntf[] _deps;
@@ -1029,9 +1029,9 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
 
   abstract bool _esdl__parentIsConstrained();
   
-  Folder!(CstPredicate, "resolvedDomainPreds") _resolvedDomainPreds;
-  Folder!(CstPredicate, "unresolvedDomainPreds") _unresolvedDomainPreds;
-  Folder!(CstPredicate, "lambdaDomainPreds") _lambdaDomainPreds;
+  Deck!(CstPredicate, "resolvedDomainPreds") _resolvedDomainPreds;
+  Deck!(CstPredicate, "unresolvedDomainPreds") _unresolvedDomainPreds;
+  Deck!(CstPredicate, "lambdaDomainPreds") _lambdaDomainPreds;
 
   final void addResolvedPred(CstPredicate pred) {
     _resolvedDomainPreds ~= pred;
@@ -1231,7 +1231,7 @@ interface CstTerm
 // This class represents an unwound Foreach iter at vec level
 abstract class CstIterator: CstVecTerm
 {
-  Folder!(CstIterCallback, "iterCbs") _iterCbs;
+  Deck!(CstIterCallback, "iterCbs") _iterCbs;
 
   void registerRolled(CstIterCallback cb) {
     _iterCbs ~= cb;
