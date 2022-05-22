@@ -1,6 +1,6 @@
 module esdl.rand.agent;
 
-import esdl.data.folder: Folder;
+import esdl.data.deck: Deck;
 
 import esdl.solver.base;
 import esdl.solver.mono: CstMonoSolver;
@@ -54,7 +54,7 @@ class CstSolverAgent			// agent of related predicates
   void initialize(_esdl__CstProcessor proc) {
     _proc = proc;
     _preds.reset();
-    _predList.reset();
+    _predGroup.reset();
 
     _annotatedDoms.reset();
     _annotatedDomArrs.reset();
@@ -72,11 +72,11 @@ class CstSolverAgent			// agent of related predicates
 
   }
   
-  Folder!(CstPredicate, "preds") _preds;
+  Deck!(CstPredicate, "preds") _preds;
 
   CstPredicate _distPred;
 
-  Folder!(CstPredicate, "predList") _predList;
+  Deck!(CstPredicate, "predGroup") _predGroup;
 
   CstPredicate[] predicates() {
     return _preds[];
@@ -98,10 +98,10 @@ class CstSolverAgent			// agent of related predicates
   void addPredicate(CstPredicate pred) {
     // import std.stdio;
     // writeln(pred.describe());
-    _predList ~= pred;
+    _predGroup ~= pred;
   }
 
-  Folder!(CstDomBase, "annotatedDoms") _annotatedDoms;
+  Deck!(CstDomBase, "annotatedDoms") _annotatedDoms;
   uint addAnnotatedDom(CstDomBase dom) {
     // import std.stdio;
     // writeln(annotatedDom.describe());
@@ -114,7 +114,7 @@ class CstSolverAgent			// agent of related predicates
     return _annotatedDoms[];
   }
   
-  Folder!(CstDomSet, "annotatedDomArrs") _annotatedDomArrs;
+  Deck!(CstDomSet, "annotatedDomArrs") _annotatedDomArrs;
   uint addAnnotatedDomArr(CstDomSet domArr) {
     uint index = cast (uint) _annotatedDomArrs.length;
     _annotatedDomArrs ~= domArr;
@@ -125,7 +125,7 @@ class CstSolverAgent			// agent of related predicates
     return _annotatedDomArrs[];
   }
   
-  Folder!(CstDomBase, "annotatedVars") _annotatedVars;
+  Deck!(CstDomBase, "annotatedVars") _annotatedVars;
   uint addAnnotatedVar(CstDomBase var) {
     uint index = cast (uint) _annotatedVars.length;
     _annotatedVars ~= var;
@@ -136,7 +136,7 @@ class CstSolverAgent			// agent of related predicates
     return _annotatedVars[];
   }
 
-  Folder!(CstDomSet, "annotatedVarArrs") _annotatedVarArrs;
+  Deck!(CstDomSet, "annotatedVarArrs") _annotatedVarArrs;
   uint addAnnotatedVarArr(CstDomSet varArr) {
     uint index = cast (uint) _annotatedVarArrs.length;
     _annotatedVarArrs ~= varArr;
@@ -164,7 +164,7 @@ class CstSolverAgent			// agent of related predicates
 
     // foreach (pred; _preds) pred._agent = null;
     _preds.reset();
-    foreach (pred; sort!((x, y) => x.hashValue() < y.hashValue())(_predList[])) {
+    foreach (pred; sort!((x, y) => x.hashValue() < y.hashValue())(_predGroup[])) {
       if (pred.isDistPredicate()) this.markDist();
       // pred._agent = this;
       if (pred._soft != 0) _softPredicateCount += 1;
@@ -175,7 +175,7 @@ class CstSolverAgent			// agent of related predicates
     }
 
     // for the next cycle
-    _predList.reset();
+    _predGroup.reset();
   }
 
   void annotate() {

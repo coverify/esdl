@@ -8,7 +8,7 @@
 
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
-module esdl.data.folder;
+module esdl.data.deck;
 
 import core.stdc.string : memcpy, memmove, memset;
 import core.memory: pureMalloc, pureRealloc, pureFree, GC;
@@ -20,7 +20,7 @@ alias realloc = pureRealloc;
 
 enum MINCAP = 4;
 
-struct Folder(T, string NAME, uint MAXCAP=1024)
+struct Deck(T, string NAME, uint MAXCAP=1024)
      if (is (T == class) || is (T == interface) || is (T ==  struct) ||
 	 is ( T == P*, P) || isSomeChar!T || isBoolean!T || isIntegral!T)
 {
@@ -48,8 +48,8 @@ struct Folder(T, string NAME, uint MAXCAP=1024)
   @disable this(this);
   
 
-  void swap(F)(ref F other) if (is (F: Folder!(T, S), string S)) {
-    enum SIZE = Folder!(T, "Temp").sizeof;
+  void swap(F)(ref F other) if (is (F: Deck!(T, S), string S)) {
+    enum SIZE = Deck!(T, "Temp").sizeof;
     ubyte[SIZE] temp;
     
     memcpy(cast(void*) temp.ptr, cast(void*) &other, SIZE);
@@ -72,7 +72,7 @@ struct Folder(T, string NAME, uint MAXCAP=1024)
 
       // import std.stdio;
       // if (cap > 1000) {
-      //   writeln("Folder ", NAME, ": ", cap);
+      //   writeln("Deck ", NAME, ": ", cap);
       // }
 
       size_t newcap = cap;
@@ -254,4 +254,4 @@ struct Folder(T, string NAME, uint MAXCAP=1024)
   }
 }
 
-alias Charbuf(string NAME, uint MAXCAP=1024) = Folder!(char, NAME, MAXCAP);
+alias Charbuf(string NAME, uint MAXCAP=1024) = Deck!(char, NAME, MAXCAP);
