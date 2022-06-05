@@ -6197,7 +6197,7 @@ abstract class Process: Procedure, HierComp, EventClient
   private EventObj _sensitiveTo = null;
   private bool _dynamic = true;
   private Process[] _esdl__childProcs;
-  private Entity _esdl__parentEntity;
+  private EntityIntf _esdl__parentEntity;
 
   // When waiting for an event, this variable will have the event
   // object
@@ -6210,11 +6210,11 @@ abstract class Process: Procedure, HierComp, EventClient
     }
   }
 
-  final Entity getParentEntity() {
+  final EntityIntf getParentEntity() {
     return _esdl__parentEntity;
   }
 
-  final void _esdl__setParentEntity(Entity entity) {
+  final void _esdl__setParentEntity(EntityIntf entity) {
     _esdl__parentEntity = entity;
   }
 
@@ -6487,7 +6487,7 @@ abstract class Process: Procedure, HierComp, EventClient
     synchronized(this) {
       if (Process.self) { // only dynamic procedures
 	Process _parent = Process.self;
-	Entity _entity = _parent.getParentEntity();
+	EntityIntf _entity = _parent.getParentEntity();
 
 	this._esdl__setHierParent(_parent);
 	this._esdl__setParentEntity(_entity);
@@ -9182,7 +9182,7 @@ interface RootEntityIntf: EntityIntf
   }
   final void terminate() {
     this.killTree();
-    this.getSimulator.termSim();
+    this.getSimulator.termSimulator();
     // To handle the situation where the terminate call gets made during a PAUSE
     if (simPhase() == SimPhase.PAUSE) {
       this.simulate(0.nsec);
@@ -9666,7 +9666,7 @@ class EsdlSimulator: EntityIntf
     }
   }
 
-  final void termSim() {
+  final void termSimulator() {
     synchronized(this) {
       _termStageRequested = true;
       _termSimRequested = true;
@@ -9803,10 +9803,8 @@ class EsdlSimulator: EntityIntf
 	  _executor._incrMaxStage();
 	  _termSimRequested = false;
 	}
-	else {
-	  _scheduler.reset();
-	  _termStageRequested = false;
-	}
+	_scheduler.reset();
+	_termStageRequested = false;
       }
 
       _scheduler.triggerImmediateEvents();
