@@ -11,7 +11,7 @@ import esdl.base.comm;
 
 class Foo: Entity {
   // Event e0;
-  Event e1[15];
+  Event[15] e1;
   Event e2;
 
   void testEvent()
@@ -22,7 +22,7 @@ class Foo: Entity {
     import std.random;
     // Event e3 = andEvents(e1, e2);
     foreach(i, ref e; e1) {
-      size_t j = uniform!ubyte(Process.self.getRandGen);
+      size_t j = uniform!ubyte;
       e.notify(j.nsec);
       writeln(j);
     }
@@ -42,6 +42,7 @@ class Sim: RootEntity {
 void main()
 {
   Sim theRootEntity = new Sim;
+  theRootEntity.multicore(0, 1);
   theRootEntity.elaborate("theRootEntity");
   theRootEntity.simulate(1000000.nsec);
   // theRootEntity.terminate();

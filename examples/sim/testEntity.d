@@ -23,13 +23,11 @@ class TrafficLight: Entity
   uint s;
   void put() {
     // srandom(2);
-    for (size_t i=0; i!=1000; ++i)
-      {
-	wait(10.nsec);
-	import std.random;
-	synchronized(this) s = urandom();
-	
-      }
+    for (size_t i=0; i!=1000; ++i) {
+      wait(10.nsec);
+      import std.random;
+      synchronized(this) s = uniform(0, 100);
+    }
   }
   
   void get() {
@@ -50,15 +48,16 @@ class TrafficLight: Entity
 
 
 class TrafficRoot: RootEntity {
-  Inst!TrafficLight traffic[2][32];
+  Inst!TrafficLight[2][32] traffic;
 }
 
 void main()
 {
   // top level module
   TrafficRoot theRoot = new TrafficRoot;
+  theRoot.multicore(0, 1);
   theRoot.elaborate("theRoot");
-  theRoot.simulate(100.nsec);
+  theRoot.simulate(10000.nsec);
   theRoot.terminate();
 }
 

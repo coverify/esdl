@@ -56,6 +56,7 @@ void main()
 {
   // top level module
   Bar theRoot = new Bar;
+  theRoot.multicore(0, 1);
   theRoot.elaborate("theRoot");
   theRoot.simulate(1.nsec);
   theRoot.terminate();

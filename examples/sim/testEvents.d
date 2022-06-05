@@ -36,8 +36,9 @@ class Foo: Entity {
   }
 
   void helloDynamicRoutine() {
+    import std.random: uniform;
     writeln(". . . . . . Hello World from Dynamic Routine");
-    writeln("Random integer: ", urandom(0, 31));
+    writeln("Random integer: ", uniform(0, 31));
     nextTrigger(10.nsec);
     // e1.notify();
   }
@@ -106,9 +107,9 @@ class Foo: Entity {
     e1.notify(DELTA);
     writeln("2 Hello World from ", this.getFullName());
     wait(e4);
-    Event e6 = e1 | SimTime(10);
+    // Event e6 = e1 | SimTime(10);
     writeln("3 Hello World from ", this.getFullName());
-    wait(eAnded & SimTime(10));
+    wait(eAnded);
     // wait(eAnded);
     writeln("Hello World from a Thread from module ", this.getFullName());
   }
@@ -135,6 +136,7 @@ void main()
 {
   // top level module
   Sim theRootEntity = new Sim();
+  theRootEntity.multicore(0, 1);
   theRootEntity.elaborate("theRootEntity");
   theRootEntity.simulate(100.nsec);
   theRootEntity.terminate();

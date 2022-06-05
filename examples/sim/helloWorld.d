@@ -7,27 +7,30 @@ import esdl.base;
 import esdl.data.bvec;
 import std.stdio;
 
-@parallelize(ParallelPolicy.SINGLE)
 class Foo: Entity {
   void hello() {
     writeln("Greetings from: ",
 	    Process.self.getFullName());
-    writeln("Thread: ", getParConfig().getThreadIndex());
+    // writeln("Thread: ", getParConfig().getThreadIndex());
     Bit!233 foo = urandom!(Bit!233);
     writeln(foo);
   }
   Task!hello[2] greet;
-  Worker!hello[2] greetWorld;
+  Work!hello[2] greetWorld;
   static this() {
     // import std.stdio;
     // writeln("hehe");
   }
 }
+
 @timeUnit(1.nsec)
 @timePrecision(1.psec)
-class Top: Entity {
+class Top: RootEntity {
   Foo[4] foo;
 }
-void main() {
-  simulate!Top("root");
+void main(string[] args) {
+  Top top = new Top;
+  top.multicore(0, 1);
+  top.elaborate("top", args);
+  top.simulate();
 }

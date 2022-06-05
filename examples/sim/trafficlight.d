@@ -75,11 +75,11 @@ class TrafficLight: Entity
       }
   }
   public int x;
-  void weee() {
-    import std.stdio;
-    writeln("This is Worker");
-  }
-  Worker!(weee) thisWork;
+  // void weee() {
+  //   import std.stdio;
+  //   writeln("This is Worker");
+  // }
+  // Worker!(weee) thisWork;
   // Task!("light()",0)  tLightTT[POLES];
   Work!(light, 5)[POLES]   tLightTT;
   // Task!(testPhase, -1)  test_1;
@@ -111,7 +111,7 @@ class Dummy: Entity
 @timePrecision(10.psec)
 class TrafficRoot: RootEntity
 {
-  @multicore(0, 4) Inst!Dummy[2] dummy;
+  @multicore(0, 1) Inst!Dummy[2] dummy;
 }
 
 void main()
@@ -119,8 +119,8 @@ void main()
   import std.stdio;
   // top level module
   TrafficRoot theRoot = new TrafficRoot;
-  theRoot.multicore(0, 4, 2);
-  // theRoot.multicore(0, 4);
+  theRoot.multicore(0, 1);
+  // theRoot.multicore(0, 1);
   theRoot.elaborate("theRoot");
   // theRoot.waitElab();
   // theRoot.simulate(100.nsec);
@@ -139,7 +139,7 @@ void main()
   // theRoot.simulate(0.nsec);
 
   import core.thread;
-  Thread[] all = Thread.getAll();
+  ThreadBase[] all = Thread.getAll();
 
   // foreach (th; all) {
   //   if (th.isRunning()) {
