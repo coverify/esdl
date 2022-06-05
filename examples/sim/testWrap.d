@@ -7,7 +7,7 @@
 import std.stdio;
 import esdl.base.core;
 
-class RootWrap: RootEntity {
+class Foo: Entity {
   void proc1() {
     import std.stdio;
     writeln("********** Task from RootEntity **********");
@@ -16,10 +16,22 @@ class RootWrap: RootEntity {
 
 }
 
+class RootWrap: RootEntity
+{
+  void proc1() {
+    import std.stdio;
+    writeln("********** Task from RootEntity **********");
+  }
+  Task!proc1 taskP;
+
+  Foo foo;
+}
+
 void main()
 {
   // top level module
-  auto theRootEntity = new RootWrap;
+  RootWrap theRootEntity = new RootWrap;
+  theRootEntity.multicore(0, 1);
   theRootEntity.elaborate("theRootEntity");
   theRootEntity.simulate();
   // theRootEntity.terminate();

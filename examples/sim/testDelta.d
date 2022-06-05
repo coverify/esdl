@@ -64,6 +64,7 @@ class Sim: RootEntity {
 void main()
 {
   Sim theRootEntity = new Sim;
+  theRootEntity.multicore(0, 1);
   theRootEntity.elaborate("theRootEntity");
   theRootEntity.simulate(10000.nsec);
   // theRootEntity.terminate();

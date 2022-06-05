@@ -6,7 +6,6 @@
 
 import esdl.base.core;
 
-@parallelize
 class TestProc: Entity
 {
   // Event e;
@@ -64,7 +63,6 @@ class TestProc: Entity
   
 }
 
-@parallelize
 class Root: RootEntity
 {
   Inst!TestProc test;
@@ -73,7 +71,8 @@ class Root: RootEntity
 void main()
 {
   Root root = new Root;
+  root.multicore(0, 1);
   root.elaborate("root");
-  root.simulate(100000.nsec);
+  root.simulate(100.nsec);
   root.terminate();
 }

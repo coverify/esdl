@@ -7,7 +7,6 @@
 import std.stdio;
 import esdl.base.core;
 
-@parallelize
 class Foo: Entity {
   Event e1;
   Event e2;
@@ -37,16 +36,15 @@ class Foo: Entity {
       
 }
 
-@timeUnit(100.psec)
-@parallelize
+@timeUnit(10.psec)
 class Sim: RootEntity {
-  @parallelize
     Foo[2] top;
 }
 
 int main()
 {
   Sim theRootEntity = new Sim;
+  theRootEntity.multicore(0, 1);
   theRootEntity.elaborate("theRootEntity");
   theRootEntity.simulate(1.nsec);
   theRootEntity.terminate();

@@ -117,8 +117,8 @@ class Foo: Entity {
     // Event e6 = (ev[0] & eOred) & SimTime(10);
     e1.notify();
     wait(e4);
-    Event e6 = e1 | SimTime(10);
-    wait(eAnded & SimTime(10));
+    // Event e6 = e1 | SimTime(10);
+    wait(eAnded);
     // wait(eAnded);
     writeln("Hello World from a Thread from module ", this.getFullName());
   }
@@ -142,6 +142,7 @@ int main()
 {
   // top level module
   Sim theRootEntity = new Sim;
+  theRootEntity.multicore(0, 1);
   theRootEntity.elaborate("theRootEntity");
   theRootEntity.simulate(100.nsec);
   theRootEntity.terminate();

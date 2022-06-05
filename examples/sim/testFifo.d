@@ -68,6 +68,7 @@ int main()
   // writeln("Size of Time is: ", Time.sizeof);
   
   Sim theRootEntity = new Sim;
+  theRootEntity.multicore(0, 1);
   theRootEntity.elaborate("theRootEntity");
   theRootEntity.simulate(1000.nsec);
   // theRootEntity.terminate();

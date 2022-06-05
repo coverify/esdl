@@ -38,11 +38,6 @@ class Foo: Entity {
 
     Task!hello helloWorld;
       
-    override void endElab() {
-      writeln("endElab called for ", this.getFullName);
-      // foreach(c; this.getChildObjs)
-      // 	writeln("endElab called for ", c.getFullName);
-    }
   }
     
   Inst!Bar sub1;
@@ -65,6 +60,7 @@ void main()
 {
 
   Sim theSimulator = new Sim;
+  theSimulator.multicore(0, 1);
   theSimulator.elaborate("theSimulator");
   theSimulator.simulate(10000.nsec);
   //   theSimulator.terminate();
