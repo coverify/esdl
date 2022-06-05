@@ -16,6 +16,8 @@ import core.thread: Thread, Fiber, ThreadGroup;
 // import esdl.sys.thread: Fiber;
 
 public import esdl.data.time;
+public import esdl.data.deck;
+
 public import esdl.base.comm;
 public import esdl.base.rand: RandomGen;
 import esdl.data.bvec: isBitVector;
@@ -2753,10 +2755,11 @@ class EventObj: EventAgent, NamedComp
   }
 
   // Clients that need to be notified when this event triggers
-  private IndexedSimEvent[] _clientEvents;
+  private Deck!(IndexedSimEvent, "clientEvents") _clientEvents;
+  private Deck!(IndexedSimEvent, "clientEventsAlt") _clientEventsAlt;
 
   // Processes that are waiting for this event to trigger
-  private Process[] _clientProcesses;
+  private Deck!(Process, "clientProcesses") _clientProcesses;
 
   protected this(NamedComp parent=null, bool async=false) {
     this(null, parent, async);
@@ -2827,12 +2830,13 @@ class EventObj: EventAgent, NamedComp
       // c._waitingFor = null;
     }
 
-    _clientProcesses.length = 0;
+    _clientProcesses.reset();
 
-    auto clientEvents = _clientEvents;
-    _clientEvents.length = 0;
+    _clientEventsAlt.swap(_clientEvents);
 
-    foreach (c; clientEvents) {
+    _clientEvents.reset();
+
+    foreach (c; _clientEventsAlt) {
       if (c.client !is null) {
 	_clientEvents ~= c;
 	debug(EVENTS) {
@@ -2978,7 +2982,7 @@ class EventObj: EventAgent, NamedComp
       this.notify();
     }
     synchronized(this) {
-      _clientProcesses.length = 0;
+      _clientProcesses.reset();
       this.cancel();
     }
   }
@@ -3700,7 +3704,7 @@ abstract private class SimEvent: EventClient
 abstract class EventExpr: SimEvent
 {
   // list of events that are in the expression
-  private EventObj[] _agents;
+  private Deck!(EventObj, "agents") _agents;
 }
 
 
@@ -3709,7 +3713,7 @@ abstract class EventExpr: SimEvent
 abstract class EventList: SimEvent
 {
   // list of events that are in the expression
-  private EventObj[] _agents;
+  private Deck!(EventObj, "agents") _agents;
 }
 
 private class AsyncTimedEvent: TimedEvent
