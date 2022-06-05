@@ -3951,7 +3951,8 @@ private class TimedEvent: SimEvent
 	stderr.writefln("Immediate notification for %s at time %s",
 			_eventObj.getFullName(), _eventObj.getRoot.getSimTime());
       }
-      if (EntityIntf.getContextParent() is null) { // async notify
+      if (Process.self() is null &&
+	  RootThread.self() is null) { // async notify
 	assert(this._getObj().isAsync is true);
 	if (this._schedule != Schedule.ASYNC) {
 	  cancel();
@@ -4793,12 +4794,7 @@ void waitForks() {
   if (Process.self is null) {
     assert (false, "waitForks can only be called from inside a Process");
   }
-  Process[] procs = Process.self._esdl__getChildProcsHier();
-  EventObj[] events;
-  foreach (proc; procs) {
-    events ~= proc.getEndedTreeEvent();
-  }
-  waitAll(events);
+  Process.self.waitForks();
 }
 
 void abortForks() {
@@ -4892,7 +4888,7 @@ private void forkHelper(int C=0, F...)
     return;
   }
   else static if (is (F[0]: DelegateThunk) ||
-		 is (F[0]: FunctionThunk)) {
+		  is (F[0]: FunctionThunk)) {
     Process proc = process(thunks[0], getStage);
     proc._esdl__setName(name ~ "_" ~ C.stringof);
     procs ~= proc;
@@ -5590,6 +5586,22 @@ private auto recreateDelegate(alias F, T)(T _entity)
 //     }
 //   }
 
+// This flag (whenever raised) get registered with the simulator. If a
+// flag is raised, the simulator shall not automatically die even if
+// it has no pending events or runnable threads. Note that this is
+// useful since in such a scenario, the user is expected to increase
+// the simulation time.
+
+// A flag can be raised or dropped. When raised for the first time,
+// the flag will register itself with the simulator. When dropped, the
+// flag state will indicate that the flag has been dropped. The
+// simulator, when it does not have any pending events or runnable
+// threads, will look for all the registered flags. It will
+// remove/unregister the flags that have been dropped and if no flag
+// is active, the simulation will come to an end. On the other hand if
+// there are one or more raised flags, the simulator will pause and
+// wait for an external actor to activate the simulation again.
+
 // PersistFlag object will always work with a single thread and so no
 // need for synchronisation guards.
 class PersistFlag
@@ -5732,39 +5744,21 @@ class SimThread: EsdlThread
   }
 }
 
-// This flag (whenever raised) get registered with the simulator. If a
-// flag is raised, the simulator shall not automatically die even if
-// it has no pending events or runnable threads. Note that this is
-// useful since in such a scenario, the user is expected to increase
-// the simulation time.
-
-// A flag can be raised or dropped. When raised for the first time,
-// the flag will register itself with the simulator. When dropped, the
-// flag state will indicate that the flag has been dropped. The
-// simulator, when it does not have any pending events or runnable
-// threads, will look for all the registered flags. It will
-// remove/unregister the flags that have been dropped and if no flag
-// is active, the simulation will come to an end. On the other hand if
-// there are one or more raised flags, the simulator will pause and
-// wait for an external actor to activate the simulation again.
-
 class BaseWork: Process
 {
   SimThread _thread;
 
-  private static BaseWork _self;
-
   static BaseWork self() {
-    return _self;
+    return staticCast!(BaseWork)(Process._self);
   }
 
   override void fn_wrap(void function() fn) {
-    BaseWork._self = this;
+    Process._self = this;
     super.fn_wrap(fn);
   }
 
   override void dg_wrap(void delegate() dg) {
-    BaseWork._self = this;
+    Process._self = this;
     super.dg_wrap(dg);
   }
 
@@ -5810,6 +5804,7 @@ class BaseWork: Process
   }
 
   protected final override void call() {
+    Process._self = this;
     if (_thread._hasStarted) {
       _thread.call();
     }
@@ -5848,10 +5843,8 @@ class BaseWorker: Process
 
   uint _cpuCore = 0;
   
-  private static BaseWorker _self;
-
   static BaseWorker self() {
-    return _self;
+    return staticCast!(BaseWorker)(_self);
   }
 
   void setCpuCore(uint fcore) {
@@ -5864,7 +5857,7 @@ class BaseWorker: Process
     try {
       stickToCpuCore(_cpuCore);
 
-      BaseWorker._self = this;
+      Process._self = this;
       super.fn_wrap(fn);
       _defunctLock.wait();
     }
@@ -5907,7 +5900,7 @@ class BaseWorker: Process
     try {
       stickToCpuCore(_cpuCore);
 
-      BaseWorker._self = this;
+      Process._self = this;
       super.dg_wrap(dg);
       _defunctLock.wait();
     }
@@ -5983,6 +5976,7 @@ class BaseWorker: Process
   }
 
   protected final override void call() {
+    Process._self = this;
     if (_thread._hasStarted) {
       _thread.call();
     }
@@ -7119,6 +7113,16 @@ abstract class Process: Procedure, HierComp, EventClient
 	l._esdl__setTimeUnit(prop._unit);
       }
     }
+  }
+
+  Deck!(EventObj, "waitForksEvents") _waitForkEvents;
+  void waitForks() {
+    Process[] procs = Process.self._esdl__getChildProcsHier();
+    foreach (proc; procs) {
+      _waitForkEvents ~= proc.getEndedTreeEvent();
+    }
+    waitAll(_waitForkEvents[]);
+    _waitForkEvents.reset();
   }
 
 }
@@ -10578,7 +10582,6 @@ void withdrawCaveat() {
 
 ubyte simulate(T)(string name, string[] argv = []) {
   auto root = new Root!T();
-  root.multicore();
   root.elaborate(name, argv);
   return root.simulate();
 }
