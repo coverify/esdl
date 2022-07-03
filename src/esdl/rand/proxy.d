@@ -927,19 +927,8 @@ class _esdl__CstProcessor
     foreach (pred; _collatedPredicates) {
       if (! pred.isGuard() && pred.isCollated()) {
 	if (pred._esdl__getOrderLevel() == level - 1 && ! (pred.isSolved)) {
-	  CstSolverAgent agent = null;
-	  if (agent is null) {
-	    agent = getPredSolver();
-	    agent.initialize(this);
-	    // if (_esdl__debugSolver) {
-	    //   import std.stdio;
-	    //   writeln("Created new agent ", agent._id, " for predicate: ", pred.describe());
-	    // }
-	  }
-	  // else if (_esdl__debugSolver) {
-	  //   import std.stdio;
-	  //   writeln("Reuse agent ", agent._id, " for predicate: ", pred.describe());
-	  // }
+	  CstSolverAgent agent = getPredSolver();
+	  agent.initialize(this);
 	  if (pred.isDistPredicate()) agent.markDist();
 	  assert (! agent.isSolved(),
 		  "Solver can not be solved when the predicate is still not solved; agent: " ~
@@ -981,19 +970,8 @@ class _esdl__CstProcessor
       return;
     }
     auto pred1 = _collatedPredicates[0];
-    CstSolverAgent agent = null;
-    if (agent is null) {
-      agent = getPredSolver();
-      agent.initialize(this);
-      // if (_esdl__debugSolver) {
-      // 	import std.stdio;
-      // 	writeln("Created new agent ", agent._id, " for predicate: ", pred1.describe());
-      // }
-    }
-    // else if (_esdl__debugSolver) {
-    //   import std.stdio;
-    //   writeln("Reuse agent ", agent._id, " for predicate: ", pred1.describe());
-    // }
+    CstSolverAgent agent = getPredSolver();
+    agent.initialize(this);
     if (pred1.isDistPredicate()) agent.markDist();
     assert (! agent.isSolved(),
 	    "Solver can not be solved when the predicate is still not solved; agent: " ~
