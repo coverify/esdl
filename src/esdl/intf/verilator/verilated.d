@@ -6,6 +6,7 @@ import esdl.base.core: _esdl__component, NamedComp, _esdl__ignore,
   BasePort;
 import std.traits: isIntegral, isBoolean;
 import esdl.data.bvec: isBitVector, ubvec;
+import esdl.rand.misc: rand;
 
 public class VlExportObj(IF)
      if (is (IF == VlSignal!T, T)) : BaseExport
@@ -361,7 +362,7 @@ public class VlPortObj(IF)
 
 
 
-abstract class VlInterface: Entity { }
+abstract class VlInterface: Entity, rand.disable { }
 
 template VlSignal(int N)
 {
