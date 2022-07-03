@@ -22,7 +22,7 @@ enum MINCAP = 4;
 
 struct Deck(T, string NAME, uint MAXCAP=1024)
      if (is (T == class) || is (T == interface) || is (T ==  struct) ||
-	 is ( T == P*, P) || isSomeChar!T || isBoolean!T || isIntegral!T)
+	 is (T == P*, P) || isSomeChar!T || isBoolean!T || isIntegral!T)
 {
   // total capacity of memory allocate
   size_t _capacity;
@@ -33,7 +33,7 @@ struct Deck(T, string NAME, uint MAXCAP=1024)
     T[] _load;
   }
   else {
-    T *_load;
+    T* _load;
   }
 
   ~this() {
@@ -120,11 +120,8 @@ struct Deck(T, string NAME, uint MAXCAP=1024)
 	if (_size + elems.length >= _capacity) {
 	  growCapacity((_size + elems.length) * 2);
 	}
-
-	foreach (ref elem; elems) {
-	  _load[_size] = elem;
-	  _size += 1;
-	}
+	_load[_size.._size+elems.length] = elems[];
+	_size += elems.length;
       }
   }
 
@@ -132,11 +129,8 @@ struct Deck(T, string NAME, uint MAXCAP=1024)
     if (_size + elems.length >= _capacity) {
       growCapacity((_size + elems.length) * 2);
     }
-
-    foreach (ref elem; elems) {
-      _load[_size] = elem;
-      _size += 1;
-    }
+    _load[_size.._size+elems.length] = elems[];
+    _size += elems.length;
   }
 
   ref T opIndex(size_t index) {
@@ -234,6 +228,28 @@ struct Deck(T, string NAME, uint MAXCAP=1024)
   }
 
   alias length = size;
+
+  static if (is (T == char)) {
+    // this function should only be used in combination with reserve
+    // Its only purpose is to allow calling format with string directly getting
+    // written to decks memory locations
+    void bump(size_t sz) {
+      growCapacity(_size + sz);
+    }
+
+    void subsume(size_t sz) {	// assume that growCapacity has already been called
+      assert (_size + sz <= _capacity);
+      _size += sz;
+    }
+
+    T[] getReserved() {
+      return _load[_size.._capacity];
+    }
+
+    T* getReservedPtr() {
+      return &(_load[_size]);
+    }
+  }
 
   V to(V)() if (is (V == string)) {
     import std.conv: to;
