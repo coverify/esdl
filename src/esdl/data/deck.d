@@ -214,7 +214,7 @@ struct Deck(T, string NAME, uint MAXCAP=1024)
 
   void size(size_t newsize) {
     if (newsize > _capacity) {
-      growCapacity(newsize);
+      growCapacity(newsize * 2);
     }
 
     if (newsize > _size) {
@@ -233,13 +233,8 @@ struct Deck(T, string NAME, uint MAXCAP=1024)
     // this function should only be used in combination with reserve
     // Its only purpose is to allow calling format with string directly getting
     // written to decks memory locations
-    void bump(size_t sz) {
-      growCapacity(_size + sz);
-    }
-
-    void subsume(size_t sz) {	// assume that growCapacity has already been called
-      assert (_size + sz <= _capacity);
-      _size += sz;
+    void addReserve(size_t sz) {
+      if (_capacity < _size + sz) growCapacity((_size + sz) * 2);
     }
 
     T[] getReserved() {
@@ -248,6 +243,17 @@ struct Deck(T, string NAME, uint MAXCAP=1024)
 
     T* getReservedPtr() {
       return &(_load[_size]);
+    }
+
+    // assume that there is sufficient reserved space
+    char[] writef(alias fmt, Args...)(Args args) {
+      import std.format: sformat;
+      return sformat!(fmt)(_load[_size.._capacity], args);
+    }
+
+    char[] writef(Args...)(scope const(char)[] fmt, Args args) {
+      import std.format: sformat;
+      return sformat!(fmt)(_load[_size.._capacity], fmt, args);
     }
   }
 

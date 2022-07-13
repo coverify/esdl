@@ -149,10 +149,9 @@ class CstVecArrExpr: CstVecExpr
   }
   
   void writeExprString(ref _esdl__Sigbuf str) {
-    import std.format: sformat;
-    char[16] buff;
     str ~= '(';
-    str ~= sformat(buff[], "%s", _op);
+    str.addReserve(16);
+    str.writef!("%s")(_op);
     str ~= ' ';
     _arr.writeExprString(str);
     str ~= ')';
@@ -297,10 +296,9 @@ class CstVec2VecExpr: CstVecExpr
   }
   
   void writeExprString(ref _esdl__Sigbuf str) {
-    import std.format: sformat;
-    char[16] buff;
     str ~= '(';
-    str ~= sformat(buff[], "%s", _op);
+    str.addReserve(16);
+    str.writef!("%s")(_op);
     str ~= ' ';
     _lhs.writeExprString(str);
     str ~= ' ';
@@ -2004,10 +2002,8 @@ class CstLogic2LogicExpr: CstLogicExpr
   }
 
   void writeExprString(ref _esdl__Sigbuf str) {
-    import std.format: sformat;
-    char[16] buff;
     str ~= '(';
-    str ~= sformat(buff[], "%s", _op);
+    str.writef!("%s")(_op);
     str ~= ' ';
     _lhs.writeExprString(str);
     str ~= ' ';
@@ -2566,10 +2562,8 @@ class CstVec2LogicExpr: CstLogicExpr
   }
 
   void writeExprString(ref _esdl__Sigbuf str) {
-    import std.format: sformat;
-    char[16] buff;
     str ~= '(';
-    str ~= sformat(buff[], "%s", _op);
+    str.writef!("%s")(_op);
     str ~= ' ';
     _lhs.writeExprString(str);
     str ~= ' ';
