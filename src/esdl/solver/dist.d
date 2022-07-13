@@ -22,28 +22,15 @@ struct CstVecDistRange(T)
   size_t _adjTotalWeight;
 
   static if (is (T == enum)) {
-    static T[] _elems;
 
-    static this() {
-      getSortedMembers(_elems);
-    }
+    enum T[] _elems = getSortedMembers!T();
 
-    static void getSortedMembers(T)(out T[] foo) {
+    static T[] getSortedMembers(T)() {
       import std.algorithm.sorting;
       import std.array;
       import std.traits: EnumMembers;
 
-      T[] unordered;
-      static T[] ordered;
-  
-      if (ordered.length == 0) {
-	foreach (t; EnumMembers!T) {
-	  unordered ~= t;
-	}
-	ordered = array(unordered.sort());
-      }
-
-      foo = ordered;
+      return array([EnumMembers!T].sort());
     }
 
     static size_t distance(T max, T min) {
@@ -258,7 +245,6 @@ class CstVecDistSolver(T): CstDistSolverBase
   //   foreach (ref dist; _set) {
   //     if (dist.setVal(var, select)) break;
   //   }
-  //   assert(select <  0);
   //   return var;
   // }
 
@@ -269,7 +255,6 @@ class CstVecDistSolver(T): CstDistSolverBase
     foreach (ref dist; _set) {
       if (dist.setVal(var, select)) break;
     }
-    assert(select <  0);
     return var;
   }
 }
@@ -285,28 +270,14 @@ struct CstLogicDistRange(T)
   size_t _adjTotalWeight;
 
   static if (is (T == enum)) {
-    static T[] _elems;
+    enum T[] _elems = getSortedMembers!T();
 
-    static this() {
-      getSortedMembers(_elems);
-    }
-
-    static void getSortedMembers(T)(out T[] foo) {
+    static T[] getSortedMembers(T)() {
       import std.algorithm.sorting;
       import std.array;
       import std.traits: EnumMembers;
 
-      T[] unordered;
-      static T[] ordered;
-  
-      if (ordered.length == 0) {
-	foreach (t; EnumMembers!T) {
-	  unordered ~= t;
-	}
-	ordered = array(unordered.sort());
-      }
-
-      foo = ordered;
+      return array([EnumMembers!T].sort());
     }
   }
 
@@ -424,7 +395,6 @@ class CstLogicDistSolver(T): CstDistSolverBase
   //   foreach (ref dist; _set) {
   //     if (dist.setVal(var, select)) break;
   //   }
-  //   assert(select <  0);
   //   return var;
   // }
 
@@ -434,7 +404,6 @@ class CstLogicDistSolver(T): CstDistSolverBase
     foreach (ref dist; _set) {
       if (dist.setVal(var, select)) break;
     }
-    assert(select <  0);
     return var;
   }
 }
@@ -468,8 +437,6 @@ class CstDistPredSolver	// agent of dist and related predicates
   }
 
   void addPredicate(CstPredicate pred) {
-    // import std.stdio;
-    // writeln(pred.describe());
     pred._state = CstPredicate.State.GROUPED;
     _preds ~= pred;
   }
