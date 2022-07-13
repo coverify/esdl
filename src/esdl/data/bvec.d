@@ -1969,9 +1969,9 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	 && !V.IS4STATE && !V.ISSIGNED) {
 	auto rhs = cast(UBitVec!SIZE) other;
 	for(size_t i=0; i!=STORESIZE; ++i) {
-	  this._aval[i] &= ! (rhs._aval[i]);
+	  this._aval[i] &= ~ (rhs._aval[i]);
 	  static if(L) {
-	    this._bval[i] &= ! (rhs._aval[i]);
+	    this._bval[i] &= ~ (rhs._aval[i]);
 	  }
 	  if(this.aValMSB) this._aval[$-1] |= SMASK;
 	  else                this._aval[$-1] &= UMASK;
@@ -2002,20 +2002,19 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       }
 
     void opSliceAssign(V)(V other, size_t i, size_t j)
-      if(isBitVector!V ||
-	 isIntegral!V)
+      if (isBitVector!V || isIntegral!V || isBoolean!V)
         {
 	  import std.algorithm;
 	  import std.exception;
-	  static if(isIntegral!V)
+	  static if(isIntegral!V || isBoolean!V)
 	    {
-	      alias _bvec!V _type;
+	      alias _type = _bvec!V;
 	      _type rhs = other;
 	    }
 	  else
 	    {
-	      alias V _type;
-	      alias other rhs;
+	      alias _type = V;
+	      alias rhs = other;
 	    }
 
 	  enforce(i <= SIZE && j <= SIZE,
