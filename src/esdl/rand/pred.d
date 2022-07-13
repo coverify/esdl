@@ -1139,12 +1139,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   }
 
   void writeSignature(ref _esdl__Sigbuf str, CstSolverAgent agent) {
-    import std.format: sformat;
     if (_soft != 0) {
-      char[16] buff;
-      str ~= '!';
-      str ~=  sformat(buff[], "%d", _soft); // _soft.to!string();
-      str ~= ':';
+      str.writef!("!%d:")(_soft); // _soft.to!string();
     }
     if (_guard !is null) {
       if (_guard._state is State.SOLVED) {
