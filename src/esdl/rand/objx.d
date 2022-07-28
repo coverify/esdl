@@ -129,7 +129,7 @@ class CstObjectIdx(V, rand RAND_ATTR, int N, VT, int IDX,
     }
   }
   override bool rand_mode() {
-    static if (_esdl__PROXYT._esdl__HAS_RAND_INFO == false) return true;
+    static if (_esdl__PROXYT._esdl__HAS_RAND_INFO == false) return false;
     else {
       assert (_parent !is null);
       _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
@@ -629,7 +629,7 @@ class CstObjArrIdx(V, rand RAND_ATTR, int N, VT, int IDX,
     }
   }
   override bool rand_mode() {
-    static if (_esdl__PROXYT._esdl__HAS_RAND_INFO == false) return true;
+    static if (_esdl__PROXYT._esdl__HAS_RAND_INFO == false) return false;
     else {
       assert (_parent !is null);
       _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
