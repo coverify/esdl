@@ -1140,6 +1140,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   void writeSignature(ref _esdl__Sigbuf str, CstSolverAgent agent) {
     if (_soft != 0) {
+      str.addReserve(16);
       str.writef!("!%d:")(_soft); // _soft.to!string();
     }
     if (_guard !is null) {
