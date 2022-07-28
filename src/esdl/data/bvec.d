@@ -2327,9 +2327,12 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       if(isBitVector!V) {
 	static if(this.IS4STATE || other.IS4STATE) {
 	  if(this.isX || other.isX) {
-	    throw new LogicError(format("Logic value of one of the " ~
-					"operands is X, %s, %s",
-					this, other), file, line);
+	    // https://issues.dlang.org/show_bug.cgi?id=23255
+	    // throw new LogicError(format("Logic value of one of the " ~
+	    // 				"operands is X, %s, %s",
+	    // 				this, other), file, line);
+	    throw new LogicError("Logic value of one of the operands is X",
+				 file, line);
 	  }
 	}
       }
@@ -2339,9 +2342,12 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       if(isIntegral!V || isBoolean!V) {
 	static if(this.IS4STATE) {
 	  if(this.isX) {
-	    throw new LogicError(format("Logic value of " ~
-					"operand is X, %s",
-					this), file, line);
+	    // https://issues.dlang.org/show_bug.cgi?id=23255
+	    // throw new LogicError(format("Logic value of " ~
+	    // 				"operand is X, %s",
+	    // 				this), file, line);
+	    throw new LogicError("Logic value of operand is X",
+				 file, line);
 	  }
 	}
       }
