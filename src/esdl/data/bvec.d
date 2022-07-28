@@ -1540,7 +1540,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       }
     }
 
-    V to(V, size_t RADIX = 2)() if((is(V == string) ||
+    const V to(V, size_t RADIX = 2)() if((is(V == string) ||
 				    is(V == char[]))
 				   &&(RADIX == 2 ||
 				      RADIX == 8 ||
@@ -1553,11 +1553,11 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       }
     }
 
-    string toString()() {
+    const string toString()() {
       return this.to!(string, 2);
     }
 
-    void toString(scope void delegate(const(char)[]) sink, FormatSpec!char f) {
+    const void toString(scope void delegate(const(char)[]) sink, FormatSpec!char f) {
       char[] buff;
       switch(f.spec) {
       case 'd'     : buff = this.toDecimalString(); break;
@@ -1577,7 +1577,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       sink(buff);
     }
 
-    private V toCharString(V, size_t RADIX)() {
+    const private V toCharString(V, size_t RADIX)() {
       char[] str;
       if(STORESIZE > 1) {
 	for(size_t i = 0; i != STORESIZE-1; ++i) {
