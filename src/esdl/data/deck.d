@@ -60,8 +60,10 @@ struct Deck(T, string NAME, uint MAXCAP=1024)
   // grow minimum to size
   void growCapacity(size_t cap) {
     import std.conv: to;
-    assert (cap <= MAXCAP || MAXCAP == 0,
-	    "Large size: " ~ NAME ~ " Size: " ~ cap.to!string());
+    debug (CHECK_DECK_SIZE) {
+      assert (cap <= MAXCAP || MAXCAP == 0,
+	      "Large size: " ~ NAME ~ " Size: " ~ cap.to!string());
+    }
     static if (is (T == struct) || is (T == P*, P)) {
       _load.reserve(cap);
       _load.length = cap;
