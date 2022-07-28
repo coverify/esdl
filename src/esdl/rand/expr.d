@@ -2003,6 +2003,7 @@ class CstLogic2LogicExpr: CstLogicExpr
 
   void writeExprString(ref _esdl__Sigbuf str) {
     str ~= '(';
+    str.addReserve(16);
     str.writef!("%s")(_op);
     str ~= ' ';
     _lhs.writeExprString(str);
@@ -2563,6 +2564,7 @@ class CstVec2LogicExpr: CstLogicExpr
 
   void writeExprString(ref _esdl__Sigbuf str) {
     str ~= '(';
+    str.addReserve(16);
     str.writef!("%s")(_op);
     str ~= ' ';
     _lhs.writeExprString(str);
