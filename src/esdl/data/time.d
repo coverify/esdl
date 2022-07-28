@@ -144,7 +144,7 @@ struct Time
     return _lhs.normalize();
   }
 
-  S to(S)() if(is(S == string)) {
+  const S to(S)() if(is(S == string)) {
     import std.conv: to;
     import std.string: toLower;
     Time t = this;
@@ -160,12 +160,12 @@ struct Time
     return value_ ~ "." ~ unit_;
   }
 
-  R to(R)() if(is(R: real)) {
+  const R to(R)() if(is(R: real)) {
     import std.conv: to;
     return _value * ((cast(R) 10) ^^ _unit);
   }
 
-  string toString() {
+  const string toString() {
     return this.to!string;
   }
 }
