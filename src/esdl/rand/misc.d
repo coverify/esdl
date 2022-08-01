@@ -569,6 +569,27 @@ template getRandAttr(T, int I) {
   alias getRandAttr = scanRandAttr!(__traits(getAttributes, T.tupleof[I]));
 }
 
+template isPacked(T, int I) {
+  import esdl.data.packed: _esdl__packed;
+  enum bool isPacked = hasSymbol!(_esdl__packed, __traits(getAttributes,
+							  T.tupleof[I]));
+}
+
+template hasSymbol(alias Sym, Syms...) {
+  static if (Syms.length == 0) {
+    enum bool hasSymbol = false;
+  }
+  else {
+    static if (__traits(isSame, Sym, Syms[0])) {
+      enum bool hasSymbol = true;
+    }
+    else {
+      enum bool hasSymbol = hasSymbol!(Sym, Syms[1..$]);
+    }
+  }
+}
+
+
 template scanRandAttr(A...) {
   static if (A.length == 0) {
     enum rand scanRandAttr = rand(true, true);
