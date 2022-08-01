@@ -11,8 +11,10 @@ module esdl.rand.meta;
 import std.traits: isIntegral, isBoolean, isArray, isSomeChar, isPointer,
   PointerTarget, OriginalType, isAssociativeArray, ValueType, KeyType,
   isSomeString;
-import esdl.data.bvec: isBitVector;
+import esdl.data.bvec: isBitVector, ubvec, bvec;
 import esdl.data.queue: isQueue, Queue;
+import esdl.data.packed: _esdl__packed, _esdl__packed_info,
+  _esdl__packed_type;
 import esdl.data.bstr;
 
 import std.exception: enforce;
@@ -61,6 +63,15 @@ struct _esdl__ARG {
 }
 enum _esdl__NotMappedForRandomization;
 
+template _esdl__PackedRandProxyType(PCT, int I, RAND, P, int PI)
+{
+  import std.traits;
+
+  static assert (isRandomizable!PCT);
+
+  alias _esdl__PackedRandProxyType = CstVectorIdx!(PCT, RAND, PCT, I, P, PI);
+}
+
 template _esdl__RandProxyType(T, int I, P, int PI)
 {
   import std.traits;
@@ -71,34 +82,34 @@ template _esdl__RandProxyType(T, int I, P, int PI)
     alias _esdl__RandProxyType = _esdl__NotMappedForRandomization;
   }
   else static if (isRandomizable!L) {
-    alias _esdl__RandProxyType = CstVectorIdx!(L, RAND, 0, L, I, P, PI);
+    alias _esdl__RandProxyType = CstVectorIdx!(L, RAND, L, I, P, PI);
   }
   else static if (isPointer!L && isRandomizable!(PointerTarget!L)) {
     alias LT = PointerTarget!L;
-    alias _esdl__RandProxyType = CstVectorIdx!(LT, RAND, 0, L, I, P, PI);
+    alias _esdl__RandProxyType = CstVectorIdx!(LT, RAND, L, I, P, PI);
   }
   else static if (isRandVectorSet!L) {
-    alias _esdl__RandProxyType = CstVecArrIdx!(L, RAND, 0, L, I, P, PI);
+    alias _esdl__RandProxyType = CstVecArrIdx!(L, RAND, L, I, P, PI);
   }
   else static if (isPointer!L && isRandVectorSet!(PointerTarget!L)) {
     alias LT = PointerTarget!L;
-    alias _esdl__RandProxyType = CstVecArrIdx!(LT, RAND, 0, L, I, P, PI);
+    alias _esdl__RandProxyType = CstVecArrIdx!(LT, RAND, L, I, P, PI);
   }
   // Exclude class/struct* elements that have not been rand tagged
   // or are excluded  because of rand.disable or rand.barrier
   else static if (isRandObject!L) {
-    alias _esdl__RandProxyType = CstObjectIdx!(L, RAND, 0, L, I, P, PI);
+    alias _esdl__RandProxyType = CstObjectIdx!(L, RAND, L, I, P, PI);
   }
   else static if (isPointer!L && isRandObject!(PointerTarget!L)) {
     alias LT = PointerTarget!L;
-    alias _esdl__RandProxyType = CstObjectIdx!(LT, RAND, 0, L, I, P, PI);
+    alias _esdl__RandProxyType = CstObjectIdx!(LT, RAND, L, I, P, PI);
   }
   else static if (isRandObjectSet!L) {
-    alias _esdl__RandProxyType = CstObjArrIdx!(L, RAND, 0, L, I, P, PI);
+    alias _esdl__RandProxyType = CstObjArrIdx!(L, RAND, L, I, P, PI);
   }
   else static if (isPointer!L && isRandObjectSet!(PointerTarget!L)) {
     alias LT = PointerTarget!L;
-    alias _esdl__RandProxyType = CstObjArrIdx!(LT, RAND, 0, L, I, P, PI);
+    alias _esdl__RandProxyType = CstObjArrIdx!(LT, RAND, L, I, P, PI);
   }
   else {
     alias _esdl__RandProxyType = _esdl__NotMappedForRandomization;
@@ -312,8 +323,8 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
   }
   else {
     alias Q = typeof (P.tupleof[I]);
-    static if (is (Q == CstVectorIdx!(L, RAND, N, LL, IDX, P, PIDX),
-		   L, rand RAND, int N, LL, int IDX, P, int PIDX)) {
+    static if (is (Q == CstVectorIdx!(L, RAND, LL, IDX, P, PIDX),
+		   L, rand RAND, LL, int IDX, P, int PIDX)) {
       if (p.tupleof[I] !is null) {
 	static if (isPointer!LL) {
 	  // assert (p._esdl__outer.tupleof[IDX] !is null,
@@ -325,8 +336,8 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 	}
       }
     }
-    static if (is (Q == CstObjectIdx!(L, RAND, N, LL, IDX, P, PIDX),
-		   L, rand RAND, int N, LL, int IDX, P, int PIDX)) {
+    static if (is (Q == CstObjectIdx!(L, RAND, LL, IDX, P, PIDX),
+		   L, rand RAND, LL, int IDX, P, int PIDX)) {
       if (p.tupleof[I] !is null) {
 	static if (is (L == struct) && !isQueue!L) {
 	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
@@ -338,8 +349,8 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 	}
       }
     }
-    static if (is (Q == CstVecArrIdx!(L, RAND, N, LL, IDX, P, PIDX),
-		   L, rand RAND, int N, LL, int IDX, P, int PIDX)) {
+    static if (is (Q == CstVecArrIdx!(L, RAND, LL, IDX, P, PIDX),
+		   L, rand RAND, LL, int IDX, P, int PIDX)) {
       if (p.tupleof[I] !is null) {
 	static if (isPointer!LL) {
 	  // assert (p._esdl__outer.tupleof[IDX] !is null,
@@ -351,8 +362,8 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 	}
       }
     }
-    static if (is (Q == CstObjArrIdx!(L, RAND, N, LL, IDX, P, PIDX),
-		   L, rand RAND, int N, LL, int IDX, P, int PIDX)) {
+    static if (is (Q == CstObjArrIdx!(L, RAND, LL, IDX, P, PIDX),
+		   L, rand RAND, LL, int IDX, P, int PIDX)) {
       if (p.tupleof[I] !is null) {
 	static if (isPointer!LL) {
 	  // assert (p._esdl__outer.tupleof[IDX] !is null,
@@ -387,14 +398,50 @@ template _esdl__RandDeclVars(T, int I, PT, int PI)
       // pragma(msg, __traits(identifier, T.tupleof[I]));
       static if (is (T == U*, U) && is (U == struct)) alias TT = U;
       else                                            alias TT = T;
+
       enum string _esdl__RandDeclVars =
 	"  public _esdl__RandProxyType!(_esdl__T, " ~ I.stringof ~
 	", _esdl__PROXYT, " ~ PI.stringof ~ ") " ~
 	__traits(identifier, TT.tupleof[I]) ~ ";\n" ~
+	_esdl__RandDeclPackedVars!(T, I, PT, PI) ~
 	_esdl__RandDeclVars!(T, I+1, PT, PI+1);
     }
   }
 }
+
+template _esdl__RandDeclPackedVars(T, int I, PT, int PI)
+{
+  static if (isPacked!(T, I)) {
+    enum string _esdl__RandDeclPackedVars =
+      _esdl__ListRandDeclPackedVars!(T, I, PT, PI, __traits(getAttributes,
+							    T.tupleof[I]));
+  }
+  else enum string _esdl__RandDeclPackedVars = "";
+}
+
+template _esdl__ListRandDeclPackedVars(T, int I, PT, int PI, Attribs...)
+{
+  import esdl.data.packed: _esdl__packed_info, _esdl__packed_type;
+  static if (Attribs.length == 0)
+    enum string _esdl__ListRandDeclPackedVars = "";
+  else {
+    static if (__traits(compiles, typeof(Attribs[0])) &&
+	       is (typeof(Attribs[0]) == _esdl__packed_info)) {
+      enum string _esdl__ListRandDeclPackedVars =
+	" public CstVectorIdx!(_esdl__packed_type!(" ~
+	Attribs[0].aggrtype ~ ", " ~ Attribs[0].type ~ ", " ~
+	Attribs[0].offset.stringof ~ "), rand(false, false), " ~
+	Attribs[0].aggrtype ~ ", " ~ I.stringof ~ ", _esdl__PROXYT, " ~
+	PI.stringof ~ ") " ~ Attribs[0].name ~ ";\n" ~
+	_esdl__ListRandDeclPackedVars!(T, I, PT, PI, Attribs[1..$]);
+    }
+    else {
+      enum string _esdl__ListRandDeclPackedVars =
+	_esdl__ListRandDeclPackedVars!(T, I, PT, PI, Attribs[1..$]);
+    }
+  }
+}
+
 
 template _esdl__ConstraintsDecl(T, int I=0)
 {
@@ -797,49 +844,49 @@ mixin template Randomization()
 
   alias rand_mode = randMode;
   
-  bool randMode(int INDX)() {
+  bool randMode(int PINDX)() {
     if (_esdl__RandInfoInst is null) return true;
-    if (_esdl__RandInfoInst._randModes.length <= INDX) return true;
-    else return _esdl__RandInfoInst._randModes[INDX];
+    if (_esdl__RandInfoInst._randModes.length <= PINDX) return true;
+    else return _esdl__RandInfoInst._randModes[PINDX];
   }
 
   bool randMode(string rnd)() {
     static assert (__traits(hasMember, _esdl__ProxyType, rnd));
 
     alias RND = typeof(__traits(getMember, _esdl__ProxyType, rnd));
-    enum int INDX = RND._esdl__INDEX;
+    enum int PINDX = RND._esdl__PROXYINDEX;
 
     alias TYPE = RND._esdl__PROXYT._esdl__Type;
 
     TYPE obj = this;
-    return obj.randMode!INDX();
+    return obj.randMode!PINDX();
   }
 
-  void randMode(int INDX)(bool mode) {
+  void randMode(int PINDX)(bool mode) {
     if (_esdl__RandInfoInst is null) _esdl__RandInfoInst = new _esdl__RandInfo();
     size_t currlen = _esdl__RandInfoInst._randModes.length;
 
-    if (currlen <= INDX) {
-      _esdl__RandInfoInst._randModes.length = INDX + 1;
-      for (size_t i=currlen; i!=INDX; ++i) {
+    if (currlen <= PINDX) {
+      _esdl__RandInfoInst._randModes.length = PINDX + 1;
+      for (size_t i=currlen; i!=PINDX; ++i) {
 	_esdl__RandInfoInst._randModes[i] = true;
       }
     }
     
-    _esdl__RandInfoInst._randModes[INDX] = mode;
+    _esdl__RandInfoInst._randModes[PINDX] = mode;
   }
 
   void randMode(string rnd)(bool mode) {
     static assert (__traits(hasMember, _esdl__ProxyType, rnd));
 
     alias RND = typeof(__traits(getMember, _esdl__ProxyType, rnd));
-    enum int INDX = RND._esdl__INDEX;
+    enum int PINDX = RND._esdl__PROXYINDEX;
 
     alias TYPE = RND._esdl__PROXYT._esdl__Type;
 
     TYPE obj = this;
 
-    obj.randMode!INDX(mode);
+    obj.randMode!PINDX(mode);
   }
 
   bool constraint_mode(string cst)() {
@@ -1156,10 +1203,10 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       else {
 	alias L = typeof(_lambdaArgs[I]);
 	static if (isRandomizable!L) {
-	  alias TYPE = CstVectorIdx!(L, rand(true, true), 0, L, -1, _esdl__ARG, -1);
+	  alias TYPE = CstVectorIdx!(L, rand(true, true), L, -1, _esdl__ARG, -1);
 	}
 	else static if (isRandVectorSet!L) {
-	  alias TYPE = CstVecArrIdx!(L, rand(true, true), 0, L, -1, _esdl__ARG, -1);
+	  alias TYPE = CstVecArrIdx!(L, rand(true, true), L, -1, _esdl__ARG, -1);
 	}
 	auto vvar = cast (TYPE) (_proxyLambdaArgs[I]);
 	vvar._esdl__setValRef(& _lambdaArgs[I]);
@@ -1379,7 +1426,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
   }
   else static if (isRandomizable!L) {
     static if (isLvalue!V) {
-      alias CstVecType = CstVectorGlob!(L, rand(true, true), 0, V);
+      alias CstVecType = CstVectorGlob!(L, rand(true, true), V);
       CstVarGlobIntf global = parent._esdl__getGlobalLookup(V.stringof);
       if (global !is null)
 	return cast(CstVecType) global;
@@ -1426,7 +1473,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
     // import std.stdio;
     // writeln("Creating VarVecArr, ", name);
     static if (isLvalue!V) {
-      alias CstVecArrType = CstVecArrGlob!(L, rand(true, true), 0, V);
+      alias CstVecArrType = CstVecArrGlob!(L, rand(true, true), V);
       CstVarGlobIntf global = parent._esdl__getGlobalLookup(V.stringof);
       if (global !is null)
 	return cast(CstVecArrType) global;
@@ -1440,7 +1487,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       }
     }
     else {
-      alias CstVecArrType = CstVecArrGlobEnum!(L, rand(true, true), 0);
+      alias CstVecArrType = CstVecArrGlobEnum!(L, rand(true, true));
       CstVarGlobIntf global = parent._esdl__getGlobalLookup(V.stringof);
       if (global !is null)
 	return cast(CstVecArrType) global;
@@ -1497,7 +1544,7 @@ auto _esdl__arg_proxy(L, X, P)(size_t idx, string name, ref L arg, X proxy, P pa
   static if (isRandomizable!L) {
     // import std.stdio;
     // writeln("Creating VarVec, ", name);
-    alias CstVectorType = CstVectorIdx!(L, rand(true, true), 0, L, -1, _esdl__ARG, -1);
+    alias CstVectorType = CstVectorIdx!(L, rand(true, true), L, -1, _esdl__ARG, -1);
     CstVarNodeIntf var = proxy._proxyLambdaArgs[idx];
     if (var is null) {
       CstVectorType vvar = new CstVectorType(name, parent, &arg);
@@ -1511,7 +1558,7 @@ auto _esdl__arg_proxy(L, X, P)(size_t idx, string name, ref L arg, X proxy, P pa
     }
   }
   else static if (isRandVectorSet!L) {
-    alias CstVecArrType = CstVecArrIdx!(L, rand(true, true), 0, L, -1, _esdl__ARG, -1);
+    alias CstVecArrType = CstVecArrIdx!(L, rand(true, true), L, -1, _esdl__ARG, -1);
     CstVarNodeIntf var = proxy._proxyLambdaArgs[idx];
     if (var is null) {
       CstVecArrType vvar = new CstVecArrType(name, parent, &arg);

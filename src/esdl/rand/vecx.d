@@ -1,6 +1,7 @@
 module esdl.rand.vecx;
 
 import esdl.data.bvec;
+import esdl.data.packed;
 import esdl.data.bstr;
 import esdl.data.queue;
 import std.traits: isIntegral, isBoolean, isArray, KeyType,
@@ -26,8 +27,8 @@ interface CstVecIndexed { }
 // N represents the level of the array-elements we have to traverse
 // for the elements this CstVector represents
 
-class CstVectorGlob(V, rand RAND_ATTR, int N, alias SYM)
-  : CstVector!(V, RAND_ATTR, N), CstVarGlobIntf
+class CstVectorGlob(V, rand RAND_ATTR, alias SYM)
+  : CstVector!(V, RAND_ATTR, 0), CstVarGlobIntf
 {
   alias RV = typeof(this);
   enum _esdl__ISRAND = RAND_ATTR.isRand();
@@ -49,8 +50,8 @@ class CstVectorGlob(V, rand RAND_ATTR, int N, alias SYM)
   }
 }
 
-class CstVectorGlobEnum(V, rand RAND_ATTR, int N)
-  : CstVector!(V, RAND_ATTR, N), CstVarGlobIntf
+class CstVectorGlobEnum(V, rand RAND_ATTR)
+  : CstVector!(V, RAND_ATTR, 0), CstVarGlobIntf
 {
   alias RV = typeof(this);
   enum _esdl__ISRAND = RAND_ATTR.isRand();
@@ -76,14 +77,15 @@ class CstVectorGlobEnum(V, rand RAND_ATTR, int N)
 
 }
 
-class CstVectorIdx(V, rand RAND_ATTR, int N, VT, int IDX,
-		   P, int PIDX): CstVector!(V, RAND_ATTR, N)
+class CstVectorIdx(V, rand RAND_ATTR, VT, int IDX,
+		   P, int PIDX): CstVector!(V, RAND_ATTR, 0)
 {
   alias RV = typeof(this);
   enum _esdl__ISRAND = RAND_ATTR.isRand();
   enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
   alias _esdl__PROXYT = P;
   enum int _esdl__INDEX = IDX;
+  enum int _esdl__PROXYINDEX = PIDX;
 
   this(string name, _esdl__Proxy parent, V* var) {
     super(name, parent, var);
@@ -120,7 +122,7 @@ class CstVectorIdx(V, rand RAND_ATTR, int N, VT, int IDX,
       assert (_parent !is null);
       _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
       assert (proxy._esdl__outer !is null);
-      return proxy._esdl__outer.rand_mode!(IDX)();
+      return proxy._esdl__outer.rand_mode!(PIDX)();
     }
   }
 
@@ -474,8 +476,8 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
       }
     }
 
-class CstVecArrGlob(V, rand RAND_ATTR, int N, alias SYM)
-  : CstVecArr!(V, RAND_ATTR, N), CstVarGlobIntf
+class CstVecArrGlob(V, rand RAND_ATTR, alias SYM)
+  : CstVecArr!(V, RAND_ATTR, 0), CstVarGlobIntf
 {
   enum _esdl__ISRAND = RAND_ATTR.isRand();
   enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
@@ -495,8 +497,8 @@ class CstVecArrGlob(V, rand RAND_ATTR, int N, alias SYM)
 }
 
 // Arrays (Multidimensional arrays as well)
-class CstVecArrGlobEnum(V, rand RAND_ATTR, int N)
-  : CstVecArr!(V, RAND_ATTR, N), CstVarGlobIntf
+class CstVecArrGlobEnum(V, rand RAND_ATTR)
+  : CstVecArr!(V, RAND_ATTR, 0), CstVarGlobIntf
 {
   // static assert (is (typeof(this) == P.tupleof[PIDX]));
   enum _esdl__ISRAND = RAND_ATTR.isRand();
@@ -523,14 +525,16 @@ class CstVecArrGlobEnum(V, rand RAND_ATTR, int N)
 }
 
 // Arrays (Multidimensional arrays as well)
-class CstVecArrIdx(V, rand RAND_ATTR, int N, VT, int IDX,
-		   P, int PIDX): CstVecArr!(V, RAND_ATTR, N)
+class CstVecArrIdx(V, rand RAND_ATTR, VT, int IDX,
+		   P, int PIDX): CstVecArr!(V, RAND_ATTR, 0)
 {
   // static assert (is (typeof(this) == P.tupleof[PIDX]));
   enum _esdl__ISRAND = RAND_ATTR.isRand();
   enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
   alias _esdl__PROXYT = P;
   enum int _esdl__INDEX = IDX;
+  enum int _esdl__PROXYINDEX = PIDX;
+
   this(string name, _esdl__Proxy parent, V* var) {
     super(name, parent, var);
   }
@@ -562,7 +566,7 @@ class CstVecArrIdx(V, rand RAND_ATTR, int N, VT, int IDX,
       assert (_parent !is null);
       _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
       assert (proxy._esdl__outer !is null);
-      return proxy._esdl__outer.rand_mode!(IDX)();
+      return proxy._esdl__outer.rand_mode!(PIDX)();
     }
   }
 }
