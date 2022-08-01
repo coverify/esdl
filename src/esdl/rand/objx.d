@@ -82,13 +82,14 @@ class CstObjectGlobEnum(V, rand RAND_ATTR, int N)
   }
 }
 
-class CstObjectIdx(V, rand RAND_ATTR, int N, VT, int IDX,
-		   P, int PIDX): CstObject!(V, RAND_ATTR, N)
+class CstObjectIdx(V, rand RAND_ATTR, VT, int IDX,
+		   P, int PIDX): CstObject!(V, RAND_ATTR, 0)
 {
   enum _esdl__ISRAND = RAND_ATTR.isRand();
   enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
   alias _esdl__PROXYT = P;
   enum int _esdl__INDEX = IDX;
+  enum int _esdl__PROXYINDEX = PIDX;
 
   static if (is (LEAF == struct)) {
     this(string name, _esdl__Proxy parent, V* var) {
@@ -134,7 +135,7 @@ class CstObjectIdx(V, rand RAND_ATTR, int N, VT, int IDX,
       assert (_parent !is null);
       _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
       assert (proxy._esdl__outer !is null);
-      return proxy._esdl__outer.rand_mode!(IDX)();
+      return proxy._esdl__outer.rand_mode!(PIDX)();
     }
   }
 }
@@ -593,13 +594,15 @@ class CstObjArrGlobEnum(V, rand RAND_ATTR, int N)
 
 
 // Arrays (Multidimensional arrays as well)
-class CstObjArrIdx(V, rand RAND_ATTR, int N, VT, int IDX,
-		   P, int PIDX): CstObjArr!(V, RAND_ATTR, N)
+class CstObjArrIdx(V, rand RAND_ATTR, VT, int IDX,
+		   P, int PIDX): CstObjArr!(V, RAND_ATTR, 0)
 {
   enum _esdl__ISRAND = RAND_ATTR.isRand();
   enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
   alias _esdl__PROXYT = P;
   enum int _esdl__INDEX = IDX;
+  enum int _esdl__PROXYINDEX = PIDX;
+
   this(string name, _esdl__Proxy parent, V* var) {
     super(name, parent, var);
   }
@@ -634,7 +637,7 @@ class CstObjArrIdx(V, rand RAND_ATTR, int N, VT, int IDX,
       assert (_parent !is null);
       _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
       assert (proxy._esdl__outer !is null);
-      return proxy._esdl__outer.rand_mode!(IDX)();
+      return proxy._esdl__outer.rand_mode!(PIDX)();
     }
   }
 }
