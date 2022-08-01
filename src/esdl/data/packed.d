@@ -3,13 +3,17 @@ module esdl.data.packed;
 import esdl.data.bvec;
 
 enum _esdl__packed;
-struct _esdl__packed_info(T)
+struct _esdl__packed_info
 {
+  string aggrtype;
+  string type;
   string name;
   bool isRand;
   uint offset;
   uint bitlen;
 }
+
+struct _esdl__packed_type(T, AT, int offset) {}
 
 struct packedParser
 {
@@ -345,9 +349,10 @@ struct packedParser
   }
 
   string createAttrib (bool isRand, VARTYPE type, size_t size_sum,
-		       size_t size, string name) {
-    string attr = "@_esdl__packed_info!(";
-    attr ~= vartypeToString(type, size) ~ ")(\"";
+		       size_t size, string name, string aggr) {
+    string attr = "@_esdl__packed_info(\"";
+    attr ~= vartypeToString(type, size) ~ "\", \"";
+    attr ~= aggr ~ "\", \"";
     attr ~= name ~ "\", ";
     attr ~= isRand.to!string ~ ", ";
     attr ~= size_sum.to!string ~ ", ";
@@ -368,13 +373,13 @@ struct packedParser
     }
     string mix = "import esdl.data.packed: _esdl__packed, _esdl__packed_info;\n";
     // mix ~= "alias " ~ bvecname ~ " this;\n";
+    string aggr = "ubvec!" ~ size_prefix_sum[$-1].to!string;
     mix ~= "@_esdl__packed\n";
     for (int i = 0; i < names.length; i ++) {
       mix ~= createAttrib(isRand[i], types[i], size_prefix_sum[i],
-			  sizes[i], names[i]);
+			  sizes[i], names[i], aggr);
     }
-    mix ~= "ubvec!" ~ size_prefix_sum[$-1].to!string ~ " " ~
-      bvecname ~ ";\n";
+    mix ~= aggr ~ " " ~ bvecname ~ ";\n";
     for (int i = 0; i < names.length; i ++) {
       mix ~= createFunctions(isRand[i], types[i], size_prefix_sum[i],
 			     sizes[i], names[i]);
@@ -444,4 +449,22 @@ string packed (string str)()
 {
   packedParser parser = packedParser(str);
   return parser.parse();
+}
+
+// compound type for CstVectorIdx
+
+struct PackedField(FT,		// Field Type
+		   int NN 	// Total number of bits in the enclosing bvec
+		   ) {
+  static assert (isIntegral!FT || isBoolean!FT || isBitVector!FT);
+
+  alias BVECT = ubvec!NN;
+
+  BVECT* _bv;
+  uint _offset;
+
+  this(BVECT* bv, uint offset) {
+    _bv = bv;
+    _offset = offset;
+  }
 }
