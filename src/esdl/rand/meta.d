@@ -429,7 +429,7 @@ template _esdl__ListRandDeclPackedVars(T, int I, PT, int PI, Attribs...)
 	       is (typeof(Attribs[0]) == _esdl__packed_info)) {
       enum string _esdl__ListRandDeclPackedVars =
 	" public CstVectorIdx!(_esdl__packed_type!(" ~
-	Attribs[0].aggrtype ~ ", " ~ Attribs[0].type ~ ", " ~
+	Attribs[0].type ~ ", " ~ Attribs[0].aggrtype ~ ", " ~
 	Attribs[0].offset.stringof ~ "), rand(false, false), " ~
 	Attribs[0].aggrtype ~ ", " ~ I.stringof ~ ", _esdl__PROXYT, " ~
 	PI.stringof ~ ") " ~ Attribs[0].name ~ ";\n" ~
