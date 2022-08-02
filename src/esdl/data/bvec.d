@@ -2047,7 +2047,9 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       return ba;
     }
 
-    public V opCast(V)() const if (isIntegral!V || isBoolean!V || isSomeChar!V) {
+    public V opCast(V)() const if (isIntegral!V ||
+				   isBoolean!V ||
+				   isSomeChar!V) {
       union U {
 	V _value;
 	store_t[STORESIZE] _val;
@@ -3067,6 +3069,18 @@ public auto to(B, T)(T t) if(isIntegral!T && isBitVector!B) {
   }
   R tmp = t;
   B res = cast(B) tmp;
+  return res;
+ }
+
+public auto toBit(T)(T t) if (isIntegral!T || isBoolean!T) {
+  static if (isSigned!T && ! isBoolean!T) {
+    alias R = BitVec!(8*T.sizeof);
+  }
+  else {
+    alias R = UBitVec!(8*T.sizeof);
+  }
+  alias B = Bit!(N);
+  R res = t;
   return res;
  }
 
