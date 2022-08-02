@@ -36,7 +36,7 @@ class CstVectorGlob(V, rand RAND_ATTR, alias SYM)
 
   static assert (_esdl__ISRAND == false);
 
-  this(string name, _esdl__Proxy parent, V* var) {
+  this(string name, _esdl__Proxy parent, VPTR var) {
     super(name, parent, var);
   }
 
@@ -87,7 +87,7 @@ class CstVectorIdx(V, rand RAND_ATTR, VT, int IDX,
   enum int _esdl__INDEX = IDX;
   enum int _esdl__PROXYINDEX = PIDX;
 
-  this(string name, _esdl__Proxy parent, V* var) {
+  this(string name, _esdl__Proxy parent, VPTR var) {
     super(name, parent, var);
   }
 
@@ -116,6 +116,7 @@ class CstVectorIdx(V, rand RAND_ATTR, VT, int IDX,
       }
     }
   }
+
   override bool rand_mode() {
     static if (_esdl__PROXYT._esdl__HAS_RAND_INFO == false) return true;
     else {
@@ -178,11 +179,11 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
     {
       alias RV = typeof(this);
 
-      V* _var;
+      VPTR _var;
       _esdl__Proxy _parent;
       bool _parentsDepsAreResolved;
       
-      this(string name, _esdl__Proxy parent, V* var) {
+      this(string name, _esdl__Proxy parent, VPTR var) {
 	super(name, parent._esdl__getRootProxy());
 	_var = var;
 	_parent = parent;
@@ -206,7 +207,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 	  return _parent._esdl__getFullName() ~ "." ~ _esdl__getName();
       }
       
-      void _esdl__setValRef(V* var) {
+      void _esdl__setValRef(VPTR var) {
 	_var = var;
       }
       
@@ -236,7 +237,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 	return this;
       }
 
-      override LEAF* getRef() {
+      override VPTR getRef() {
 	return _var;
       }
 
@@ -409,7 +410,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	}
       }
       
-      override LEAF* getRef() {
+      override VPTR getRef() {
 	// import std.stdio;
 	// writeln("getRef: ", _esdl__getName());
 	if (_indexExpr) {
@@ -482,7 +483,7 @@ class CstVecArrGlob(V, rand RAND_ATTR, alias SYM)
   enum _esdl__ISRAND = RAND_ATTR.isRand();
   enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
 
-  this(string name, _esdl__Proxy parent, V* var) {
+  this(string name, _esdl__Proxy parent, VPTR var) {
     super(name, parent, var);
   }
 
@@ -535,7 +536,7 @@ class CstVecArrIdx(V, rand RAND_ATTR, VT, int IDX,
   enum int _esdl__INDEX = IDX;
   enum int _esdl__PROXYINDEX = PIDX;
 
-  this(string name, _esdl__Proxy parent, V* var) {
+  this(string name, _esdl__Proxy parent, VPTR var) {
     super(name, parent, var);
   }
 
@@ -576,6 +577,7 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
   if (_esdl__ArrOrder!(V, N) != 0): CstDomSet
 {
 
+  alias V* VPTR;
   alias RV = CstVecArr!(V, RAND_ATTR, N);
 
   enum ARR_ORDER = _esdl__ArrOrder!(V, N);
@@ -883,15 +885,15 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
 class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
   CstVecArrBase!(V, RAND_ATTR, N)
     {
-      V* _var;
+      VPTR _var;
       _esdl__Proxy _parent;
       bool _parentsDepsAreResolved;
     
-      void _esdl__setValRef(V* var) {
+      void _esdl__setValRef(VPTR var) {
 	_var = var;
       }
       
-      this(string name, _esdl__Proxy parent, V* var) {
+      this(string name, _esdl__Proxy parent, VPTR var) {
 	super(name, parent._esdl__getRootProxy());
 	_var = var;
 	_parent = parent;
