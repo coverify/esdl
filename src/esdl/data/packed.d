@@ -351,8 +351,8 @@ struct packedParser
   string createAttrib (bool isRand, VARTYPE type, size_t size_sum,
 		       size_t size, string name, string aggr) {
     string attr = "@_esdl__packed_info(\"";
-    attr ~= vartypeToString(type, size) ~ "\", \"";
     attr ~= aggr ~ "\", \"";
+    attr ~= vartypeToString(type, size) ~ "\", \"";
     attr ~= name ~ "\", ";
     attr ~= isRand.to!string ~ ", ";
     attr ~= size_sum.to!string ~ ", ";
