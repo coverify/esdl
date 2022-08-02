@@ -24,8 +24,8 @@ import esdl.solver.base: CstSolver, CstDistSolverBase;
 import esdl.base.rand: _esdl__RandGen;
 
 
-abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
-  CstVecDomain!(T, RAND_ATTR), CstLogicTerm
+abstract class CstDomain(V, rand RAND_ATTR) if (is (V == bool)):
+  CstVecDomain!(V, RAND_ATTR), CstLogicTerm
     {
       this(string name, _esdl__Proxy root) {
 	super(name, root);
@@ -78,8 +78,8 @@ abstract class CstDomain(T, rand RAND_ATTR) if (is (T == bool)):
       override CstDomBase getDomain() { return this; }
     }
 
-abstract class CstDomain(T, rand RAND_ATTR) if (!is (T == bool)):
-  CstVecDomain!(T, RAND_ATTR), CstVecTerm
+abstract class CstDomain(V, rand RAND_ATTR) if (!is (V == bool)):
+  CstVecDomain!(V, RAND_ATTR), CstVecTerm
     {
       this(string name, _esdl__Proxy root) {
 	super(name, root);
@@ -108,21 +108,21 @@ abstract class CstDomain(T, rand RAND_ATTR) if (!is (T == bool)):
       }
 
       override uint bitcount() {
-	static if (isBoolean!T)         return 1;
-	else static if (isIntegral!T || isSomeChar!T)   return T.sizeof * 8;
-	else static if (isBitVector!T)  return T.SIZE;
-	else static if (is (T == enum)) {
-	  alias OT = OriginalType!T;
+	static if (isBoolean!VT)         return 1;
+	else static if (isIntegral!VT || isSomeChar!VT)   return VT.sizeof * 8;
+	else static if (isBitVector!VT)  return VT.SIZE;
+	else static if (is (VT == enum)) {
+	  alias OT = OriginalType!VT;
 	  static if (isBoolean!OT)         return 1;
 	  else static if (isIntegral!OT || isSomeChar!OT)   return OT.sizeof * 8;
 	  else static if (isBitVector!OT)  return OT.SIZE;
-	  else static assert(false, "bitcount can not operate on: " ~ T.stringof);
+	  else static assert(false, "bitcount can not operate on: " ~ VT.stringof);
 	}
-	else static assert(false, "bitcount can not operate on: " ~ T.stringof);
+	else static assert(false, "bitcount can not operate on: " ~ VT.stringof);
       }
 
       override bool signed() {
-	static if (isVecSigned!T) {
+	static if (isVecSigned!VT) {
 	  return true;
 	}
 	else  {
@@ -133,24 +133,38 @@ abstract class CstDomain(T, rand RAND_ATTR) if (!is (T == bool)):
       override CstDomBase getDomain() { return this; }
 
       final override CstVecType getVecType() {
-	return GetVecType!T;
+	return GetVecType!VT;
       }
     }
 
-abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
+abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
 {
   enum HAS_RAND_ATTRIB = RAND_ATTR.isRand();
 
-  Unconst!T _shadowValue;
+  static if (is (V == _esdl__packed_type!(T, AT, OFFSET),
+		 T, AT, int OFFSET)) {
+    alias AT* VPTR;
+    enum uint VOFFSET = OFFSET;
+    alias T   VT;
+    enum bool ISPACKED = true;
+  }
+  else {
+    alias V* VPTR;
+    enum uint VOFFSET = 0;
+    alias V VT;
+    enum bool ISPACKED = false;
+  }
+  
+  Unconst!VT _shadowValue;
 
-  static if (is (T == enum)) {
-    alias OT = OriginalType!T;
+  static if (is (VT == enum)) {
+    alias OT = OriginalType!VT;
 
-    // T[] _enumSortedVals;
+    // VT[] _enumSortedVals;
 
     // void _enumSortedValsPopulate() {
     //   import std.algorithm.sorting: sort;
-    //   _enumSortedVals = cast(T[]) [EnumMembers!T];
+    //   _enumSortedVals = cast(VT[]) [EnumMembers!VT];
     //   _enumSortedVals.sort();
     // }
 
@@ -200,15 +214,15 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
 
 
    override bool visitDomain(CstSolver solver) {
-    static if (is (T == enum) && isIntegral!T) {
+    static if (is (VT == enum) && isIntegral!VT) {
       // uint count;
 
-      // EnumRange!T enumRanges[] = [EnumRanges!T];
+      // EnumRange!VT enumRanges[] = [EnumRanges!VT];
       // if (_enumSortedVals.length == 0) {
       // 	_enumSortedValsPopulate();
       // }
-      // T min;
-      // T max;
+      // VT min;
+      // VT max;
       // foreach (i, val; _enumSortedVals) {
       // 	if (i == 0) {
       // 	  min = val;
@@ -227,11 +241,11 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
       // 	}
       // }
 
-      foreach (enumRange; [EnumRanges!T]) {
+      foreach (enumRange; [EnumRanges!VT]) {
 	_addRangeConstraint(solver, enumRange.min(), enumRange.max());
       }
 
-      for (uint i=0; i!=(EnumRanges!T).length-1; ++i)
+      for (uint i=0; i!=(EnumRanges!VT).length-1; ++i)
 	solver.processEvalStack(CstLogicOp.LOGICOR);
 
       return true;
@@ -263,30 +277,30 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
       str ~= 'R';
       if (_domN < 256) (cast(ubyte) _domN).writeHexString(str);
       else (cast(ushort) _domN).writeHexString(str);
-      str ~= T.stringof;
-      // static if (isBitVector!T) {
-      // 	static if (T.ISSIGNED) {
+      str ~= VT.stringof;
+      // static if (isBitVector!VT) {
+      // 	static if (VT.ISSIGNED) {
       // 	  str ~= 'S';
       // 	}
       // 	else {
       // 	  str ~= 'U';
       // 	}
-      // 	if (T.SIZE < 256) (cast(ubyte) T.SIZE).writeHexString(str);
-      // 	else (cast(ushort) T.SIZE).writeHexString(str);
+      // 	if (VT.SIZE < 256) (cast(ubyte) VT.SIZE).writeHexString(str);
+      // 	else (cast(ushort) VT.SIZE).writeHexString(str);
       // }
-      // else static if (is (T == enum)) {
-      // 	str ~= T.stringof;
+      // else static if (is (VT == enum)) {
+      // 	str ~= VT.stringof;
       // }
-      // else static if (isIntegral!T) {
-      // 	static if (isSigned!T) {
+      // else static if (isIntegral!VT) {
+      // 	static if (isSigned!VT) {
       // 	  str ~= 'S';
       // 	}
       // 	else {
       // 	  str ~= 'U';
       // 	}
-      // 	(cast(ubyte) (T.sizeof * 8)).writeHexString(str);
+      // 	(cast(ubyte) (VT.sizeof * 8)).writeHexString(str);
       // }
-      // else static if (isBoolean!T) {
+      // else static if (isBoolean!VT) {
       // 	str ~= 'U';
       // 	(cast(ubyte) 1).writeHexString(str);
       // }
@@ -303,7 +317,7 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
     else {
       hash.modify(82);
       hash.modify(_domN);
-      hash.modify(T.stringof);
+      hash.modify(VT.stringof);
     }
   }
   
@@ -313,7 +327,7 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
   }
   void makeHash(){
     _hash = Hash(82);
-    _hash.modify(T.stringof);
+    _hash.modify(VT.stringof);
   }
   
   this(string name, _esdl__Proxy root) {
@@ -321,7 +335,7 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
   }
 
   
-  abstract T* getRef();
+  abstract VPTR getRef();
 
   override long value() {
     return cast(long) *(getRef());
@@ -329,11 +343,11 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
 
   override void setVal(ulong[] value) {
     static if (HAS_RAND_ATTRIB) {
-      Unconst!T newVal;
+      Unconst!VT newVal;
       foreach (i, v; value) {
-	static if(isIntegral!T || isBoolean!T) {
+	static if(isIntegral!VT || isBoolean!VT) {
 	  if (i == 0) {
-	    newVal = cast(T) v;
+	    newVal = cast(VT) v;
 	  }
 	  else {
 	    assert(false, "word has to be 0 for integrals");
@@ -353,7 +367,12 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
 	import std.stdio;
 	writeln("Setting value of ", _esdl__getFullName(), " to: ", newVal);
       }
-      *(getRef()) = newVal;
+      static if (ISPACKED) {
+	(*(getRef()))[OFFSET..OFFSET+tSize] = newVal;
+      }
+      else {
+	*(getRef()) = newVal;
+      }
       markSolved();
     }
     else {
@@ -362,13 +381,13 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
   }
 
   override void setVal(ulong val) {
-    static if (isBitVector!T) {
-      assert (T.SIZE <= 64);
+    static if (isBitVector!VT) {
+      assert (VT.SIZE <= 64);
     }
     static if (HAS_RAND_ATTRIB) {
-      Unconst!T newVal;
-      static if (isIntegral!T || isBoolean!T) {
-	newVal = cast(T) val;
+      Unconst!VT newVal;
+      static if (isIntegral!VT || isBoolean!VT) {
+	newVal = cast(VT) val;
       }
       else {
 	newVal._setNthWord(val, 0);
@@ -386,7 +405,12 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
 	import std.stdio;
 	writeln("Setting value of ", _esdl__getFullName(), " to: ", newVal);
       }
-      *(getRef()) = newVal;
+      static if (ISPACKED) {
+	(*(getRef()))[OFFSET..OFFSET+tSize] = newVal;
+      }
+      else {
+	*(getRef()) = newVal;
+      }
       markSolved();
     }
     else {
@@ -397,15 +421,26 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
   override void _esdl__doRandomize(_esdl__RandGen randGen) {
     static if (HAS_RAND_ATTRIB) {
       if (! isSolved()) {
-	Unconst!T newVal;
+	Unconst!VT newVal;
 	assert (randGen !is null);
 	randGen.gen(newVal);
-	if (newVal != *(getRef())) {
-	  _valueChanged = true;
-	  *(getRef()) = newVal;
+	static if (ISPACKED) {
+	  if (newVal != cast(VT) ((*(getRef()))[OFFSET..OFFSET+tSize])) {
+	    _valueChanged = true;
+	    (*(getRef()))[OFFSET..OFFSET+tSize] = newVal;
+	  }
+	  else {
+	    _valueChanged = false;
+	  }
 	}
 	else {
-	  _valueChanged = false;
+	  if (newVal != *(getRef())) {
+	    _valueChanged = true;
+	    *(getRef()) = newVal;
+	  }
+	  else {
+	    _valueChanged = false;
+	  }
 	}
 	this.reset();
       }
@@ -423,10 +458,15 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
   
   override bool updateVal() {
     assert(_esdl__isRand() !is true);
-    Unconst!T newVal;
+    Unconst!VT newVal;
     assert (_root !is null);
     if (! this.isSolved()) {
-      newVal = *(getRef());
+      static if (ISPACKED) {
+	newVal = cast(VT) ((*(getRef()))[OFFSET..OFFSET+tSize]);
+      }
+      else {
+	newVal = *(getRef());
+      }
       this.markSolved();
       if (newVal != _shadowValue) {
 	_shadowValue = newVal;
@@ -441,29 +481,29 @@ abstract class CstVecDomain(T, rand RAND_ATTR): CstDomBase
     return true;
   }
 
-  static if (isIntegral!T) {
+  static if (isIntegral!VT) {
     import std.traits;
-    static if (isSigned!T) {
+    static if (isSigned!VT) {
       enum bool tSigned = true;
     }
     else {
       enum bool tSigned = false;
     }
-    enum size_t tSize = T.sizeof * 8;
+    enum size_t tSize = VT.sizeof * 8;
   }
-  else static if (isBoolean!T) {
+  else static if (isBoolean!VT) {
     enum bool tSigned = false;
     enum size_t tSize = 1;
   }
-  else static if (isBitVector!T) {
-    static if (T.ISSIGNED) {
+  else static if (isBitVector!VT) {
+    static if (VT.ISSIGNED) {
       enum bool tSigned = true;
     }
     else {
       enum bool tSigned = false;
     }
-    static if (T.SIZE <= 64) {
-      enum size_t tSize = T.SIZE;
+    static if (VT.SIZE <= 64) {
+      enum size_t tSize = VT.SIZE;
     }
   }
 

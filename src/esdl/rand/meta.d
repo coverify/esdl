@@ -399,49 +399,67 @@ template _esdl__RandDeclVars(T, int I, PT, int PI)
       static if (is (T == U*, U) && is (U == struct)) alias TT = U;
       else                                            alias TT = T;
 
-      enum string _esdl__RandDeclVars =
-	"  public _esdl__RandProxyType!(_esdl__T, " ~ I.stringof ~
-	", _esdl__PROXYT, " ~ PI.stringof ~ ") " ~
-	__traits(identifier, TT.tupleof[I]) ~ ";\n" ~
-	_esdl__RandDeclPackedVars!(T, I, PT, PI) ~
-	_esdl__RandDeclVars!(T, I+1, PT, PI+1);
+      static if (isPacked!(T, I)) {
+	enum string _esdl__RandDeclVars =
+	  _esdl__RandDeclPackedVars!(TT, I, PT, PI, __traits(getAttributes,
+								 TT.tupleof[I])) ~
+	  _esdl__RandDeclVars!(T, I+1, PT, PI+
+			       _esdl__RandCountPackedVars!(__traits(getAttributes,
+								    TT.tupleof[I])));
+      }
+      else {
+	enum string _esdl__RandDeclVars =
+	  "  public _esdl__RandProxyType!(_esdl__T, " ~ I.stringof ~
+	  ", _esdl__PROXYT, " ~ PI.stringof ~ ") " ~
+	  __traits(identifier, TT.tupleof[I]) ~ ";\n" ~
+	  _esdl__RandDeclVars!(T, I+1, PT, PI+1);
+      }
     }
   }
 }
 
-template _esdl__RandDeclPackedVars(T, int I, PT, int PI)
-{
-  static if (isPacked!(T, I)) {
-    enum string _esdl__RandDeclPackedVars =
-      _esdl__ListRandDeclPackedVars!(T, I, PT, PI, __traits(getAttributes,
-							    T.tupleof[I]));
-  }
-  else enum string _esdl__RandDeclPackedVars = "";
-}
-
-template _esdl__ListRandDeclPackedVars(T, int I, PT, int PI, Attribs...)
+template _esdl__RandDeclPackedVars(T, int I, PT, int PI, Attribs...)
 {
   import esdl.data.packed: _esdl__packed_info, _esdl__packed_type;
   static if (Attribs.length == 0)
-    enum string _esdl__ListRandDeclPackedVars = "";
+    enum string _esdl__RandDeclPackedVars = "";
   else {
     static if (__traits(compiles, typeof(Attribs[0])) &&
 	       is (typeof(Attribs[0]) == _esdl__packed_info)) {
-      enum string _esdl__ListRandDeclPackedVars =
+      static if (Attribs[0].isRand == true) enum string RANDSTR = "rand(false, false), ";
+      else enum RANDSTR = "rand(true, true), ";
+      enum string _esdl__RandDeclPackedVars =
 	" public CstVectorIdx!(_esdl__packed_type!(" ~
 	Attribs[0].type ~ ", " ~ Attribs[0].aggrtype ~ ", " ~
-	Attribs[0].offset.stringof ~ "), rand(false, false), " ~
-	Attribs[0].aggrtype ~ ", " ~ I.stringof ~ ", _esdl__PROXYT, " ~
+	Attribs[0].offset.stringof ~ "), " ~ RANDSTR ~ Attribs[0].aggrtype ~
+	", " ~ I.stringof ~ ", _esdl__PROXYT, " ~
 	PI.stringof ~ ") " ~ Attribs[0].name ~ ";\n" ~
-	_esdl__ListRandDeclPackedVars!(T, I, PT, PI, Attribs[1..$]);
+	_esdl__RandDeclPackedVars!(T, I, PT, PI+1, Attribs[1..$]);
     }
     else {
-      enum string _esdl__ListRandDeclPackedVars =
-	_esdl__ListRandDeclPackedVars!(T, I, PT, PI, Attribs[1..$]);
+      enum string _esdl__RandDeclPackedVars =
+	_esdl__RandDeclPackedVars!(T, I, PT, PI, Attribs[1..$]);
     }
   }
 }
 
+template _esdl__RandCountPackedVars(Attribs...)
+{
+  import esdl.data.packed: _esdl__packed_info, _esdl__packed_type;
+  static if (Attribs.length == 0)
+    enum uint _esdl__RandCountPackedVars = 0;
+  else {
+    static if (__traits(compiles, typeof(Attribs[0])) &&
+	       is (typeof(Attribs[0]) == _esdl__packed_info)) {
+      enum uint _esdl__RandCountPackedVars = 1 +
+	_esdl__RandCountPackedVars!(Attribs[1..$]);
+    }
+    else {
+      enum uint _esdl__RandCountPackedVars =
+	_esdl__RandCountPackedVars!(Attribs[1..$]);
+    }
+  }
+}
 
 template _esdl__ConstraintsDecl(T, int I=0)
 {
