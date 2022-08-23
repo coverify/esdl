@@ -7,48 +7,47 @@
 // Authors:   Puneet Goel <puneet@coverify.com>
 
 module esdl.rand.cover;
-import std.stdio;
 // Coverage
 //import esdl.rand.misc;
+
+// import esdl.rand;
+// import esdl.data.bvec;
+import std.conv;
+
 
 static string doParse(T)(string Bins){
   parser!T Parser = parser!T(Bins);
   return Parser.parse();
 }
 
-class CoverGroup {
-  Parameters option;
-  static StaticParameters type_option;
-}
-
-void sample (T)(T grp) if (is(T: CoverGroup)){
-  foreach (ref elem; grp.tupleof){
-    if (!elem.isCross()){
-      elem.sample();
-    }
-  }
-  foreach (ref elem; grp.tupleof){
-    if (elem.isCross()){
-      elem.sample();
-    }
-  }
- }
-void sample (T)(T grp) if (!is(T: CoverGroup)){
-  foreach (ref elem; grp.tupleof){
-    static if (is(typeof(elem): CoverGroup)){
-      sample(elem);
-    }
-  }
- }
-double get_coverage (T)(T grp) if (is(T: CoverGroup)){
-  double total = 0;
-  size_t weightSum = 0;
-  foreach (ref elem; grp.tupleof){
-    total += elem.get_coverage()*elem.get_weight();
-    weightSum += elem.get_weight();
-  }
-  return total/weightSum;
- }
+// void sample (T)(T grp) if (is(T: CoverGroup)){
+//   foreach (ref elem; grp.tupleof){
+//     if (!elem.isCross()){
+//       elem.sample();
+//     }
+//   }
+//   foreach (ref elem; grp.tupleof){
+//     if (elem.isCross()){
+//       elem.sample();
+//     }
+//   }
+//  }
+// void sample (T)(T grp) if (!is(T: CoverGroup)){
+//   foreach (ref elem; grp.tupleof){
+//     static if (is(typeof(elem): CoverGroup)){
+//       sample(elem);
+//     }
+//   }
+//  }
+// double get_coverage (T)(T grp) if (is(T: CoverGroup)){
+//   double total = 0;
+//   size_t weightSum = 0;
+//   foreach (ref elem; grp.tupleof){
+//     total += elem.get_coverage()*elem.get_weight();
+//     weightSum += elem.get_weight();
+//   }
+//   return total/weightSum;
+//  }
 // double get_curr_coverage (T)(T grp) if (is(T: CoverGroup)){
 //   double total = 0;
 //   size_t weightSum = 0;
@@ -69,10 +68,8 @@ void stop (T)(T grp) if (is(T: CoverGroup)){
   }
  }
 struct parser (T){
-  import std.conv;
   enum BinType: byte {SINGLE, DYNAMIC, STATIC};
   size_t srcCursor = 0;
-  size_t outCursor = 0;
   size_t srcLine = 0;
   string outBuffer = "";
   string BINS;
@@ -614,7 +611,6 @@ struct parser (T){
 }
 
 struct WildCardBin(T){
-  import std.conv;
   string _bin;
   string _name;
   size_t _hits = 0;
@@ -623,7 +619,7 @@ struct WildCardBin(T){
     _bin = num;
     _name = word;
     int p = 1, i = _bin.length.to!int() - 1;
-    writeln(i);
+    // writeln(i);
     while(i >= 0){
       if(_bin[i] == '1'){
         _ones += p;
@@ -872,7 +868,6 @@ struct Bin(T)
 
   string describe()
   {
-    import std.conv;
     string s = "Name : " ~ _name ~ "\n";
     foreach (elem; _ranges)
       {
@@ -925,7 +920,6 @@ string makeArray(size_t len, string type,string name){
 }
 
 string crossSampleHelper(int n){
-  import std.conv;
   string s = "bool [][] curr_hits_arr;\n";
   for(int i = 0; i < n; i++){
     s ~= "curr_hits_arr ~= coverPoints[" ~ i.to!string() ~ "].get_curr_hits();\n";
@@ -950,7 +944,6 @@ string crossSampleHelper(int n){
 }
 
 string arrayInitialising(string name, int n){
-  import std.conv;
   string s,tmp = name;
   s ~= name ~ ".length = bincnts[0];\n";
   for(int i = 0; i < n; i++){
@@ -967,7 +960,6 @@ string arrayInitialising(string name, int n){
 }
 
 string sampleCoverpoints(int n){
-  import std.conv;
   string s;
   for(int i = 0; i < n; i++){
     s ~= "if (isIntegral!(typeof(N[" ~ i.to!string() ~ "])))";
@@ -991,7 +983,7 @@ class Cross ( N... ): coverInterface{
         bincnts ~= elem.getBins().length;
       }
       else {
-        auto tmp = new CoverPoint!(elem)();
+        auto tmp = new CoverPoint!(elem)(); // here you make from classes which you define inside Cross only
         coverPoints ~= tmp;
         bincnts ~= tmp.getBins().length;
       }
@@ -1006,11 +998,9 @@ class Cross ( N... ): coverInterface{
   }
   override double get_coverage(){
     return 0;
-
   }
   override double get_curr_coverage(){
     return 0;
-
   }
   override void start(){
 
@@ -1043,9 +1033,9 @@ struct StaticParameters {
   size_t weight = 1;
   size_t goal = 90;
 }
-class CoverPoint(alias t, string BINS="", N...) : coverInterface{
+abstract class CoverPoint(T, string BINS="", N...) : coverInterface{
   import std.traits: isIntegral;
-  alias T = typeof(t);
+  T t();
   string outBuffer;
   bool [] _curr_hits;
   bool [] _curr_wild_hits;
@@ -1100,7 +1090,6 @@ class CoverPoint(alias t, string BINS="", N...) : coverInterface{
     return _bins;
   }
 
-  import std.conv;
   
   void procIgnoreBins(){
     if (_ig_bins.length == 0){
@@ -1156,9 +1145,7 @@ class CoverPoint(alias t, string BINS="", N...) : coverInterface{
         }
         size_t rangeCount = size_t(ranges[i+1]) - size_t(ranges[i]) + 1;
         if(rangeCount > binleft){
-          //makeBins ~= 
-
-          alias_bins[$ - (arrSize - binNum)].addRange((ranges[i]), (ranges[i] + binleft - 1));
+          alias_bins[$ - (arrSize - binNum)].addRange((ranges[i]), cast(T)(ranges[i] + binleft - 1));
           ranges[i] += binleft;
           binleft = 0;
           i -= 2;
@@ -1183,7 +1170,7 @@ class CoverPoint(alias t, string BINS="", N...) : coverInterface{
     return s;
   }
   override void sample(){
-    // writeln("sampleCalled");
+    // writeln("sampleCalled, number is ", t);
     bool hasHit = false;
     foreach (i, ref ill_wbin; _ill_wildbins){
       if (ill_wbin.checkHit(t)){
@@ -1199,8 +1186,10 @@ class CoverPoint(alias t, string BINS="", N...) : coverInterface{
     foreach(i, ref bin;_bins){
       _curr_hits[i] = false;
       if(bin.checkHit(t)){
+	// writeln("bin hit, bin = ", bin.describe());
         if (bin._hits == 0){
           _num_hits ++;
+	  // writeln("first time hit, num_hits ++");
         }
 	hasHit = true;
         bin._hits++;
@@ -1259,95 +1248,268 @@ class CoverPoint(alias t, string BINS="", N...) : coverInterface{
   }
 }
 
-unittest {
-  int p;
-  auto x = new CoverPoint!(p, q{
-      bins a = {     1 , 2 }  ;
-
-    })();
-  import std.stdio;
-  writeln(x.describe()); 
-}
-unittest {
-  int p;
-  auto x = new CoverPoint!(p, q{
-      bins a = { [0:63],65 };
-      bins [] b = { [127:130],[137:147],200,[100:108] }; // note overlapping values
-      bins [3]c = { 200,201,202,204 };
-      bins d = { [1000:$] };
-      bins e = { 125 };
-      ignore_bins []a = { 5 , [20:30] };
-      ignore_bins [3]b = { [100:104] };
-    })();
-  import std.stdio;
-  writeln(x.describe()); 
-}
-unittest {
-  int p;
-  auto x = new CoverPoint!(p, q{
-      bins [32] a = {[-2147483647:2147483647]};
-    })();
-  import std.stdio;
-  writeln(x.describe());
-}
-unittest{
-  int a = 5, d = 3;
-  auto cp = new CoverPoint!(d, q{
-      bins [2] a = {2,3};
-      option.weight = 4;
-    })();
-  auto cp2 = new CoverPoint!(a, q{
-      bins [] cp2 = {4,5};
-    })();
-  auto x = new Cross!(cp, cp2)();
-  import std.stdio;
-  writeln(cp.option.weight);
-  cp.sample();
-  cp2.sample();
-  x.sample();
-  auto tmp = x.get_cross_curr_hits();
-  assert(tmp[1][1] && !tmp[0][0] && !tmp[0][1] && !tmp[1][0]);
-
-  a = 4;
-  cp.sample();
-  cp2.sample();
-  x.sample();
-  tmp = x.get_cross_curr_hits();
-  assert(tmp[1][0] && !tmp[0][0] && !tmp[0][1] && !tmp[1][1]);
-
-  d = 2;
-  cp.sample();
-  cp2.sample();
-  x.sample();
-  tmp = x.get_cross_curr_hits();
-  assert(!tmp[1][0] && tmp[0][0] && !tmp[0][1] && !tmp[1][1]);
-  // sampling works
-}
-
-unittest{
-  int a = 1, b = 2;
-  auto x = new CoverPoint!(a, q{
-      bins x1 = {1,2,3};
-      bins x2 = {1};
-      bins x3 = default;
-    })();
-
-
-  auto xb = new Cross!(x,b)();
-  x.sample();
-  xb.sample();
-}
-unittest {
-  int a = 13;
-  auto x = new CoverPoint!(a, q{
-      bins a = {1 , 4 , $0}  ;
-      wildcard bins abx = { 4ab11?? };
-    }, 3)();
-  import std.stdio;
-  for(int i = 12; i < 16; i++){
-    a = i;
-    x.sample();
-    assert(x._curr_wild_hits[0]);
+struct CoverGroupParser {
+  size_t srcCursor = 0;
+  size_t srcLine = 0;
+  string S;
+  string outBuffer = "";
+  void fill(in string source) {
+    outBuffer ~= source;
   }
-  writeln(x.describe());
+  this(string s) {
+    S = s;
+  }
+  size_t parseName() {
+    auto start = srcCursor;
+    while(S[srcCursor] != ';' && S[srcCursor] != ':' && S[srcCursor] != ' ' && S[srcCursor] != '=' && S[srcCursor] != '\n'&& S[srcCursor] != '\t' ){
+      ++srcCursor;
+    }
+    return start;
+  }
+  bool parseCoverPointDecl() {
+    if (S.length >= srcCursor+10 && S[srcCursor..srcCursor+10] == "coverpoint"){
+      srcCursor += 10;
+      return true;
+    }
+    return false;
+  }
+  bool parseCrossDecl() {
+    if (S.length >= srcCursor+5 && S[srcCursor..srcCursor+5] == "cross"){
+      srcCursor += 5;
+      return true;
+    }
+    return false;
+  }
+    size_t parseLineComment() {
+    size_t start = srcCursor;
+    if (srcCursor >= S.length - 2 ||
+        S[srcCursor] != '/' || S[srcCursor+1] != '/') return start;
+    else {
+      srcCursor += 2;
+      while (srcCursor < S.length) {
+        if (S[srcCursor] == '\n') {
+          break;
+        }
+        else {
+          if (srcCursor == S.length) {
+            // commment unterminated
+            assert (false, "Line comment not terminated at line "~ srcLine.to!string);
+          }
+        }
+        srcCursor += 1;
+      }
+      srcCursor += 1;
+      return start;
+    }
+  }
+
+  size_t parseBlockComment() {
+    size_t start = srcCursor;
+    if (srcCursor >= S.length - 2 ||
+        S[srcCursor] != '/' || S[srcCursor+1] != '*') return start;
+    else {
+      srcCursor += 2;
+      while (srcCursor < S.length - 1) {
+        if (S[srcCursor] == '*' && S[srcCursor+1] == '/') {
+          break;
+        }
+        else {
+          if (srcCursor == S.length - 1) {
+            // commment unterminated
+            assert (false, "Block comment not terminated at line "~ srcLine.to!string);
+          }
+        }
+        srcCursor += 1;
+      }
+      srcCursor += 2;
+      return start;
+    }
+  }
+  size_t parseNestedComment() {
+    size_t nesting = 0;
+    size_t start = srcCursor;
+    if (srcCursor >= S.length - 2 ||
+        S[srcCursor] != '/' || S[srcCursor+1] != '+') return start;
+    else {
+      srcCursor += 2;
+      while (srcCursor < S.length - 1) {
+        if (S[srcCursor] == '/' && S[srcCursor+1] == '+') {
+          nesting += 1;
+          srcCursor += 1;
+        }
+        else if (S[srcCursor] == '+' && S[srcCursor+1] == '/') {
+          if (nesting == 0) {
+            break;
+          }
+          else {
+            nesting -= 1;
+            srcCursor += 1;
+          }
+        }
+        srcCursor += 1;
+        if (srcCursor >= S.length - 1) {
+          // commment unterminated
+          assert (false, "Block comment not terminated at line "~ srcLine.to!string);
+        }
+      }
+      srcCursor += 2;
+      return start;
+    }
+  }
+  size_t parseComment(){
+    auto start = srcCursor;
+    while (srcCursor < S.length) {
+      auto srcTag = srcCursor;
+      parseLineComment();
+      parseBlockComment();
+      parseNestedComment();
+      if (srcCursor > srcTag) {
+        continue;
+      }
+      else {
+        break;
+      }
+    }
+    return start;
+  }
+  size_t parseWhiteSpace() {
+    auto start = srcCursor;
+    while (srcCursor < S.length) {
+      auto c = S[srcCursor];
+      // eat up whitespaces
+      if (c is '\n') ++srcLine;
+      if (c is ' ' || c is '\n' || c is '\t' || c is '\r' || c is '\f') {
+        ++srcCursor;
+        continue;
+      }
+      else {
+        break;
+      }
+    }
+    return start;
+  }
+
+  size_t parseSpace() {
+    size_t start = srcCursor;
+    while (srcCursor < S.length) {
+      auto srcTag = srcCursor;
+
+      parseLineComment();
+      parseBlockComment();
+      parseNestedComment();
+      parseWhiteSpace();
+      
+      
+      if (srcCursor > srcTag) {
+        continue;
+      }
+      else {
+        break;
+      }
+    }
+    return start;
+  }
+
+  size_t nextEndCurlyBrace() {
+    size_t start = srcCursor;
+    int bracketCount = 0;
+    while (srcCursor < S.length && bracketCount >= 0){
+      if (S[srcCursor] == '{'){
+	bracketCount ++;
+      }
+      else if (S[srcCursor] == '}'){
+	bracketCount --;
+      }
+      srcCursor ++;
+    }
+    if (srcCursor == S.length) {
+      assert (false, "unterminated '{' at line " ~ srcLine.to!string);
+    }
+    return start;
+  }
+  
+  string parse() {    
+    parseSpace();
+    int coverpointNumber = 0;
+    string [] cp_names;
+    while (srcCursor < S.length){
+      
+      if (parseCoverPointDecl()){
+	parseSpace();
+        auto srcTag = parseName();
+	string name = S[srcTag .. srcCursor];
+	parseSpace();
+	string coverpointName = "";
+	if (S[srcCursor] == '{'){
+	  // goto next }
+	  srcCursor ++;
+	  srcTag = nextEndCurlyBrace();
+	  coverpointName = "CoverPoint!(typeof(" ~ name ~ "), \" " ~ S[srcTag .. srcCursor-1] ~ "\")";
+	}
+	else {
+	  if (S[srcCursor] != ';'){
+	    assert (false, "expected ; at line " ~ srcLine.to!string);
+	  }
+	  srcCursor ++;
+	  coverpointName = "CoverPoint!(typeof(" ~ name ~ "))";
+	}
+	if (cp_names.length == coverpointNumber)
+	  cp_names ~= "_esdl__coverpoint_" ~ coverpointNumber.to!string;
+	outBuffer ~= coverpointName ~ " " ~ cp_names[$-1] ~ ";\n";
+	outBuffer ~= "class " ~ cp_names[$-1] ~ "_esdl__proxy : " ~ coverpointName ~ " { \n override typeof(" ~ name ~ ") t() { return " ~ name ~ "; }\n }\n";
+      }
+      else if (parseCrossDecl()){ // TODO
+	
+      }
+      else {
+	if (cp_names.length > coverpointNumber){
+	  assert (false, "expected 'coverpoint' or 'cross'at line " ~ srcLine.to!string);
+	}
+        auto srcTag = parseName();
+	string name = S[srcTag .. srcCursor];
+	parseSpace();
+	if (S[srcCursor] != ':'){
+	  assert(false, "expected : at line " ~ srcLine.to!string);
+	}
+	cp_names ~= name;
+	srcCursor++;
+	parseSpace();
+	continue;
+      }
+      parseSpace();
+      coverpointNumber ++;
+    }
+    outBuffer ~= "this () { \n";
+    for (int i = 0; i < coverpointNumber; i ++){
+      outBuffer ~= cp_names[i] ~ " = new " ~ cp_names[i] ~ "_esdl__proxy();\n";
+    }
+    outBuffer ~= "}\n";
+    outBuffer ~= "void sample() { \n";
+    for (int i = 0; i < coverpointNumber; i ++){
+      outBuffer ~= cp_names[i] ~ ".sample();";
+    }
+    outBuffer ~= "}\n";
+    outBuffer ~= "double get_coverage() {
+      double total = 0;
+      size_t weightSum = 0;\n";
+    for (int i = 0; i < coverpointNumber; i ++){
+      outBuffer ~= "total += " ~ cp_names[i] ~ ".get_coverage() * "~ cp_names[i] ~ ".get_weight();\n";
+      outBuffer ~= "weightSum += " ~ cp_names[i] ~ ".get_weight();\n";
+    }
+    outBuffer ~= "
+    return total/weightSum; }\n";
+    return outBuffer;
+  }
 }
+
+string _esdl__parseCoverGroupString(string S) {
+  CoverGroupParser parser = CoverGroupParser(S);
+  return parser.parse();
+}
+
+mixin template CoverGroup (string S){
+  class covergroup_name { // put name of covergroup instead
+    mixin(_esdl__parseCoverGroupString(S));
+  }
+}
+
