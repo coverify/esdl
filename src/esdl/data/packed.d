@@ -445,7 +445,12 @@ struct packedParser
   }
 }
 
-string packed (string str)()
+mixin template packed(string STR)
+{
+  mixin(packed_str!(STR)());
+}
+
+string packed_str(string str)()
 {
   packedParser parser = packedParser(str);
   return parser.parse();
