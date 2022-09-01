@@ -8,7 +8,11 @@
 
 module esdl.rand.cover;
 // Coverage
-//import esdl.rand.misc;
+import esdl.rand.misc: rand;
+
+
+abstract class _esdl__BaseCoverGroup: rand.disable {
+}
 
 // import esdl.rand;
 // import esdl.data.bvec;
@@ -1082,9 +1086,11 @@ struct StaticParameters {
   size_t weight = 1;
   size_t goal = 90;
 }
+
 abstract class CoverPoint(T, string BINS="", N...) : coverInterface {
   import std.traits: isIntegral;
-  T t();
+  T _esdl__t();
+  alias _esdl__T = T;
   string outBuffer;
   bool [] _curr_hits;
   bool [] _curr_wild_hits;
@@ -1231,20 +1237,21 @@ abstract class CoverPoint(T, string BINS="", N...) : coverInterface {
   override void sample() {
     // writeln("sampleCalled, number is ", t);
     bool hasHit = false;
+    auto tval = _esdl__t();
     foreach (i, ref ill_wbin; _ill_wildbins) {
-      if (ill_wbin.checkHit(t)) {
+      if (ill_wbin.checkHit(tval)) {
 	assert (false, "illegal bin hit");
       }
     }
     foreach (i, ref ill_bin; _ill_bins) {
-      if (ill_bin.checkHit(t)) {
+      if (ill_bin.checkHit(tval)) {
 	assert (false, "illegal bin hit");
       }
     }
     _num_curr_hits = 0;
     foreach (i, ref bin;_bins) {
       _curr_hits[i] = false;
-      if (bin.checkHit(t)) {
+      if (bin.checkHit(tval)) {
 	// writeln("bin hit, bin = ", bin.describe());
         if (bin._hits == 0) {
           _num_hits ++;
@@ -1257,13 +1264,13 @@ abstract class CoverPoint(T, string BINS="", N...) : coverInterface {
       }
     }
     foreach (i, ref ig_wbin; _ig_wildbins) {
-      if (ig_wbin.checkHit(t)) {
+      if (ig_wbin.checkHit(tval)) {
 	return;
       }
     }
     foreach (i, ref wbin; _wildbins) {
       _curr_wild_hits[i] = false;
-      if (wbin.checkHit(t)) {
+      if (wbin.checkHit(tval)) {
         if (wbin._hits == 0) {
           _num_hits++;
         }
@@ -1506,7 +1513,7 @@ struct CoverGroupParser {
     int coverpointNumber = 0;
     string [] cp_names;
     while (srcCursor < S.length) {
-      
+      string cp_name;
       if (parseCoverPointDecl()) {
 	parseSpace();
         auto srcTag = parseName();
@@ -1530,12 +1537,14 @@ struct CoverGroupParser {
 	}
 	if (cp_names.length == coverpointNumber) {
 	  import std.conv;
-	  cp_names ~= "_esdl__coverpoint_" ~ coverpointNumber.to!string;
+	  cp_name = "_esdl__coverpoint_" ~ coverpointNumber.to!string;
+	  cp_names ~= cp_name;
 	}
-	outBuffer ~= coverpointName ~ " " ~ cp_names[$-1] ~ ";\n";
-	outBuffer ~= "class " ~ cp_names[$-1] ~ "_esdl__proxy : " ~
-	  coverpointName ~ " { \n override typeof(" ~ name ~
-	  ") t() { return " ~ name ~ "; }\n }\n";
+	outBuffer ~= "alias " ~ cp_name ~ "_class = " ~
+	  coverpointName ~ ";\n";
+	outBuffer ~= cp_name ~ "_class " ~ cp_name ~ ";\n";
+	outBuffer ~= "class " ~ cp_name ~ "_override : " ~
+	  cp_name ~ "_class { \n override _esdl__T _esdl__t() { return " ~ name ~ "; }\n }\n";
       }
       else if (parseCrossDecl()) { // TODO
 	
@@ -1562,23 +1571,23 @@ struct CoverGroupParser {
       coverpointNumber ++;
     }
     outBuffer ~= "this () { \n";
-    for (int i = 0; i < coverpointNumber; i ++) {
-      outBuffer ~= cp_names[i] ~ " = new " ~ cp_names[i] ~
-	"_esdl__proxy();\n";
+    foreach (cp_name; cp_names) {
+      outBuffer ~= cp_name ~ " = new " ~ cp_name ~
+	"_override();\n";
     }
     outBuffer ~= "}\n";
     outBuffer ~= "void sample() { \n";
-    for (int i = 0; i < coverpointNumber; i ++) {
-      outBuffer ~= cp_names[i] ~ ".sample();";
+    foreach (cp_name; cp_names) {
+      outBuffer ~= cp_name ~ ".sample();";
     }
     outBuffer ~= "}\n";
     outBuffer ~= "double get_coverage() {
       double total = 0;
       size_t weightSum = 0;\n";
-    for (int i = 0; i < coverpointNumber; i ++) {
-      outBuffer ~= "total += " ~ cp_names[i] ~ ".get_coverage() * " ~
-	cp_names[i] ~ ".get_weight();\n";
-      outBuffer ~= "weightSum += " ~ cp_names[i] ~ ".get_weight();\n";
+    foreach (cp_name; cp_names) {
+      outBuffer ~= "total += " ~ cp_name ~ ".get_coverage() * " ~
+	cp_name ~ ".get_weight();\n";
+      outBuffer ~= "weightSum += " ~ cp_name ~ ".get_weight();\n";
     }
     outBuffer ~= "
     return total/weightSum; }\n";

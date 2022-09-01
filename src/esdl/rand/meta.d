@@ -33,6 +33,7 @@ import esdl.rand.domain: CstVecValue, CstLogicValue;
 import esdl.rand.proxy;
 import esdl.rand.cstr;
 import esdl.rand.func;
+import esdl.rand.cover: _esdl__BaseCoverGroup;
 
 import esdl.base.rand: _esdl__RandGen, getRandGen;
 
@@ -79,6 +80,10 @@ template _esdl__RandProxyType(T, int I, P, int PI)
   enum rand RAND = getRandAttr!(T, I);
   // pragma(msg, "Looking at: ", T.tupleof[I].stringof);
   static if (is (L: rand.disable)) {
+    alias _esdl__RandProxyType = _esdl__NotMappedForRandomization;
+  }
+  // constraints shall soon be implemented as structs -- ToDo
+  else static if (is (L: constraint!STR, string STR)) {
     alias _esdl__RandProxyType = _esdl__NotMappedForRandomization;
   }
   else static if (isRandomizable!L) {
@@ -282,6 +287,23 @@ void _esdl__doInitConstraintElems(P, Q, int I=0)(P p, Q q) {
     _esdl__doInitConstraintElems!(P, Q, I+1)(p, q);
   }
 }
+
+void _esdl__doInitCoverageElems(P, int I=0)(P p) {
+  static if (I >= p.tupleof.length) {
+    return;
+  }
+  else {
+    alias E = typeof (p.tupleof[I]);
+    // pragma(msg, E.stringof);
+    static if (is (E: _esdl__BaseCoverGroup)) {
+      if (p.tupleof[I] is null) {
+	p.tupleof[I] = p.new E();
+      }
+    }
+    _esdl__doInitCoverageElems!(P, I+1)(p);
+  }
+}
+
 
 void _esdl__doSetDomainContext(_esdl__ConstraintBase cst) { cst.doSetDomainContext(); }
 void _esdl__doProcDomainContext(_esdl__ConstraintBase cst) { cst.doProcDomainContext(); }
@@ -780,6 +802,32 @@ mixin template Randomization()
   }
   
   static if (is (typeof(this) == class)) {
+    import esdl.rand.cover: _esdl__BaseCoverGroup;
+    class covergroup(string CoverSpec): _esdl__BaseCoverGroup {
+      // alias _esdl__CG_OUTER = typeof(this.outer);
+      pragma (msg, _esdl__parseCoverGroupString(CoverSpec));
+      mixin(_esdl__parseCoverGroupString(CoverSpec));
+    }
+
+    static if (__traits(hasMember, typeof(this), "_esdl__covergroups_initialized")) {
+      override void init_coverage() {
+	if (_esdl__covergroups_initialized is false) {
+	  super.init_coverage();
+	  _esdl__covergroups_initialized = true;
+	  _esdl__doInitCoverageElems(this);
+	}
+      }
+    }
+    else {
+      bool _esdl__covergroups_initialized = false;
+      void init_coverage() {
+	if (_esdl__covergroups_initialized is false) {
+	  _esdl__covergroups_initialized = true;
+	  _esdl__doInitCoverageElems(this);
+	}
+      }
+    }
+    
     static class _esdl__ProxyRand(_esdl__T): _esdl__ProxyBase!_esdl__T
     {
       mixin _esdl__ProxyMixin!_esdl__T;
