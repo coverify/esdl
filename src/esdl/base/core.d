@@ -2301,7 +2301,7 @@ class NotificationObj(T): EventObj
       if (l is null) l = new L();
     }
   }
-};
+}
 
 // A struct wrapper for EventObj class -- this is basically to make
 // local instantiation more user-friendly. Also since an EventObj
@@ -4531,16 +4531,14 @@ interface Procedure: NamedComp
 }
 
 void waitAll(E...)(E events) {
-  AndSimEvent simE = new AndSimEvent();
-  auto count = simEventsAdd(simE, 0, events);
-  if (count == 0) {
-    auto event = Process.self._timed;
-    // Event dummy = Event();
-    // dummy.initialize("waitAll");
-    simEventsAdd(simE, 0, event);
-    event.notify();
+  static if (E.length == 0) {
+    return;
   }
-  wait(simE);
+  else {
+    AndSimEvent simE = new AndSimEvent();
+    auto count = simEventsAdd(simE, 0, events);
+    wait(simE);
+  }
 }
 
 void waitAny(E...)(E events) {
@@ -6106,7 +6104,7 @@ class BaseRoutine: Process
   override void nextTrigger(EventObj event) {
     _nextTrigger = event;
   }
-
+  
   this(void function() fn, int stage = 0) {
     synchronized(this) {
       _fn = fn;
@@ -6785,6 +6783,10 @@ abstract class Process: Procedure, HierComp, EventClient
   private ProcState _state = ProcState.STARTING;
   private ProcState _origState;
   private ProcState _nextState;	// Right after the process yields
+
+  // Effective only if _state is ProcState.WAITING
+  private ProcWaitType _waitType; // TIMED, EVENT, or FOREVER
+  private SimTime _waitTime;	  // only if wait time is TIMED
 
   protected final ProcState requestState() {
     synchronized(this) {
@@ -7506,6 +7508,10 @@ private enum ProcState: byte
       KILLED = 10,	// end of simulation
       NONE = 11,
       }
+
+enum ProcWaitType: ubyte {
+  TIMED, EVENT, FOREVER
+}
 
 private enum _ACTIVE  = ProcState.WAITING; // <= _ACTIVE are active tasks
 private enum _DEFUNCT = ProcState.FINISHED; // >= _DEFUNCT are defunt tasks
