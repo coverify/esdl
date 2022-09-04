@@ -1511,7 +1511,7 @@ class SignalObj(T, bool MULTI_DRIVER = false): Channel, SignalInOutIF!T
 
   alias VAL_TYPE = T;
 
-  protected Notification!T _changeEvent;
+  protected Event _changeEvent;
   protected T _curVal;
   protected T _newVal;
 
@@ -1545,21 +1545,20 @@ class SignalObj(T, bool MULTI_DRIVER = false): Channel, SignalInOutIF!T
   }
 
   final Event defaultEvent() {
-    Event e = _changeEvent;
-    return e;
+    return _changeEvent;
   }
 
   final Event event() {
     return defaultEvent();
   }
 
-  final Notification!T defaultNotification() {
-    return _changeEvent;
-  }
+  // final Event defaultNotification() {
+  //   return _changeEvent;
+  // }
 
-  final Notification!T notification() {
-    return defaultNotification();
-  }
+  // final Event notification() {
+  //   return defaultNotification();
+  // }
 
   public final T read() {
     synchronized(this) {
@@ -1658,7 +1657,7 @@ class SignalObj(T, bool MULTI_DRIVER = false): Channel, SignalInOutIF!T
   public final override void update() {
     // if(_newVal != _curVal) {
     _curVal = _newVal;
-    _changeEvent.post(0, _curVal);
+    _changeEvent.notify(0);
     updateBindings();
     static if(is(T == bool) || (isBitVector!T && T.SIZE == 1)) {
       // if(_posedgeEvent._eventObj !is null) {

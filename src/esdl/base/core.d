@@ -2172,570 +2172,6 @@ final class IndexedSimEvent
   }
 }
 
-// FIXME -- create a freelist for notifications
-class NotificationObj(T): EventObj
-  // , private EventClient
-{
-  // _data is set when a data is provided while making a notification
-  private T _data;
-  // data is copied over to _dataTriggered when an event is triggered
-  private T _dataTriggered;
-
-  this(NamedComp parent=null) {
-    super(parent);
-  }
-
-  this(SimEvent simEvent, NamedComp parent=null) {
-    super(simEvent, parent);
-  }
-
-  // This function is always called in the schedule phase, when only a
-  // single thread is active -- do we need synchronization guards
-  // here?
-  override protected void trigger(EsdlSimulator sim) {
-    _dataTriggered = _data;
-    super.trigger(sim);
-  }
-
-  // final ProxyEvent proxy() {
-  //   ProxyEvent event = new ProxyEvent();
-  //   event.addAgent(this);
-  //   return event;
-  // }
-
-  //////////////////////////////////////////////////////////////
-  // TimedNotice methods
-  // These methods are applied only for Timed Events, otherwise
-  // a runtime assertion error would occur
-  // Any object can be passed as a data while notifying. The
-  // object becomes available to the waiting threads.
-  /////////////////////////////////////////////////////////////
-
-  // Immediate notification
-  // The thread is *not* stopped to activate immediate
-  // notifications, instead the scheduler has a loop looking for
-  // immediate notifications before it looks for any delta
-  // notifications. As a result if you raise two immediate
-  // notifications one-after-another, the result would be same
-  // as having just one notification
-  void post(T data) {
-    if (this.getTimed().notify()) {
-      synchronized(this) {
-	_data = data;
-      }
-    }
-  }
-
-  // Timed notification -- takes a ulong as an argument and
-  // applies the timescale of this event
-  void post(ulong t, T data) {
-    this.post(SimTime(t * getTimeScale()), data);
-  }
-
-  // Timed notification with Time as argument
-  void post(Time t, T data) {
-    this.post(SimTime(this.getSimulator, t), data);
-  }
-
-  // Timed notification with simulation time steps as argument
-  void post(SimTime t, T data) {
-    if (this.getTimed().notify(t)) {
-      synchronized(this) {
-	_data = data;
-      }
-    }
-  }
-
-  // method to set the data on an event independent of notification
-  final void set(T data) {
-    synchronized(this) {
-      _data = data;
-    }
-  }
-
-  // getter method for getting the data from an event notification
-  // -- this method would be usually called right after wait
-  final T get() {
-    synchronized(this) {
-      return _dataTriggered;
-    }
-  }
-
-  final NotificationQueue!T delayed(D)(D delay)
-    if (is (D == SimTime) || is (D == Time) || isIntegral!D) {
-      auto delN = new NotificationQueueObj!T();
-      cron(this,
-	   {
-	     delN.post(delay, this.get());
-	   });
-      // fork({
-      //	  while (true) {
-      //	    delN.post(delay, observe(this));
-      //	  }
-      //	});
-      NotificationQueue!T n = delN;
-      return n;
-    }
-
-  final Notification!T clocked(ref Event clk) {
-    auto clked = new NotificationObj!T();
-    cron(clk,
-	 {
-	   clked.post(this.get());
-	 });
-    // fork({
-    //	while (true) {
-    //	  clk.wait();
-    //	  clked.post(this.get());
-    //	}
-    //   });
-    Notification!T n = clked;
-    return n;
-  }
-
-  // internal function for event instantiation -- called during the
-  // elaboration phase
-  static void _esdl__inst(size_t I=0, U, L)(U u, ref L l)
-  {
-    synchronized(u) {
-      if (l is null) l = new L();
-    }
-  }
-}
-
-// A struct wrapper for EventObj class -- this is basically to make
-// local instantiation more user-friendly. Also since an EventObj
-// object is copied by refence, named events become more difficult to
-// handle with EventObj.
-// Effectively an Event wrapper is exposed for the API.
-@_esdl__component struct Notification(T)
-{
-  // The wrapped object
-  package NotificationObj!T _notificationObj = null;
-
-  // seek the object by reference. This function is used during the
-  // elaboration phase. Do not use it otherwise.
-  package ref NotificationObj!T _esdl__objRef() {
-    return _notificationObj;
-  }
-
-  NotificationObj!T _esdl__obj() {
-    // Use double-locked checking -- assumption Intel Processor Architecture
-    // All the pointer read writes are atomic
-    if (this._notificationObj is null) {
-      synchronized(typeid(Notification!T)) {
-	if (this._notificationObj is null) {
-	  NotificationObj!T be = new NotificationObj!T();
-	  this._notificationObj = be;
-	}
-      }
-    }
-    return this._notificationObj;
-  }
-
-
-  alias _esdl__obj this;
-  alias _esdl__obj getNotification;
-
-  // postblit
-  this(this) {
-    import std.exception: enforce;	// enforce
-    enforce((this._notificationObj !is null),
-	    "Attempt to copy un-initialized notification");
-  }
-
-  this(SimEvent e) {
-    this.initialize;
-    synchronized(e) {
-      synchronized(getNotification) {
-	import std.exception: enforce;
-	enforce((e._eventObj is null));
-	e._eventObj = this.getNotification;
-	this.getNotification._simEvent = e;
-      }
-    }
-  }
-
-
-  // Disallow Event assignment
-  @disable private void opAssign(Notification!T e);
-
-  // User API
-
-  final void opAssign(SimEvent e) {
-    this.initialize();
-    synchronized(e) {
-      synchronized(getNotification) {
-	import std.exception: enforce;	// enforce
-	enforce(e._eventObj is null);
-	enforce(this.getNotification._simEvent is null);
-	e._eventObj = this.getNotification;
-	this.getNotification._simEvent = e;
-      }
-    }
-  }
-
-
-  // static Notification!T opCall() {
-  //   Notification!T notification;
-  //   notification.initialize();
-  //   return notification;
-  // }
-
-  this(string name) {
-    this.initialize(name);
-  }
-
-  static Notification!T[] opIndex(size_t n) {
-    Notification!T[] notifications = new Notification!T[n];
-    foreach (ref notification;notifications) {
-      synchronized {
-	notification.initialize();
-      }
-    }
-    return notifications;
-  }
-
-  final void initialize(NamedComp parent=null) {
-    initialize(null, parent);
-  }
-
-  final void initialize(string name, NamedComp parent=null) {
-    synchronized {
-      if (RootThread.self !is null && parent is null) {
-	assert(false, "Must provide parent for NotificationObj being " ~
-	       "\"initialize\" during elaboration");
-      }
-      if (_notificationObj is null) {
-	_notificationObj = new NotificationObj!T(parent);
-      }
-      if (name !is null) {
-	_notificationObj._esdl__nomenclate_inst(name);
-	_notificationObj._esdl__setObjId();
-      }
-    }
-  }
-  // alias initialize init;
-
-  final void opAssign()(NotificationObj!T e) {
-    import std.exception: enforce;	// enforce
-    enforce(this._notificationObj is null);
-    this._eventObj = e;
-  }
-
-  this(NotificationObj!T e) {
-    this._notificationObj = e;
-  }
-
-  static void _esdl__inst(size_t I=0, T, L)(T t, ref L l) {
-    l._esdl__objRef._esdl__inst!I(t, l._esdl__objRef);
-  }
-
-  static void _esdl__elab(size_t I, T, L)(T t, ref L l, uint[] indices=null)
-  {
-    debug(ELABORATE) {
-      import std.stdio;
-      stderr.writeln("** Notification: Elaborating " ~ t.tupleof[I].stringof ~ ":" ~
-		     typeof(l).stringof);
-    }
-    l._esdl__inst!I(t, l);
-    synchronized(l._esdl__obj) {
-      static if (is (T unused: ElabContext)) {
-	t._esdl__addChildObj(l._esdl__obj);
-      }
-      l._esdl__obj._esdl__setParent(t);
-      l._esdl__obj._esdl__setObjId();
-      l._esdl__obj._esdl__nomenclate!I(t, indices);
-    }
-  }
-}
-
-
-// Notification Queue -- just like event queues in SystemC.
-// FIXME -- review later since this is not required for UVM --
-// actually does not even have an equivalent functionality in
-// SystemVerilog
-class NotificationQueueObj(T): NotificationObj!T
-{
-  import std.container: BinaryHeap;
-  private TimedNotice[] _nQueue;
-  private TimedNotice _currentNotice;
-
-  static int less(T)(T a, T b) {
-    return a < b;
-  }
-
-  static int greater(T)(T a, T b) {
-    return a > b;
-  }
-
-  alias BinaryHeap!(TimedNotice[], greater) Heap;
-  private Heap _nHeap;
-
-  struct TimedNotice
-  {
-    enum SimTime invalid = SimTime(ulong.max);
-
-    SimTime _time = invalid;
-    T _data;
-
-    final bool isValid() {
-      return _time != invalid;
-    }
-
-    final void invalidate() {
-      _time = invalid;
-    }
-
-    final int opCmp(TimedNotice rhs) {
-      if (this._time == rhs._time) return 0;
-      if (this._time < rhs._time) return -1;
-      else return 1;
-    }
-  }
-
-
-  protected this(SimEvent simEvent=null) {
-    super(simEvent);
-    synchronized(this) {
-      this._nQueue = new TimedNotice[4];
-      this._nHeap = Heap(_nQueue, 0);
-    }
-  }
-
-  protected final override void trigger(EsdlSimulator sim) {
-    super.trigger(sim);
-    assert((_currentNotice.isValid),
-	   "Heap can not be empty when an NotificationQueueObj triggered");
-    debug(EVENT_HEAP) {
-      import std.stdio;
-      stderr.writeln(getSimulator._simTime, "::", _currentNotice._time);
-      assert(getSimulator._simTime == _currentNotice._time ||
-	     // cover the immediate notifications
-	     getSimulator._simTime == (_currentNotice._time + SimTime(1)));
-    }
-
-    if (_nHeap.empty()) {
-      _currentNotice.invalidate();
-    }
-    else {
-      _currentNotice = _nHeap.front();
-      _nHeap.removeFront();
-      auto t = _currentNotice._time - getSimulator._simTime;
-      if (t == SimTime(-1)) {
-	debug(EVENT_HEAP) {
-	  import std.stdio;
-	  stderr.writeln("Immediate Notification: ", _nHeap.length);
-	}
-	super.post(_currentNotice._data);
-      }
-      else {
-	super.post(t, _currentNotice._data);
-      }
-      debug(EVENT_HEAP) {
-	import std.stdio;
-	stderr.writeln("Next TimedNotice at time: ",
-		       _currentNotice._time - getSimulator._simTime);
-      }
-    }
-  }
-
-  final override void cancel() {
-    synchronized(this) {
-      _currentNotice.invalidate();
-      _nHeap.release();
-      super.cancel();
-    }
-  }
-
-  final override void post(T data) {
-    // since we want to store the immediate notifications too in the
-    // same event heap, we shall represent immediate events as
-    // occuring at SimTime -1
-    this._post(SimTime(-1), data);
-  }
-
-  final override void post(ulong t, T data) {
-    this.post(SimTime(t * getTimeScale()), data);
-  }
-
-  final override void post(SimTime t, T data) {
-    if (t == SimTime(-1)) {
-      assert(false, "Negative SimTime provided with notify");
-    }
-    this._post(t, data);
-  }
-
-  private final void _post(SimTime t, T data) {
-    auto nTime = t + getSimulator._simTime;
-    synchronized(this) {
-      if (this._nQueue.length == this._nHeap.length) {
-	// double the size of underlying array
-	debug(EVENT_HEAP) {
-	  import std.stdio: stderr;
-	  stderr.writeln("Increasing the heap store to: ",
-			 this._nQueue.length * 2);
-	}
-	this._nQueue.length *= 2;
-	this._nHeap.assume(this._nQueue,
-			   this._nHeap.length);
-      }
-      if (_currentNotice.isValid) {
-	if (_currentNotice._time <= nTime) {
-	  this._nHeap.insert(TimedNotice(nTime, data));
-	  return;
-	}
-	else {
-	  super.cancel();
-	  this._nHeap.insert(_currentNotice);
-	  _currentNotice = TimedNotice(nTime, data);
-	  if (t == SimTime(-1)) super.post(_currentNotice._data);
-	  else super.post(t, _currentNotice._data);
-	}
-      }
-      else {
-	_currentNotice = TimedNotice(nTime, data);
-	if (t == SimTime(-1)) super.post(_currentNotice._data);
-	else super.post(t, _currentNotice._data);
-      }
-    }
-  }
-
-  static void _esdl__inst(size_t I=0, U, L)(U u, ref L l)
-  {
-    synchronized(u) {
-      if (l is null) l = new L();
-    }
-  }
-}
-
-
-// Wrapper struct for EventQueueObj
-// Fixme -- review later -- but should be very similar to the Event
-// struct
-@_esdl__component struct NotificationQueue(T)
-{
-  package NotificationQueueObj!T _notificationQueueObj = void;
-
-  package final ref NotificationQueueObj!T _esdl__objRef() {
-    return _notificationQueueObj;
-  }
-
-  final NotificationObj!T _esdl__obj() {
-    // Use double-locked checking -- assumption Intel Processor Architecture
-    // All the pointer read writes are atomic
-    if (this._notificationQueueObj is null) {
-      synchronized(typeid(NotificationQueue!T)) {
-	if (this._notificationQueueObj is null) {
-	  NotificationQueueObj!T be = new NotificationQueueObj!T();
-	  this._notificationQueueObj = be;
-	}
-      }
-    }
-    return this._notificationQueueObj;
-  }
-
-  alias _esdl__obj this;
-  alias _esdl__obj getNotificationQueue;
-
-  // postblit
-  this(this) {
-    import std.exception: enforce;	// enforce
-    enforce((this._notificationQueueObj !is null),
-	    "Attempt to copy un-initialized notificationQueue");
-  }
-
-  this(SimEvent e) {
-    synchronized(e) {
-      synchronized(getNotificationQueue) {
-	import std.exception: enforce;	// enforce
-	enforce((e._eventObj is null));
-	e._eventObj = this.getNotificationQueue;
-	this.getNotificationQueue._simEvent = e;
-      }
-    }
-  }
-
-
-  // Disallow NotificationQueue assignment
-  @disable private void opAssign(NotificationQueue!T e);
-
-  // User API
-
-  final void opAssign(SimEvent e) {
-    synchronized(e) {
-      synchronized(getNotificationQueue) {
-	import std.exception: enforce;	// enforce
-	enforce(e._eventObj is null);
-	enforce(this.getNotificationQueue._simEvent is null);
-	e._eventObj = this.getNotificationQueue;
-	this.getNotificationQueue._simEvent = e;
-      }
-    }
-  }
-
-
-  // static NotificationQueue!T opCall() {
-  //   NotificationQueue!T notification;
-  //   notificationQueue.initialize();
-  //   return notification;
-  // }
-
-  this(string name) {
-    this.initialize(name);
-  }
-
-  final void initialize() {
-    synchronized {
-      if (_notificationQueueObj is null) {
-	_notificationQueueObj = new NotificationQueueObj!T();
-      }
-    }
-  }
-
-  final void initialize(string name) {
-    synchronized {
-      if (_notificationQueueObj is null) {
-	_notificationQueueObj = new NotificationQueueObj!T();
-      }
-      _notificationQueueObj._esdl__nomenclate_inst(name);
-      _notificationQueueObj._esdl__setObjId();
-    }
-  }
-  // alias initialize init;
-
-  final void opAssign()(NotificationQueueObj!T e) {
-    import std.exception: enforce;	// enforce
-    enforce(this._notificationQueueObj is null);
-    this._eventObj = e;
-  }
-
-  this(NotificationQueueObj!T e) {
-    this._notificationQueueObj = e;
-  }
-
-  static void _esdl__inst(size_t I=0, T, L)(T t, ref L l) {
-    l._esdl__objRef._esdl__inst!I(t, l._esdl__objRef);
-  }
-
-  static void _esdl__elab(size_t I, T, L)(T t, ref L l, uint[] indices=null)
-  {
-    debug(ELABORATE) {
-      import std.stdio;
-      stderr.writeln("** NotificationQueue: Elaborating " ~ t.tupleof[I].stringof ~ ":" ~
-		     typeof(l).stringof);
-    }
-    l._esdl__inst!I(t, l);
-    synchronized(l._esdl__obj) {
-      static if (is (T unused: ElabContext)) {
-	t._esdl__addChildObj(l._esdl__obj);
-      }
-      l._esdl__obj._esdl__setParent(t);
-      l._esdl__obj._esdl__setObjId();
-      l._esdl__obj._esdl__nomenclate!I(t, indices);
-    }
-  }
-}
 
 // FIXME -- create a freelist for events
 class EventObj: EventAgent, NamedComp
@@ -4547,15 +3983,6 @@ void waitAny(E...)(E events) {
   wait(simE);
 }
 
-auto observe(E)(E e)
-  if (is (E: NotificationObj!T, T) ||
-     is (E: Notification!T, T) ||
-     is (E: NotificationQueueObj!T, T) ||
-     is (E: NotificationQueue!T, T)) {
-    waitForEvent(e);
-    return e.get();
-  }
-
 void wait(E)(E e)
   if (!is (E == struct) &&
      !isIntegral!E) {
@@ -4616,28 +4043,6 @@ void wait(EventQueue e) {
   waitForEvent(event);
 }
 
-void wait(T)(ref Notification!T e) {
-  e.initialize();
-  auto event = getEventObj(e);
-  waitForEvent(event);
-}
-
-void wait(T)(Notification!T e) {
-  auto event = getEventObj(e);
-  waitForEvent(event);
-}
-
-void wait(T)(ref NotificationQueue!T e) {
-  e.initialize();
-  auto event = getEventObj(e);
-  waitForEvent(event);
-}
-
-void wait(T)(NotificationQueue!T e) {
-  auto event = getEventObj(e);
-  waitForEvent(event);
-}
-
 void wait(IF, size_t N, size_t M)(ref Port!(IF, N, M) e) {
   e.initialize();
   auto event = getEventObj(e);
@@ -4692,28 +4097,6 @@ void waitp(ref EventQueue e) {
 }
 
 void waitp(EventQueue e) {
-  auto event = getEventObj(e);
-  waitForEventP(event);
-}
-
-void waitp(T)(ref Notification!T e) {
-  e.initialize();
-  auto event = getEventObj(e);
-  waitForEventP(event);
-}
-
-void waitp(T)(Notification!T e) {
-  auto event = getEventObj(e);
-  waitForEventP(event);
-}
-
-void waitp(T)(ref NotificationQueue!T e) {
-  e.initialize();
-  auto event = getEventObj(e);
-  waitForEventP(event);
-}
-
-void waitp(T)(NotificationQueue!T e) {
   auto event = getEventObj(e);
   waitForEventP(event);
 }
@@ -5784,7 +5167,7 @@ class BaseWork: Process
 	_thread = new SimThread(format("%s(SimThread)", getName()),
 				root, () {fn_wrap(fn);}, sz);
       }
-      root._simulator._executor.addSimThread(_thread);
+      root._simulator._executor.addWorkThread(_thread);
     }
   }
 
@@ -5801,7 +5184,7 @@ class BaseWork: Process
 	_thread = new SimThread(format("%s(SimThread)", getName()),
 				root, () {dg_wrap(dg);}, sz);
       }
-      root._simulator._executor.addSimThread(_thread);
+      root._simulator._executor.addWorkThread(_thread);
     }
   }
 
@@ -7784,7 +7167,7 @@ class EsdlExecutor: EsdlExecutorIf
 	  _workBarrier = new Barrier(1);
 	}
 	_poolThreadGroup = new ThreadGroup;
-	_simThreadGroup = new ThreadGroup;
+	_workThreadGroup = new ThreadGroup;
 	_workerThreadGroup = new ThreadGroup;
       }
   }
@@ -7805,8 +7188,9 @@ class EsdlExecutor: EsdlExecutorIf
   private PoolThread[] _poolThreads = null;
 
   ThreadGroup _poolThreadGroup;
-  ThreadGroup _simThreadGroup;
-  uint _simThreadCount = 0;
+  ThreadGroup _workThreadGroup;
+
+  SimThread[] _simThreads;
 
   private BaseWorker[] _runningWorkers;
   private BaseWorker[] _newWorkers;
@@ -7846,10 +7230,9 @@ class EsdlExecutor: EsdlExecutorIf
     _stageIndex = cast(int) _registeredProcesses.length - 1;
   }
 
-  private final void addSimThread(SimThread thread) {
+  private final void addWorkThread(SimThread thread) {
     synchronized(this) {
-      _simThreadGroup.add(thread);
-      _simThreadCount += 1;
+      _workThreadGroup.add(thread);
     }
   }
 
@@ -8344,8 +7727,8 @@ class EsdlExecutor: EsdlExecutorIf
 
   // final void joinSimThreads() {
   //   synchronized(this) {
-  //     if (_simThreadCount != 0) {
-  // 	_simThreadGroup.joinAll();
+  //     if (_workThreadCount != 0) {
+  // 	_workThreadGroup.joinAll();
   //     }
   //   }
   // }
