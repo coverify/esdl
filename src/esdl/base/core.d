@@ -5647,9 +5647,9 @@ class EsdlThread: Thread
     return _self;
   }
 
-  static if (!__traits(compiles, _esdl__root)) {
-    @_esdl__ignore protected RootEntity _esdl__root;
-  }
+  // static if (!__traits(compiles, _esdl__root)) {
+  @_esdl__ignore protected RootEntity _esdl__root;
+  // }
 
   this(RootEntity root, void function() fn, size_t sz = 0 ) {
     assert(root !is null);
@@ -5699,9 +5699,9 @@ class SimThread: EsdlThread
     return _self;
   }
 
-  static if (!__traits(compiles, _esdl__root)) {
-    @_esdl__ignore protected RootEntity _esdl__root;
-  }
+  // static if (!__traits(compiles, _esdl__root)) {
+  //   @_esdl__ignore protected RootEntity _esdl__root;
+  // }
 
   this(string name, RootEntity root, void function() fn, size_t sz = 0 ) {
     synchronized(this) {
@@ -6104,9 +6104,7 @@ class BaseRoutine: Process
   private void delegate() _dg = null;
 
   override void nextTrigger(EventObj event) {
-    synchronized(this) {
-      _nextTrigger = event;
-    }
+    _nextTrigger = event;
   }
 
   this(void function() fn, int stage = 0) {
@@ -7543,36 +7541,37 @@ class PoolThread: SimThread
 
   private final void execTaskProcesses() {
     // First set affinity
-    _esdl__root.simulator()._executor._poolThreadInitBarrier.wait();
+    auto executor = _esdl__root.simulator()._executor;
+    executor._poolThreadInitBarrier.wait();
     stickToCpuCore((getRoot().getThreadCoreList()[_poolIndex]) % CPU_COUNT());
 
     while (true) {
       // wait for next cycle
-      _esdl__root.simulator()._executor._poolThreadExecBarrier.wait();
+      executor._poolThreadExecBarrier.wait();
       // this._waitLock.wait();
 
       if (this._hasHalted()) {
-	_esdl__root.simulator()._executor._poolThreadHaltBarrier.wait();
+	executor._poolThreadHaltBarrier.wait();
 	break;
       }
 
-      foreach (proc; this._esdl__root.simulator._executor._terminalTasksGroups[_poolIndex]) {
+      foreach (proc; executor._terminalTasksGroups[_poolIndex]) {
 	if (proc._state >= _KILLED) {
 	  proc._execute();
 	}
       }
-      foreach (proc; this._esdl__root.simulator._executor._runnableTasksGroups[_poolIndex]) {
+      foreach (proc; executor._runnableTasksGroups[_poolIndex]) {
 	if (proc._state == ProcState.RUNNING) {
 	  proc._execute();
 	}
       }
-      _esdl__root.simulator()._executor._poolThreadPostBarrier.wait();
-      foreach (proc; this._esdl__root.simulator._executor._runnableTasksGroups[_poolIndex]) {
-	proc.postExecute();
-      }
-      this._esdl__root.simulator._executor._runnableTasksGroups[_poolIndex].length = 0;
-      this._esdl__root.simulator._executor._terminalTasksGroups[_poolIndex].length = 0;
-      _esdl__root.simulator()._executor._poolThreadDoneBarrier.wait();
+      // executor._poolThreadPostBarrier.wait();
+      // foreach (proc; executor._runnableTasksGroups[_poolIndex]) {
+      // 	proc.postExecute();
+      // }
+      // executor._runnableTasksGroups[_poolIndex].length = 0;
+      // executor._terminalTasksGroups[_poolIndex].length = 0;
+      executor._poolThreadDoneBarrier.wait();
     }
   }
 
@@ -7760,7 +7759,7 @@ class EsdlExecutor: EsdlExecutorIf
   private Barrier _workerBarrier;
   private Barrier _poolThreadExecBarrier;
   private Barrier _poolThreadDoneBarrier;
-  private Barrier _poolThreadPostBarrier;
+  // private Barrier _poolThreadPostBarrier;
   private Barrier _poolThreadHaltBarrier;
   private Barrier _poolThreadInitBarrier;
   // private size_t _numThreads;
@@ -8286,8 +8285,8 @@ class EsdlExecutor: EsdlExecutorIf
 						  "_poolThreadExecBarrier");
 	_poolThreadDoneBarrier = new DebugBarrier(cast(uint)numThreads + 1,
 						  "_poolThreadDoneBarrier");
-	_poolThreadPostBarrier = new DebugBarrier(cast(uint)numThreads + 1,
-						  "_poolThreadPostBarrier");
+	// _poolThreadPostBarrier = new DebugBarrier(cast(uint)numThreads + 1,
+	// 					  "_poolThreadPostBarrier");
 	_poolThreadHaltBarrier = new DebugBarrier(cast(uint)numThreads + 1,
 						  "_poolThreadHaltBarrier");
 	_poolThreadInitBarrier = new DebugBarrier(cast(uint)numThreads + 1,
@@ -8296,7 +8295,7 @@ class EsdlExecutor: EsdlExecutorIf
       else {
 	_poolThreadExecBarrier = new Barrier(cast(uint)numThreads + 1);
 	_poolThreadDoneBarrier = new Barrier(cast(uint)numThreads + 1);
-	_poolThreadPostBarrier = new Barrier(cast(uint)numThreads + 1);
+	// _poolThreadPostBarrier = new Barrier(cast(uint)numThreads + 1);
 	_poolThreadHaltBarrier = new Barrier(cast(uint)numThreads + 1);
 	_poolThreadInitBarrier = new Barrier(cast(uint)numThreads + 1);
       }
@@ -8311,9 +8310,17 @@ class EsdlExecutor: EsdlExecutorIf
     // all threads start here
     _poolThreadExecBarrier.wait();
     // wait for all threads to end
-    _poolThreadPostBarrier.wait();
+    // _poolThreadPostBarrier.wait();
     // wait for postExecute() to end
     _poolThreadDoneBarrier.wait();
+    foreach (ref runnableTasksGroup; _runnableTasksGroups) {
+      foreach (proc; runnableTasksGroup) {
+	proc.postExecute();
+      }
+      runnableTasksGroup.length = 0;
+    }
+    foreach (ref terminalTasksGroup; _terminalTasksGroups)
+      terminalTasksGroup.length = 0;
   }
 
   final void joinPoolThreads() {
