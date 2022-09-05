@@ -2173,6 +2173,13 @@ final class IndexedSimEvent
 }
 
 
+struct Notification
+{
+  EventObj _event;
+  bool _isImmediate;
+  SimTime _time;
+}
+
 // FIXME -- create a freelist for events
 class EventObj: EventAgent, NamedComp
   // , private EventClient
@@ -2454,6 +2461,15 @@ class EventObj: EventAgent, NamedComp
   // notifications one-after-another, the result would be same
   // as having just one notification
   void notify() {
+    SimThread simthread = SimThread._self;
+    if (simthread !is null) {
+      SimThread.addNotification(Notification(this, true, SimTime(0)));
+    }
+    else {
+      _notify();
+    }
+  }
+  void _notify() {
     this.getTimed().notify();
   }
 
@@ -2471,6 +2487,15 @@ class EventObj: EventAgent, NamedComp
 
   // Timed notification with simulation time steps as argument
   void notify(SimTime t) {
+    SimThread simthread = SimThread._self;
+    if (simthread !is null) {
+      simthread.addNotification(Notification(this, false, t));
+    }
+    else {
+      _notify(t);
+    }
+  }
+  void _notify(SimTime t) {
     this.getTimed().notify(t);
   }
 
@@ -5090,6 +5115,7 @@ class SimThread: EsdlThread
       _name = name;
       super(root, () {_self = this; fn();}, sz);
       _waitLock = new Semaphore(0);
+      _esdl__root.simulator()._executor.addSimThread(this);
     }
   }
 
@@ -5099,6 +5125,7 @@ class SimThread: EsdlThread
       _name = name;
       super(root, () {_self = this; dg();}, sz);
       _waitLock = new Semaphore(0);
+      _esdl__root.simulator()._executor.addSimThread(this);
     }
   }
 
@@ -5127,6 +5154,22 @@ class SimThread: EsdlThread
     }
     super.start();
   }
+
+  Deck!(Notification, "notifications") _notifications;
+  // Notification[] _notifications;
+
+  static void addNotification(Notification notice) {
+    _self._notifications ~= notice;
+  }
+
+  void processNotifications() {
+    foreach (ref notice; _notifications) {
+      if (notice._isImmediate) notice._event._notify();
+      else notice._event._notify(notice._time);
+      notice = Notification.init;
+    }
+    _notifications.clear();
+  }
 }
 
 class BaseWork: Process
@@ -5139,11 +5182,13 @@ class BaseWork: Process
 
   override void fn_wrap(void function() fn) {
     Process._self = this;
+    SimThread._self = _thread;
     super.fn_wrap(fn);
   }
 
   override void dg_wrap(void delegate() dg) {
     Process._self = this;
+    SimThread._self = _thread;
     super.dg_wrap(dg);
   }
 
@@ -6922,6 +6967,7 @@ class PoolThread: SimThread
       super(format("PoolThread[%d]", _poolIndex),
 	    root, {
 	      _self = this;
+	      SimThread._self = this;
 	      execTaskProcesses();
 	    }, sz);
       _poolIndex = index;
@@ -7241,6 +7287,10 @@ class EsdlExecutor: EsdlExecutorIf
       _newWorkers ~= worker;
     }
   }
+
+  private final void addSimThread(SimThread thread) {
+      _simThreads ~= thread;
+  }
   
   private final void createPoolThreads(size_t numThreads,
 				       size_t stackSize) {
@@ -7382,6 +7432,9 @@ class EsdlExecutor: EsdlExecutorIf
     // done with the tasks
     foreach (proc; runProcs) {
       proc.postExecute();
+    }
+    foreach (simthread; _simThreads) {
+      simthread.processNotifications();
     }
     // Look at all the requests for thread terminations/suspensions etc
     updateProcs();
