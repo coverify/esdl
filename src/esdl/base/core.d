@@ -3786,9 +3786,9 @@ final class EventNotice
       }
     }
     else if (RootThread.self !is null) {
-      if (RootThread.self._thread._eventNoticeList !is null) {
-	f = RootThread.self._thread._eventNoticeList;
-	RootThread.self._thread._eventNoticeList = f.next;
+      if (RootThread.self._eventNoticeList !is null) {
+	f = RootThread.self._eventNoticeList;
+	RootThread.self._eventNoticeList = f.next;
 	synchronized(f) {
 	  f.time = t;
 	  f._event = event;
@@ -3797,7 +3797,7 @@ final class EventNotice
 	}
       }
       else {
-	f = new EventNotice(t, event, RootThread.self._thread, delta);
+	f = new EventNotice(t, event, RootThread.self, delta);
       }
     }
     assert (f !is null);
@@ -5079,9 +5079,9 @@ class EsdlThread: Thread
     }
   }
 
-  protected EsdlSimulator getSimulator() {
-    return getRoot().simulator();
-  }
+  // protected EsdlSimulator getSimulator() {
+  //   return getRoot().simulator();
+  // }
 }
 
 class SimThread: EsdlThread
@@ -5092,9 +5092,9 @@ class SimThread: EsdlThread
 
   string _name;
 
-  string getName() {
-    return _name;
-  }
+  // string getName() {
+  //   return _name;
+  // }
 
   void setName(string name) {
     import std.string: format;
@@ -6808,13 +6808,11 @@ class Channel: ChannelIF, NamedComp // Primitive Channel
 
 }
 
-class RootThread: Procedure
+class RootThread: SimThread, Procedure
 {
   import esdl.base.rand: _esdl__RandGen;
 
   mixin NamedMixin;
-
-  EsdlThread _thread;
 
   private static RootThread _self;
   static RootThread self() {
@@ -6824,12 +6822,14 @@ class RootThread: Procedure
   private final void fn_wrap(void function() fn, size_t fcore=0) {
     stickToCpuCore(fcore % CPU_COUNT());
     _self = this;
+    SimThread._self = this;
     fn();
   }
 
   private final void dg_wrap(void delegate() dg, size_t fcore=0) {
     stickToCpuCore(fcore % CPU_COUNT());
     _self = this;
+    SimThread._self = this;
     dg();
   }
 
@@ -6838,31 +6838,16 @@ class RootThread: Procedure
        size_t fcore=0, size_t sz = 0 ) {
     synchronized(this) {
       _randGen = new _esdl__RandGen(uniform!int());
-      if (sz is 0) {
-	_thread = new EsdlThread(root, () {fn_wrap(fn, fcore);});
-      }
-      else {
-	_thread = new EsdlThread(root, () {fn_wrap(fn, fcore);}, sz);
-      }
     }
+    super("RootThread", root, () {fn_wrap(fn, fcore);}, sz);
   }
 
   this(RootEntity root, void delegate() dg,
        size_t fcore=0, size_t sz = 0 ) {
     synchronized(this) {
       _randGen = new _esdl__RandGen(uniform!int());
-      if (sz is 0) {
-	_thread = new EsdlThread(root, () {dg_wrap(dg, fcore);});
-      }
-      else {
-	_thread = new EsdlThread(root, () {dg_wrap(dg, fcore);}, sz);
-      }
     }
-  }
-
-  private final void start() {
-    // _thread is effectively immutable
-    _thread.start();
+    super("RootThread", root, () {dg_wrap(dg, fcore);}, sz);
   }
 
 
@@ -6933,8 +6918,9 @@ private enum ProcState: byte
 
       // _KILLED
       ABORTED = 9,		// user aborted
-      KILLED = 10,	// end of simulation
-      NONE = 11,
+      KILLED = 10,	        // end of simulation
+      PURGE = 11,
+      NONE = 12,
       }
 
 enum ProcWaitType: ubyte {
@@ -7605,6 +7591,7 @@ class EsdlExecutor: EsdlExecutorIf
 	proc.requestKill(this);
 	break;
       case ProcState.NONE:
+      case ProcState.PURGE:
       case ProcState.WAITING:
       case ProcState.FINISHED:
       case ProcState.EXCEPTION:
