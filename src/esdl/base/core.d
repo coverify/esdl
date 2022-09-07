@@ -2461,13 +2461,9 @@ class EventObj: EventAgent, NamedComp
   // notifications one-after-another, the result would be same
   // as having just one notification
   void notify() {
-    SimThread simthread = SimThread._self;
-    if (simthread !is null) {
-      SimThread.addNotification(Notification(this, true, SimTime(0)));
-    }
-    else {
-      _notify();
-    }
+    SimThread thread = SimThread._self;
+    if (thread is null || thread._type is SimThreadType.ROOT) _notify();
+    else thread.addNotification(Notification(this, true, SimTime(0)));
   }
   void _notify() {
     this.getTimed().notify();
@@ -2487,13 +2483,9 @@ class EventObj: EventAgent, NamedComp
 
   // Timed notification with simulation time steps as argument
   void notify(SimTime t) {
-    SimThread simthread = SimThread._self;
-    if (simthread !is null) {
-      simthread.addNotification(Notification(this, false, t));
-    }
-    else {
-      _notify(t);
-    }
+    SimThread thread = SimThread._self;
+    if (thread is null || thread._type is SimThreadType.ROOT) _notify(t);
+    else thread.addNotification(Notification(this, false, t));
   }
   void _notify(SimTime t) {
     this.getTimed().notify(t);
@@ -3416,23 +3408,23 @@ private class TimedEvent: SimEvent
 	stderr.writefln("Immediate notification for %s at time %s",
 			_eventObj.getFullName(), _eventObj.getRoot.getSimTime());
       }
-      if (Process.self() is null &&
-	  RootThread.self() is null) { // async notify
-	assert(this._getObj().isAsync is true);
-	if (this._schedule != Schedule.ASYNC) {
-	  cancel();
-	  this._schedule = Schedule.ASYNC;
-	  this._eventQueueIndex =
-	    this.getSimulator._scheduler.insertAsyncEvent(this);
-	}
-      }
-      else {			// immediate notify
+      if (SimThread.self() !is null ||
+	  EntityIntf.isContextSet()) { // immediate notify
 	if (this._schedule != Schedule.NOW &&
 	    this._schedule != Schedule.ASYNC) {
 	  cancel();
 	  this._schedule = Schedule.NOW;
 	  this._eventQueueIndex =
 	    this.getSimulator._scheduler.insertImmediateEvent(this);
+	}
+      }
+      else {			// async notify
+	assert(this._getObj().isAsync is true);
+	if (this._schedule != Schedule.ASYNC) {
+	  cancel();
+	  this._schedule = Schedule.ASYNC;
+	  this._eventQueueIndex =
+	    this.getSimulator._scheduler.insertAsyncEvent(this);
 	}
       }
       return true;
@@ -3992,14 +3984,16 @@ interface Procedure: NamedComp
 }
 
 void waitAll(E...)(E events) {
-  static if (E.length == 0) {
-    return;
+  AndSimEvent simE = new AndSimEvent();
+  auto count = simEventsAdd(simE, 0, events);
+  if (count == 0) {
+    auto event = Process.self._timed;
+    // Event dummy = Event();
+    // dummy.initialize("waitAll");
+    simEventsAdd(simE, 0, event);
+    event.notify();
   }
-  else {
-    AndSimEvent simE = new AndSimEvent();
-    auto count = simEventsAdd(simE, 0, events);
-    wait(simE);
-  }
+  wait(simE);
 }
 
 void waitAny(E...)(E events) {
@@ -5084,6 +5078,9 @@ class EsdlThread: Thread
   // }
 }
 
+enum SimThreadType: ubyte { ROOT, POOL, WORK, WORKER }
+
+
 class SimThread: EsdlThread
 {
   import core.sync.semaphore: Semaphore;
@@ -5109,23 +5106,27 @@ class SimThread: EsdlThread
   //   @_esdl__ignore protected RootEntity _esdl__root;
   // }
 
-  this(string name, RootEntity root, void function() fn, size_t sz = 0 ) {
+  this(string name, RootEntity root, void function() fn,
+       SimThreadType type, size_t sz ) {
     synchronized(this) {
       _esdl__root = root;
       _name = name;
       super(root, () {_self = this; fn();}, sz);
       _waitLock = new Semaphore(0);
       _esdl__root.simulator()._executor.addSimThread(this);
+      _type = type;
     }
   }
 
-  this(string name, RootEntity root, void delegate() dg, size_t sz = 0 ) {
+  this(string name, RootEntity root, void delegate() dg,
+       SimThreadType type, size_t sz ) {
     synchronized(this) {
       _esdl__root = root;
       _name = name;
       super(root, () {_self = this; dg();}, sz);
       _waitLock = new Semaphore(0);
       _esdl__root.simulator()._executor.addSimThread(this);
+      _type = type;
     }
   }
 
@@ -5143,6 +5144,7 @@ class SimThread: EsdlThread
   //  private State _stateMonitor;
 
   private bool _hasStarted = false;
+  private immutable SimThreadType _type;
 
   private final  bool hasStarted() {
     return _hasStarted;
@@ -5158,11 +5160,11 @@ class SimThread: EsdlThread
   Deck!(Notification, "notifications") _notifications;
   // Notification[] _notifications;
 
-  static void addNotification(Notification notice) {
-    _self._notifications ~= notice;
+  final void addNotification(Notification notice) {
+    _notifications ~= notice;
   }
 
-  void processNotifications() {
+  final void processNotifications() {
     foreach (ref notice; _notifications) {
       if (notice._isImmediate) notice._event._notify();
       else notice._event._notify(notice._time);
@@ -5204,14 +5206,8 @@ class BaseWork: Process
     synchronized(this) {
       import std.string: format;
       super(fn, stage);
-      if (sz is 0) {
-	_thread = new SimThread(format("%s(SimThread)", getName()),
-				root, () {fn_wrap(fn);});
-      }
-      else {
-	_thread = new SimThread(format("%s(SimThread)", getName()),
-				root, () {fn_wrap(fn);}, sz);
-      }
+      _thread = new SimThread(format("%s(SimThread)", getName()),
+			      root, () {fn_wrap(fn);}, SimThreadType.WORK, sz);
       root._simulator._executor.addWorkThread(_thread);
     }
   }
@@ -5221,14 +5217,8 @@ class BaseWork: Process
     synchronized(this) {
       import std.string: format;
       super(dg, stage);
-      if (sz is 0) {
-	_thread = new SimThread(format("%s(SimThread)", getName()),
-				root, () {dg_wrap(dg);});
-      }
-      else {
-	_thread = new SimThread(format("%s(SimThread)", getName()),
-				root, () {dg_wrap(dg);}, sz);
-      }
+      _thread = new SimThread(format("%s(SimThread)", getName()),
+			      root, () {dg_wrap(dg);}, SimThreadType.WORK, sz);
       root._simulator._executor.addWorkThread(_thread);
     }
   }
@@ -5375,14 +5365,8 @@ class BaseWorker: Process
       import std.string: format;
       _defunctLock = new AsyncLock(root);
       super (fn, stage);
-      if (sz is 0) {
-	_thread = new SimThread(format("%s(SimThread)", getName()),
-				root, () {fn_wrap(fn);});
-      }
-      else {
-	_thread = new SimThread(format("%s(SimThread)", getName()),
-				root, () {fn_wrap(fn);}, sz);
-      }
+      _thread = new SimThread(format("%s(SimThread)", getName()),
+			      root, () {fn_wrap(fn);}, SimThreadType.WORKER, sz);
       root._simulator._executor.addWorker(this);
     }
   }
@@ -5393,14 +5377,8 @@ class BaseWorker: Process
       import std.string: format;
       _defunctLock = new AsyncLock(root);
       super(dg, stage);
-      if (sz is 0) {
-	_thread = new SimThread(format("%s(SimThread)", getName()),
-				root, () {dg_wrap(dg);});
-      }
-      else {
-	_thread = new SimThread(format("%s(SimThread)", getName()),
-				root, () {dg_wrap(dg);}, sz);
-      }
+      _thread = new SimThread(format("%s(SimThread)", getName()),
+			      root, () {dg_wrap(dg);}, SimThreadType.WORKER, sz);
       root._simulator._executor.addWorker(this);
     }
   }
@@ -6839,7 +6817,7 @@ class RootThread: SimThread, Procedure
     synchronized(this) {
       _randGen = new _esdl__RandGen(uniform!int());
     }
-    super("RootThread", root, () {fn_wrap(fn, fcore);}, sz);
+    super("RootThread", root, () {fn_wrap(fn, fcore);}, SimThreadType.ROOT, sz);
   }
 
   this(RootEntity root, void delegate() dg,
@@ -6847,7 +6825,7 @@ class RootThread: SimThread, Procedure
     synchronized(this) {
       _randGen = new _esdl__RandGen(uniform!int());
     }
-    super("RootThread", root, () {dg_wrap(dg, fcore);}, sz);
+    super("RootThread", root, () {dg_wrap(dg, fcore);}, SimThreadType.ROOT, sz);
   }
 
 
@@ -6955,7 +6933,7 @@ class PoolThread: SimThread
 	      _self = this;
 	      SimThread._self = this;
 	      execTaskProcesses();
-	    }, sz);
+	    }, SimThreadType.POOL, sz);
       _poolIndex = index;
     }
   }
@@ -8527,7 +8505,8 @@ interface RootEntityIntf: EntityIntf
   EsdlSimulator simulator();
 
   SimTime getSimTime();
-
+  size_t getDeltaCount();
+  
   ulong getRunTime();
 
   uint getNumPoolThreads();
@@ -8847,6 +8826,10 @@ abstract class RootEntity: RootEntityIntf
 
   final override SimTime getSimTime() {
     return _esdl__root.simulator().simTime();
+  }
+
+  final override size_t getDeltaCount() {
+    return _esdl__root.simulator()._deltaCount;
   }
 
   final override ulong getRunTime() {
@@ -9572,6 +9555,10 @@ RootEntity getRootEntity() {
 
 SimTime getSimTime() {
   return getRootEntity().getSimTime();
+}
+
+size_t getDeltaCount() {
+  return getRootEntity().getDeltaCount();
 }
 
 ulong getRunTime() {

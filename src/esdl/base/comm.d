@@ -125,7 +125,7 @@ string declareWait(IF, string E, string CHANNEL)() {
 @_esdl__component struct Port(IF, size_t N=1, size_t M=N)
 {
   // enum bool _thisIsPort = true;
-  public PortObj!(IF,N,M) _portObj = void;
+  public PortObj!(IF,N,M) _portObj;
 
   package ref PortObj!(IF,N,M) _esdl__objRef() {
     return _portObj;
@@ -180,7 +180,7 @@ string declareWait(IF, string E, string CHANNEL)() {
 @_esdl__component struct Export(IF, size_t N=1, size_t M=N) if(N == 1)
   {
     // enum bool _thisIsExport = true;
-    public ExportObj!(IF) _exportObj = void;
+    public ExportObj!(IF) _exportObj;
 
     package ref ExportObj!(IF) _esdl__objRef() {
       return _exportObj;
@@ -231,7 +231,7 @@ string declareWait(IF, string E, string CHANNEL)() {
 public class PortObj(IF, size_t N=1, size_t M=N) if(N == 1) : BasePort
 {
   static assert(N == 0 || N >= M);
-  public IF _channel = void;
+  public IF _channel;
 
   // disable auto instatiation during the elaboration process
   @disable package ref IF _esdl__objRef() {
@@ -448,7 +448,7 @@ public class ExportObj(IF, size_t N=1, size_t M=N)
   if(N == 1) : BaseExport
 {
   static assert(N == 0 || N >= M);
-  public IF _channel = void;
+  public IF _channel;
 
   // disable auto instantiation of the channel during the elaboration
   @disable package ref IF _esdl__objRef() {
@@ -867,7 +867,7 @@ class MutexObj: MutexIF, NamedComp
 @_esdl__component struct Mutex
 {
   // enum bool _thisIsMutex = true;
-  public MutexObj _mutexObj = void;
+  public MutexObj _mutexObj;
 
   package final ref MutexObj _esdl__objRef() return {
     return _mutexObj;
@@ -1029,7 +1029,7 @@ class SemaphoreObj: SemaphoreIF, NamedComp
 @_esdl__component struct Semaphore
 {
   // enum bool _thisIsSemaphore = true;
-  public SemaphoreObj _semaphoreObj = void;
+  public SemaphoreObj _semaphoreObj;
 
   package ref SemaphoreObj _esdl__objRef() return {
     return _semaphoreObj;
@@ -1426,7 +1426,7 @@ class FifoObj(T, size_t N=0): Channel, FifoInIF!T, FifoOutIF!T
 @_esdl__component struct Fifo(T, size_t N = 0)
 {
   // enum bool _thisIsFifo = true;
-  public FifoObj!(T, N) _fifoObj = void;
+  public FifoObj!(T, N) _fifoObj;
 
   package ref FifoObj!(T, N) _esdl__objRef() {
     return _fifoObj;
@@ -1754,7 +1754,7 @@ template Signal(uint WIDTH) {
   // enum bool _thisIsSignal = true;
   alias VAL_TYPE = T;
 
-  public SignalObj!(T, MULTI_DRIVER) _signalObj = void;
+  public SignalObj!(T, MULTI_DRIVER) _signalObj;
 
   public ref SignalObj!(T, MULTI_DRIVER) _esdl__objRef() {
     return _signalObj;
@@ -2084,7 +2084,7 @@ template HdlSignal(uint WIDTH) {
 {
   // enum bool _thisIsSignal = true;
   alias VAL_TYPE = T;
-  public HdlSignalObj!(T, MULTI_DRIVER) _signalObj = void;
+  public HdlSignalObj!(T, MULTI_DRIVER) _signalObj;
 
   public ref HdlSignalObj!(T, MULTI_DRIVER) _esdl__objRef() {
     return _signalObj;
