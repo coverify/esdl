@@ -20,7 +20,7 @@ alias realloc = pureRealloc;
 
 enum MINCAP = 4;
 
-struct Deck(T, string NAME, uint MAXCAP=1024)
+struct Deck(T, string NAME, uint MAXCAP=100)
      if (is (T == class) || is (T == interface) || is (T ==  struct) ||
 	 is (T == P*, P) || isSomeChar!T || isBoolean!T || isIntegral!T)
 {
@@ -45,7 +45,26 @@ struct Deck(T, string NAME, uint MAXCAP=1024)
     }
   }
 
-  @disable this(this);
+  this(this) {
+    static if (is (T == struct) || is (T == P*, P)) {
+      _load = _load.dup;
+    }
+    else {
+      import core.checkedint : mulu;
+      T* newLoad;
+
+      bool overflow;
+      const nbytes = mulu(_capacity, T.sizeof, overflow);
+      if (overflow) assert(0);
+
+      newLoad = cast(T*) malloc(nbytes);
+      memcpy(newLoad, _load, _capacity * T.sizeof);
+      static if (is (T == class) || is (T == interface)) {
+	GC.addRange(newLoad, nbytes);
+      }
+      _load = newLoad;
+    }
+  }
   
 
   void swap(F)(ref F other) if (is (F: Deck!(T, S), string S)) {
@@ -61,8 +80,13 @@ struct Deck(T, string NAME, uint MAXCAP=1024)
   void growCapacity(size_t cap) {
     import std.conv: to;
     debug (CHECK_DECK_SIZE) {
-      assert (cap <= MAXCAP || MAXCAP == 0,
-	      "Large size: " ~ NAME ~ " Size: " ~ cap.to!string());
+      static if (NAME == "stackLoad" || NAME == "rangeLoad"
+		 || NAME == "termLoad") {
+	assert (cap <= MAXCAP || MAXCAP == 0,
+		"Large size: " ~ NAME ~ " Size: " ~ cap.to!string());
+	// import std.stdio;
+	// writeln ("New size: " ~ NAME ~ " Size: " ~ cap.to!string());
+      }
     }
     static if (is (T == struct) || is (T == P*, P)) {
       _load.reserve(cap);
