@@ -5,7 +5,10 @@ import esdl.rand.base: CstDomBase, CstVecValueBase;
 import esdl.rand.pred: CstPredicate;
 import esdl.rand.agent: CstSolverAgent;
 import esdl.rand.misc;
+import esdl.data.deck: Deck;
 import esdl.rand.proxy: _esdl__CstProcessor;
+
+
 enum NumType: ubyte {INT, UINT, LONG, ULONG};
 enum Type: ubyte { NUM, ADD, SUB, RAND};
 
@@ -14,7 +17,7 @@ debug (MONOSOLVER){
   debug = CHECKMONO;
 }
 struct RangeStack (T){
-  Range!T [] _load;
+  Deck!(Range!T, "stackLoad") _stackLoad;
   size_t length;
   alias size = length;
   size_t capacity;
@@ -22,7 +25,7 @@ struct RangeStack (T){
     return this.size;
   }
   ref Range!T opIndex(size_t index) {
-    return _load[index];
+    return _stackLoad[index];
   }
   void reset(){
     length = 0;
@@ -31,22 +34,22 @@ struct RangeStack (T){
     if (length + 1 > capacity){
       length ++;
       capacity ++;
-      _load ~= Range!T();
-      _load[length-1].copyVal(elem);
+      _stackLoad ~= Range!T();
+      _stackLoad[length-1].copyVal(elem);
     }
     else {
-      _load[length].copyVal(elem);
+      _stackLoad[length].copyVal(elem);
       length ++;
     }
   }
   void opOpAssign(string op)(ref T[] elem) if (op == "~"){
     if (length + 1 > capacity){
-      _load ~= Range(elem);
+      _stackLoad ~= Range(elem);
       length ++;
       capacity ++;
     }
     else {
-      _load[length].copyVal(elem);
+      _stackLoad[length].copyVal(elem);
       length ++;
     }
   }
@@ -54,22 +57,22 @@ struct RangeStack (T){
     if (length + 1 > capacity){
       length ++;
       capacity ++;
-      _load ~= Range!T();
-      _load[length-1].copyVal(elem);
+      _stackLoad ~= Range!T();
+      _stackLoad[length-1].copyVal(elem);
     }
     else {
-      _load[length].copyVal(elem);
+      _stackLoad[length].copyVal(elem);
       length ++;
     }
   }
   void opOpAssign(string op)(bool elem) if (op == "~"){
     if (length + 1 > capacity){
-      _load ~= Range!T();
+      _stackLoad ~= Range!T();
       length ++;
       capacity ++;
     }
     else {
-      _load[length].clear();
+      _stackLoad[length].clear();
       length ++;
     }
   }
@@ -97,7 +100,7 @@ struct RangeStack (T){
     writeln();
     write("[");   
     for (int i = 0; i < length; i ++){
-      _load[i].display();
+      _stackLoad[i].display();
       write(", ");      
     }
     write("]");
@@ -106,7 +109,7 @@ struct RangeStack (T){
 }
 struct Range (T)
 {
-  T [] _load;
+  Deck!(T, "rangeLoad") _rangeLoad;
   size_t _first = 0;
   size_t _last = 0;
   size_t opDollar() const @safe nothrow {
@@ -114,44 +117,44 @@ struct Range (T)
   }
   ref T opIndex(size_t index){
     assert(index + _first < _last);
-    return _load[index + _first];
+    return _rangeLoad[index + _first];
   }
   void opOpAssign(string op)(T[] r) if (op == "~"){
     size_t i = 0;
-    for (; i < r.length && i + _last < _load.length; i ++){
-      _load[i + _last] = r[i];
+    for (; i < r.length && i + _last < _rangeLoad.length; i ++){
+      _rangeLoad[i + _last] = r[i];
     }
     for (; i < r.length; i ++){
-      _load ~= r[i];
+      _rangeLoad ~= r[i];
     }
     _last += r.length;
   }
   void opOpAssign(string op)(T[2] r) if (op == "~"){
     size_t i = 0;
-    for (; i < 2 && i + _last < _load.length; i ++){
-      _load[i + _last] = r[i];
+    for (; i < 2 && i + _last < _rangeLoad.length; i ++){
+      _rangeLoad[i + _last] = r[i];
     }
     for (; i < 2; i ++){
-      _load ~= r[i];
+      _rangeLoad ~= r[i];
     }
     _last += 2;
   }
   void opOpAssign(string op)(T[4] r) if (op == "~"){
     size_t i = 0;
-    for (; i < 4 && i + _last < _load.length; i ++){
-      _load[i + _last] = r[i];
+    for (; i < 4 && i + _last < _rangeLoad.length; i ++){
+      _rangeLoad[i + _last] = r[i];
     }
     for (; i < 4; i ++){
-      _load ~= r[i];
+      _rangeLoad ~= r[i];
     }
     _last += 4;
   }
   void opOpAssign(string op)(T r) if (op == "~"){
-    if (_last < _load.length){
-      _load[_last] = r;
+    if (_last < _rangeLoad.length){
+      _rangeLoad[_last] = r;
     }
     else{
-      _load ~= r;
+      _rangeLoad ~= r;
     }
     _last += 1;
   }
@@ -204,10 +207,10 @@ struct Range (T)
     assert(start <= end);
     _last = _first + end;
     _first += start;
-    assert(this._last <= _load.length);
+    assert(this._last <= _rangeLoad.length);
   }
   T [] opSlice(){
-    return _load[_first .. _last];
+    return _rangeLoad[_first .. _last];
   }
   void negateRange(){
     if (isEmpty()){
@@ -215,21 +218,21 @@ struct Range (T)
       this ~= temp;
       return;   
     }
-    if (_load[_first] == T.min){
+    if (_rangeLoad[_first] == T.min){
       _first ++;
     }
     else if (_first == 0){
-      this ~= _load[_last-1];
+      this ~= _rangeLoad[_last-1];
       for (size_t i = _last-2; i > _first; --i){
-	_load[i] = _load[i-1];
+	_rangeLoad[i] = _rangeLoad[i-1];
       }
-      _load[_first] = T.max;
+      _rangeLoad[_first] = T.max;
     }
     else {
       _first --;
-      _load[_first] = T.max;
+      _rangeLoad[_first] = T.max;
     }
-    if (_load[_last-1] == T.max){
+    if (_rangeLoad[_last-1] == T.max){
       _last --;
     }
     else{
@@ -237,10 +240,10 @@ struct Range (T)
     }
     for (size_t i = _first; i < _last; ++i){
       if ((i - _first) % 2 == 0){
-	_load[i] ++;
+	_rangeLoad[i] ++;
       }
       else {
-	_load[i] --;
+	_rangeLoad[i] --;
       }
     }
     if (_first == _last){
@@ -382,10 +385,10 @@ struct Range (T)
     import std.stdio;
     writeln("[");
     for(ulong i = _first; i < _last; i ++){
-      write(_load[i], ",");
+      write(_rangeLoad[i], ",");
     }
     for (ulong i = _first+1; i < _last; i ++){
-      assert(_load[i] >= _load[i-1]);
+      assert(_rangeLoad[i] >= _rangeLoad[i-1]);
     }
     writeln("]");
   }
@@ -516,7 +519,7 @@ struct Term
 }
 
 struct TermArray {
-  Term [] _load;
+  Deck!(Term, "termLoad") _termLoad;
   size_t length = 0;
   alias size = length;
   size_t start = 0;
@@ -525,7 +528,7 @@ struct TermArray {
     return this.size - this.start;
   }
   ref Term opIndex(size_t index) {
-    return _load[index + start];
+    return _termLoad[index + start];
   }
   void reset(){
     length = 0;
@@ -549,10 +552,10 @@ struct TermArray {
     if (length + 1 > capacity){
       length ++;
       capacity ++;
-      _load ~= elem;
+      _termLoad ~= elem;
     }
     else {
-      _load[length] = elem;
+      _termLoad[length] = elem;
       length ++;
     }
   }
@@ -564,7 +567,7 @@ struct TermArray {
   public int opApply(int delegate(Term) dg){
     int res = 0;
     for (size_t i = start; i < length; i ++){
-      res = dg(_load[i]);
+      res = dg(_termLoad[i]);
       if (res) return res;
     }
     return res;
@@ -586,6 +589,7 @@ class CstMonoSolver (S): CstSolver
   _esdl__CstProcessor _proc;
   TermArray _insideEqual;
   TermArray _insideRange; // inclusive
+  
   debug (CHECKMONO){
     bool _debugFlag = false;
     uint _currentRangePos = 0;
@@ -2106,7 +2110,7 @@ class CstMonoSolver (S): CstSolver
   }
   void solveUnique(){
     import std.algorithm.sorting: sort;
-    sort!(compareTerms)(_insideEqual._load[_insideEqual.start.._insideEqual.length]);
+    sort!(compareTerms)(_insideEqual._termLoad[_insideEqual.start.._insideEqual.length]);
     for(size_t i = 0; i<_insideEqual.opDollar()-1; ++i){
       if(doesSatisfy(_insideEqual[i], CstCompareOp.EQU, _insideEqual[i+1])){
 	pushToEvalStack(false);
