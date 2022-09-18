@@ -267,7 +267,10 @@ class CstZ3Solver: CstSolver
     _proc = agent.getProcessor();
 
     setParam("auto_config", false);
+    setParam("parallel.enable", false);
+    setParam("parallel.threads.max", 1);
     setParam("smt.phase_selection", 5);
+    // setParam("verbose", 10);
     // setParam("smt.auto_config", false);
     // setParam("relevancy", 0);
     Config cfg = new Config();
