@@ -17,9 +17,9 @@ import esdl.rand.base: CstDomBase, CstDomSet, CstIterCallback,
 import esdl.rand.base: CstValue, CstVarNodeIntf;
 
 import esdl.solver.base;
-import esdl.solver.mono: CstMonoSolver;
-import esdl.solver.z3: CstZ3Solver;
-import esdl.solver.buddy: CstBuddySolver;
+// import esdl.solver.mono: CstMonoSolver;
+// import esdl.solver.z3: CstZ3Solver;
+// import esdl.solver.buddy: CstBuddySolver;
 // import esdl.rand.vecx: CstVector, CstVecArr;
 // import esdl.rand.domain: CstArrLength;
 
