@@ -559,7 +559,18 @@ struct TermArray {
       length ++;
     }
   }
-  void opOpAssign(string op)(TermArray other) if (op == "~"){
+  void opOpAssign(string op)(ref Term elem) if (op == "~"){
+    if (length + 1 > capacity){
+      length ++;
+      capacity ++;
+      _termLoad ~= elem;
+    }
+    else {
+      _termLoad[length] = elem;
+      length ++;
+    }
+  }
+  void opOpAssign(string op)(ref TermArray other) if (op == "~"){
     for (int i = 0; i < other.opDollar; i ++){
       opOpAssign!"~"(other[i]);
     }
@@ -589,6 +600,7 @@ class CstMonoSolver (S): CstSolver
   _esdl__CstProcessor _proc;
   TermArray _insideEqual;
   TermArray _insideRange; // inclusive
+  TermArray _tempStack;
   
   debug (CHECKMONO){
     bool _debugFlag = false;
@@ -2058,10 +2070,10 @@ class CstMonoSolver (S): CstSolver
     }
   }
   void generateInsideRange() {
-    TermArray tempStack;
-    tempStack ~= _evalStack;
+    _tempStack.reset();
+    _tempStack ~= _evalStack;
     bool hasX = false;
-    foreach(elem; tempStack){
+    foreach(elem; _tempStack){
       if(elem.getType() == Type.RAND){
 	hasX = true;
 	break;
@@ -2069,7 +2081,7 @@ class CstMonoSolver (S): CstSolver
     }
     _evalStack.reset();
     foreach(elem; _insideEqual){
-      _evalStack ~= tempStack;
+      _evalStack ~= _tempStack;
       _evalStack ~= elem;
       if(hasX || elem.getType() == Type.RAND){
 	_hasRand = true;
@@ -2083,7 +2095,7 @@ class CstMonoSolver (S): CstSolver
       processEvalStack(CstLogicOp.LOGICOR);
     }
     for(size_t i = 0; i < _insideRange.opDollar(); i+=2){
-      _evalStack ~= tempStack;
+      _evalStack ~= _tempStack;
       _evalStack ~= _insideRange[i];
       if(hasX || _insideRange[i].getType() == Type.RAND){
 	_hasRand = true;
@@ -2092,7 +2104,7 @@ class CstMonoSolver (S): CstSolver
 	_hasRand = false;
       }
       processEvalStack(CstCompareOp.GTE);
-      _evalStack ~= tempStack;
+      _evalStack ~= _tempStack;
       _evalStack ~= _insideRange[i+1];
       if(hasX || _insideRange[i+1].getType() == Type.RAND){
 	_hasRand = true;
