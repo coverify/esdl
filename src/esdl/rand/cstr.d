@@ -84,6 +84,8 @@ abstract class _esdl__ConstraintBase: rand.disable
 // constructed before he can call API methods like constraint_mode
 alias constraint = Constraint;
 
+enum constraint_override;
+
 struct Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=__LINE__)
 {
   enum bool _esdl__TypeHasRandBarrier = true;

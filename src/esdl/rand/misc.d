@@ -148,7 +148,7 @@ struct rand
 // class Foo {
 //   @norand int[] a;
 //   @rand int[] b;
-//   Constraint!q{
+//   constraint!q{
 //     foreach(i, aa; a) {
 //       b[i] < aa;
 //     }
