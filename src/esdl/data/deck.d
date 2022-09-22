@@ -64,6 +64,14 @@ struct Deck(T, string NAME, uint MAXCAP=100)
       }
       _load = newLoad;
     }
+    debug (CHECK_DECK_SIZE) {
+      static if (NAME == "stackLoad" || NAME == "rangeLoad"
+		 || NAME == "termLoad") {
+	import std.stdio;
+	import std.conv: to;
+	writeln ("POSTBLIT size: " ~ NAME ~ " Size: " ~ _capacity.to!string());
+      }
+    }
   }
   
 
@@ -84,8 +92,8 @@ struct Deck(T, string NAME, uint MAXCAP=100)
 		 || NAME == "termLoad") {
 	assert (cap <= MAXCAP || MAXCAP == 0,
 		"Large size: " ~ NAME ~ " Size: " ~ cap.to!string());
-	// import std.stdio;
-	// writeln ("New size: " ~ NAME ~ " Size: " ~ cap.to!string());
+	import std.stdio;
+	writeln ("New size: " ~ NAME ~ " Size: " ~ cap.to!string());
       }
     }
     static if (is (T == struct) || is (T == P*, P)) {

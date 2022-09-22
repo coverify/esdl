@@ -6,8 +6,8 @@ import std.random: MinstdRand, Random;
 import esdl.data.bvec: isBitVector;
 
 
-alias RandomGen = MinstdRand;
-// alias RandomGen = Random;
+// alias RandomGen = MinstdRand;
+alias RandomGen = Random;
 
 T urandom(T=uint)() if (isIntegral!T || isBitVector!T) {
   static if(isBitVector!T) {
