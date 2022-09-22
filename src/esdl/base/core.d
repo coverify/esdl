@@ -2244,9 +2244,7 @@ class EventObj: EventAgent, NamedComp
   // the running procs are processed in the scheduler, that can be a
   // good place to add the clients to the respective events
   protected final void addClientProc(Process client) {
-    synchronized(this) {
-      this._clientProcesses ~= client;
-    }
+    this._clientProcesses ~= client;
   }
 
   final void wait() {
@@ -5113,7 +5111,6 @@ class SimThread: EsdlThread
       _name = name;
       super(root, () {_self = this; fn();}, sz);
       _waitLock = new Semaphore(0);
-      _esdl__root.simulator()._executor.addSimThread(this);
       _type = type;
     }
   }
@@ -5125,7 +5122,6 @@ class SimThread: EsdlThread
       _name = name;
       super(root, () {_self = this; dg();}, sz);
       _waitLock = new Semaphore(0);
-      _esdl__root.simulator()._executor.addSimThread(this);
       _type = type;
     }
   }
@@ -5208,6 +5204,7 @@ class BaseWork: Process
       super(fn, stage);
       _thread = new SimThread(format("%s(SimThread)", getName()),
 			      root, () {fn_wrap(fn);}, SimThreadType.WORK, sz);
+      root.simulator()._executor.addProcThread(_thread);
       root._simulator._executor.addWorkThread(_thread);
     }
   }
@@ -5219,6 +5216,7 @@ class BaseWork: Process
       super(dg, stage);
       _thread = new SimThread(format("%s(SimThread)", getName()),
 			      root, () {dg_wrap(dg);}, SimThreadType.WORK, sz);
+      root.simulator()._executor.addProcThread(_thread);
       root._simulator._executor.addWorkThread(_thread);
     }
   }
@@ -5367,6 +5365,7 @@ class BaseWorker: Process
       super (fn, stage);
       _thread = new SimThread(format("%s(SimThread)", getName()),
 			      root, () {fn_wrap(fn);}, SimThreadType.WORKER, sz);
+      // root.simulator()._executor.addProcThread(_thread);
       root._simulator._executor.addWorker(this);
     }
   }
@@ -5379,6 +5378,7 @@ class BaseWorker: Process
       super(dg, stage);
       _thread = new SimThread(format("%s(SimThread)", getName()),
 			      root, () {dg_wrap(dg);}, SimThreadType.WORKER, sz);
+      // root.simulator()._executor.addProcThread(_thread);
       root._simulator._executor.addWorker(this);
     }
   }
@@ -5539,7 +5539,9 @@ class BaseRoutine: Process
     }
 
     if (_nextTrigger !is null) {
-      _nextTrigger.addClientProc(this);
+      _waitEvent = _nextTrigger;
+      // this is now done by the scheduler
+      // _nextTrigger.addClientProc(this);
       _nextState = ProcState.WAITING;
     }
   }
@@ -5778,6 +5780,10 @@ abstract class Process: Procedure, HierComp, EventClient
       _state = _nextState;
       _nextState = ProcState.NONE;
     }
+    if (_waitEvent !is null) {
+      _waitEvent.addClientProc(this);
+      _waitEvent = null;
+    }
   }
 
   final protected void abortProcess() {
@@ -5831,7 +5837,7 @@ abstract class Process: Procedure, HierComp, EventClient
     }
   }
 
-  // Called only in schedule phase -- no need for syn guards
+  // Called only in schedule phase -- no need for synch guards
   final bool isDontInitialize() {
     return _dontInit;
   }
@@ -5940,9 +5946,12 @@ abstract class Process: Procedure, HierComp, EventClient
   }
 
   // For all the timed-waits during the execution of the process, use
-  // this event
-  // Effectively Immutable
+  // this event Effectively Immutable
   private EventObj _timed;
+
+  // So if it is a _timed wait, the _waitEvent would hold a reference
+  // to _timed. Otherwise it holds reference to whatever event it is
+  private EventObj _waitEvent;	// ref to event the process waits for
 
   // Triggered when a process ends execution
   private Event _ended;
@@ -6146,7 +6155,9 @@ abstract class Process: Procedure, HierComp, EventClient
       import std.stdio;
       stderr.writeln("De-activating Process: ", getFullName());
     }
-    event.addClientProc(this);
+    _waitEvent = event;
+    // this is now done by the scheduler
+    // event.addClientProc(this);
     _nextState = ProcState.WAITING;
     freeLock();
     
@@ -6934,6 +6945,7 @@ class PoolThread: SimThread
 	      SimThread._self = this;
 	      execTaskProcesses();
 	    }, SimThreadType.POOL, sz);
+      root.simulator()._executor.addProcThread(this);
       _poolIndex = index;
     }
   }
@@ -7200,7 +7212,7 @@ class EsdlExecutor: EsdlExecutorIf
   ThreadGroup _poolThreadGroup;
   ThreadGroup _workThreadGroup;
 
-  SimThread[] _simThreads;
+  SimThread[] _procThreads;
 
   private BaseWorker[] _runningWorkers;
   private BaseWorker[] _newWorkers;
@@ -7252,8 +7264,8 @@ class EsdlExecutor: EsdlExecutorIf
     }
   }
 
-  private final void addSimThread(SimThread thread) {
-      _simThreads ~= thread;
+  private final void addProcThread(SimThread thread) {
+      _procThreads ~= thread;
   }
   
   private final void createPoolThreads(size_t numThreads,
@@ -7300,28 +7312,28 @@ class EsdlExecutor: EsdlExecutorIf
 
   final void processRegistered() {
     foreach (ref proc; _registeredProcesses[_stageIndex]) {
-      synchronized (proc) {
-	if (proc.isDontInitialize()) {
-	  EventObj event = proc.sensitiveTo();
-	  event.addClientProc(proc);
+      // synchronized (proc) {
+      if (proc.isDontInitialize()) {
+	EventObj event = proc.sensitiveTo();
+	event.addClientProc(proc);
+      }
+      else {
+	if (proc.isRunnableWork) {
+	  this._runnableWorks ~= proc;
 	}
-	else {
-	  if (proc.isRunnableWork) {
-	    this._runnableWorks ~= proc;
+	if (proc.isRunnableTask) {
+	  this._executableTasks ~= proc;
+	  // determine the pool index -- _esdl__poolIndex if set overrides
+	  if (proc._esdl__poolIndex != -1) {
+	    this._runnableTasksGroups[proc._esdl__poolIndex %
+				      _simulator.getRoot().getThreadCoreList().length] ~= proc;
 	  }
-	  if (proc.isRunnableTask) {
-	    this._executableTasks ~= proc;
-	    // determine the pool index -- _esdl__poolIndex if set overrides
-	    if (proc._esdl__poolIndex != -1) {
-	      this._runnableTasksGroups[proc._esdl__poolIndex %
-					_simulator.getRoot().getThreadCoreList().length] ~= proc;
-	    }
-	    else {
-	      this._runnableTasksGroups[proc._esdl__multicoreConfig.getPoolThreadIndex()] ~= proc;
-	    }
+	  else {
+	    this._runnableTasksGroups[proc._esdl__multicoreConfig.getPoolThreadIndex()] ~= proc;
 	  }
 	}
       }
+      // }
     }
     // _processedProcs = _registeredProcesses.length;
     _registeredProcesses[_stageIndex].length = 0;
@@ -7397,8 +7409,8 @@ class EsdlExecutor: EsdlExecutorIf
     foreach (proc; runProcs) {
       proc.postExecute();
     }
-    foreach (simthread; _simThreads) {
-      simthread.processNotifications();
+    foreach (procthread; _procThreads) {
+      procthread.processNotifications();
     }
     // Look at all the requests for thread terminations/suspensions etc
     updateProcs();
