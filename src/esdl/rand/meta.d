@@ -82,8 +82,8 @@ template _esdl__RandProxyType(T, int I, P, int PI)
   static if (is (L: rand.disable)) {
     alias _esdl__RandProxyType = _esdl__NotMappedForRandomization;
   }
-  // constraints shall soon be implemented as structs -- ToDo
-  else static if (is (L: constraint!STR, string STR)) {
+  else static if (is (L: Constraint!(CST, FILE, LINE),
+		      string CST, string FILE, size_t LINE)) {
     alias _esdl__RandProxyType = _esdl__NotMappedForRandomization;
   }
   else static if (isRandomizable!L) {
@@ -262,29 +262,51 @@ void _esdl__doInitRandObjectElems(P, int I=0)(P p) {
 }
 
 void _esdl__doInitConstraintElems(P, Q, int I=0)(P p, Q q) {
-  // static if (I == 0 &&
-  // 	     is (P B == super) &&
-  // 	     is (B[0]: _esdl__Proxy) &&
-  // 	     is (B[0] == class)) {
-  //   B[0] b = p;			// super object
-  //   _esdl__doInitConstraintElems(b);
-  // }
-  static if (I == P.tupleof.length) {
-    return;
-  }
-  else if (p._esdl__isReal()) {
-    alias E = typeof (P.tupleof[I]);
-    // pragma(msg, E.stringof);
-    static if (is (E: _esdl__ConstraintBase)) {
-      enum string EN = p.tupleof[I].stringof[2..$];
-      enum bool IS_USER_DEFINED = __traits(hasMember, q, EN);
-      auto cst = p.new E(p, EN);
-      p.tupleof[I] = cst;
-      // Keep a list of constraint names so that a derived class can
-      // override a constraint
-      static if (IS_USER_DEFINED) p._esdl__addConstraintName(cst);
+  // Every proxy class will inherit from _esdl__Proxy
+  static if (is (P B == super) &&
+	     is (B[0]: _esdl__Proxy) &&
+	     is (B[0] == class)) {
+    B[0] b = p;			// super object
+    //   _esdl__doInitConstraintElems(b);
+    // }
+    static if (I == P.tupleof.length) {
+      return;
     }
-    _esdl__doInitConstraintElems!(P, Q, I+1)(p, q);
+    else if (p._esdl__isReal()) {
+      alias E = typeof (P.tupleof[I]);
+      // pragma(msg, E.stringof);
+      static if (is (E: _esdl__ConstraintBase)) {
+	enum string EN = p.tupleof[I].stringof[2..$];
+	enum bool IS_USER_DEFINED = __traits(hasMember, q, EN);
+	enum bool OVERRIDES = __traits(hasMember, b, EN);
+	static if ((IS_USER_DEFINED && OVERRIDES) is true) {
+	  static assert (_esdl__ConstraintIsOverride
+			 !(__traits(getAttributes, __traits(getMember, q, EN))),
+			 "Constraint " ~ EN ~ " in class '" ~ Q.stringof ~
+			 "' overrides a base class constraint; " ~
+			 "Add @constraint_override attribute or change its name");
+	  __traits(getMember, b, EN).markOverridden();
+	}
+	auto cst = p.new E(p, EN);
+	p.tupleof[I] = cst;
+      }
+      _esdl__doInitConstraintElems!(P, Q, I+1)(p, q);
+    }
+  }
+  else {
+    static assert (false);
+  }
+}
+
+template _esdl__ConstraintIsOverride(T...) {
+  static if (T.length == 0)
+    enum bool _esdl__ConstraintIsOverride = false;
+  else {
+    static if (is (T[0]: constraint_override))
+      enum bool _esdl__ConstraintIsOverride = true;
+    else
+      enum bool _esdl__ConstraintIsOverride =
+	_esdl__ConstraintIsOverride!(T[1..$]);
   }
 }
 
@@ -404,7 +426,9 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 template _esdl__RandDeclVars(T, int I, PT, int PI)
 {
   static if (I == T.tupleof.length) {
-    enum _esdl__RandDeclVars = "";
+    // enum _esdl__RandDeclVars = "";
+    enum _esdl__RandDeclVars =
+      "enum uint _esdl__RandCount = " ~ PI.stringof ~ ";\n";
   }
   else {
     enum rand RAND = getRandAttr!(T, I);
