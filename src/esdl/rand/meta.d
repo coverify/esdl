@@ -801,7 +801,7 @@ alias randomization = Randomization;
 
 mixin template Randomization()
 {
-  static class _esdl__RandInfo: rand.barrier
+  struct _esdl__RandInfo
   {
     bool[] _randModes;
     _esdl__RandGen _randGen;
@@ -935,7 +935,6 @@ mixin template Randomization()
   alias rand_mode = randMode;
   
   bool randMode(int PINDX)() {
-    if (_esdl__RandInfoInst is null) return true;
     if (_esdl__RandInfoInst._randModes.length <= PINDX) return true;
     else return _esdl__RandInfoInst._randModes[PINDX];
   }
@@ -953,7 +952,6 @@ mixin template Randomization()
   }
 
   void randMode(int PINDX)(bool mode) {
-    if (_esdl__RandInfoInst is null) _esdl__RandInfoInst = new _esdl__RandInfo();
     size_t currlen = _esdl__RandInfoInst._randModes.length;
 
     if (currlen <= PINDX) {
@@ -988,7 +986,6 @@ mixin template Randomization()
   }
 
   void _esdl__seedRandom()(int seed) {
-    if (_esdl__RandInfoInst is null) _esdl__RandInfoInst = new _esdl__RandInfo();
     if (_esdl__RandInfoInst._randGen is null) _esdl__RandInfoInst._randGen = new _esdl__RandGen(seed);
     _esdl__RandInfoInst._randGen.seed(seed);
   }
@@ -996,8 +993,7 @@ mixin template Randomization()
   _esdl__RandInfo _esdl__RandInfoInst;
 
   _esdl__RandGen _esdl__getRandGen()() {
-    if (_esdl__RandInfoInst is null) return null;
-    else return _esdl__RandInfoInst._randGen;
+    return _esdl__RandInfoInst._randGen;
   }
 
   static if(// is(_esdl__T: Randomizable) ||
