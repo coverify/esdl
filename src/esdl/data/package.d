@@ -1,5 +1,6 @@
 module esdl.data;
 
+public import esdl.data.array;
 public import esdl.data.bstr;
 public import esdl.data.bvec;
 public import esdl.data.deck;

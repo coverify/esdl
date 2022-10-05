@@ -16,7 +16,7 @@ import core.thread: Thread, Fiber, ThreadGroup;
 // import esdl.sys.thread: Fiber;
 
 public import esdl.data.time;
-public import esdl.data.deck;
+public import esdl.data.array;
 
 public import esdl.base.comm;
 public import esdl.base.rand: RandomGen;
@@ -2178,6 +2178,16 @@ struct Notification
   EventObj _event;
   bool _isImmediate;
   SimTime _time;
+
+  bool opEquals(const Notification rhs) const {
+    return opEquals(rhs);
+  }
+
+  bool opEquals(ref const Notification rhs) const {
+    return (_event is rhs._event &&
+	    _isImmediate == rhs._isImmediate &&
+	    _time == rhs._time);
+  }
 }
 
 // FIXME -- create a freelist for events
@@ -2198,11 +2208,11 @@ class EventObj: EventAgent, NamedComp
   }
 
   // Clients that need to be notified when this event triggers
-  private Deck!(IndexedSimEvent, "clientEvents") _clientEvents;
-  private Deck!(IndexedSimEvent, "clientEventsAlt") _clientEventsAlt;
+  private Array!(IndexedSimEvent, "clientEvents") _clientEvents;
+  private Array!(IndexedSimEvent, "clientEvents") _clientEventsAlt;
 
   // Processes that are waiting for this event to trigger
-  private Deck!(Process, "clientProcesses") _clientProcesses;
+  private Array!(Process, "clientProcesses") _clientProcesses;
 
   protected this(NamedComp parent=null, bool async=false) {
     this(null, parent, async);
@@ -2260,6 +2270,7 @@ class EventObj: EventAgent, NamedComp
   // single thread is active -- do we need synchronization guards
   // here?
   protected void trigger(EsdlSimulator sim) {
+    import std.algorithm.mutation: swap;
     _triggeredAt = sim.updateCount;
     debug(EVENTS) {
       import std.stdio: stderr;
@@ -2271,11 +2282,11 @@ class EventObj: EventAgent, NamedComp
       // c._waitingFor = null;
     }
 
-    _clientProcesses.reset();
+    _clientProcesses.length = 0;
 
     _clientEventsAlt.swap(_clientEvents);
 
-    _clientEvents.reset();
+    _clientEvents.length = 0;
 
     foreach (c; _clientEventsAlt) {
       if (c.client !is null) {
@@ -2423,7 +2434,7 @@ class EventObj: EventAgent, NamedComp
       this.notify();
     }
     synchronized(this) {
-      _clientProcesses.reset();
+      _clientProcesses.length = 0;
       this.cancel();
     }
   }
@@ -3155,7 +3166,7 @@ abstract private class SimEvent: EventClient
 abstract class EventExpr: SimEvent
 {
   // list of events that are in the expression
-  private Deck!(EventObj, "agents") _agents;
+  private Array!(EventObj, "agents") _agents;
 }
 
 
@@ -3164,7 +3175,7 @@ abstract class EventExpr: SimEvent
 abstract class EventList: SimEvent
 {
   // list of events that are in the expression
-  private Deck!(EventObj, "agents") _agents;
+  private Array!(EventObj, "agents") _agents;
 }
 
 private class AsyncTimedEvent: TimedEvent
@@ -5153,7 +5164,7 @@ class SimThread: EsdlThread
     super.start();
   }
 
-  Deck!(Notification, "notifications") _notifications;
+  Array!(Notification, "notifications") _notifications;
   // Notification[] _notifications;
 
   final void addNotification(Notification notice) {
@@ -6536,16 +6547,23 @@ abstract class Process: Procedure, HierComp, EventClient
     }
   }
 
-  Deck!(EventObj, "waitForksEvents") _waitForkEvents;
+  Array!(EventObj, "waitForksEvents") _waitForkEvents;
   void waitForks() {
     Process[] procs = Process.self._esdl__getChildProcsHier();
     foreach (proc; procs) {
       _waitForkEvents ~= proc.getEndedTreeEvent();
     }
     waitAll(_waitForkEvents[]);
-    _waitForkEvents.reset();
+    _waitForkEvents.length = 0;
   }
 
+  bool opEquals(const Process rhs) const {
+    return opEquals(rhs);
+  }
+
+  bool opEquals(ref const Process rhs) const {
+    return rhs is this;
+  }
 }
 
 // A specialized class for single process forks -- this class exists
@@ -9885,7 +9903,11 @@ struct SimTime
     else return 1;
   }
 
-  bool opEquals(SimTime rhs) {
+  bool opEquals(const SimTime rhs) const {
+    return opEquals(rhs);
+  }
+
+  bool opEquals(ref const SimTime rhs) const {
     return _value == rhs._value;
   }
 
