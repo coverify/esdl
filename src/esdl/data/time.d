@@ -86,10 +86,14 @@ struct Time
     }
   }
 
-  bool opEquals(Time other) {
-    if(other._unit > this._unit) {
+  bool opEquals(const Time other) {
+    return opEquals(other);
+  }
+  
+  bool opEquals(ref const Time other) {
+    if (other._unit > this._unit) {
       int p = other._unit - this._unit;
-      if(other._value * 10L^^p == this._value) return true;
+      if (other._value * 10L^^p == this._value) return true;
       else return false;
     }
     else {
