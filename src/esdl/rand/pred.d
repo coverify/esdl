@@ -2,9 +2,10 @@ module esdl.rand.pred;
 
 import std.algorithm.sorting: sort;
 import std.algorithm.searching: canFind, countUntil;
+import std.algorithm.mutation: swap;
 import std.algorithm: map, filter;
-import std.array;
-import std.container.array;
+// import std.array;
+// import std.container.array;
 
 import esdl.data.vector;
 import esdl.rand.proxy: _esdl__Proxy, _esdl__CstProcessor;
