@@ -803,7 +803,61 @@ mixin template Randomization()
 {
   struct _esdl__RandInfo
   {
-    bool[] _randModes;
+    import core.memory: pureMalloc, pureFree;
+    import esdl.data.bvec: ubvec;
+
+    alias malloc = pureMalloc;
+    alias free = pureFree;
+
+    enum uint PTRSIZE = cast(uint) size_t.sizeof * 8;
+
+    bool malloced = false;
+    union {
+      ubvec!PTRSIZE _bvecRandModes;
+      size_t* _ptrRandModes;
+    }
+
+    bool randMode(int PINDX, uint RANDNUM)() {
+      static if (RANDNUM <= PTRSIZE) {
+	if (! _bvecRandModes[PINDX]) return true;
+	else return false;
+      }
+      else {
+	import core.bitop: bt;
+	if (_ptrRandModes is null) return true;
+	else {
+	  if (bt(_ptrRandModes, PINDX)) return false;
+	  else return true;
+	}
+      }
+    }
+      
+    void randMode(int PINDX, uint RANDNUM)(bool mode) {
+      static if (RANDNUM <= PTRSIZE) {
+	if (mode is true) _bvecRandModes[PINDX] = false;
+	else _bvecRandModes[PINDX] = true;
+      }
+      else {
+	import core.bitop: btr, bts;
+	import core.stdc.string : memset;
+	if (_ptrRandModes is null) {
+	  enum size_t nbytes = PTRSIZE/8 * ((RANDNUM/PTRSIZE)+1);
+	  _ptrRandModes = cast (size_t*) malloc(nbytes);
+	  memset(_ptrRandModes, 0, nbytes);
+	  malloced = true;
+	}
+	if (mode is true) btr(_ptrRandModes, PINDX);
+	else bts(_ptrRandModes, PINDX);
+      }
+    }
+
+    ~this() {
+      if (malloced && _ptrRandModes !is null) free(_ptrRandModes);
+    }
+      
+    // bool[] _randModes;
+
+
     _esdl__RandGen _randGen;
 
     // This instance would be populated only to avoid
@@ -935,8 +989,10 @@ mixin template Randomization()
   alias rand_mode = randMode;
   
   bool randMode(int PINDX)() {
-    if (_esdl__RandInfoInst._randModes.length <= PINDX) return true;
-    else return _esdl__RandInfoInst._randModes[PINDX];
+    return _esdl__RandInfoInst.randMode!(PINDX,
+					 _esdl__ProxyType._esdl__RandCount)();
+    // if (_esdl__RandInfoInst._randModes.length <= PINDX) return true;
+    // else return _esdl__RandInfoInst._randModes[PINDX];
   }
 
   bool randMode(string rnd)() {
@@ -952,16 +1008,18 @@ mixin template Randomization()
   }
 
   void randMode(int PINDX)(bool mode) {
-    size_t currlen = _esdl__RandInfoInst._randModes.length;
+    _esdl__RandInfoInst.randMode!(PINDX,
+				  _esdl__ProxyType._esdl__RandCount)(mode);
+    // size_t currlen = _esdl__RandInfoInst._randModes.length;
 
-    if (currlen <= PINDX) {
-      _esdl__RandInfoInst._randModes.length = PINDX + 1;
-      for (size_t i=currlen; i!=PINDX; ++i) {
-	_esdl__RandInfoInst._randModes[i] = true;
-      }
-    }
+    // if (currlen <= PINDX) {
+    //   _esdl__RandInfoInst._randModes.length = PINDX + 1;
+    //   for (size_t i=currlen; i!=PINDX; ++i) {
+    // 	_esdl__RandInfoInst._randModes[i] = true;
+    //   }
+    // }
     
-    _esdl__RandInfoInst._randModes[PINDX] = mode;
+    // _esdl__RandInfoInst._randModes[PINDX] = mode;
   }
 
   void randMode(string rnd)(bool mode) {
@@ -1000,7 +1058,7 @@ mixin template Randomization()
 	    __traits(compiles, _esdl__isBaseRand)) { // this is a derived class
     static assert (is (typeof(this) == class),
 		   typeof(this).stringof ~ " is not a class"); // only classes can have a base class
-    enum bool _esdl__isBaseRand = false;
+    // enum bool _esdl__isBaseRand = false;
     override void _esdl__virtualRandomize() {
       _esdl__randomize(this);
     }

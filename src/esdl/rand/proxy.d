@@ -14,6 +14,7 @@ import esdl.data.vector;
 import std.algorithm.searching: canFind;
 import esdl.rand.parser: CstParseData, CstParser;
 import esdl.base.rand: _esdl__RandGen, getRandGen;
+import std.algorithm.mutation: swap;
 
 
 abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier

@@ -3,6 +3,7 @@ import esdl.rand.pred: CstPredicate;
 import esdl.rand.parser: CstParseData, CstParser;
 import esdl.rand.misc;
 import esdl.rand.proxy: _esdl__Proxy;
+import esdl.data.vector: Vector;
 
 
 static CstParseData constraintXlate(string PROXY, string CST,
@@ -134,8 +135,8 @@ abstract class _esdl__Constraint(string CONSTRAINT, string FILE=__FILE__, size_t
     
   enum CstParseData CST_PARSE_DATA = constraintXlate("this.outer", CONSTRAINT, FILE, LINE);
 
-  protected CstPredicate[] _preds;
-  protected CstPredicate[] _guards;
+  protected Vector!(CstPredicate, "preds") _preds;
+  protected Vector!(CstPredicate, "guards") _guards;
   
   protected bool _initialized;
 
@@ -145,12 +146,12 @@ abstract class _esdl__Constraint(string CONSTRAINT, string FILE=__FILE__, size_t
 
   final override CstPredicate[] getConstraintGuards() {
     assert (_initialized);
-    return _guards;
+    return _guards[];
   }
 
   final override CstPredicate[] getConstraints() {
     assert (_initialized);
-    return _preds;
+    return _preds[];
   }
 
   final override void doSetDomainContext() {
