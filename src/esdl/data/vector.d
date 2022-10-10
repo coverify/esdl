@@ -8,7 +8,7 @@
 
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
-module esdl.data.deck;
+module esdl.data.vector;
 
 import core.stdc.string : memcpy, memmove, memset;
 import core.memory: pureMalloc, pureRealloc, pureFree, GC;
@@ -20,7 +20,7 @@ alias realloc = pureRealloc;
 
 enum MINCAP = 4;
 
-struct Deck(T, string NAME, uint MAXCAP=100)
+struct Vector(T, string NAME, uint MAXCAP=100)
      if (is (T == class) || is (T == interface) || is (T ==  struct) ||
 	 is (T == P*, P) || isSomeChar!T || isBoolean!T || isIntegral!T)
 {
@@ -64,7 +64,7 @@ struct Deck(T, string NAME, uint MAXCAP=100)
       }
       _load = newLoad;
     }
-    debug (CHECK_DECK_SIZE) {
+    debug (CHECK_VECTOR_SIZE) {
       static if (NAME == "stackLoad" || NAME == "rangeLoad"
 		 || NAME == "termLoad") {
 	import std.stdio;
@@ -75,8 +75,8 @@ struct Deck(T, string NAME, uint MAXCAP=100)
   }
   
 
-  void swap(F)(ref F other) if (is (F: Deck!(T, S), string S)) {
-    enum SIZE = Deck!(T, "Temp").sizeof;
+  void swap(F)(ref F other) if (is (F: Vector!(T, S), string S)) {
+    enum SIZE = Vector!(T, "Temp").sizeof;
     ubyte[SIZE] temp;
     
     memcpy(cast(void*) temp.ptr, cast(void*) &other, SIZE);
@@ -87,7 +87,7 @@ struct Deck(T, string NAME, uint MAXCAP=100)
   // grow minimum to size
   void growCapacity(size_t cap) {
     import std.conv: to;
-    debug (CHECK_DECK_SIZE) {
+    debug (CHECK_VECTOR_SIZE) {
       static if (NAME == "stackLoad" || NAME == "rangeLoad"
 		 || NAME == "termLoad") {
 	assert (cap <= MAXCAP || MAXCAP == 0,
@@ -106,7 +106,7 @@ struct Deck(T, string NAME, uint MAXCAP=100)
 
       // import std.stdio;
       // if (cap > 1000) {
-      //   writeln("Deck ", NAME, ": ", cap);
+      //   writeln("Vector ", NAME, ": ", cap);
       // }
 
       size_t newcap = cap;
@@ -266,7 +266,7 @@ struct Deck(T, string NAME, uint MAXCAP=100)
   static if (is (T == char)) {
     // this function should only be used in combination with reserve
     // Its only purpose is to allow calling format with string directly getting
-    // written to decks memory locations
+    // written to vectors memory locations
     void addReserve(size_t sz) {
       if (_capacity < _size + sz) growCapacity((_size + sz) * 2);
     }
@@ -310,4 +310,4 @@ struct Deck(T, string NAME, uint MAXCAP=100)
   }
 }
 
-alias Charbuf(string NAME, uint MAXCAP=1024) = Deck!(char, NAME, MAXCAP);
+alias Charbuf(string NAME, uint MAXCAP=1024) = Vector!(char, NAME, MAXCAP);

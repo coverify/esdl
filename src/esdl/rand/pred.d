@@ -6,7 +6,7 @@ import std.algorithm: map, filter;
 import std.array;
 import std.container.array;
 
-import esdl.data.deck;
+import esdl.data.vector;
 import esdl.rand.proxy: _esdl__Proxy, _esdl__CstProcessor;
 import esdl.rand.cstr: _esdl__ConstraintBase;
 import esdl.rand.misc;
@@ -248,7 +248,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   
   // List of dependent predicates that this guard may block
   // This can be set once in the setDomainContext
-  Deck!(CstPredicate, "depPreds") _depPreds;
+  Vector!(CstPredicate, "depPreds") _depPreds;
 
   void addDepPred(CstPredicate dep) {
     _depPreds ~= dep;
@@ -308,7 +308,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     _resolvedDepsCount = 0;
   }
 
-  Deck!(CstPredicate, "uwPreds", 0) _uwPreds;
+  Vector!(CstPredicate, "uwPreds", 0) _uwPreds;
   size_t _uwLength;
   
   __gshared uint _count;
@@ -503,8 +503,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return _domain;
   }
   
-  Deck!(CstDomBase, "unresolvedRnds") _unresolvedRnds;
-  Deck!(CstDomBase, "distRnds") _distRnds;	// temporary deck used in expr.d
+  Vector!(CstDomBase, "unresolvedRnds") _unresolvedRnds;
+  Vector!(CstDomBase, "distRnds") _distRnds;	// temporary vector used in expr.d
   void addUnresolvedRnd(CstDomBase rnd,
 	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
     // A guard should store its own rands as deps
@@ -526,12 +526,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
 
-  Deck!(CstDomBase, "resolvedRnds") _resolvedRnds;
+  Vector!(CstDomBase, "resolvedRnds") _resolvedRnds;
   void addResolvedRnd(CstDomBase rnd) {
     if (! _resolvedRnds[].canFind(rnd)) _resolvedRnds ~= rnd;
   }
 
-  Deck!(CstDomSet, "unrosolvedRndArrs") _unresolvedRndArrs;
+  Vector!(CstDomSet, "unrosolvedRndArrs") _unresolvedRndArrs;
   void addUnresolvedRndArr(CstDomSet rndArr,
 		 DomainContextEnum context=DomainContextEnum.DEFAULT) {
     if (this.isGuard()) {
@@ -542,12 +542,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     if (! _unresolvedRndArrs[].canFind(rndArr)) _unresolvedRndArrs ~= rndArr;
   }
 
-  Deck!(CstDomSet, "resolvedRndArrs") _resolvedRndArrs;
+  Vector!(CstDomSet, "resolvedRndArrs") _resolvedRndArrs;
   void addResolvedRndArr(CstDomSet rdn) {
     if (! _resolvedRndArrs[].canFind(rdn)) _resolvedRndArrs ~= rdn;
   }
 
-  Deck!(CstDomBase, "unrosolvedVars") _unresolvedVars;
+  Vector!(CstDomBase, "unrosolvedVars") _unresolvedVars;
   void addVar(CstDomBase var,
 	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
     final switch (context) {
@@ -561,63 +561,63 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
 
-  Deck!(CstDomBase, "resolvedVars") _resolvedVars;
+  Vector!(CstDomBase, "resolvedVars") _resolvedVars;
   void addResolvedVar(CstDomBase var) {
     if (! _resolvedVars[].canFind(var)) _resolvedVars ~= var;
   }
 
-  Deck!(CstDomSet, "unresolvedVarArrs") _unresolvedVarArrs;
+  Vector!(CstDomSet, "unresolvedVarArrs") _unresolvedVarArrs;
   void addVarArr(CstDomSet varArr,
 		 DomainContextEnum context=DomainContextEnum.DEFAULT) {
     // assert (context == DomainContextEnum.DEFAULT);
     if (! _unresolvedVarArrs[].canFind(varArr)) _unresolvedVarArrs ~= varArr;
   }
 
-  Deck!(CstDomSet, "resolvedVarArrs") _resolvedVarArrs;
+  Vector!(CstDomSet, "resolvedVarArrs") _resolvedVarArrs;
   void addResolvedVarArr(CstDomSet rdn) {
     if (! _resolvedVarArrs[].canFind(rdn)) _resolvedVarArrs ~= rdn;
   }
 
   // all the dist domains that this predicate is associated with
   // There could be multiple such domains
-  Deck!(CstDomBase, "dists") _dists;
+  Vector!(CstDomBase, "dists") _dists;
   void addDist(CstDomBase dist,
 	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
     if (! _dists[].canFind(dist)) _dists ~= dist;
   }
-  Deck!(CstValue, "vals")  _vals;
+  Vector!(CstValue, "vals")  _vals;
   void addVal(CstValue val,
 	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
     if (! _vals[].canFind(val)) _vals ~= val;
   }
-  Deck!(CstDepIntf, "deps") _deps;
+  Vector!(CstDepIntf, "deps") _deps;
   void addDep(CstDepIntf dep,
 	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
     if (! _deps[].canFind(dep)) _deps ~= dep;
   }
-  Deck!(CstDepIntf, "idxs") _idxs;
+  Vector!(CstDepIntf, "idxs") _idxs;
   void addIdx(CstDepIntf idx,
 	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
     if (! _idxs[].canFind(idx)) _idxs ~= idx;
   }
-  Deck!(CstDomBase, "bitIdxs") _bitIdxs;
+  Vector!(CstDomBase, "bitIdxs") _bitIdxs;
   void addBitIdx(CstDomBase bitIdx,
 		 DomainContextEnum context=DomainContextEnum.DEFAULT) {
     if (! _bitIdxs[].canFind(bitIdx)) _bitIdxs ~= bitIdx;
   }
-  Deck!(CstIterator, "iters") _iters;
+  Vector!(CstIterator, "iters") _iters;
   void addIter(CstIterator iter,
 	       DomainContextEnum context=DomainContextEnum.DEFAULT) {
     // if (! _iters[].canFind(iter))
     _iters ~= iter;
   }
-  Deck!(CstIterator, "parsedIters") _parsedIters;
+  Vector!(CstIterator, "parsedIters") _parsedIters;
   void addParsedIter(CstIterator parsedIter,
 		     DomainContextEnum context=DomainContextEnum.DEFAULT) {
     // if (! _parsedIters[].canFind(parsedIter))
     _parsedIters ~= parsedIter;
   }
-  Deck!(CstIterator, "varIters") _varIters;
+  Vector!(CstIterator, "varIters") _varIters;
   void addVarIter(CstIterator varIter,
 		  DomainContextEnum context=DomainContextEnum.DEFAULT) {
     // if (! _varIters[].canFind(varIter))
@@ -626,7 +626,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   // For the predicates that have been created by unrolling,
   // keep track of the iterators unrolled
-  Deck!(CstIterator, "unrolledIters") _unrolledIters;
+  Vector!(CstIterator, "unrolledIters") _unrolledIters;
   
   CstIterator _unrollIter;
   uint _unrollIterVal;
@@ -1243,7 +1243,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return (_state == State.SOLVED);
   }
 
-  Deck!(CstDepCallback, "depCbs") _depCbs;
+  Vector!(CstDepCallback, "depCbs") _depCbs;
 
   void registerDepPred(CstDepCallback depCb) {
     // if (! _depCbs[].canFind(depCb))

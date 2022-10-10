@@ -7,7 +7,7 @@ import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__CstProcessor;
 
 import esdl.data.bvec: isBitVector, to;
-import esdl.data.deck: Deck;
+import esdl.data.vector: Vector;
 
 struct CstVecDistRange(T)
 {
@@ -418,7 +418,7 @@ class CstDistPredSolver	// agent of dist and related predicates
     _state = State.INIT;
   }
   
-  Deck!(CstPredicate, "preds") _preds;
+  Vector!(CstPredicate, "preds") _preds;
   CstPredicate _distPred;
 
   CstPredicate[] predicates() {

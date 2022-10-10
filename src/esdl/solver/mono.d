@@ -5,7 +5,7 @@ import esdl.rand.base: CstDomBase, CstVecValueBase;
 import esdl.rand.pred: CstPredicate;
 import esdl.rand.agent: CstSolverAgent;
 import esdl.rand.misc;
-import esdl.data.deck: Deck;
+import esdl.data.vector: Vector;
 import esdl.rand.proxy: _esdl__CstProcessor;
 
 
@@ -17,7 +17,7 @@ debug (MONOSOLVER){
   debug = CHECKMONO;
 }
 struct RangeStack (T){
-  Deck!(Range!T, "stackLoad") _stackLoad;
+  Vector!(Range!T, "stackLoad") _stackLoad;
   size_t length;
   alias size = length;
   size_t capacity;
@@ -109,7 +109,7 @@ struct RangeStack (T){
 }
 struct Range (T)
 {
-  Deck!(T, "rangeLoad") _rangeLoad;
+  Vector!(T, "rangeLoad") _rangeLoad;
   size_t _first = 0;
   size_t _last = 0;
   size_t opDollar() const @safe nothrow {
@@ -519,7 +519,7 @@ struct Term
 }
 
 struct TermArray {
-  Deck!(Term, "termLoad") _termLoad;
+  Vector!(Term, "termLoad") _termLoad;
   size_t length = 0;
   alias size = length;
   size_t start = 0;

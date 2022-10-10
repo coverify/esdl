@@ -9,7 +9,7 @@ import esdl.rand.agent: CstSolverAgent;
 import esdl.rand.cstr: _esdl__ConstraintBase;
 import esdl.solver.dist: CstDistPredSolver;
 import esdl.rand.misc;
-import esdl.data.deck;
+import esdl.data.vector;
 
 import std.algorithm.searching: canFind;
 import esdl.rand.parser: CstParseData, CstParser;
@@ -119,7 +119,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     else return null;
   }
 
-  Deck!(_esdl__ConstraintBase, "globalVisitors") _esdl__globalVisitors;
+  Vector!(_esdl__ConstraintBase, "globalVisitors") _esdl__globalVisitors;
 
   void _esdl__addGlobalVisitor(_esdl__ConstraintBase visitor) {
     _esdl__globalVisitors ~= visitor;
@@ -136,7 +136,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     return _esdl__globalVisitors[];
   }
 
-  Deck!(_esdl__ConstraintBase, "argVisitors") _esdl__argVisitors;
+  Vector!(_esdl__ConstraintBase, "argVisitors") _esdl__argVisitors;
 
   void _esdl__addArgVisitor(_esdl__ConstraintBase visitor) {
     _esdl__argVisitors ~= visitor;
@@ -224,7 +224,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   abstract void _esdl__doRandomize(_esdl__RandGen randGen);
   abstract void _esdl__doConstrain(_esdl__CstProcessor proc, bool callPreRandomize);
 
-  Deck!(CstVecNodeIntf, "lambdaCstDoms") _esdl__lambdaCstDoms;
+  Vector!(CstVecNodeIntf, "lambdaCstDoms") _esdl__lambdaCstDoms;
 
   final void _esdl__addLambdaCstDom(CstVecNodeIntf dom) {
     _esdl__lambdaCstDoms ~= dom;
@@ -343,7 +343,7 @@ class _esdl__CstProcessor
     return _distPredSolver;
   }
 
-  Deck!(CstPredicate, "unrolledNewPreds") _unrolledNewPreds;
+  Vector!(CstPredicate, "unrolledNewPreds") _unrolledNewPreds;
 
   void addUnrolledNewPredicate(CstPredicate pred) {
     _unrolledNewPreds ~= pred;
@@ -355,44 +355,44 @@ class _esdl__CstProcessor
     _unrolledNewPreds.reset();
   }
 
-  // Deck!(CstPredicate, "predsThatUnrolled") _predsThatUnrolled;
+  // Vector!(CstPredicate, "predsThatUnrolled") _predsThatUnrolled;
   // void registerUnrolled(CstPredicate pred) {
   //   _predsThatUnrolled ~= pred;
   // }
 
-  Deck!(CstPredicate, "newPreds") _newPreds;
-  Deck!(CstPredicate, "toNewPreds") _toNewPreds;
-  // Deck!(CstPredicate, "unrolledPreds") _unrolledPreds;
-  // Deck!(CstPredicate, "toUnrolledPreds") _toUnrolledPreds;
+  Vector!(CstPredicate, "newPreds") _newPreds;
+  Vector!(CstPredicate, "toNewPreds") _toNewPreds;
+  // Vector!(CstPredicate, "unrolledPreds") _unrolledPreds;
+  // Vector!(CstPredicate, "toUnrolledPreds") _toUnrolledPreds;
   
-  Deck!(CstPredicate, "rolledPreds") _rolledPreds;
-  Deck!(CstPredicate, "toRolledPreds") _toRolledPreds;
+  Vector!(CstPredicate, "rolledPreds") _rolledPreds;
+  Vector!(CstPredicate, "toRolledPreds") _toRolledPreds;
 
-  Deck!(CstPredicate, "resolvedPreds") _resolvedPreds;
-  Deck!(CstPredicate, "toResolvedPreds") _toResolvedPreds;
+  Vector!(CstPredicate, "resolvedPreds") _resolvedPreds;
+  Vector!(CstPredicate, "toResolvedPreds") _toResolvedPreds;
 
-  Deck!(CstPredicate, "resolvedDistPreds") _resolvedDistPreds;
-  Deck!(CstPredicate, "toResolvedDistPreds") _toResolvedDistPreds;
+  Vector!(CstPredicate, "resolvedDistPreds") _resolvedDistPreds;
+  Vector!(CstPredicate, "toResolvedDistPreds") _toResolvedDistPreds;
 
-  Deck!(CstPredicate, "solvePreds") _solvePreds;
+  Vector!(CstPredicate, "solvePreds") _solvePreds;
 
-  Deck!(CstPredicate, "unresolvedPreds") _unresolvedPreds;
-  Deck!(CstPredicate, "toUnresolvedPreds") _toUnresolvedPreds;
+  Vector!(CstPredicate, "unresolvedPreds") _unresolvedPreds;
+  Vector!(CstPredicate, "toUnresolvedPreds") _toUnresolvedPreds;
 
-  Deck!(CstPredicate, "predGuards") _predGuards;
+  Vector!(CstPredicate, "predGuards") _predGuards;
 
-  Deck!(CstDomBase, "solvedDomains") _solvedDomains;
-  Deck!(CstDomSet, "solvedDomainArrs") _solvedDomainArrs;
+  Vector!(CstDomBase, "solvedDomains") _solvedDomains;
+  Vector!(CstDomSet, "solvedDomainArrs") _solvedDomainArrs;
   
-  // Deck!(CstSolverAgent, "solvedSolvers") _solvedSolvers;
+  // Vector!(CstSolverAgent, "solvedSolvers") _solvedSolvers;
 
   
-  Deck!(CstPredicate, "collatedPredicates") _collatedPredicates;
-  Deck!(CstDomBase, "collatedDomains") _collatedDomains;
-  Deck!(CstDomSet, "collatedDomArrs") _collatedDomArrs;
+  Vector!(CstPredicate, "collatedPredicates") _collatedPredicates;
+  Vector!(CstDomBase, "collatedDomains") _collatedDomains;
+  Vector!(CstDomSet, "collatedDomArrs") _collatedDomArrs;
   
-  Deck!(CstVarNodeIntf, "beforeSolve") _beforeSolve;
-  Deck!(CstVarNodeIntf, "afterSolve") _afterSolve;
+  Vector!(CstVarNodeIntf, "beforeSolve") _beforeSolve;
+  Vector!(CstVarNodeIntf, "afterSolve") _afterSolve;
 
   void collatePredicate (CstPredicate pred){
     _collatedPredicates ~= pred;
@@ -412,7 +412,7 @@ class _esdl__CstProcessor
     domArr._state = CstDomSet.State.COLLATED;
   }
 
-  Deck!(CstIterator, "itersWithCbs") _itersWithCbs;
+  Vector!(CstIterator, "itersWithCbs") _itersWithCbs;
 
   void printSolver (){
     import std.stdio;
