@@ -14,7 +14,7 @@ import esdl.rand.agent: CstSolverAgent;
 import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__CstProcessor;
 import esdl.rand.misc;
-import esdl.data.deck: Deck;
+import esdl.data.vector: Vector;
 import esdl.intf.z3.z3;
 import esdl.intf.z3.api.z3_types: Z3_ast;
 import esdl.intf.z3.api.z3_api: Z3_mk_int64, Z3_mk_unsigned_int64, Z3_mk_true, Z3_mk_false;
@@ -229,7 +229,7 @@ struct Z3Var
 class CstZ3Solver: CstSolver
 {
   
-  Deck!(Z3Term, "evalStack") _evalStack;
+  Vector!(Z3Term, "evalStack") _evalStack;
 
   Z3Term _term;
 
@@ -254,7 +254,7 @@ class CstZ3Solver: CstSolver
 
   uint _seed;
 
-  Deck!(Z3_ast, "vector") _vector;
+  Vector!(Z3_ast, "vector") _vector;
   CstPredicate[] _softPreds;
 
   CstVectorOp _state;
@@ -442,12 +442,12 @@ class CstZ3Solver: CstSolver
     _solver.pop();
   }
 
-  Deck!(bool, "assumptionFlags") _assumptionFlags;
+  Vector!(bool, "assumptionFlags") _assumptionFlags;
 
   bool _optimizeInit = false;
 
-  Deck!(bool, "newAssumptionFlags") _newAssumptionFlags;
-  Deck!(Expr, "assumptions") _assumptions;
+  Vector!(bool, "newAssumptionFlags") _newAssumptionFlags;
+  Vector!(Expr, "assumptions") _assumptions;
   
   void optimize() {
     _newAssumptionFlags.reset();

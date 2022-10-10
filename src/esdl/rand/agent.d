@@ -1,6 +1,6 @@
 module esdl.rand.agent;
 
-import esdl.data.deck: Deck;
+import esdl.data.vector: Vector;
 
 import esdl.solver.base;
 import esdl.solver.mono: CstMonoSolver;
@@ -72,11 +72,11 @@ class CstSolverAgent			// agent of related predicates
 
   }
   
-  Deck!(CstPredicate, "preds") _preds;
+  Vector!(CstPredicate, "preds") _preds;
 
   CstPredicate _distPred;
 
-  Deck!(CstPredicate, "predGroup") _predGroup;
+  Vector!(CstPredicate, "predGroup") _predGroup;
 
   CstPredicate[] predicates() {
     return _preds[];
@@ -101,7 +101,7 @@ class CstSolverAgent			// agent of related predicates
     _predGroup ~= pred;
   }
 
-  Deck!(CstDomBase, "annotatedDoms") _annotatedDoms;
+  Vector!(CstDomBase, "annotatedDoms") _annotatedDoms;
   uint addAnnotatedDom(CstDomBase dom) {
     // import std.stdio;
     // writeln(annotatedDom.describe());
@@ -114,7 +114,7 @@ class CstSolverAgent			// agent of related predicates
     return _annotatedDoms[];
   }
   
-  Deck!(CstDomSet, "annotatedDomArrs") _annotatedDomArrs;
+  Vector!(CstDomSet, "annotatedDomArrs") _annotatedDomArrs;
   uint addAnnotatedDomArr(CstDomSet domArr) {
     uint index = cast (uint) _annotatedDomArrs.length;
     _annotatedDomArrs ~= domArr;
@@ -125,7 +125,7 @@ class CstSolverAgent			// agent of related predicates
     return _annotatedDomArrs[];
   }
   
-  Deck!(CstDomBase, "annotatedVars") _annotatedVars;
+  Vector!(CstDomBase, "annotatedVars") _annotatedVars;
   uint addAnnotatedVar(CstDomBase var) {
     uint index = cast (uint) _annotatedVars.length;
     _annotatedVars ~= var;
@@ -136,7 +136,7 @@ class CstSolverAgent			// agent of related predicates
     return _annotatedVars[];
   }
 
-  Deck!(CstDomSet, "annotatedVarArrs") _annotatedVarArrs;
+  Vector!(CstDomSet, "annotatedVarArrs") _annotatedVarArrs;
   uint addAnnotatedVarArr(CstDomSet varArr) {
     uint index = cast (uint) _annotatedVarArrs.length;
     _annotatedVarArrs ~= varArr;

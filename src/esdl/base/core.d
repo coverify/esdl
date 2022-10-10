@@ -16,7 +16,7 @@ import core.thread: Thread, Fiber, ThreadGroup;
 // import esdl.sys.thread: Fiber;
 
 public import esdl.data.time;
-public import esdl.data.deck;
+public import esdl.data.vector;
 
 public import esdl.base.comm;
 public import esdl.base.rand: RandomGen;
@@ -2198,11 +2198,11 @@ class EventObj: EventAgent, NamedComp
   }
 
   // Clients that need to be notified when this event triggers
-  private Deck!(IndexedSimEvent, "clientEvents") _clientEvents;
-  private Deck!(IndexedSimEvent, "clientEventsAlt") _clientEventsAlt;
+  private Vector!(IndexedSimEvent, "clientEvents") _clientEvents;
+  private Vector!(IndexedSimEvent, "clientEventsAlt") _clientEventsAlt;
 
   // Processes that are waiting for this event to trigger
-  private Deck!(Process, "clientProcesses") _clientProcesses;
+  private Vector!(Process, "clientProcesses") _clientProcesses;
 
   protected this(NamedComp parent=null, bool async=false) {
     this(null, parent, async);
@@ -3155,7 +3155,7 @@ abstract private class SimEvent: EventClient
 abstract class EventExpr: SimEvent
 {
   // list of events that are in the expression
-  private Deck!(EventObj, "agents") _agents;
+  private Vector!(EventObj, "agents") _agents;
 }
 
 
@@ -3164,7 +3164,7 @@ abstract class EventExpr: SimEvent
 abstract class EventList: SimEvent
 {
   // list of events that are in the expression
-  private Deck!(EventObj, "agents") _agents;
+  private Vector!(EventObj, "agents") _agents;
 }
 
 private class AsyncTimedEvent: TimedEvent
@@ -5153,7 +5153,7 @@ class SimThread: EsdlThread
     super.start();
   }
 
-  Deck!(Notification, "notifications") _notifications;
+  Vector!(Notification, "notifications") _notifications;
   // Notification[] _notifications;
 
   final void addNotification(Notification notice) {
@@ -6536,7 +6536,7 @@ abstract class Process: Procedure, HierComp, EventClient
     }
   }
 
-  Deck!(EventObj, "waitForksEvents") _waitForkEvents;
+  Vector!(EventObj, "waitForksEvents") _waitForkEvents;
   void waitForks() {
     Process[] procs = Process.self._esdl__getChildProcsHier();
     foreach (proc; procs) {
