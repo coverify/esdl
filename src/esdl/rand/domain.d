@@ -12,12 +12,11 @@ import esdl.rand.base: CstValue, CstDomBase, CstDomSet, CstIterator,
   CstVecTerm, CstVecValueBase, CstDepIntf;
 import esdl.rand.misc: rand, writeHexString, isVecSigned, CstVectorOp,
   CstInsideOp, CstCompareOp, CstLogicOp, DomainContextEnum, GetVecType,
-  CstVecType, _esdl__Sigbuf, EnumRange, EnumRanges;
+  CstVecType, _esdl__Sigbuf, EnumRange, EnumRanges, _esdl__staticCast;
 import esdl.rand.proxy: _esdl__Proxy, _esdl__CstProcessor;
 import esdl.rand.pred: CstPredicate, Hash;
 import esdl.rand.agent: CstSolverAgent;
 import esdl.rand.expr: CstNotLogicExpr, CstLogic2LogicExpr;
-import esdl.rand.meta: _esdl__staticCast;
 
 import esdl.solver.base: CstSolver, CstDistSolverBase;
 

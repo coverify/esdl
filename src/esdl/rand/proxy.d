@@ -208,17 +208,17 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   // Keep a list of constraints in the class
   _esdl__ConstraintBase _esdl__lambdaCst;
 
-  _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-				      CstObjectIntf obj, void* outer) {
-    assert (false,
-	    "Override _esdl__createProxyInst in the derived proxy class");
-  }
+  // _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
+  // 				      CstObjectIntf obj, void* outer) {
+  //   assert (false,
+  // 	    "Override _esdl__createProxyInst in the derived proxy class");
+  // }
 
-  _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-				      CstObjectIntf obj, Object outer) {
-    assert (false,
-	    "Override _esdl__createProxyInst in the derived proxy class");
-  }
+  // _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
+  // 				      CstObjectIntf obj, Object outer) {
+  //   assert (false,
+  // 	    "Override _esdl__createProxyInst in the derived proxy class");
+  // }
 
 
   // overridden by Randomization mixin -- see meta.d
@@ -277,14 +277,14 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 	_esdl__seed = 0; // uniform!(uint)();
       }
     }
-    _esdl__rGen = new _esdl__RandGen(_esdl__seed);
+    _esdl__rGen = make!_esdl__RandGen(_esdl__seed);
 
     // only the root proxy shall have a processor
-    if (_esdl__root is this) _esdl__proc = new _esdl__CstProcessor(this);
+    if (_esdl__root is this) _esdl__proc = make!_esdl__CstProcessor(this);
     else _esdl__proc = _esdl__getRootProxy()._esdl__getProc();
 
     // scopes for constraint parsing
-    _esdl__rootScope = new CstScope(null, null);
+    _esdl__rootScope = make!CstScope(null, null);
     _esdl__currentScope = _esdl__rootScope;
 
   }
@@ -335,12 +335,12 @@ class _esdl__CstProcessor
   }
   
   static getPredSolver() {
-    if (_agent is null) _agent = new CstSolverAgent();
+    if (_agent is null) _agent = make!CstSolverAgent();
     return _agent;
   }
 
   static getDistPredSolver() {
-    if (_distPredSolver is null) _distPredSolver = new CstDistPredSolver();
+    if (_distPredSolver is null) _distPredSolver = make!CstDistPredSolver();
     return _distPredSolver;
   }
 

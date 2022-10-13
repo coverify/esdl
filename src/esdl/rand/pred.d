@@ -451,11 +451,11 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	  assert (uwPred is null);
 	  CstPredicate guard = _guard;
 	  if (guardUnrolled) guard = _guard._uwPreds[i];
-	  uwPred = new CstPredicate(_constraint, guard, _guardInv, _statement,
-				    _proxy, _soft, _expr._esdl__unroll(iter, iter.mapIter(i)),
-				    _isGuard, this, iter, i// ,
-				    // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
-				    );
+	  uwPred = make!CstPredicate(_constraint, guard, _guardInv, _statement,
+				     _proxy, _soft, _expr._esdl__unroll(iter, iter.mapIter(i)),
+				     _isGuard, this, iter, i// ,
+				     // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
+				     );
 	  uwPred._unrolledIters ~= this._unrolledIters[];
 	  uwPred._unrolledIters ~= iter;
 	  _uwPreds[i] = uwPred;
@@ -1317,10 +1317,10 @@ class CstVisitorPredicate: CstPredicate
 	// import std.stdio;
 	// writeln("i: ", i, " mapped: ", iter.mapIter(i));
 	CstVisitorPredicate uwPred =
-	  new CstVisitorPredicate(_constraint, _guard, _guardInv, _statement, _proxy, _soft,
-				  _expr._esdl__unroll(iter, iter.mapIter(i)), false, this, iter, i// ,
-				  // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
-				  );
+	  make!CstVisitorPredicate(_constraint, _guard, _guardInv, _statement, _proxy, _soft,
+				   _expr._esdl__unroll(iter, iter.mapIter(i)), false, this, iter, i// ,
+				   // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
+				   );
 	uwPred._unrolledIters ~= this._unrolledIters[];
 	uwPred._unrolledIters ~= iter;
 	_uwPreds ~= uwPred;

@@ -5,7 +5,7 @@ import esdl.solver.base: CstSolver, CstDistSolverBase;
 import esdl.rand.misc: rand, isVecSigned, Unconst, CstVecType,
   CstVectorOp, CstInsideOp, CstBinaryOp, CstCompareOp, CstLogicOp,
   CstUnaryOp, CstSliceOp, writeHexString, CstUniqueOp, DomainContextEnum,
-  getCommonVecType, _esdl__Sigbuf;
+  getCommonVecType, _esdl__Sigbuf, make;
 
 import esdl.rand.base: DomDistEnum, CstTerm, CstDomBase, CstDomSet,
   CstIterator, CstVecNodeIntf, CstVarNodeIntf, CstVecArrIntf,
@@ -231,8 +231,8 @@ class CstVec2VecExpr: CstVecExpr
   }
 
   CstVec2VecExpr _esdl__unroll(CstIterator iter, ulong n) {
-    return new CstVec2VecExpr(_lhs._esdl__unroll(iter, n),
-			      _rhs._esdl__unroll(iter, n), _op);
+    return make!CstVec2VecExpr(_lhs._esdl__unroll(iter, n),
+			       _rhs._esdl__unroll(iter, n), _op);
   }
 
   this(CstVecTerm lhs, CstVecTerm rhs, CstBinaryOp op) {
@@ -410,10 +410,10 @@ class CstRangeExpr
 
   CstRangeExpr _esdl__unroll(CstIterator iter, ulong n) {
     if (_rhs is null)
-      return new CstRangeExpr(_lhs._esdl__unroll(iter, n), null, _inclusive);
+      return make!CstRangeExpr(_lhs._esdl__unroll(iter, n), null, _inclusive);
     else
-      return new CstRangeExpr(_lhs._esdl__unroll(iter, n),
-			      _rhs._esdl__unroll(iter, n), _inclusive);
+      return make!CstRangeExpr(_lhs._esdl__unroll(iter, n),
+			       _rhs._esdl__unroll(iter, n), _inclusive);
   }
 
   this(CstVecTerm lhs, CstVecTerm rhs, bool inclusive=false) {
@@ -508,10 +508,10 @@ class CstVecDistSetElem
 
   CstVecDistSetElem _esdl__unroll(CstIterator iter, ulong n) {
     if (_rhs is null)
-      return new CstVecDistSetElem(_lhs._esdl__unroll(iter, n), null, _inclusive);
+      return make!CstVecDistSetElem(_lhs._esdl__unroll(iter, n), null, _inclusive);
     else
-      return new CstVecDistSetElem(_lhs._esdl__unroll(iter, n),
-				   _rhs._esdl__unroll(iter, n), _inclusive);
+      return make!CstVecDistSetElem(_lhs._esdl__unroll(iter, n),
+				    _rhs._esdl__unroll(iter, n), _inclusive);
   }
 
   this(CstVecTerm lhs, CstVecTerm rhs, bool inclusive=false) {
@@ -606,11 +606,11 @@ class CstUniqueSetElem
   CstUniqueSetElem _esdl__unroll(CstIterator iter, ulong n) {
     if (_arr !is null) {
       assert (_vec is null);
-      return new CstUniqueSetElem(_arr._esdl__unroll(iter, n));
+      return make!CstUniqueSetElem(_arr._esdl__unroll(iter, n));
     }
     else {
       assert (_arr is null);
-      return new CstUniqueSetElem(_vec._esdl__unroll(iter, n));
+      return make!CstUniqueSetElem(_vec._esdl__unroll(iter, n));
     }
   }
 
@@ -834,15 +834,15 @@ class CstInsideSetElem
   CstInsideSetElem _esdl__unroll(CstIterator iter, ulong n) {
     if (_arr !is null) {
       assert (_lhs is null);
-      return new CstInsideSetElem(_arr._esdl__unroll(iter, n));
+      return make!CstInsideSetElem(_arr._esdl__unroll(iter, n));
     }
     else {
       assert (_arr is null);
       if (_rhs is null)
-	return new CstInsideSetElem(_lhs._esdl__unroll(iter, n), null, _inclusive);
+	return make!CstInsideSetElem(_lhs._esdl__unroll(iter, n), null, _inclusive);
       else
-	return new CstInsideSetElem(_lhs._esdl__unroll(iter, n),
-				    _rhs._esdl__unroll(iter, n), _inclusive);
+	return make!CstInsideSetElem(_lhs._esdl__unroll(iter, n),
+				     _rhs._esdl__unroll(iter, n), _inclusive);
     }
   }
 
@@ -1069,9 +1069,9 @@ class CstLogicWeightedDistSetElem
   }
 
   CstLogicWeightedDistSetElem _esdl__unroll(CstIterator iter, ulong n) {
-    return new CstLogicWeightedDistSetElem(_term._esdl__unroll(iter, n),
-					   _weight._esdl__unroll(iter, n),
-					   _perItem);
+    return make!CstLogicWeightedDistSetElem(_term._esdl__unroll(iter, n),
+					    _weight._esdl__unroll(iter, n),
+					    _perItem);
   }
 
   this(CstLogicTerm term, CstVecTerm weight, bool perItem=false) {
@@ -1149,9 +1149,9 @@ class CstVecWeightedDistSetElem
   }
 
   CstVecWeightedDistSetElem _esdl__unroll(CstIterator iter, ulong n) {
-    return new CstVecWeightedDistSetElem(_range._esdl__unroll(iter, n),
-					 _weight._esdl__unroll(iter, n),
-					 _perItem);
+    return make!CstVecWeightedDistSetElem(_range._esdl__unroll(iter, n),
+					  _weight._esdl__unroll(iter, n),
+					  _perItem);
   }
 
   this(CstVecDistSetElem range, CstVecTerm weight, bool perItem=false) {
@@ -1227,7 +1227,7 @@ class CstLogicDistExpr(T): CstLogicExpr
   }
 
   private final void initDistSolver() {
-    _rs = new CstLogicDistSolver!T(_vec);
+    _rs = make!(CstLogicDistSolver!T)(_vec);
     foreach (dist; _dists) {
       T term = cast(T) dist._term.eval();
       T rhs;
@@ -1269,7 +1269,7 @@ class CstLogicDistExpr(T): CstLogicExpr
     foreach (dist; _dists) {
       dists ~= dist._esdl__unroll(iter, n);
     }
-    return new CstLogicDistExpr!T(cast (CstDomBase) (_vec._esdl__unroll(iter, n)), dists);
+    return make!(CstLogicDistExpr!T)(cast (CstDomBase) (_vec._esdl__unroll(iter, n)), dists);
   }
 
   override void setDistPredContext(CstPredicate pred) {
@@ -1354,7 +1354,7 @@ class CstVecDistExpr(T): CstLogicExpr
   }
 
   private final void initDistSolver() {
-    _rs = new CstVecDistSolver!T(_vec);
+    _rs = make!(CstVecDistSolver!T)(_vec);
     foreach (dist; _dists) {
       T lhs = cast(T) dist._range._lhs.evaluate();
       T rhs;
@@ -1410,7 +1410,7 @@ class CstVecDistExpr(T): CstLogicExpr
     foreach (dist; _dists) {
       dists ~= dist._esdl__unroll(iter, n);
     }
-    return new CstVecDistExpr!T(cast (CstDomBase) (_vec._esdl__unroll(iter, n)), dists);
+    return make!(CstVecDistExpr!T)(cast (CstDomBase) (_vec._esdl__unroll(iter, n)), dists);
   }
 
   override void setDistPredContext(CstPredicate pred) {
@@ -1516,10 +1516,10 @@ class CstVecDistExpr(T): CstLogicExpr
 
 //   override CstVecSliceExpr _esdl__unroll(CstIterator iter, ulong n) {
 //     if (_rhs is null)
-//       return new CstVecSliceExpr(_vec._esdl__unroll(iter, n),
+//       return make!CstVecSliceExpr(_vec._esdl__unroll(iter, n),
 // 				 _lhs._esdl__unroll(iter, n), null);
 //     else 
-//       return new CstVecSliceExpr(_vec._esdl__unroll(iter, n),
+//       return make!CstVecSliceExpr(_vec._esdl__unroll(iter, n),
 // 				 _lhs._esdl__unroll(iter, n), _rhs._esdl__unroll(iter, n));
 //   }
 
@@ -1611,7 +1611,7 @@ class CstVecSliceExpr: CstVecExpr
   }
 
   CstVecSliceExpr _esdl__unroll(CstIterator iter, ulong n) {
-    return new CstVecSliceExpr(_vec._esdl__unroll(iter, n),
+    return make!CstVecSliceExpr(_vec._esdl__unroll(iter, n),
 			       _range._esdl__unroll(iter, n));
   }
 
@@ -1709,7 +1709,7 @@ class CstVecSliceExpr: CstVecExpr
 //   }
 
 //   override CstVecIndexExpr _esdl__unroll(CstIterator iter, ulong n) {
-//     return new CstVecIndexExpr(_vec._esdl__unroll(iter, n),
+//     return make!CstVecIndexExpr(_vec._esdl__unroll(iter, n),
 // 			       _index._esdl__unroll(iter, n));
 //   }
 
@@ -1773,7 +1773,7 @@ class CstNotVecExpr: CstVecExpr
   }
 
   CstNotVecExpr _esdl__unroll(CstIterator iter, ulong n) {
-    return new CstNotVecExpr(_expr._esdl__unroll(iter, n));
+    return make!CstNotVecExpr(_expr._esdl__unroll(iter, n));
   }
 
   this(CstVecTerm expr) {
@@ -1879,7 +1879,7 @@ class CstNegVecExpr: CstVecExpr
   }
 
   CstNegVecExpr _esdl__unroll(CstIterator iter, ulong n) {
-    return new CstNegVecExpr(_expr._esdl__unroll(iter, n));
+    return make!CstNegVecExpr(_expr._esdl__unroll(iter, n));
   }
 
   this(CstVecTerm expr) {
@@ -1980,7 +1980,7 @@ class CstLogic2LogicExpr: CstLogicExpr
   }
 
   override CstLogic2LogicExpr _esdl__unroll(CstIterator iter, ulong n) {
-    return new CstLogic2LogicExpr(_lhs._esdl__unroll(iter, n),
+    return make!CstLogic2LogicExpr(_lhs._esdl__unroll(iter, n),
 				  _rhs._esdl__unroll(iter, n), _op);
   }
 
@@ -2103,7 +2103,7 @@ class CstInsideArrExpr: CstLogicExpr
   }
 
   CstInsideArrExpr dup() {
-    CstInsideArrExpr expr = new CstInsideArrExpr(_term);
+    CstInsideArrExpr expr = make!CstInsideArrExpr(_term);
     expr._elems = _elems;
     return expr;
   }
@@ -2169,7 +2169,7 @@ class CstInsideArrExpr: CstLogicExpr
   }
 
   override CstInsideArrExpr _esdl__unroll(CstIterator iter, ulong n) {
-    CstInsideArrExpr unrolled = new CstInsideArrExpr(_term._esdl__unroll(iter, n));
+    CstInsideArrExpr unrolled = make!CstInsideArrExpr(_term._esdl__unroll(iter, n));
     foreach (elem; _elems) {
       unrolled.addElem(elem._esdl__unroll(iter, n));
     }
@@ -2310,7 +2310,7 @@ class CstUniqueArrExpr: CstLogicExpr
   }
 
   override CstUniqueArrExpr _esdl__unroll(CstIterator iter, ulong n) {
-    CstUniqueArrExpr unrolled = new CstUniqueArrExpr();
+    CstUniqueArrExpr unrolled = make!CstUniqueArrExpr();
     foreach (elem; _elems) {
       unrolled.addElem(elem._esdl__unroll(iter, n));
     }
@@ -2488,8 +2488,8 @@ class CstVec2LogicExpr: CstLogicExpr
     // writeln(_lhs.describe(true) ~ " " ~ _op.to!string ~ " " ~ _rhs.describe(true) ~ " Getting unwound!");
     // writeln("RHS: ", _rhs._esdl__unroll(iter, n).describe(true));
     // writeln("LHS: ", _lhs._esdl__unroll(iter, n).describe(true));
-    return new CstVec2LogicExpr(_lhs._esdl__unroll(iter, n),
-				_rhs._esdl__unroll(iter, n), _op);
+    return make!CstVec2LogicExpr(_lhs._esdl__unroll(iter, n),
+				 _rhs._esdl__unroll(iter, n), _op);
   }
 
   void setDomainContext(CstPredicate pred, DomainContextEnum context) {
@@ -2747,7 +2747,7 @@ class CstNotLogicExpr: CstLogicExpr
   }
 
   override CstNotLogicExpr _esdl__unroll(CstIterator iter, ulong n) {
-    return new CstNotLogicExpr(_expr._esdl__unroll(iter, n));
+    return make!CstNotLogicExpr(_expr._esdl__unroll(iter, n));
   }
 
   void setDomainContext(CstPredicate pred, DomainContextEnum context) {
@@ -2822,7 +2822,7 @@ class CstVarVisitorExpr: CstLogicExpr
     assert (_obj !is null);
     CstIterator iter_ = _obj._esdl__iter();
     if (iter_ is iter) {
-      return new CstVarVisitorExpr(_obj._esdl__getChild(n));
+      return make!CstVarVisitorExpr(_obj._esdl__getChild(n));
     }
     else {
       return this;
