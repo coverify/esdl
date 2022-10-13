@@ -15,12 +15,14 @@ import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy;
 import esdl.rand.expr: CstRangeExpr, CstVec2LogicExpr;
 import esdl.rand.domain: CstArrIterator, CstArrLength, CstArrHierLength, CstDomain;
-import esdl.rand.meta: _esdl__staticCast, _esdl__ARG;
+import esdl.rand.misc: _esdl__staticCast, _esdl__ARG;
 
 import esdl.base.rand: _esdl__RandGen;
 
 import std.algorithm.searching: canFind;
 
+alias CstBoolVar = CstVector!(bool, rand(true, true), 0);
+  
 interface CstVecIndexed { }
 
 // V represents the type of the declared array/non-array member
@@ -899,8 +901,8 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	_parent = parent;
 	// _root = _parent._esdl__getRootProxy();
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
-	_arrLen = new CstArrLength!RV (name ~ "->length", this);
-	_arrHierLen = new CstArrHierLength!RV (name ~ "->hierLength", this);
+	_arrLen = make!(CstArrLength!RV)(name ~ "->length", this);
+	_arrHierLen = make!(CstArrHierLength!RV)(name ~ "->hierLength", this);
       }
 
       final override bool _esdl__parentIsConstrained() {
@@ -986,11 +988,11 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       override EV createElem(uint i, bool isMapped) {
-	return new EV(_esdl__getName(), this, i, isMapped);
+	return make!EV(_esdl__getName(), this, i, isMapped);
       }
 
       override EV createElem(CstVecTerm index, bool isMapped) {
-	return new EV(_esdl__getName(), this, index, isMapped);
+	return make!EV(_esdl__getName(), this, index, isMapped);
       }
 
       override void markSolved() {
@@ -1068,8 +1070,8 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	_indexExpr = indexExpr;
 	// _root = _parent._esdl__getRootProxy();
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
-	_arrLen = new CstArrLength!RV (iname ~ "->length", this);
-	_arrHierLen = new CstArrHierLength!RV (name ~ "->hierLength", this);
+	_arrLen = make!(CstArrLength!RV) (iname ~ "->length", this);
+	_arrHierLen = make!(CstArrHierLength!RV)(name ~ "->hierLength", this);
       }
 
       this(string name, P parent, ulong index, bool isMapped) {
@@ -1084,8 +1086,8 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	_pindex = index;
 	_root = _parent._esdl__getRootProxy();
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
-	_arrLen = new CstArrLength!RV (iname ~ "->length", this);
-	_arrHierLen = new CstArrHierLength!RV (name ~ "->hierLength", this);
+	_arrLen = make!(CstArrLength!RV)(iname ~ "->length", this);
+	_arrHierLen = make!(CstArrHierLength!RV)(name ~ "->hierLength", this);
       }
 
       final override bool _esdl__parentIsConstrained() {
@@ -1223,11 +1225,11 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       override EV createElem(uint i, bool isMapped) {
-	return new EV(_esdl__getName(), this, i, isMapped);
+	return make!EV(_esdl__getName(), this, i, isMapped);
       }
 
       override EV createElem(CstVecTerm index, bool isMapped) {
-	return new EV(_esdl__getName(), this, index, isMapped);
+	return make!EV(_esdl__getName(), this, index, isMapped);
       }
 
       override void markHierResolved() {

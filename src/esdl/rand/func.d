@@ -14,20 +14,20 @@ import esdl.rand.domain: CstDomain;
 
 
 auto _esdl__cstVal(T)(T val) {
-  return new CstVecValue!(T)(val); // CstVecValue!(T).allocate(val);
+  return make!(CstVecValue!(T))(val); // CstVecValue!(T).allocate(val);
 }
 
 auto _esdl__logicOr(P, Q)(P p, Q q) {
   CstLogicTerm _p;
   CstLogicTerm _q;
   static if (is (P == bool)) {
-    _p = new CstLogicValue(p);
+    _p = make!CstLogicValue(p);
   }
   else {
     _p = p;
   }
   static if(is(Q == bool)) {
-    _q = new CstLogicValue(q);
+    _q = make!CstLogicValue(q);
   }
   else {
     _q = q;
@@ -39,13 +39,13 @@ auto _esdl__logicAnd(P, Q)(P p, Q q) {
   CstLogicTerm _p;
   CstLogicTerm _q;
   static if(is(P == bool)) {
-    _p = new CstLogicValue(p);
+    _p = make!CstLogicValue(p);
   }
   else {
     _p = p;
   }
   static if(is(Q == bool)) {
-    _q = new CstLogicValue(q);
+    _q = make!CstLogicValue(q);
   }
   else {
     _q = q;
@@ -63,18 +63,18 @@ auto _esdl__lth(P, Q)(P p, Q q) {
   }
   else static if((isBitVector!P || isIntegral!P) &&
 		 (isBitVector!Q || isIntegral!Q)) {
-    return new CstLogicValue(p < q);
+    return make!CstLogicValue(p < q);
   }
 }
 
 CstVec2LogicExpr _esdl__lth_impl(Q)(CstVecTerm left, Q q)
   if(isBitVector!Q || isIntegral!Q) {
-    auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
+    auto qq = make!(CstVecValue!Q)(q); // CstVecValue!Q.allocate(q);
     return _esdl__lth_impl(left, qq);
   }
 
 CstVec2LogicExpr _esdl__lth_impl(CstVecTerm p, CstVecTerm q) {
-  return new CstVec2LogicExpr(p, q, CstCompareOp.LTH);
+  return make!CstVec2LogicExpr(p, q, CstCompareOp.LTH);
 }
 
 auto _esdl__lte(P, Q)(P p, Q q) {
@@ -86,18 +86,18 @@ auto _esdl__lte(P, Q)(P p, Q q) {
   }
   else static if((isBitVector!P || isIntegral!P) &&
 		 (isBitVector!Q || isIntegral!Q)) {
-    return new CstLogicValue(p <= q);
+    return make!CstLogicValue(p <= q);
   }
 }
 
 CstVec2LogicExpr _esdl__lte_impl(Q)(CstVecTerm p, Q q)
   if(isBitVector!Q || isIntegral!Q) {
-    auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
+    auto qq = make!(CstVecValue!Q)(q); // CstVecValue!Q.allocate(q);
     return _esdl__lte_impl(p, qq);
   }
 
 CstVec2LogicExpr _esdl__lte_impl(CstVecTerm p, CstVecTerm q) {
-  return new CstVec2LogicExpr(p, q, CstCompareOp.LTE);
+  return make!CstVec2LogicExpr(p, q, CstCompareOp.LTE);
 }
 
 auto _esdl__gth(P, Q)(P p, Q q) {
@@ -109,18 +109,18 @@ auto _esdl__gth(P, Q)(P p, Q q) {
   }
   else static if((isBitVector!P || isIntegral!P) &&
 		 (isBitVector!Q || isIntegral!Q)) {
-    return new CstLogicValue(p > q);
+    return make!CstLogicValue(p > q);
   }
 }
 
 CstVec2LogicExpr _esdl__gth_impl(Q)(CstVecTerm p, Q q)
   if(isBitVector!Q || isIntegral!Q) {
-    auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
+    auto qq = make!(CstVecValue!Q)(q); // CstVecValue!Q.allocate(q);
     return _esdl__gth_impl(p, qq);
   }
 
 CstVec2LogicExpr _esdl__gth_impl(CstVecTerm p, CstVecTerm q) {
-  return new CstVec2LogicExpr(p, q, CstCompareOp.GTH);
+  return make!CstVec2LogicExpr(p, q, CstCompareOp.GTH);
 }
 
 auto _esdl__gte(P, Q)(P p, Q q) {
@@ -132,18 +132,18 @@ auto _esdl__gte(P, Q)(P p, Q q) {
   }
   else static if((isBitVector!P || isIntegral!P) &&
 		 (isBitVector!Q || isIntegral!Q)) {
-    return new CstLogicValue(p >= q);
+    return make!CstLogicValue(p >= q);
   }
 }
 
 CstVec2LogicExpr _esdl__gte_impl(Q)(CstVecTerm p, Q q)
   if(isBitVector!Q || isIntegral!Q) {
-    auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
+    auto qq = make!(CstVecValue!Q)(q); // CstVecValue!Q.allocate(q);
     return _esdl__gte_impl(p, qq);
   }
 
 CstVec2LogicExpr _esdl__gte_impl(CstVecTerm p, CstVecTerm q) {
-  return new CstVec2LogicExpr(p, q, CstCompareOp.GTE);
+  return make!CstVec2LogicExpr(p, q, CstCompareOp.GTE);
 }
 
 auto _esdl__equ(P, Q)(P p, Q q) {
@@ -158,23 +158,23 @@ auto _esdl__equ(P, Q)(P p, Q q) {
   }
   else static if((isBitVector!P || isIntegral!P) &&
 		 (isBitVector!Q || isIntegral!Q)) {
-    return new CstLogicValue(p == q);
+    return make!CstLogicValue(p == q);
   }
 }
 
 CstLogic2LogicExpr _esdl__equ_logic_impl(P, Q)(P p, Q q)
   if (is (P: CstLogicTerm) && is (Q: CstLogicTerm)) {
-    return new CstLogic2LogicExpr(p, q, CstLogicOp.LOGICEQ);
+    return make!CstLogic2LogicExpr(p, q, CstLogicOp.LOGICEQ);
   }
 
 CstVec2LogicExpr _esdl__equ_impl(Q)(CstVecTerm p, Q q)
   if(isBitVector!Q || isIntegral!Q) {
-    auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
+    auto qq = make!(CstVecValue!Q)(q); // CstVecValue!Q.allocate(q);
     return _esdl__equ_impl(p, qq);
   }
 
 CstVec2LogicExpr _esdl__equ_impl(CstVecTerm p, CstVecTerm q) {
-  return new CstVec2LogicExpr(p, q, CstCompareOp.EQU);
+  return make!CstVec2LogicExpr(p, q, CstCompareOp.EQU);
 }
 
 auto _esdl__index_range(P, Q)(P p, Q q) {
@@ -193,12 +193,12 @@ auto _esdl__index_range(P, Q)(P p, Q q) {
 CstRangeExpr _esdl__index_range_impl(Q)(CstVecTerm p, Q q)
   if (isBitVector!Q || isIntegral!Q) {
     if (q is null) return _esdl__index_range_impl(p, q);
-    auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
+    auto qq = make!(CstVecValue!Q)(q); // CstVecValue!Q.allocate(q);
     return _esdl__index_range_impl(p, qq);
   }
 
 CstRangeExpr _esdl__index_range_impl(CstVecTerm p, CstVecTerm q) {
-  return new CstRangeExpr(p, q);
+  return make!CstRangeExpr(p, q);
 }
 
 auto _esdl__index_rangeinc(P, Q)(P p, Q q) {
@@ -210,18 +210,18 @@ auto _esdl__index_rangeinc(P, Q)(P p, Q q) {
   }
   else static if((isBitVector!P || isIntegral!P) &&
 		 (isBitVector!Q || isIntegral!Q)) {
-    return new CstLogicValue(p == q);
+    return make!CstLogicValue(p == q);
   }
 }
 
 CstRangeExpr _esdl__index_rangeinc_impl(Q)(CstVecTerm p, Q q)
   if(isBitVector!Q || isIntegral!Q) {
-    auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
+    auto qq = make!(CstVecValue!Q)(q); // CstVecValue!Q.allocate(q);
     return _esdl__index_rangeinc_impl(p, qq);
   }
 
 CstRangeExpr _esdl__index_rangeinc_impl(CstVecTerm p, CstVecTerm q) {
-  return new CstRangeExpr(p, q, true);
+  return make!CstRangeExpr(p, q, true);
 }
 
 auto _esdl__dist_range(P, Q)(P p, Q q) {
@@ -245,12 +245,12 @@ auto _esdl__dist_range(P, Q)(P p, Q q) {
 CstVecDistSetElem _esdl__dist_range_impl(Q)(CstVecTerm p, Q q)
   if (isBitVector!Q || isIntegral!Q) {
     if (q is null) return _esdl__dist_range_impl(p, q);
-    auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
+    auto qq = make!(CstVecValue!Q)(q); // CstVecValue!Q.allocate(q);
     return _esdl__dist_range_impl(p, qq);
   }
 
 CstVecDistSetElem _esdl__dist_range_impl(CstVecTerm p, CstVecTerm q) {
-  return new CstVecDistSetElem(p, q);
+  return make!CstVecDistSetElem(p, q);
 }
 
 auto _esdl__dist_rangeinc(P, Q)(P p, Q q) {
@@ -262,18 +262,18 @@ auto _esdl__dist_rangeinc(P, Q)(P p, Q q) {
   }
   else static if((isBitVector!P || isIntegral!P) &&
 		 (isBitVector!Q || isIntegral!Q)) {
-    return new CstLogicValue(p == q);
+    return make!CstLogicValue(p == q);
   }
 }
 
 CstVecDistSetElem _esdl__dist_rangeinc_impl(Q)(CstVecTerm p, Q q)
   if(isBitVector!Q || isIntegral!Q) {
-    auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
+    auto qq = make!(CstVecValue!Q)(q); // CstVecValue!Q.allocate(q);
     return _esdl__dist_rangeinc_impl(p, qq);
   }
 
 CstVecDistSetElem _esdl__dist_rangeinc_impl(CstVecTerm p, CstVecTerm q) {
-  return new CstVecDistSetElem(p, q, true);
+  return make!CstVecDistSetElem(p, q, true);
 }
 
 auto _esdl__inside_range(P, Q)(P p, Q q) {
@@ -294,19 +294,19 @@ auto _esdl__inside_range(P, Q)(P p, Q q) {
 
 CstInsideSetElem _esdl__inside_range_impl(Q)(CstDomSet p, Q q) {
   assert (q is null);
-  return new CstInsideSetElem(p);
+  return make!CstInsideSetElem(p);
 }
 
 
 CstInsideSetElem _esdl__inside_range_impl(Q)(CstVecTerm p, Q q)
   if (isBitVector!Q || isIntegral!Q) {
     if (q is null) return _esdl__inside_range_impl(p, q);
-    auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
+    auto qq = make!(CstVecValue!Q)(q); // CstVecValue!Q.allocate(q);
     return _esdl__inside_range_impl(p, qq);
   }
 
 CstInsideSetElem _esdl__inside_range_impl(CstVecTerm p, CstVecTerm q) {
-  return new CstInsideSetElem(p, q);
+  return make!CstInsideSetElem(p, q);
 }
 
 auto _esdl__inside_rangeinc(P, Q)(P p, Q q) {
@@ -318,22 +318,22 @@ auto _esdl__inside_rangeinc(P, Q)(P p, Q q) {
   }
   else static if((isBitVector!P || isIntegral!P) &&
 		 (isBitVector!Q || isIntegral!Q)) {
-    return new CstLogicValue(p == q);
+    return make!CstLogicValue(p == q);
   }
 }
 
 CstInsideSetElem _esdl__inside_rangeinc_impl(Q)(CstVecTerm p, Q q)
   if(isBitVector!Q || isIntegral!Q) {
-    auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
+    auto qq = make!(CstVecValue!Q)(q); // CstVecValue!Q.allocate(q);
     return _esdl__inside_rangeinc_impl(p, qq);
   }
 
 CstInsideSetElem _esdl__inside_rangeinc_impl(CstVecTerm p, CstVecTerm q) {
-  return new CstInsideSetElem(p, q, true);
+  return make!CstInsideSetElem(p, q, true);
 }
 
 auto _esdl__unique_elem(P)(P p) {
-  return new CstUniqueSetElem(p);
+  return make!CstUniqueSetElem(p);
 }
 
 auto _esdl__neq(P, Q)(P p, Q q) {
@@ -348,27 +348,27 @@ auto _esdl__neq(P, Q)(P p, Q q) {
   }
   else static if((isBitVector!P || isIntegral!P) &&
 		 (isBitVector!Q || isIntegral!Q)) {
-    return new CstLogicValue(p != q);
+    return make!CstLogicValue(p != q);
   }
 }
 
 CstLogic2LogicExpr _esdl__neq_logic_impl(P, Q)(P p, Q q)
   if (is (P: CstLogicTerm) && is (Q: CstLogicTerm)) {
-    return new CstLogic2LogicExpr(p, q, CstLogicOp.LOGICNEQ);
+    return make!CstLogic2LogicExpr(p, q, CstLogicOp.LOGICNEQ);
   }
 
 CstVec2LogicExpr _esdl__neq_impl(Q)(CstVecTerm p, Q q)
   if(isBitVector!Q || isIntegral!Q) {
-    auto qq = new CstVecValue!Q(q); // CstVecValue!Q.allocate(q);
+    auto qq = make!(CstVecValue!Q)(q); // CstVecValue!Q.allocate(q);
     return _esdl__neq(p, qq);
   }
 
 CstVec2LogicExpr _esdl__neq_impl(CstVecTerm p, CstVecTerm q) {
-  return new CstVec2LogicExpr(p, q, CstCompareOp.NEQ);
+  return make!CstVec2LogicExpr(p, q, CstCompareOp.NEQ);
 }
 
 CstInsideArrExpr _esdl__inside(CstVecTerm vec, CstInsideSetElem[] ranges) {
-  CstInsideArrExpr expr = new CstInsideArrExpr(vec);
+  CstInsideArrExpr expr = make!CstInsideArrExpr(vec);
   foreach (r; ranges) {
     expr.addElem(r);
   }
@@ -382,7 +382,7 @@ CstInsideArrExpr _esdl__notinside(CstVecTerm vec, CstInsideSetElem[] ranges) {
 }
 
 CstUniqueArrExpr _esdl__unique(CstUniqueSetElem[] ranges) {
-  CstUniqueArrExpr expr = new CstUniqueArrExpr();
+  CstUniqueArrExpr expr = make!CstUniqueArrExpr();
   foreach (r; ranges) {
     expr.addElem(r);
   }
@@ -390,25 +390,25 @@ CstUniqueArrExpr _esdl__unique(CstUniqueSetElem[] ranges) {
 }
 
 CstVecWeightedDistSetElem _esdl__rangeWeight(CstVecDistSetElem range, CstVecTerm weight) {
-  return new CstVecWeightedDistSetElem(range, weight, false);
+  return make!CstVecWeightedDistSetElem(range, weight, false);
 }
 
 CstVecWeightedDistSetElem _esdl__itemWeight(CstVecDistSetElem range, CstVecTerm weight) {
-  return new CstVecWeightedDistSetElem(range, weight, true);
+  return make!CstVecWeightedDistSetElem(range, weight, true);
 }
 
 CstLogicWeightedDistSetElem _esdl__itemWeight(CstLogicTerm term, CstVecTerm weight) {
-  return new CstLogicWeightedDistSetElem(term, weight, true);
+  return make!CstLogicWeightedDistSetElem(term, weight, true);
 }
 
 auto _esdl__dist(T, rand RAND)(CstDomain!(T, RAND) vec,
 			       CstLogicWeightedDistSetElem[] ranges) if (isBoolean!T) {
-  return new CstLogicDistExpr!T(vec, ranges);
+  return make!(CstLogicDistExpr!T)(vec, ranges);
 }
 
 auto _esdl__dist(T, rand RAND)(CstDomain!(T, RAND) vec,
 			       CstVecWeightedDistSetElem[] ranges) if (! isBoolean!T) {
-  return new CstVecDistExpr!T(vec, ranges);
+  return make!(CstVecDistExpr!T)(vec, ranges);
 }
 
 void _esdl__order(CstDomBase a, CstDomBase b){

@@ -2,15 +2,55 @@ module esdl.rand.misc;
 
 import esdl.data.queue;
 import esdl.data.vector: Charbuf;
-import std.traits: isIntegral, isBoolean, isArray, EnumMembers, isSigned,
-  isSomeChar, isAssociativeArray, ValueType, KeyType, OriginalType;
+import esdl.data.bvec: isBitVector;
+
+import std.traits: isIntegral, isBoolean, isArray, EnumMembers,
+  isSigned, isSomeChar, isAssociativeArray, ValueType, KeyType,
+  OriginalType, BaseClassesTuple;
 import std.range: ElementType;
 import std.meta: AliasSeq;
-import esdl.data.bvec: isBitVector;
+private import std.typetuple: staticIndexOf, TypeTuple;
+
+import std.experimental.allocator.typed: TypedAllocator;
+// import std.experimental.allocator.gc_allocator : GCAllocator;
+import esdl.experimental.allocator.mallocator : Mallocator;
+// import std.experimental.allocator.mmap_allocator : MmapAllocator;
+
+// static alias Unconst(T) = T;
+// static alias Unconst(T: const U, U) = U;
+
+enum _esdl__NotMappedForRandomization;
+
+alias ProxyAllocator = TypedAllocator!(Mallocator);
+
+static ProxyAllocator proxyAllocator;
+
+auto make(T, U...)(U args) {
+  // import std.stdio;
+  // writeln("Make: ", T.stringof);
+  return proxyAllocator.make!T(args);
+}
 
 alias _esdl__Sigbuf = Charbuf!("Signature", 0);
 
 public enum SolveOrder: ubyte { UNDECIDED, NOW, LATER }
+
+T _esdl__staticCast(T, F)(const F from)
+  if (is (F == class) && is (T == class)
+     // make sure that F is indeed amongst the base classes of T
+     && staticIndexOf!(F, BaseClassesTuple!T) != -1
+     )
+    in {
+      // assert statement will not be compiled for production release
+      assert((from is null) || cast(T)from !is null);
+    }
+do {
+  return cast(T) cast(void*) from;
+ }
+
+struct _esdl__ARG {
+  enum bool _esdl__HAS_RAND_INFO = false;
+}
 
 // https://stackoverflow.com/questions/46073295/implicit-type-promotion-rules
 // Mainly two things:

@@ -109,10 +109,6 @@ struct Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=__LINE__)
 abstract class _esdl__Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=__LINE__)
   : _esdl__ConstraintBase, rand.barrier
 {
-  import esdl.rand.vecx: CstVector;
-  
-  alias CstBoolVar = CstVector!(bool, rand(true, true), 0);
-  
   debug(CSTPARSER) {
     pragma(msg, "/* Constraint Specification STARTS\n");
     pragma(msg, CONSTRAINT);

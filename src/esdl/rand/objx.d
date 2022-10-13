@@ -15,7 +15,8 @@ import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy, _esdl__CstProcessor;
 import esdl.rand.expr: CstRangeExpr;
 import esdl.rand.domain: CstArrIterator, CstArrLength, CstArrHierLength;
-import esdl.rand.meta: _esdl__ProxyResolve, _esdl__staticCast, _esdl__ARG;
+import esdl.rand.meta: _esdl__ProxyResolve;
+import esdl.rand.misc: _esdl__staticCast, _esdl__ARG;
 
 import std.algorithm.searching: canFind;
 import esdl.base.rand: _esdl__RandGen, getRandGen;
@@ -161,6 +162,7 @@ abstract class _esdl__ProxyStub(T): CstObjectIntf, rand.disable, rand.barrier
     this(_esdl__Proxy parent, void* outer) {
       _parent = parent;
       _outer = cast(T*) outer;
+      assert (_proxy is null);
     }
   }
   else {
@@ -173,13 +175,14 @@ abstract class _esdl__ProxyStub(T): CstObjectIntf, rand.disable, rand.barrier
     this(_esdl__Proxy parent, T outer) {
       _parent = parent;
       _outer = outer;
+      assert (_proxy is null);
     }
   }
   
   PROXYT _esdl__get()() {
     if (_proxy is null) {
       assert(_parent !is null);
-      _proxy = new PROXYT(_parent, this, _outer);
+      _proxy = make!PROXYT(_parent, this, _outer);
     }
     return _esdl__staticCast!PROXYT(_proxy);
   }
@@ -883,8 +886,8 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	_var = var;
 	_parent = parent;
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
-	_arrLen = new CstArrLength!RV(name ~ "->length", this);
-	_arrHierLen = new CstArrHierLength!RV (name ~ "->hierLength", this);
+	_arrLen = make!(CstArrLength!RV)(name ~ "->length", this);
+	_arrHierLen = make!(CstArrHierLength!RV)(name ~ "->hierLength", this);
       }
 
       final override bool _esdl__isRand() {
@@ -970,11 +973,11 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       override EV createElem(CstVecTerm indexExpr, bool isMapped) {
-	return new EV(_esdl__name, this, indexExpr, isMapped);
+	return make!EV(_esdl__name, this, indexExpr, isMapped);
       }
   
       override EV createElem(uint i, bool isMapped) {
-	return new EV(_esdl__name, this, cast(uint) i, isMapped);
+	return make!EV(_esdl__name, this, cast(uint) i, isMapped);
       }
   
       override void markHierResolved() {
@@ -1025,8 +1028,8 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	_indexExpr = indexExpr;
 	// _root = _parent._esdl__getRootProxy();
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
-	_arrLen = new CstArrLength!RV(iname ~ "->length", this);
-	_arrHierLen = new CstArrHierLength!RV (name ~ "->hierLength", this);
+	_arrLen = make!(CstArrLength!RV)(iname ~ "->length", this);
+	_arrHierLen = make!(CstArrHierLength!RV)(name ~ "->hierLength", this);
       }
 
       // Call super only after the _parent has been set
@@ -1043,8 +1046,8 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	_pindex = index;
 	// _root = _parent._esdl__getRootProxy();
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
-	_arrLen = new CstArrLength!RV(iname ~ "->length", this);
-	_arrHierLen = new CstArrHierLength!RV (name ~ "->hierLength", this);
+	_arrLen = make!(CstArrLength!RV)(iname ~ "->length", this);
+	_arrHierLen = make!(CstArrHierLength!RV)(name ~ "->hierLength", this);
       }
 
       final override bool _esdl__isRand() {
@@ -1161,11 +1164,11 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       override EV createElem(CstVecTerm indexExpr, bool isMapped) {
-	return new EV(_esdl__name, this, indexExpr, isMapped);
+	return make!EV(_esdl__name, this, indexExpr, isMapped);
       }
   
       override EV createElem(uint i, bool isMapped) {
-	return new EV(_esdl__name, this, cast(uint) i, isMapped);
+	return make!EV(_esdl__name, this, cast(uint) i, isMapped);
       }
   
       override void markHierResolved() {
