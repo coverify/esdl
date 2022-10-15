@@ -27,8 +27,8 @@ interface CstObjIndexed { }
 // N represents the level of the array-elements we have to traverse
 // for the elements this CstObject represents
 
-class CstObjectGlob(V, rand RAND_ATTR, int N, alias SYM)
-  : CstObject!(V, RAND_ATTR, N), CstVarGlobIntf
+class CstObjectGlob(V, rand RAND_ATTR, alias SYM)
+  : CstObject!(V, RAND_ATTR, 0), CstVarGlobIntf
 {
   enum _esdl__ISRAND = RAND_ATTR.isRand();
   enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
@@ -58,8 +58,8 @@ class CstObjectGlob(V, rand RAND_ATTR, int N, alias SYM)
   }
 }
 
-class CstObjectGlobEnum(V, rand RAND_ATTR, int N)
-  : CstObject!(V, RAND_ATTR, N), CstVarGlobIntf
+class CstObjectGlobEnum(V, rand RAND_ATTR)
+  : CstObject!(V, RAND_ATTR, 0), CstVarGlobIntf
 {
   enum _esdl__ISRAND = RAND_ATTR.isRand();
   enum _esdl__HASPROXY = RAND_ATTR.hasProxy();

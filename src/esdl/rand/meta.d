@@ -1593,10 +1593,10 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
 		  (is (L == U*, U) && is (U == struct))) {
     // pragma(msg, "inside: ", NAME);
     static if (is (L == class) || is (L == struct)) {
-      alias CstObjType = CstObjectGlob!(L, rand(true, true), 0, V);
+      alias CstObjType = CstObjectGlob!(L, rand(true, true), V);
     }
     else {
-      alias CstObjType = CstObjectGlob!(U, rand(true, true), 0, V);
+      alias CstObjType = CstObjectGlob!(U, rand(true, true), V);
     }
     CstVarGlobIntf global = parent._esdl__getGlobalLookup(V.stringof);
     if (global !is null)
