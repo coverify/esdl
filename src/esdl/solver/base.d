@@ -6,6 +6,7 @@ import esdl.rand.misc;
 import esdl.base.rand: _esdl__RandGen;
 import esdl.rand.agent: CstSolverAgent;
 import esdl.rand.base: CstDomBase, CstVecValueBase;
+import esdl.rand.proxy: _esdl__CstProcessor;
 
 abstract class CstSolver
 {
@@ -60,6 +61,6 @@ abstract class CstSolver
 abstract class CstDistSolverBase {
   abstract CstDomBase getDomain();
   abstract void purge(long item);
-  abstract void uniform(CstDomBase dom, _esdl__RandGen randGen);
+  abstract void uniform(CstDomBase dom, _esdl__RandGen randGen, _esdl__CstProcessor proc);
   abstract void reset();
 }

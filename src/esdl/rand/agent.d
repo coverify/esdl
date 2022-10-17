@@ -380,7 +380,7 @@ class CstSolverAgent			// agent of related predicates
     foreach (pred; _preds) {
       // import std.stdio;
       // writeln("Marking Solved: ", pred._esdl__getName());
-      pred.markPredSolved();
+      pred.markPredSolved(_proc);
     }
 
     this.markSolved();

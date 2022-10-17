@@ -580,12 +580,12 @@ class CstZ3Solver: CstSolver
       if (dom._type == Z3Term.Type.BOOLEXPR) {
 	BoolExpr vdom = dom.toBool.mapTo(model, true);
 	bool val = vdom.getBool();
-	doms[i].setBool(val);
+	doms[i].setBool(val, _proc);
       }
       else {
 	BvExpr vdom = dom.toBv.mapTo(model, true);
 	ulong val = vdom.getNumeralUint64();
-	doms[i].setVal(val);
+	doms[i].setVal(val, _proc);
       }
 
       // writeln("Value for Domain ", doms[i].name(), ": ",

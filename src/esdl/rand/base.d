@@ -119,11 +119,12 @@ interface CstObjectIntf: CstObjNodeIntf
   string _esdl__getName();
   bool _esdl__isRand();
   bool _esdl__isDomainInRange();
-  CstObjectIntf _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc);
+  CstObjectIntf _esdl__unroll(CstIterator iter, ulong n,
+			      _esdl__CstProcessor proc);
   _esdl__Proxy _esdl__getProxy();
   bool _esdl__isStatic();
   bool _esdl__isReal();
-  bool _esdl__isRolled();
+  bool _esdl__isRolled(_esdl__CstProcessor proc);
 }
 
 interface CstObjArrIntf: CstObjNodeIntf {
@@ -252,7 +253,7 @@ enum DomDistEnum: ubyte
     PROPER = 2
     }
 
-abstract class CstDomBase: CstTerm, CstVectorIntf
+abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
 {
 
   public enum State: ubyte { INIT, COLLATED, GROUPED, SOLVED }
@@ -288,11 +289,11 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   
   abstract string _esdl__getFullName();
   // abstract void collate(ulong v, int word=0);
-  abstract void setVal(ulong[] v);
-  abstract void setVal(ulong v);
+  abstract void setVal(ulong[] v, _esdl__CstProcessor proc);
+  abstract void setVal(ulong v, _esdl__CstProcessor proc);
 
   abstract bool isBool();
-  abstract void setBool(bool v);
+  abstract void setBool(bool v, _esdl__CstProcessor proc);
   abstract bool getBool();
   
   // abstract uint domIndex();
@@ -303,10 +304,10 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
   abstract _esdl__Proxy _esdl__getRootProxy();
   abstract void _esdl__doRandomize(_esdl__RandGen randGen);
   abstract CstDomBase _esdl__getResolvedNode();
-  abstract bool updateVal();
+  abstract bool updateVal(_esdl__CstProcessor proc);
   abstract bool hasChanged();
   abstract bool _esdl__isStatic();
-  abstract bool _esdl__isRolled();
+  abstract bool _esdl__isRolled(_esdl__CstProcessor proc);
   // abstract void registerRndPred(CstPredicate rndPred);
   abstract CstDomSet getParentDomSet();
   abstract long evaluate();
@@ -399,8 +400,8 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     else { // deps are resolved, so _esdl__getResolvedNode will not fail
       auto resolved = this._esdl__getResolvedNode();
       if (resolved.isDepResolved()) {
-	// if (resolved !is this) resolved.execCbs();
-	// this.markSolved();
+	// if (resolved !is this) resolved.execCbs(proc);
+	// this.markSolved(proc);
 	return true;
       }
       else {
@@ -435,17 +436,17 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     if (this._esdl__isRand())
       resolved._esdl__doRandomize(_esdl__getRootProxy()._esdl__getRandGen());
     proc.solvedSome();
-    resolved.markSolved();
+    resolved.markSolved(proc);
     proc.addSolvedDomain(resolved);
     if (this !is resolved) {
-      this.markSolved();
+      this.markSolved(proc);
       proc.addSolvedDomain(this);
     }
   }
 
-  void markSolved() {
+  void markSolved(_esdl__CstProcessor proc) {
     if (_state == State.SOLVED) return;
-    if (_proc.debugSolver()) {
+    if (proc.debugSolver()) {
       import std.stdio;
       writeln("Marking ", this._esdl__getName(), " as SOLVED");
     }
@@ -453,8 +454,8 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     assert (_state != State.SOLVED, this._esdl__getName() ~
 	    " already marked as solved");
     _state = State.SOLVED;
-    _proc.addSolvedDomain(this);
-    this.execCbs();
+    proc.addSolvedDomain(this);
+    this.execCbs(proc);
   }
 
   bool isMarkedSolved() {
@@ -597,8 +598,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     // import std.stdio;
     // writeln("setProcContext on: ", this._esdl__getName());
     assert (_state is State.INIT && (! this.isSolved()));
-    assert (proc is _proc);
-    _proc.collateDomain(this);
+    proc.collateDomain(this);
     // assert (_agent is null && (! this.isSolved()));
     // _agent = agent;
     if (this._esdl__isRand()) {
@@ -672,18 +672,18 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     }
   }
 
-  void execCbs() {
-    execIterCbs();
-    execDepCbs();
+  void execCbs(_esdl__CstProcessor proc) {
+    execIterCbs(proc);
+    execDepCbs(proc);
   }
 
-  void execIterCbs() { }
-  void execDepCbs() {
+  void execIterCbs(_esdl__CstProcessor proc) { }
+  void execDepCbs(_esdl__CstProcessor proc) {
     // import std.stdio;
     // writeln("domain: ", this._esdl__getFullName());
     foreach (cb; _depCbs) {
       // writeln(cb._esdl__getFullName());
-      cb.doResolve();
+      cb.doResolve(proc);
     }
   }
 
@@ -716,7 +716,8 @@ abstract class CstValue: CstTerm
   bool isIterator() { return false; }
 
 
-  CstValue _esdl__unroll(CstIterator iters, ulong n, _esdl__CstProcessor proc) {
+  CstValue _esdl__unroll(CstIterator iters, ulong n,
+			 _esdl__CstProcessor proc) {
     return this;
   }
 
@@ -777,7 +778,7 @@ abstract class CstObjSet: CstObjArrVoid, CstObjArrIntf
     return _esdl__domsetUnresolvedArrLen == 0;
   }
 
-  abstract void markHierResolved();
+  abstract void markHierResolved(_esdl__CstProcessor proc);
   
 }
 
@@ -872,20 +873,21 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     }
   }
   
-  void execCbs() {
-    execIterCbs();
-    execDepCbs();
+  void execCbs(_esdl__CstProcessor proc) {
+    execIterCbs(proc);
+    execDepCbs(proc);
   }
 
-  void execIterCbs() { }
-  void execDepCbs() {
+  void execIterCbs(_esdl__CstProcessor proc) { }
+  void execDepCbs(_esdl__CstProcessor proc) {
     foreach (cb; _depCbs) {
-      cb.doResolve();
+      cb.doResolve(proc);
     }
   }
 
   abstract CstDomSet getParentDomSet();
-  abstract CstDomSet _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc);
+  abstract CstDomSet _esdl__unroll(CstIterator iter, ulong n,
+				   _esdl__CstProcessor proc);
   
   override void registerDepPred(CstDepCallback depCb) {
     // if (! _depCbs[].canFind(depCb))
@@ -920,11 +922,11 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     return _esdl__domsetUnsolvedLeafCount == 0;
   }
 
-  abstract void markHierResolved();
+  abstract void markHierResolved(_esdl__CstProcessor proc);
 
-  void markSolved() {
+  void markSolved(_esdl__CstProcessor proc) {
     if (_state == State.SOLVED) return;
-    if (_proc.debugSolver()) {
+    if (proc.debugSolver()) {
       import std.stdio;
       writeln("Marking ", this._esdl__getName(), " as SOLVED");
     }
@@ -932,8 +934,8 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     assert (_state != State.SOLVED, this._esdl__getName() ~
 	    " already marked as solved");
     _state = State.SOLVED;
-    _proc.addSolvedDomainArr(this);
-    this.execCbs();
+    proc.addSolvedDomainArr(this);
+    this.execCbs(proc);
   }
   
   bool hasChanged() {
@@ -1116,7 +1118,6 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     // writeln("setProcContext on: ", this._esdl__getName());
     assert (this.isDepResolved(), this._esdl__getName() ~ " is unresolved");
     assert (_state is State.INIT);
-    assert (proc is _proc);
     foreach (pred; _resolvedDomainPreds[]) {
       if (! pred.isGuard()) {
 	if (pred.isEnabled() && pred.isResolved() && ! pred.isBlocked()) {
@@ -1187,14 +1188,14 @@ interface CstIterCallback
 {
   string _esdl__getName();
   string _esdl__getFullName();
-  void doUnroll();
+  void doUnroll(_esdl__CstProcessor proc);
 }
 
 interface CstDepCallback
 {
   string _esdl__getName();
   string _esdl__getFullName();
-  void doResolve();
+  void doResolve(_esdl__CstProcessor proc);
 }
 
 interface CstVecPrim
@@ -1220,7 +1221,8 @@ interface CstTerm
   void makeHash();
   size_t hashValue();
 
-  CstTerm _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc);
+  CstTerm _esdl__unroll(CstIterator iter, ulong n,
+			_esdl__CstProcessor proc);
   
   void _esdl__scan(); // {}		// used for CstVarVisitorExpr
 
@@ -1237,9 +1239,9 @@ abstract class CstIterator: CstVecTerm
     _iterCbs ~= cb;
   }
 
-  void unrollCbs() {
+  void unrollCbs(_esdl__CstProcessor proc) {
     foreach (cb; _iterCbs) {
-      cb.doUnroll();
+      cb.doUnroll(proc);
     }
   }
 
@@ -1288,7 +1290,8 @@ interface CstVecTerm: CstTerm
 
   CstVecType getVecType();
 
-  CstVecTerm _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc);
+  CstVecTerm _esdl__unroll(CstIterator iter, ulong n,
+			   _esdl__CstProcessor proc);
 
   final CstLogicTerm toBoolExpr() {
     auto zero = new CstVecValue!int(0); // CstVecValue!int.allocate(0);
@@ -1463,7 +1466,8 @@ interface CstLogicTerm: CstTerm
   bool eval();
 
 
-  CstLogicTerm _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc);
+  CstLogicTerm _esdl__unroll(CstIterator iter, ulong n,
+			     _esdl__CstProcessor proc);
 
   CstLogicTerm opBinary(string op)(CstLogicTerm other)
   {

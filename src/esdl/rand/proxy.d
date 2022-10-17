@@ -85,9 +85,9 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     else return _esdl__objIntf._esdl__isReal();
   }
 
-  bool _esdl__isRolled() {
+  bool _esdl__isRolled(_esdl__CstProcessor proc) {
     if (_esdl__objIntf is null) return false;
-    else return _esdl__objIntf._esdl__isRolled();
+    else return _esdl__objIntf._esdl__isRolled(proc);
   }
 
   
@@ -686,7 +686,7 @@ class _esdl__CstProcessor
       _rolledPreds.swap(_toRolledPreds);
 
       foreach (pred; _rolledPreds) {
-	if (pred._esdl__isRolled()) {
+	if (pred._esdl__isRolled(this)) {
 	  pred.markAsUnresolved(_lap);
 	  _toRolledPreds ~= pred;
 	}
@@ -902,7 +902,7 @@ class _esdl__CstProcessor
     }
     else {
       CstIterator iter = pred._iters[0];
-      if (iter.isUnrollable()) pred.doUnroll();
+      if (iter.isUnrollable()) pred.doUnroll(this);
       else {
 	if (iter._iterCbs.length == 0) _itersWithCbs ~= iter;
 	iter.registerRolled(pred);
