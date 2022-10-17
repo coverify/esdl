@@ -581,7 +581,7 @@ abstract class CstDomBase: CstTerm, CstVectorIntf
     // import std.stdio;
     // writeln("annotate: ", this._esdl__getName());
     if (_domN == uint.max) {
-      if (_varN == uint.max) _varN = _proc.getAnnotationIndex();
+      if (_varN == uint.max) _varN = agent.getAnnotationIndex();
       if (this.isSolved()) setAnnotation(agent.addAnnotatedVar(this));
       else setAnnotation(agent.addAnnotatedDom(this));
     }
@@ -984,7 +984,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
       // import std.stdio;
       // writeln("annotate: ", this._esdl__getName());
       if (_domSetN == uint.max) {
-	if (_varSetN == uint.max) _varSetN = _proc.getAnnotationIndex();
+	if (_varSetN == uint.max) _varSetN = agent.getAnnotationIndex();
 	if (this.isSolved()) setAnnotation(agent.addAnnotatedVarArr(this));
 	else setAnnotation(agent.addAnnotatedDomArr(this));
       }

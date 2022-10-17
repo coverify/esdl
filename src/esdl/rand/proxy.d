@@ -311,12 +311,6 @@ class _esdl__CstProcessor
     return _proxy;
   }
 
-  uint _annotationIndex;
-
-  uint getAnnotationIndex() {
-    return _annotationIndex++;
-  }
-  
   _esdl__RandGen _randGen;
 
   final _esdl__RandGen getRandGen() {

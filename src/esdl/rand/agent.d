@@ -147,6 +147,12 @@ class CstSolverAgent			// agent of related predicates
     return _annotatedVarArrs[];
   }
 
+  uint _annotationIndex;
+
+  uint getAnnotationIndex() {
+    return _annotationIndex++;
+  }
+  
   void setSolverContext(CstPredicate solvablePred, uint level) {
     solvablePred.setSolverContext(this, level);
 
