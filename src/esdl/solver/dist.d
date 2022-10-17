@@ -223,9 +223,10 @@ class CstVecDistSolver(T): CstDistSolverBase
     }
   }
 
-  override void uniform(CstDomBase dom, _esdl__RandGen randGen) {
+  override void uniform(CstDomBase dom, _esdl__RandGen randGen,
+			_esdl__CstProcessor proc) {
     assert (randGen !is null);
-    dom.setVal(this.uniform(randGen));
+    dom.setVal(this.uniform(randGen), proc);
   }
   
   override void reset() {
@@ -379,8 +380,9 @@ class CstLogicDistSolver(T): CstDistSolverBase
     }
   }
 
-  override void uniform(CstDomBase dom, _esdl__RandGen randGen) {
-    dom.setVal(this.uniform(randGen));
+  override void uniform(CstDomBase dom, _esdl__RandGen randGen,
+			_esdl__CstProcessor proc) {
+    dom.setVal(this.uniform(randGen), proc);
   }
   
   override void reset() {
@@ -482,15 +484,15 @@ class CstDistPredSolver	// agent of dist and related predicates
 	if (compat is false)
 	  assert (false, "can only use != or !inside operator on distributed domains");
 	wp._expr.visit(dist);
-	wp.markPredSolved();
+	wp.markPredSolved(_proc);
       }
       else {
-	wp.markPredSolved();
+	wp.markPredSolved(_proc);
       }
     }
-    dist.uniform(distDomain, _proc.getRandGen());
+    dist.uniform(distDomain, _proc.getRandGen(), _proc);
     _proc.addSolvedDomain(distDomain);
-    _distPred.markPredSolved();
+    _distPred.markPredSolved(_proc);
 
 
     this.markSolved();

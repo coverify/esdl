@@ -47,7 +47,8 @@ class CstVectorGlob(V, rand RAND_ATTR, alias SYM)
   }
   
   // no unrolling is possible without adding rand proxy
-  override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
+  override RV _esdl__unroll(CstIterator iter, ulong n,
+			    _esdl__CstProcessor proc) {
     return this;
   }
 }
@@ -73,7 +74,8 @@ class CstVectorGlobEnum(V, rand RAND_ATTR)
   }
   
   // no unrolling is possible without adding rand proxy
-  override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
+  override RV _esdl__unroll(CstIterator iter, ulong n,
+			    _esdl__CstProcessor proc) {
     return this;
   }
 
@@ -94,12 +96,14 @@ class CstVectorIdx(V, rand RAND_ATTR, VT, int IDX,
   }
 
   static if (is (P: _esdl__ARG)) {
-    override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
+    override RV _esdl__unroll(CstIterator iter, ulong n,
+			      _esdl__CstProcessor proc) {
       return this;
     }
   }
   else {
-    override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
+    override RV _esdl__unroll(CstIterator iter, ulong n,
+			      _esdl__CstProcessor proc) {
       if (_parent !is _root) {
 	P uparent = cast(P)(_parent._esdl__unroll(iter, n, proc));
 	assert (uparent !is null);
@@ -222,8 +226,8 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 	return _parent._esdl__isStatic();		// N == 0
       }
 
-      final override bool _esdl__isRolled() {
-	return _parent._esdl__isRolled();		// N == 0
+      final override bool _esdl__isRolled(_esdl__CstProcessor proc) {
+	return _parent._esdl__isRolled(proc);		// N == 0
       }
 
       override bool _esdl__depsAreResolved() {
@@ -235,7 +239,8 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       // RV
-      RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
+      RV _esdl__unroll(CstIterator iter, ulong n,
+		       _esdl__CstProcessor proc) {
 	return this;
       }
 
@@ -361,10 +366,10 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 		_parent._esdl__isStatic());
       }
 
-      final override bool _esdl__isRolled() {
+      final override bool _esdl__isRolled(_esdl__CstProcessor proc) {
 	return ((_indexExpr !is null &&
 		 _indexExpr.isIterator) ||
-		_parent._esdl__isRolled());
+		_parent._esdl__isRolled(proc));
       }
 
       final override string _esdl__getFullName() {
@@ -403,7 +408,8 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       // RV
-      override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
+      override RV _esdl__unroll(CstIterator iter, ulong n,
+				_esdl__CstProcessor proc) {
 	if (_indexExpr) {
 	  return _parent._esdl__unroll(iter, n, proc)[_indexExpr._esdl__unroll(iter, n, proc)];
 	}
@@ -472,10 +478,10 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	return _parent;
       }
       
-      override void markSolved() {
-	super.markSolved();
+      override void markSolved(_esdl__CstProcessor proc) {
+	super.markSolved(proc);
 	assert (_indexExpr is null);
-	_parent.markChildSolved();
+	_parent.markChildSolved(proc);
       }
     }
 
@@ -494,7 +500,8 @@ class CstVecArrGlob(V, rand RAND_ATTR, alias SYM)
   }
   
   // no unrolling is possible without adding rand proxy
-  override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
+  override RV _esdl__unroll(CstIterator iter, ulong n,
+			    _esdl__CstProcessor proc) {
     return this;
   }
 }
@@ -521,7 +528,8 @@ class CstVecArrGlobEnum(V, rand RAND_ATTR)
   }
   
   // no unrolling is possible without adding rand proxy
-  override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
+  override RV _esdl__unroll(CstIterator iter, ulong n,
+			    _esdl__CstProcessor proc) {
     return this;
   }
 
@@ -543,12 +551,14 @@ class CstVecArrIdx(V, rand RAND_ATTR, VT, int IDX,
   }
 
   static if (is (P: _esdl__ARG)) {
-    override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
+    override RV _esdl__unroll(CstIterator iter, ulong n,
+			      _esdl__CstProcessor proc) {
       return this;
     }
   }
   else {
-    override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
+    override RV _esdl__unroll(CstIterator iter, ulong n,
+			      _esdl__CstProcessor proc) {
       P uparent = cast(P)(_parent._esdl__unroll(iter, n, proc));
       assert (uparent !is null);
       assert (this is uparent.tupleof[PIDX]);
@@ -744,7 +754,7 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
     return _arrHierLen;
   }
 
-  void markArrLen(size_t length) {
+  void markArrLen(size_t length, _esdl__CstProcessor proc) {
     assert (_resolvedDomainPreds.length == 0);
     buildElements(length);
     // import std.stdio;
@@ -752,14 +762,14 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
     static if (is (EV: CstDomBase)) {
       _esdl__domsetUnresolvedArrLen = 0;
       _esdl__domsetLeafElemsCount = cast(uint) length;
-      markHierResolved();
+      markHierResolved(proc);
     }
     else {
       _esdl__domsetUnresolvedArrLen = cast(uint) length;
       _esdl__domsetLeafElemsCount = 0;
     }
     _esdl__domsetUnsolvedLeafCount = cast(uint) length;
-    if (length == 0) markSolved();
+    if (length == 0) markSolved(proc);
   }
 
   EV _esdl__elems() {
@@ -917,8 +927,8 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	return _parent._esdl__isDomainInRange();
       }
 
-      final bool _esdl__isRolled() {
-	return _parent._esdl__isRolled();
+      final bool _esdl__isRolled(_esdl__CstProcessor proc) {
+	return _parent._esdl__isRolled(proc);
       }
 
       final bool _esdl__isStatic() {
@@ -939,7 +949,8 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	return this;
       }
 
-      override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
+      override RV _esdl__unroll(CstIterator iter, ulong n,
+				_esdl__CstProcessor proc) {
 	return this;
       }
 
@@ -995,13 +1006,13 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	return make!EV(_esdl__getName(), this, index, isMapped);
       }
 
-      override void markSolved() {
-	super.markSolved();
-	// // _parent.markChildSolved();
+      override void markSolved(_esdl__CstProcessor proc) {
+	super.markSolved(proc);
+	// // _parent.markChildSolved(proc);
       }
 
-      override void markHierResolved() {
-	_arrHierLen.setVal(_esdl__domsetLeafElemsCount);
+      override void markHierResolved(_esdl__CstProcessor proc) {
+	_arrHierLen.setVal(_esdl__domsetLeafElemsCount, proc);
 	// top level array -- no need to do anything
 	// import std.stdio;
 	// stdout.writeln("Array elements count: ", _esdl__domsetLeafElemsCount);
@@ -1010,22 +1021,22 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	// }
       }
 
-      void markChildResolved(uint n) {
+      void markChildResolved(uint n, _esdl__CstProcessor proc) {
 	assert (_esdl__domsetUnresolvedArrLen != 0 &&
 		_esdl__domsetUnresolvedArrLen != uint.max);
 	_esdl__domsetUnresolvedArrLen -= 1;
 	_esdl__domsetLeafElemsCount += n;
 	if (_esdl__domsetUnresolvedArrLen == 0) {
-	  markHierResolved();
+	  markHierResolved(proc);
 	}
       }
 
-      void markChildSolved() {
+      void markChildSolved(_esdl__CstProcessor proc) {
 	assert (_esdl__domsetUnsolvedLeafCount != 0 &&
 		_esdl__domsetUnsolvedLeafCount != uint.max);
 	_esdl__domsetUnsolvedLeafCount -= 1;
 	if (_esdl__domsetUnsolvedLeafCount == 0) {
-	  markSolved();
+	  markSolved(proc);
 	}
       }
 
@@ -1126,10 +1137,10 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	}
       }
       
-      final bool _esdl__isRolled() {
+      final bool _esdl__isRolled(_esdl__CstProcessor proc) {
 	return (_indexExpr !is null &&
 		_indexExpr.isIterator) ||
-	  _parent._esdl__isRolled();
+	  _parent._esdl__isRolled(proc);
       }
 
       final bool _esdl__isStatic() {
@@ -1172,7 +1183,8 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	return _resolvedVec;
       }
 
-      override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
+      override RV _esdl__unroll(CstIterator iter, ulong n,
+				_esdl__CstProcessor proc) {
 	if (_indexExpr) {
 	  return _parent._esdl__unroll(iter, n, proc)[_indexExpr._esdl__unroll(iter, n, proc)];
 	}
@@ -1232,35 +1244,35 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	return make!EV(_esdl__getName(), this, index, isMapped);
       }
 
-      override void markHierResolved() {
-	_arrHierLen.setVal(_esdl__domsetLeafElemsCount);
+      override void markHierResolved(_esdl__CstProcessor proc) {
+	_arrHierLen.setVal(_esdl__domsetLeafElemsCount, proc);
 	if (_indexExpr is null) {
-	  _parent.markChildResolved(_esdl__domsetLeafElemsCount);
+	  _parent.markChildResolved(_esdl__domsetLeafElemsCount, proc);
 	}
       }
 
-      override void markSolved() {
-	super.markSolved();
+      override void markSolved(_esdl__CstProcessor proc) {
+	super.markSolved(proc);
 	assert (_indexExpr is null);
-	_parent.markChildSolved();
+	_parent.markChildSolved(proc);
       }
 
-      void markChildResolved(uint n) {
+      void markChildResolved(uint n, _esdl__CstProcessor proc) {
 	assert (_esdl__domsetUnresolvedArrLen != 0 &&
 		_esdl__domsetUnresolvedArrLen != uint.max);
 	_esdl__domsetUnresolvedArrLen -= 1;
 	_esdl__domsetLeafElemsCount += n;
 	if (_esdl__domsetUnresolvedArrLen == 0) {
-	  markHierResolved();
+	  markHierResolved(proc);
 	}
       }
 
-      void markChildSolved() {
+      void markChildSolved(_esdl__CstProcessor proc) {
 	assert (_esdl__domsetUnsolvedLeafCount != 0 &&
 		_esdl__domsetUnsolvedLeafCount != uint.max);
 	_esdl__domsetUnsolvedLeafCount -= 1;
 	if (_esdl__domsetUnsolvedLeafCount == 0) {
-	  markSolved();
+	  markSolved(proc);
 	}
       }
 

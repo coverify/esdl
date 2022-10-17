@@ -588,12 +588,12 @@ class CstBuddySolver: CstSolver
       if (dom.isBool()) {
 	assert (bitindices.length == 1);
 	int index = bitindices[0];
-	dom.setBool(vec[index]);
+	dom.setBool(vec[index], _proc);
 	// if (bits.length == 0 || bits[index] == -1) {
-	//   dom.setBool(_proc.getRandGen.flip());
+	//   dom.setBool(_proc.getRandGen.flip(), _proc);
 	// }
 	// else {
-	//   dom.setBool(bits[index] == 1);
+	//   dom.setBool(bits[index] == 1, _proc);
 	// }
       }
       else {
@@ -622,7 +622,7 @@ class CstBuddySolver: CstSolver
 	  }
 	}
 	
-	dom.setVal(array(_solveValue[0..NUMWORDS]));
+	dom.setVal(array(_solveValue[0..NUMWORDS]), _proc);
       }
     }
     // _context.print();

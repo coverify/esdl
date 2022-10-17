@@ -321,8 +321,8 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	return _parent._esdl__isReal();
       }
 
-      final bool _esdl__isRolled() {
-	return _parent._esdl__isRolled();		// N == 0
+      final bool _esdl__isRolled(_esdl__CstProcessor proc) {
+	return _parent._esdl__isRolled(proc);		// N == 0
       }
 
       override bool _esdl__depsAreResolved() { // this level is resolved
@@ -441,10 +441,10 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 		_parent._esdl__isReal());
       }
 
-      final bool _esdl__isRolled() {
+      final bool _esdl__isRolled(_esdl__CstProcessor proc) {
 	return ((_indexExpr !is null &&
 		 _indexExpr.isIterator) ||
-		_parent._esdl__isRolled());
+		_parent._esdl__isRolled(proc));
       }
 
       final override string _esdl__getFullName() {
@@ -811,14 +811,14 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
     return _arrHierLen;
   }
 
-  void markArrLen(size_t length) {
+  void markArrLen(size_t length, _esdl__CstProcessor proc) {
     buildElements(length);
     // import std.stdio;
     // writeln("buildElements: ", length);
     static if (is (EV: CstObjectIntf)) {
       _esdl__domsetUnresolvedArrLen = 0;
       _esdl__domsetLeafElemsCount = cast(uint) length;
-      markHierResolved();
+      markHierResolved(proc);
     }
     else {
       _esdl__domsetUnresolvedArrLen = cast(uint) length;
@@ -898,8 +898,8 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	return _parent._esdl__isDomainInRange();
       }
 
-      final bool _esdl__isRolled() {
-	return _parent._esdl__isRolled();
+      final bool _esdl__isRolled(_esdl__CstProcessor proc) {
+	return _parent._esdl__isRolled(proc);
       }
 
       final bool _esdl__isStatic() {
@@ -980,8 +980,8 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	return make!EV(_esdl__name, this, cast(uint) i, isMapped);
       }
   
-      override void markHierResolved() {
-	_arrHierLen.setVal(_esdl__domsetLeafElemsCount);
+      override void markHierResolved(_esdl__CstProcessor proc) {
+	_arrHierLen.setVal(_esdl__domsetLeafElemsCount, proc);
 	// top level array -- no need to do anything
 	// import std.stdio;
 	// stdout.writeln("Array elements count: ", _esdl__domsetLeafElemsCount);
@@ -990,13 +990,13 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	// }
       }
 
-      void markChildResolved(uint n) {
+      void markChildResolved(uint n, _esdl__CstProcessor proc) {
 	assert (_esdl__domsetUnresolvedArrLen != 0 &&
 		_esdl__domsetUnresolvedArrLen != uint.max);
 	_esdl__domsetUnresolvedArrLen -= 1;
 	_esdl__domsetLeafElemsCount += n;
 	if (_esdl__domsetUnresolvedArrLen == 0) {
-	  markHierResolved();
+	  markHierResolved(proc);
 	}
       }
     }
@@ -1065,10 +1065,10 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	else return (_parent == rhs._parent && _indexExpr == _indexExpr);
       }
       
-      final bool _esdl__isRolled() {
+      final bool _esdl__isRolled(_esdl__CstProcessor proc) {
 	return (_indexExpr !is null &&
 		_indexExpr.isIterator) ||
-	  _parent._esdl__isRolled();
+	  _parent._esdl__isRolled(proc);
       }
 
       final bool _esdl__isStatic() {
@@ -1171,20 +1171,20 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	return make!EV(_esdl__name, this, cast(uint) i, isMapped);
       }
   
-      override void markHierResolved() {
-	_arrHierLen.setVal(_esdl__domsetLeafElemsCount);
+      override void markHierResolved(_esdl__CstProcessor proc) {
+	_arrHierLen.setVal(_esdl__domsetLeafElemsCount, proc);
 	if (_indexExpr is null) {
-	  _parent.markChildResolved(_esdl__domsetLeafElemsCount);
+	  _parent.markChildResolved(_esdl__domsetLeafElemsCount, proc);
 	}
       }
 
-      void markChildResolved(uint n) {
+      void markChildResolved(uint n, _esdl__CstProcessor proc) {
 	assert (_esdl__domsetUnresolvedArrLen != 0 &&
 		_esdl__domsetUnresolvedArrLen != uint.max);
 	_esdl__domsetUnresolvedArrLen -= 1;
 	_esdl__domsetLeafElemsCount += n;
 	if (_esdl__domsetUnresolvedArrLen == 0) {
-	  markHierResolved();
+	  markHierResolved(proc);
 	}
       }
     }

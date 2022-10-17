@@ -972,7 +972,7 @@ class CstMonoSolver (S): CstSolver
     //   _count = counter();
     //   auto rand = _proc.getRandGen.gen(0, _count);
     //   ulong num = choose(rand);
-    //   doms[0].setVal(num);
+    //   doms[0].setVal(num, _proc);
     //   debug (MONOSOLVER){
     // 	import std.stdio;
     // 	writeln("no difference found, reusing same solver");
@@ -1088,7 +1088,7 @@ class CstMonoSolver (S): CstSolver
     _count = counter();
     auto rand = _proc.getRandGen.gen(0, _count);
     ulong num = choose(rand);
-    doms[0].setVal(num);
+    doms[0].setVal(num, _proc);
     _hasBeenSolved = true;
     debug (MONOSOLVER){
       import std.stdio;

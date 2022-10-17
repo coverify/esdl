@@ -382,7 +382,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return _proxy;
   }
 
-  void doResolve() {
+  void doResolve(_esdl__CstProcessor proc) {
     if (_iters.length == 0) {
       _resolvedDepsCount += 1;
       _markResolve = true;
@@ -392,11 +392,11 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
   }
 
-  void doUnroll() {
+  void doUnroll(_esdl__CstProcessor proc) {
     if (_state == State.BLOCKED) return;
     import std.conv: to;
     bool guardUnrolled = false;
-    if (_unrollCycle == _proc._cycle) { // already executed
+    if (_unrollCycle == proc._cycle) { // already executed
       return;
     }
 
@@ -414,16 +414,16 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
     if (_guard !is null && _guard._iters.length > 0 &&
 	_guard._iters[0] is iter) {
-      _guard.doUnroll();
+      _guard.doUnroll(proc);
       guardUnrolled = true;
     }
     
     if (iter.getLenVec().isSolved()) {
-      this._esdl__unroll(iter, guardUnrolled, _proc);
-      _unrollCycle = _proc._cycle;
+      this._esdl__unroll(iter, guardUnrolled, proc);
+      _unrollCycle = proc._cycle;
     }
 
-    _proc.procUnrolledNewPredicates();
+    proc.procUnrolledNewPredicates();
   }
 
   uint _currLen;
@@ -459,12 +459,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	  uwPred._unrolledIters ~= this._unrolledIters[];
 	  uwPred._unrolledIters ~= iter;
 	  _uwPreds[i] = uwPred;
-	  _proc.addUnrolledNewPredicate(uwPred);
+	  proc.addUnrolledNewPredicate(uwPred);
 	}
 	else if (i >= prevLen) {
 	  _uwPreds[i]._isInRange = true;
 	}
-	_proc.addNewPredicate(_uwPreds[i]);
+	proc.addNewPredicate(_uwPreds[i]);
       }
       else {
 	_uwPreds[i]._isInRange = false;
@@ -729,8 +729,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   //   return false;
   // }
 
-  final bool _esdl__isRolled() {
-    if (_unrollCycle != _proc._cycle && _state != State.BLOCKED) {
+  final bool _esdl__isRolled(_esdl__CstProcessor proc) {
+    if (_unrollCycle != proc._cycle && _state != State.BLOCKED) {
       assert (this._iters.length > 0 && _state == State.INIT);
       return true;
     }
@@ -1195,7 +1195,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return _distDomain;
   }
 
-  void markPredSolved() {
+  void markPredSolved(_esdl__CstProcessor proc) {
     import std.conv: to;
     // import std.stdio;
     // writeln("marking predicate solved: ", describe());
@@ -1204,7 +1204,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	    "State is: " ~ _state.to!string());
     _state = State.SOLVED;
 
-    this.execDepCbs();
+    this.execDepCbs(proc);
   }
 
   bool tryResolveFixed(_esdl__CstProcessor proc) {
@@ -1229,7 +1229,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	}
       }
       if (success) {
-	this.markPredSolved();
+	this.markPredSolved(proc);
 	_proc.solvedSome();
       }
       return success;
@@ -1259,9 +1259,9 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     assert (false);
   }
 
-  void execDepCbs() {
+  void execDepCbs(_esdl__CstProcessor proc) {
     foreach (cb; _depCbs) {
-      cb.doResolve();
+      cb.doResolve(proc);
     }
   }
 

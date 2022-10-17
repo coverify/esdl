@@ -38,7 +38,7 @@ abstract class CstDomain(V, rand RAND_ATTR) if (is (V == bool)):
 
       override bool getBool() {	return eval(); }
 
-      override void setBool(bool val) {
+      override void setBool(bool val, _esdl__CstProcessor proc) {
 	static if (HAS_RAND_ATTRIB) {
 	  assert (getRef() !is null,
 		  "Domain does not have a valid R-Value pointer: " ~
@@ -50,7 +50,7 @@ abstract class CstDomain(V, rand RAND_ATTR) if (is (V == bool)):
 	    _valueChanged = false;
 	  }
 	  *(getRef()) = val;
-	  markSolved();
+	  markSolved(proc);
 	}
 	else {
 	  assert(false);
@@ -88,7 +88,7 @@ abstract class CstDomain(V, rand RAND_ATTR) if (!is (V == bool)):
 
       final override bool getBool() {assert (false);}
 
-      final override void setBool(bool val) {assert (false);}
+      final override void setBool(bool val, _esdl__CstProcessor proc) {assert (false);}
 
       final override bool isDistVar() { return getDistPred() !is null; }
 
@@ -340,7 +340,7 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
     return cast(long) *(getRef());
   }
 
-  override void setVal(ulong[] value) {
+  override void setVal(ulong[] value, _esdl__CstProcessor proc) {
     static if (HAS_RAND_ATTRIB) {
       Unconst!VT newVal;
       foreach (i, v; value) {
@@ -372,14 +372,14 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
       else {
 	*(getRef()) = newVal;
       }
-      markSolved();
+      markSolved(proc);
     }
     else {
       assert(false);
     }
   }
 
-  override void setVal(ulong val) {
+  override void setVal(ulong val, _esdl__CstProcessor proc) {
     static if (isBitVector!VT) {
       assert (VT.SIZE <= 64);
     }
@@ -410,7 +410,7 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
       else {
 	*(getRef()) = newVal;
       }
-      markSolved();
+      markSolved(proc);
     }
     else {
       assert(false);
@@ -455,7 +455,7 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
     return _valueChanged;
   }
   
-  override bool updateVal() {
+  override bool updateVal(_esdl__CstProcessor proc) {
     assert(_esdl__isRand() !is true);
     Unconst!VT newVal;
     assert (_root !is null);
@@ -466,7 +466,7 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
       else {
 	newVal = *(getRef());
       }
-      this.markSolved();
+      this.markSolved(proc);
       if (newVal != _shadowValue) {
 	_shadowValue = newVal;
 	_valueChanged = true;
@@ -705,7 +705,6 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   }
 
   override bool tryResolveDep(_esdl__CstProcessor proc) {
-    assert (proc is _proc);
     import std.algorithm.iteration: filter;
     debug (CSTSOLVER) {
       import std.stdio;
@@ -717,7 +716,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 	import std.stdio;
 	writeln("tryResolveDep: Already marked solved: ", _esdl__getFullName());
       }
-      // execCbs();
+      // execCbs(proc);
       return true;
     }
     else {
@@ -806,28 +805,28 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     return _parent.getLen();
   }
 
-  override void setVal(ulong value) {
+  override void setVal(ulong value, _esdl__CstProcessor proc) {
     debug (CSTSOLVER) {
       import std.stdio;
       writeln("Setting value of ", _esdl__getFullName(), " to: ", value);
     }
     _parent.setLen(cast(size_t) value);
-    markSolved();
+    markSolved(proc);
   }
 
-  override void setVal(ulong[] v) {
+  override void setVal(ulong[] v, _esdl__CstProcessor proc) {
     debug (CSTSOLVER) {
       import std.stdio;
       writeln("Setting value of ", _esdl__getFullName(), " to: ", v[0]);
     }
     assert(v.length == 1);
     _parent.setLen(cast(size_t) v[0]);
-    markSolved();
+    markSolved(proc);
   }
 
-  override void markSolved() {
-    super.markSolved();
-    _parent.markArrLen(value());
+  override void markSolved(_esdl__CstProcessor proc) {
+    super.markSolved(proc);
+    _parent.markArrLen(value(), proc);
   }
 
   // override void collate(ulong v, int word = 0) {
@@ -868,9 +867,9 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     _parent.setDomainContext(pred, context);
   }
 
-  override void execIterCbs() {
+  override void execIterCbs(_esdl__CstProcessor proc) {
     assert(_iterVar !is null);
-    _iterVar.unrollCbs();
+    _iterVar.unrollCbs(proc);
     // assert (_root !is null);
     // _root.procUnrolledNewPredicates();
   }
@@ -879,13 +878,13 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     assert(false);
   }
 
-  override bool updateVal() {
+  override bool updateVal(_esdl__CstProcessor proc) {
     assert(_esdl__isRand() !is true);
     uint newVal;
     assert(_root !is null);
     if (! this.isSolved()) {
       newVal = cast(uint)_parent.getLen();
-      this.markSolved();
+      this.markSolved(proc);
       if (newVal != _shadowValue) {
 	_shadowValue = cast(uint) newVal;
 	_valueChanged = true;
@@ -903,8 +902,8 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     return _parent._esdl__isStatic();
   }
 
-  final override bool _esdl__isRolled() {
-    return _parent._esdl__isRolled();
+  final override bool _esdl__isRolled(_esdl__CstProcessor proc) {
+    return _parent._esdl__isRolled(proc);
   }
 
   override CstDomSet getParentDomSet() {
@@ -917,7 +916,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 
   final override bool getBool() {assert (false);}
 
-  final override void setBool(bool val) {assert (false);}
+  final override void setBool(bool val, _esdl__CstProcessor proc) {assert (false);}
 
   final override long evaluate() {
     static if (HAS_RAND_ATTRIB) {
@@ -1003,7 +1002,7 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
 	import std.stdio;
 	writeln("tryResolveDep: Already marked solved: ", _esdl__getFullName());
       }
-      // execCbs();
+      // execCbs(proc);
       return true;
     }
     else {
@@ -1074,28 +1073,28 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
     return _val;
   }
 
-  override void setVal(ulong value) {
+  override void setVal(ulong value, _esdl__CstProcessor proc) {
     debug (CSTSOLVER) {
       import std.stdio;
       writeln("Setting value of ", _esdl__getFullName(), " to: ", value);
     }
     _val = cast(uint) value;
-    markSolved();
+    markSolved(proc);
   }
 
-  override void setVal(ulong[] v) {
+  override void setVal(ulong[] v, _esdl__CstProcessor proc) {
     debug (CSTSOLVER) {
       import std.stdio;
       writeln("Setting value of ", _esdl__getFullName(), " to: ", v[0]);
     }
     assert(v.length == 1);
     _val = cast(uint) v[0];
-    markSolved();
+    markSolved(proc);
   }
 
-  // override void markSolved() {
-  //   super.markSolved();
-  //   // _parent.markArrLen(value());
+  // override void markSolved(_esdl__CstProcessor proc) {
+  //   super.markSolved(proc);
+  //   // _parent.markArrLen(value(), proc);
   // }
 
   // override bool isDepResolved() {
@@ -1141,9 +1140,9 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
     _parent.setDomainContext(pred, context);
   }
 
-  // override void execIterCbs() {
+  // override void execIterCbs(_esdl__CstProcessor proc) {
   //   assert(_iterVar !is null);
-  //   _iterVar.unrollCbs();
+  //   _iterVar.unrollCbs(proc);
   //   // assert (_root !is null);
   //   // _root.procUnrolledNewPredicates();
   // }
@@ -1152,7 +1151,7 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
     assert(false);
   }
 
-  override bool updateVal() {
+  override bool updateVal(_esdl__CstProcessor proc) {
     return true;
   }
   
@@ -1160,8 +1159,8 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
     return _parent._esdl__isStatic();
   }
 
-  final override bool _esdl__isRolled() {
-    return _parent._esdl__isRolled();
+  final override bool _esdl__isRolled(_esdl__CstProcessor proc) {
+    return _parent._esdl__isRolled(proc);
   }
 
   override CstDomSet getParentDomSet() {
@@ -1174,7 +1173,7 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
 
   final override bool getBool() {assert (false);}
 
-  final override void setBool(bool val) {assert (false);}
+  final override void setBool(bool val, _esdl__CstProcessor proc) {assert (false);}
 
   final override long evaluate() {
     static if (HAS_RAND_ATTRIB) {

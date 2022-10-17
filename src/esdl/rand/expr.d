@@ -11,8 +11,9 @@ import esdl.rand.base: DomDistEnum, CstTerm, CstDomBase, CstDomSet,
   CstIterator, CstVecNodeIntf, CstVarNodeIntf, CstVecArrIntf,
   CstVecPrim, CstValue, CstVecTerm, CstLogicTerm, CstDepIntf;
 import esdl.rand.pred: CstPredicate, Hash;
-import esdl.rand.proxy: _esdl__CstProcessor;
 import esdl.rand.agent: CstSolverAgent;
+
+import esdl.rand.proxy: _esdl__CstProcessor;
 
 import esdl.rand.func;
 
@@ -1613,7 +1614,7 @@ class CstVecSliceExpr: CstVecExpr
 
   CstVecSliceExpr _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     return make!CstVecSliceExpr(_vec._esdl__unroll(iter, n, proc),
-			       _range._esdl__unroll(iter, n, proc));
+				_range._esdl__unroll(iter, n, proc));
   }
 
   this(CstVecTerm vec, CstRangeExpr range) {
@@ -1982,7 +1983,7 @@ class CstLogic2LogicExpr: CstLogicExpr
 
   override CstLogic2LogicExpr _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     return make!CstLogic2LogicExpr(_lhs._esdl__unroll(iter, n, proc),
-				  _rhs._esdl__unroll(iter, n, proc), _op);
+				   _rhs._esdl__unroll(iter, n, proc), _op);
   }
 
   void setDomainContext(CstPredicate pred, DomainContextEnum context) {
