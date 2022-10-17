@@ -12,7 +12,7 @@ import esdl.rand.base: CstVecPrim, CstVecTerm, CstIterator, CstDomBase,
   CstDomSet, CstVarNodeIntf, CstVecNodeIntf, CstVarGlobIntf, CstValue,
   CstLogicTerm, CstDepIntf;
 import esdl.rand.pred: CstPredicate;
-import esdl.rand.proxy: _esdl__Proxy;
+import esdl.rand.proxy: _esdl__Proxy, _esdl__CstProcessor;
 import esdl.rand.expr: CstRangeExpr, CstVec2LogicExpr;
 import esdl.rand.domain: CstArrIterator, CstArrLength, CstArrHierLength, CstDomain;
 import esdl.rand.misc: _esdl__staticCast, _esdl__ARG;
@@ -47,7 +47,7 @@ class CstVectorGlob(V, rand RAND_ATTR, alias SYM)
   }
   
   // no unrolling is possible without adding rand proxy
-  override RV _esdl__unroll(CstIterator iter, ulong n) {
+  override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     return this;
   }
 }
@@ -73,7 +73,7 @@ class CstVectorGlobEnum(V, rand RAND_ATTR)
   }
   
   // no unrolling is possible without adding rand proxy
-  override RV _esdl__unroll(CstIterator iter, ulong n) {
+  override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     return this;
   }
 
@@ -94,14 +94,14 @@ class CstVectorIdx(V, rand RAND_ATTR, VT, int IDX,
   }
 
   static if (is (P: _esdl__ARG)) {
-    override RV _esdl__unroll(CstIterator iter, ulong n) {
+    override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
       return this;
     }
   }
   else {
-    override RV _esdl__unroll(CstIterator iter, ulong n) {
+    override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
       if (_parent !is _root) {
-	P uparent = cast(P)(_parent._esdl__unroll(iter, n));
+	P uparent = cast(P)(_parent._esdl__unroll(iter, n, proc));
 	assert (uparent !is null);
 	return uparent.tupleof[PIDX];
       }
@@ -235,7 +235,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       // RV
-      RV _esdl__unroll(CstIterator iter, ulong n) {
+      RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
 	return this;
       }
 
@@ -403,12 +403,12 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       // RV
-      override RV _esdl__unroll(CstIterator iter, ulong n) {
+      override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
 	if (_indexExpr) {
-	  return _parent._esdl__unroll(iter,n)[_indexExpr._esdl__unroll(iter,n)];
+	  return _parent._esdl__unroll(iter, n, proc)[_indexExpr._esdl__unroll(iter, n, proc)];
 	}
 	else {
-	  return _parent._esdl__unroll(iter,n)[_pindex];
+	  return _parent._esdl__unroll(iter, n, proc)[_pindex];
 	}
       }
       
@@ -494,7 +494,7 @@ class CstVecArrGlob(V, rand RAND_ATTR, alias SYM)
   }
   
   // no unrolling is possible without adding rand proxy
-  override RV _esdl__unroll(CstIterator iter, ulong n) {
+  override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     return this;
   }
 }
@@ -521,7 +521,7 @@ class CstVecArrGlobEnum(V, rand RAND_ATTR)
   }
   
   // no unrolling is possible without adding rand proxy
-  override RV _esdl__unroll(CstIterator iter, ulong n) {
+  override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     return this;
   }
 
@@ -543,13 +543,13 @@ class CstVecArrIdx(V, rand RAND_ATTR, VT, int IDX,
   }
 
   static if (is (P: _esdl__ARG)) {
-    override RV _esdl__unroll(CstIterator iter, ulong n) {
+    override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
       return this;
     }
   }
   else {
-    override RV _esdl__unroll(CstIterator iter, ulong n) {
-      P uparent = cast(P)(_parent._esdl__unroll(iter, n));
+    override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
+      P uparent = cast(P)(_parent._esdl__unroll(iter, n, proc));
       assert (uparent !is null);
       assert (this is uparent.tupleof[PIDX]);
       return this;
@@ -939,7 +939,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	return this;
       }
 
-      override RV _esdl__unroll(CstIterator iter, ulong n) {
+      override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
 	return this;
       }
 
@@ -1172,12 +1172,12 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	return _resolvedVec;
       }
 
-      override RV _esdl__unroll(CstIterator iter, ulong n) {
+      override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
 	if (_indexExpr) {
-	  return _parent._esdl__unroll(iter,n)[_indexExpr._esdl__unroll(iter,n)];
+	  return _parent._esdl__unroll(iter, n, proc)[_indexExpr._esdl__unroll(iter, n, proc)];
 	}
 	else {
-	  return _parent._esdl__unroll(iter,n)[_pindex];
+	  return _parent._esdl__unroll(iter, n, proc)[_pindex];
 	}
       }
 
