@@ -611,9 +611,9 @@ class CstArrIterator(RV): CstIterator
     else return (_arrVar == rhs._arrVar);
   }
 
-  CstVecTerm _esdl__unroll(CstIterator iter, ulong n) {
+  CstVecTerm _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     if(this !is iter) {
-      return _arrVar._esdl__unroll(iter,n).arrLen().makeIterVar();
+      return _arrVar._esdl__unroll(iter, n, proc).arrLen().makeIterVar();
     }
     else {
       return new CstVecValue!size_t(n); // CstVecValue!size_t.allocate(n);
@@ -622,7 +622,7 @@ class CstArrIterator(RV): CstIterator
 
   override CstIterator unrollIterator(CstIterator iter, uint n) {
     assert(this !is iter);
-    return _arrVar._esdl__unroll(iter,n).arrLen().makeIterVar();
+    return _arrVar._esdl__unroll(iter, n, null).arrLen().makeIterVar();
   }
 
   void visit(CstSolver solver) {
@@ -835,8 +835,8 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   //   _parent.setLen(cast(size_t) v);
   // }
 
-  CstVecTerm _esdl__unroll(CstIterator iter, ulong n) {
-    return _parent._esdl__unroll(iter,n).arrLen();
+  CstVecTerm _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
+    return _parent._esdl__unroll(iter, n, proc).arrLen();
   }
 
   override AV _esdl__getResolvedNode() {
@@ -1108,8 +1108,8 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
   //   _parent.setLen(cast(size_t) v);
   // }
 
-  CstVecTerm _esdl__unroll(CstIterator iter, ulong n) {
-    return _parent._esdl__unroll(iter,n).arrLen();
+  CstVecTerm _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
+    return _parent._esdl__unroll(iter, n, proc).arrLen();
   }
 
   override AV _esdl__getResolvedNode() {
@@ -1286,7 +1286,7 @@ class CstLogicValue: CstValue, CstLogicTerm
   override CstDistSolverBase getDist() { assert(false); }
   override bool isCompatWithDist(CstDomBase A) { assert(false); }
   override void visit(CstDistSolverBase solver) { assert(false); }
-  override CstLogicValue _esdl__unroll(CstIterator iter, ulong n) { return this; }
+  override CstLogicValue _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) { return this; }
   override void setDistPredContext(CstPredicate pred) { }
   override CstDomBase getDomain() { return null; }
 }
@@ -1346,7 +1346,7 @@ class CstVecValue(T): CstVecValueBase
 
   T _val;			// the value of the constant
 
-  override RV _esdl__unroll(CstIterator iters, ulong n) {
+  override RV _esdl__unroll(CstIterator iters, ulong n, _esdl__CstProcessor proc) {
     return this;
   }
 

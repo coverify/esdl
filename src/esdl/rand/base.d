@@ -119,7 +119,7 @@ interface CstObjectIntf: CstObjNodeIntf
   string _esdl__getName();
   bool _esdl__isRand();
   bool _esdl__isDomainInRange();
-  CstObjectIntf _esdl__unroll(CstIterator iter, ulong n);
+  CstObjectIntf _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc);
   _esdl__Proxy _esdl__getProxy();
   bool _esdl__isStatic();
   bool _esdl__isReal();
@@ -716,7 +716,7 @@ abstract class CstValue: CstTerm
   bool isIterator() { return false; }
 
 
-  CstValue _esdl__unroll(CstIterator iters, ulong n) {
+  CstValue _esdl__unroll(CstIterator iters, ulong n, _esdl__CstProcessor proc) {
     return this;
   }
 
@@ -885,7 +885,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   }
 
   abstract CstDomSet getParentDomSet();
-  abstract CstDomSet _esdl__unroll(CstIterator iter, ulong n);
+  abstract CstDomSet _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc);
   
   override void registerDepPred(CstDepCallback depCb) {
     // if (! _depCbs[].canFind(depCb))
@@ -1220,7 +1220,7 @@ interface CstTerm
   void makeHash();
   size_t hashValue();
 
-  CstTerm _esdl__unroll(CstIterator iter, ulong n);
+  CstTerm _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc);
   
   void _esdl__scan(); // {}		// used for CstVarVisitorExpr
 
@@ -1288,7 +1288,7 @@ interface CstVecTerm: CstTerm
 
   CstVecType getVecType();
 
-  CstVecTerm _esdl__unroll(CstIterator iter, ulong n);
+  CstVecTerm _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc);
 
   final CstLogicTerm toBoolExpr() {
     auto zero = new CstVecValue!int(0); // CstVecValue!int.allocate(0);
@@ -1463,7 +1463,7 @@ interface CstLogicTerm: CstTerm
   bool eval();
 
 
-  CstLogicTerm _esdl__unroll(CstIterator iter, ulong n);
+  CstLogicTerm _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc);
 
   CstLogicTerm opBinary(string op)(CstLogicTerm other)
   {

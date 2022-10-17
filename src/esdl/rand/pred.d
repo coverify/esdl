@@ -419,7 +419,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
     
     if (iter.getLenVec().isSolved()) {
-      this._esdl__unroll(iter, guardUnrolled);
+      this._esdl__unroll(iter, guardUnrolled, _proc);
       _unrollCycle = _proc._cycle;
     }
 
@@ -428,7 +428,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   uint _currLen;
   
-  void _esdl__unroll(CstIterator iter, bool guardUnrolled) {
+  void _esdl__unroll(CstIterator iter, bool guardUnrolled, _esdl__CstProcessor proc) {
     assert (iter is _iters[0]);
 
     if (! iter.isUnrollable()) {
@@ -452,7 +452,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	  CstPredicate guard = _guard;
 	  if (guardUnrolled) guard = _guard._uwPreds[i];
 	  uwPred = make!CstPredicate(_constraint, guard, _guardInv, _statement,
-				     _proxy, _soft, _expr._esdl__unroll(iter, iter.mapIter(i)),
+				     _proxy, _soft, _expr._esdl__unroll(iter, iter.mapIter(i), proc),
 				     _isGuard, this, iter, i// ,
 				     // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
 				     );
@@ -1296,7 +1296,7 @@ class CstVisitorPredicate: CstPredicate
     return true;
   }
 
-  override void _esdl__unroll(CstIterator iter, bool guardUnrolled) {
+  override void _esdl__unroll(CstIterator iter, bool guardUnrolled, _esdl__CstProcessor proc) {
     // import std.stdio;
     // writeln("Unrolling Visitor");
     assert (iter is _iters[0]);
@@ -1318,7 +1318,7 @@ class CstVisitorPredicate: CstPredicate
 	// writeln("i: ", i, " mapped: ", iter.mapIter(i));
 	CstVisitorPredicate uwPred =
 	  make!CstVisitorPredicate(_constraint, _guard, _guardInv, _statement, _proxy, _soft,
-				   _expr._esdl__unroll(iter, iter.mapIter(i)), false, this, iter, i// ,
+				   _expr._esdl__unroll(iter, iter.mapIter(i), proc), false, this, iter, i// ,
 				   // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
 				   );
 	uwPred._unrolledIters ~= this._unrolledIters[];

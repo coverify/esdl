@@ -53,7 +53,7 @@ class CstObjectGlob(V, rand RAND_ATTR, alias SYM)
   }
   
   // no unrolling is possible without adding rand proxy
-  override typeof(this) _esdl__unroll(CstIterator iter, ulong n) {
+  override typeof(this) _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     return this;
   }
 }
@@ -78,7 +78,7 @@ class CstObjectGlobEnum(V, rand RAND_ATTR)
   }
   
   // no unrolling is possible without adding rand proxy
-  override typeof(this) _esdl__unroll(CstIterator iter, ulong n) {
+  override typeof(this) _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     return this;
   }
 }
@@ -106,14 +106,14 @@ class CstObjectIdx(V, rand RAND_ATTR, VT, int IDX,
   }    
 
   static if (is (P: _esdl__ARG)) {
-    override RV _esdl__unroll(CstIterator iter, ulong n) {
+    override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
       return this;
     }
   }
   else {
-    override RV _esdl__unroll(CstIterator iter, ulong n) {
+    override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
       if (_parent !is _root) {
-	P uparent = cast(P)(_parent._esdl__unroll(iter, n));
+	P uparent = cast(P)(_parent._esdl__unroll(iter, n, proc));
 	assert (uparent !is null);
 	return uparent.tupleof[PIDX];
       }
@@ -207,7 +207,7 @@ abstract class _esdl__ProxyStub(T): CstObjectIntf, rand.disable, rand.barrier
     return null;
   }
 
-  abstract typeof(this) _esdl__unroll(CstIterator iter, ulong n);
+  abstract typeof(this) _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc);
 }
 
 abstract class CstObjectBase(V, rand RAND_ATTR, int N)
@@ -334,7 +334,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       // RV
-      override typeof(this) _esdl__unroll(CstIterator iter, ulong n) {
+      override typeof(this) _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
 	return this;
       }
 
@@ -486,12 +486,12 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       // RV
-      override RV _esdl__unroll(CstIterator iter, ulong n) {
+      override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
 	if (_indexExpr) {
-	  return _parent._esdl__unroll(iter,n)[_indexExpr._esdl__unroll(iter,n)];
+	  return _parent._esdl__unroll(iter, n, proc)[_indexExpr._esdl__unroll(iter, n, proc)];
 	}
 	else {
-	  return _parent._esdl__unroll(iter,n)[_pindex];
+	  return _parent._esdl__unroll(iter, n, proc)[_pindex];
 	}
       }
       
@@ -565,7 +565,7 @@ class CstObjArrGlob(V, rand RAND_ATTR, int N, alias SYM)
   }
   
   // no unrolling is possible without adding rand proxy
-  override RV _esdl__unroll(CstIterator iter, ulong n) {
+  override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     return this;
   }
 }
@@ -590,7 +590,7 @@ class CstObjArrGlobEnum(V, rand RAND_ATTR, int N)
   }
   
   // no unrolling is possible without adding rand proxy
-  override RV _esdl__unroll(CstIterator iter, ulong n) {
+  override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     return this;
   }
 }
@@ -610,14 +610,14 @@ class CstObjArrIdx(V, rand RAND_ATTR, VT, int IDX,
     super(name, parent, var);
   }
   static if (is (P: _esdl__ARG)) {
-    override RV _esdl__unroll(CstIterator iter, ulong n) {
+    override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
       return this;
     }
   }
   else {
-    override RV _esdl__unroll(CstIterator iter, ulong n) {
+    override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
       if (_parent !is _esdl__getRootProxy()) {
-	P uparent = cast(P)(_parent._esdl__unroll(iter, n));
+	P uparent = cast(P)(_parent._esdl__unroll(iter, n, proc));
 	assert (uparent !is null);
 	return uparent.tupleof[PIDX];
       }
@@ -924,7 +924,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	return this;
       }
 
-      RV _esdl__unroll(CstIterator iter, ulong n) {
+      RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
 	return this;
       }
 
@@ -1111,12 +1111,12 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	return _resolvedObj;
       }
 
-      RV _esdl__unroll(CstIterator iter, ulong n) {
+      RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
 	if (_indexExpr) {
-	  return _parent._esdl__unroll(iter,n)[_indexExpr._esdl__unroll(iter,n)];
+	  return _parent._esdl__unroll(iter, n, proc)[_indexExpr._esdl__unroll(iter, n, proc)];
 	}
 	else {
-	  return _parent._esdl__unroll(iter,n)[_pindex];
+	  return _parent._esdl__unroll(iter, n, proc)[_pindex];
 	}
       }
 

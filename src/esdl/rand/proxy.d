@@ -69,9 +69,9 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     else return _esdl__objIntf._esdl__depsAreResolved();
   }
 
-  _esdl__Proxy _esdl__unroll(CstIterator iter, ulong n) {
+  _esdl__Proxy _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     if (_esdl__objIntf is null) return this;
-    else return _esdl__objIntf._esdl__unroll(iter, n)._esdl__getProxy();
+    else return _esdl__objIntf._esdl__unroll(iter, n, proc)._esdl__getProxy();
   }
 
   // the root proxy is always static
