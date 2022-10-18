@@ -121,10 +121,10 @@ class CstObjectIdx(V, rand RAND_ATTR, VT, int IDX,
 	return this;
       }
     }
-    override RV _esdl__getResolvedNode() {
+    override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
       if (_parentsDepsAreResolved) return this;
       else {
-	P uparent = cast(P)(_parent._esdl__getResolvedNode());
+	P uparent = cast(P)(_parent._esdl__getResolvedNode(proc));
 	assert (uparent !is null);
 	return uparent.tupleof[PIDX];
       }
@@ -329,7 +329,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	return _parentsDepsAreResolved;
       }
 
-      override RV _esdl__getResolvedNode() {
+      override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
 	return this;
       }
 
@@ -349,7 +349,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	}
       }
 
-      override void _esdl__scan() {
+      override void _esdl__scan(_esdl__CstProcessor proc) {
 	// import std.stdio;
 	// writeln("Visiting: ", this._esdl__getFullName());
 	assert (false);
@@ -465,9 +465,9 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	return _parentsDepsAreResolved && _nodeIsMapped;
       }
 
-      override RV _esdl__getResolvedNode() {
-	if (_resolvedCycle != _esdl__getProc()._cycle) {
-	  auto parent = _parent._esdl__getResolvedNode();
+      override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
+	if (_resolvedCycle != proc._cycle) {
+	  auto parent = _parent._esdl__getResolvedNode(proc);
 	  if (_indexExpr) {
 	    _resolvedObj = parent[cast(size_t) _indexExpr.evaluate()];
 	  }
@@ -480,7 +480,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	      _resolvedObj = parent[_pindex];
 	    }
 	  }
-	  _resolvedCycle = _esdl__getProc()._cycle;
+	  _resolvedCycle = proc._cycle;
 	}
 	return _resolvedObj;
       }
@@ -516,13 +516,13 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	}
       }
 
-      override void _esdl__scan() {
+      override void _esdl__scan(_esdl__CstProcessor proc) {
 	// import std.stdio;
 	// writeln("Visiting: ", this._esdl__getFullName());
 	assert (this.getRef() !is null);
 	_esdl__setValRef(this.getRef());
 	if (this._esdl__isRand()) {
-	  _esdl__doConstrain(_esdl__getProc(), true);
+	  _esdl__doConstrain(proc, true);
 	}
       }
 
@@ -625,10 +625,10 @@ class CstObjArrIdx(V, rand RAND_ATTR, VT, int IDX,
 	return this;
       }
     }
-    override RV _esdl__getResolvedNode() {
+    override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
       if (_parentsDepsAreResolved) return this;
       else {
-	P uparent = cast(P)(_parent._esdl__getResolvedNode());
+	P uparent = cast(P)(_parent._esdl__getResolvedNode(proc));
 	assert (uparent !is null);
 	return uparent.tupleof[PIDX];
       }
@@ -682,8 +682,8 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
   EV[] _elems;
   EV   _negIndexElem;
 
-  abstract EV createElem(CstVecTerm indexExpr, bool isMapped);
   abstract EV createElem(uint i, bool isMapped);
+  abstract EV createElem(CstVecTerm indexExpr, bool isMapped);
     
   bool rand_mode() { return true; }
   // overridded in derived classes
@@ -839,7 +839,7 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
   }
 
   final CstVarNodeIntf _esdl__getChild(ulong n) {
-    return this[n];
+    return this[cast(size_t) n];
   }
 
 
@@ -862,7 +862,7 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
     }
   }    
 
-  final void _esdl__scan() {
+  final void _esdl__scan(_esdl__CstProcessor proc) {
     // import std.stdio;
     // writeln("Visiting: ", this._esdl__getFullName());
   }
@@ -920,7 +920,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 	return _parentsDepsAreResolved;
       }
 
-      override RV _esdl__getResolvedNode() {
+      override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
 	return this;
       }
 
@@ -1091,9 +1091,9 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	return _parentsDepsAreResolved && _nodeIsMapped;
       }
 
-      override RV _esdl__getResolvedNode() {
-	if (_resolvedCycle != _esdl__getProc()._cycle) {
-	  auto parent = _parent._esdl__getResolvedNode();
+      override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
+	if (_resolvedCycle != proc._cycle) {
+	  auto parent = _parent._esdl__getResolvedNode(proc);
 	  if (_indexExpr) {
 		_resolvedObj = parent[_indexExpr.evaluate()];
 	  }
@@ -1106,7 +1106,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	      _resolvedObj = parent[_pindex];
 	    }
 	  }
-	  _resolvedCycle = _esdl__getProc()._cycle;
+	  _resolvedCycle = proc._cycle;
 	}
 	return _resolvedObj;
       }

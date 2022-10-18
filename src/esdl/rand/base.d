@@ -33,13 +33,13 @@ interface CstVarNodeIntf {
   uint _esdl__getOrderLevel();
   void _esdl__markOrderedAfter(uint level);
 
-  CstVarNodeIntf _esdl__getResolvedNode();
+  CstVarNodeIntf _esdl__getResolvedNode(_esdl__CstProcessor proc);
   bool _esdl__depsAreResolved();
   
   bool _esdl__isObjArray();
   CstIterator _esdl__iter();
   CstVarNodeIntf _esdl__getChild(ulong n);
-  void _esdl__scan();			// when an object is unrolled
+  void _esdl__scan(_esdl__CstProcessor proc);			// when an object is unrolled
 }
 
 interface CstDepIntf {
@@ -303,7 +303,7 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
   abstract uint bitcount();
   abstract _esdl__Proxy _esdl__getRootProxy();
   abstract void _esdl__doRandomize(_esdl__RandGen randGen);
-  abstract CstDomBase _esdl__getResolvedNode();
+  abstract CstDomBase _esdl__getResolvedNode(_esdl__CstProcessor proc);
   abstract bool updateVal(_esdl__CstProcessor proc);
   abstract bool hasChanged();
   abstract bool _esdl__isStatic();
@@ -398,7 +398,7 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
       return false;
     }
     else { // deps are resolved, so _esdl__getResolvedNode will not fail
-      auto resolved = this._esdl__getResolvedNode();
+      auto resolved = this._esdl__getResolvedNode(proc);
       if (resolved.isDepResolved()) {
 	// if (resolved !is this) resolved.execCbs(proc);
 	// this.markSolved(proc);
@@ -432,7 +432,7 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
   
   void randomizeWithoutConstraints(_esdl__CstProcessor proc) {
     assert (this._esdl__depsAreResolved());
-    auto resolved = this._esdl__getResolvedNode();
+    auto resolved = this._esdl__getResolvedNode(proc);
     if (this._esdl__isRand())
       resolved._esdl__doRandomize(_esdl__getRootProxy()._esdl__getRandGen());
     proc.solvedSome();
@@ -573,11 +573,11 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
   }
   
   final void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
-    this._esdl__getResolvedNode().annotateResolved(agent, proc);
+    this._esdl__getResolvedNode(proc).annotateResolved(agent, proc);
   }
 
   final void annotateResolved(CstSolverAgent agent, _esdl__CstProcessor proc) {
-    assert (this is this._esdl__getResolvedNode());
+    assert (this is this._esdl__getResolvedNode(proc));
     // import std.conv: to;
     // import std.stdio;
     // writeln("annotate: ", this._esdl__getName());
@@ -700,11 +700,11 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
   abstract bool _esdl__parentIsConstrained();
   abstract string describe(bool descExpr=false);
 
-  void _esdl__scan() { }
+  void _esdl__scan(_esdl__CstProcessor proc) { }
   CstDomBase getDomain() { return this; }
 
   final void visit(CstSolver solver, _esdl__CstProcessor proc) {
-    solver.pushToEvalStack(this._esdl__getResolvedNode());
+    solver.pushToEvalStack(this._esdl__getResolvedNode(proc));
   }
 
 }
@@ -727,7 +727,7 @@ abstract class CstValue: CstTerm
   // abstract bool signed();
   // abstract uint bitcount();
   
-  void _esdl__scan() { }
+  void _esdl__scan(_esdl__CstProcessor proc) { }
 
 }
 
@@ -978,7 +978,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   
   final void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
     assert (isDepResolved());
-    CstDomSet resolved = this._esdl__getResolvedNode();
+    CstDomSet resolved = this._esdl__getResolvedNode(proc);
     if (resolved !is this) resolved.annotate(agent, proc);
     else {
       foreach (dom; this[]) dom.annotate(agent, proc);
@@ -1173,7 +1173,7 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
 
   CstDomBase getDomain() { return null; }
 
-  abstract CstDomSet _esdl__getResolvedNode();
+  abstract CstDomSet _esdl__getResolvedNode(_esdl__CstProcessor proc);
 
   final override void resetLambdaPreds() {
     _lambdaDomainPreds.reset();
@@ -1224,7 +1224,7 @@ interface CstTerm
   CstTerm _esdl__unroll(CstIterator iter, ulong n,
 			_esdl__CstProcessor proc);
   
-  void _esdl__scan(); // {}		// used for CstVarVisitorExpr
+  void _esdl__scan(_esdl__CstProcessor proc); // {}		// used for CstVarVisitorExpr
 
   CstDomBase getDomain(); // Return the domain if the expression is a domain
   // bool isDomain();
@@ -1264,7 +1264,7 @@ abstract class CstIterator: CstVecTerm
   long evaluate() {
     assert(false, "Can not evaluate an Iterator: " ~ this._esdl__getName());
   }
-  void _esdl__scan() { }
+  void _esdl__scan(_esdl__CstProcessor proc) { }
 
   override CstDomBase getDomain() { return null; }
 

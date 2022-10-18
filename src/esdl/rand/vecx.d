@@ -113,10 +113,10 @@ class CstVectorIdx(V, rand RAND_ATTR, VT, int IDX,
 	return this;
       }
     }
-    override RV _esdl__getResolvedNode() {
+    override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
       if (_parentsDepsAreResolved) return this;
       else {
-	P uparent = cast(P)(_parent._esdl__getResolvedNode());
+	P uparent = cast(P)(_parent._esdl__getResolvedNode(proc));
 	assert (uparent !is null);
 	return uparent.tupleof[PIDX];
       }
@@ -234,7 +234,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 	return _parentsDepsAreResolved;
       }
 
-      override RV _esdl__getResolvedNode() {
+      override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
 	return this;
       }
 
@@ -385,11 +385,11 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	return _parentsDepsAreResolved && _nodeIsMapped;
       }
 
-      override RV _esdl__getResolvedNode() {
+      override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
 	// domains do not resolve by themselves -- we only check if a
-	// domain has dependencies. If not, we make a call to _esdl__getResolvedNode()
-	if (_resolvedCycle != _esdl__getProc()._cycle) {
-	  auto parent = _parent._esdl__getResolvedNode();
+	// domain has dependencies. If not, we make a call to _esdl__getResolvedNode(_esdl__CstProcessor proc)
+	if (_resolvedCycle != proc._cycle) {
+	  auto parent = _parent._esdl__getResolvedNode(proc);
 	  if (_indexExpr) {
 	    _resolvedVec = parent[cast(size_t) _indexExpr.evaluate()];
 	  }
@@ -402,7 +402,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	      _resolvedVec = parent[_pindex];
 	    }
 	  }
-	  _resolvedCycle = _esdl__getProc()._cycle;
+	  _resolvedCycle = proc._cycle;
 	}
 	return _resolvedVec;
       }
@@ -564,10 +564,10 @@ class CstVecArrIdx(V, rand RAND_ATTR, VT, int IDX,
       assert (this is uparent.tupleof[PIDX]);
       return this;
     }
-    override RV _esdl__getResolvedNode() {
+    override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
       if (_parentsDepsAreResolved) return this;
       else {
-	P uparent = cast(P)(_parent._esdl__getResolvedNode());
+	P uparent = cast(P)(_parent._esdl__getResolvedNode(proc));
 	assert (uparent !is null);
 	return uparent.tupleof[PIDX];
       }
@@ -945,7 +945,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	return _parentsDepsAreResolved;
       }
 
-      override RV _esdl__getResolvedNode() {
+      override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
 	return this;
       }
 
@@ -1158,9 +1158,9 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	return _parentsDepsAreResolved && _nodeIsMapped;
       }
 
-      override RV _esdl__getResolvedNode() {
-	if (_resolvedCycle != _esdl__getProc()._cycle) {
-	  auto parent = _parent._esdl__getResolvedNode();
+      override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
+	if (_resolvedCycle != proc._cycle) {
+	  auto parent = _parent._esdl__getResolvedNode(proc);
 	  if (_indexExpr) {
 	    _resolvedVec = parent[_indexExpr.evaluate()];
 	  }
@@ -1178,7 +1178,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	      }
 	    }
 	  }
-	  _resolvedCycle = _esdl__getProc()._cycle;
+	  _resolvedCycle = proc._cycle;
 	}
 	return _resolvedVec;
       }

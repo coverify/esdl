@@ -180,7 +180,7 @@ class CstVecArrExpr: CstVecExpr
     _hash.modify(41);
   }
   
-  void _esdl__scan() { }
+  void _esdl__scan(_esdl__CstProcessor proc) { }
 
   final void visit(CstDistSolverBase dist, _esdl__CstProcessor proc) { assert(false); }
 
@@ -377,7 +377,7 @@ class CstVec2VecExpr: CstVecExpr
     _hash.modify(41);
   }
   
-  void _esdl__scan() { }
+  void _esdl__scan(_esdl__CstProcessor proc) { }
 
   final void visit(CstDistSolverBase dist, _esdl__CstProcessor proc) { assert(false); }
 
@@ -1337,7 +1337,7 @@ class CstLogicDistExpr(T): CstLogicExpr
   
   bool eval() {assert (false, "Unable to evaluate CstLogicDistExpr");}
 
-  override void _esdl__scan() { }
+  override void _esdl__scan(_esdl__CstProcessor proc) { }
 }
 
 class CstVecDistExpr(T): CstLogicExpr
@@ -1478,7 +1478,7 @@ class CstVecDistExpr(T): CstLogicExpr
   
   bool eval() {assert (false, "Unable to evaluate CstVecDistExpr");}
 
-  override void _esdl__scan() { }
+  override void _esdl__scan(_esdl__CstProcessor proc) { }
 }
 
 // class CstVecSliceExpr: CstVecExpr
@@ -1679,7 +1679,7 @@ class CstVecSliceExpr: CstVecExpr
     _hash.modify(_range.hashValue());
   }
 
-  void _esdl__scan() { }
+  void _esdl__scan(_esdl__CstProcessor proc) { }
 
   final void visit(CstDistSolverBase dist, _esdl__CstProcessor proc) { assert(false); }
 
@@ -1845,7 +1845,7 @@ class CstNotVecExpr: CstVecExpr
     _hash.modify(41);
   }
 
-  void _esdl__scan() { }
+  void _esdl__scan(_esdl__CstProcessor proc) { }
 
   final void visit(CstDistSolverBase dist, _esdl__CstProcessor proc) { assert(false); }
 
@@ -1950,7 +1950,7 @@ class CstNegVecExpr: CstVecExpr
     _hash.modify(41);
   }
 
-  void _esdl__scan() { }
+  void _esdl__scan(_esdl__CstProcessor proc) { }
 
   final void visit(CstDistSolverBase dist, _esdl__CstProcessor proc) { assert(false); }
 
@@ -2089,7 +2089,7 @@ class CstLogic2LogicExpr: CstLogicExpr
     }
   }
   
-  override void _esdl__scan() { }
+  override void _esdl__scan(_esdl__CstProcessor proc) { }
 }
 
 class CstInsideArrExpr: CstLogicExpr
@@ -2270,7 +2270,7 @@ class CstInsideArrExpr: CstLogicExpr
     else return inside;
   }
 
-  override void _esdl__scan() { }
+  override void _esdl__scan(_esdl__CstProcessor proc) { }
 
 }
 
@@ -2407,7 +2407,7 @@ class CstUniqueArrExpr: CstLogicExpr
     }
   }
 
-  override void _esdl__scan() { }
+  override void _esdl__scan(_esdl__CstProcessor proc) { }
 }
 
 // TBD
@@ -2458,7 +2458,7 @@ class CstIteLogicExpr: CstLogicExpr
   
 
   override bool eval() { assert(false, "TBD"); }
-  override void _esdl__scan() { }
+  override void _esdl__scan(_esdl__CstProcessor proc) { }
 }
 
 class CstVec2LogicExpr: CstLogicExpr
@@ -2728,7 +2728,7 @@ class CstVec2LogicExpr: CstLogicExpr
     assert(false, "TBD -- Can not yet handle > 64 bit math operations");
   }
 
-  override void _esdl__scan() { }
+  override void _esdl__scan(_esdl__CstProcessor proc) { }
 }
 
 class CstNotLogicExpr: CstLogicExpr
@@ -2800,7 +2800,7 @@ class CstNotLogicExpr: CstLogicExpr
 
   override bool eval() {return !_expr.eval();}
 
-  override void _esdl__scan() { }
+  override void _esdl__scan(_esdl__CstProcessor proc) { }
 }
 
 class CstVarVisitorExpr: CstLogicExpr
@@ -2873,9 +2873,9 @@ class CstVarVisitorExpr: CstLogicExpr
     assert (false);
   }
 
-  override void _esdl__scan() {
+  override void _esdl__scan(_esdl__CstProcessor proc) {
     assert (_obj !is null);
-    _obj._esdl__scan();
+    _obj._esdl__scan(proc);
   }
 
   override bool eval() {assert(false);}
