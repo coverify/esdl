@@ -233,7 +233,6 @@ abstract class CstObjectBase(V, rand RAND_ATTR, int N)
 
 	string _esdl__name;
 	_esdl__Proxy _root;
-	_esdl__CstProcessor _proc;
 
 	override string _esdl__getName() {
 	  return _esdl__name;
@@ -276,7 +275,6 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	this(string name, _esdl__Proxy parent, V* var) {
 	  _parent = parent;
 	  _root = _parent._esdl__getRootProxy();
-	  _proc = _root._esdl__getProc();
 	  _parentsDepsAreResolved = _parent._esdl__depsAreResolved();
 	  super(name, parent, var);
 	}
@@ -285,7 +283,6 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	this(string name, _esdl__Proxy parent, V var) {
 	  _parent = parent;
 	  _root = _parent._esdl__getRootProxy();
-	  _proc = _root._esdl__getProc();
 	  _parentsDepsAreResolved = _parent._esdl__depsAreResolved();
 	  super(name, parent, var);
 	}
@@ -306,11 +303,6 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
       _esdl__Proxy _esdl__getRootProxy()() {
 	assert (_root !is null);
 	return _root;
-      }
-
-      _esdl__CstProcessor _esdl__getProc()() {
-	assert (_proc !is null);
-	return _proc;
       }
 
       final bool _esdl__isStatic() {
@@ -394,7 +386,6 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	super(_esdl__name, parent._esdl__getRootProxy(), null);
 	_parent = parent;
 	_root = _parent._esdl__getRootProxy();
-	_proc = _root._esdl__getProc();
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
 	_indexExpr = indexExpr;
 	// }
@@ -410,7 +401,6 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	_parent = parent;
 	_pindex = index;
 	_root = _parent._esdl__getRootProxy();
-	_proc = _root._esdl__getProc();
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
       }
 
@@ -454,11 +444,6 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
       _esdl__Proxy _esdl__getRootProxy()() {
 	assert (_root !is null);
 	return _root;
-      }
-
-      _esdl__CstProcessor _esdl__getProc()() {
-	assert (_proc !is null);
-	return _proc;
       }
 
       override bool _esdl__depsAreResolved() {

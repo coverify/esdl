@@ -677,8 +677,6 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 
   CstVecPrim[] _preReqs;
 
-  _esdl__CstProcessor _proc;
-
   final override bool isDistVar() { return false; }
 
   override string _esdl__getName() {
@@ -694,7 +692,6 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     super(_esdl__getName, parent._esdl__getRootProxy());
     _esdl__name = _esdl__getName;
     _parent = parent;
-    _proc = parent._esdl__getProc();
     _iterVar = new CstArrIterator!RV(_parent);
   }
 

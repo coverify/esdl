@@ -52,7 +52,6 @@ class CstSolverAgent			// agent of related predicates
   }
 
   void initialize(_esdl__CstProcessor proc) {
-    _proc = proc;
     _preds.reset();
     _predGroup.reset();
 
@@ -82,17 +81,11 @@ class CstSolverAgent			// agent of related predicates
     return _preds[];
   }
 
-  _esdl__CstProcessor _proc;
-
   this () {
     intMono = new CstMonoSolver!int("");
     uintMono = new CstMonoSolver!uint("");
     longMono = new CstMonoSolver!long("");
     ulongMono = new CstMonoSolver!ulong("");
-  }
-
-  final _esdl__CstProcessor getProcessor() {
-    return _proc;
   }
 
   void addPredicate(CstPredicate pred) {

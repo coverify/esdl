@@ -232,8 +232,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   // this is not root proxy
   _esdl__Proxy _proxy;
 
-  _esdl__CstProcessor _proc;
-  
   CstScope _scope;
   CstLogicTerm _expr;
   CstPredicate _parent;
@@ -333,7 +331,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     _soft = soft;
     _statement = stmt;
     _proxy = proxy;
-    _proc = _proxy._esdl__getProc();
     _unrollIterVal = unrollIterVal;
     _isInRange = true;
     if (parent is null) {
