@@ -145,16 +145,16 @@ class CstVecArrExpr: CstVecExpr
     return false;
   }
 
-  void annotate(CstSolverAgent agent) {
-    _arr.annotate(agent);
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
+    _arr.annotate(agent, proc);
   }
   
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     str ~= '(';
     str.addReserve(16);
     str.writef!("%s")(_op);
     str ~= ' ';
-    _arr.writeExprString(str);
+    _arr.writeExprString(proc, str);
     str ~= ')';
   }
   
@@ -291,19 +291,19 @@ class CstVec2VecExpr: CstVecExpr
     return _lhs.isSolved() && _rhs.isSolved();
   }
 
-  void annotate(CstSolverAgent agent) {
-    _lhs.annotate(agent);
-    _rhs.annotate(agent);
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
+    _lhs.annotate(agent, proc);
+    _rhs.annotate(agent, proc);
   }
   
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     str ~= '(';
     str.addReserve(16);
     str.writef!("%s")(_op);
     str ~= ' ';
-    _lhs.writeExprString(str);
+    _lhs.writeExprString(proc, str);
     str ~= ' ';
-    _rhs.writeExprString(str);
+    _rhs.writeExprString(proc, str);
     str ~= ')';
   }
   
@@ -442,19 +442,19 @@ class CstRangeExpr
     return _lhs.isSolved() && (_rhs is null || _rhs.isSolved());
   }
 
-  void annotate(CstSolverAgent agent) {
-    _lhs.annotate(agent);
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
+    _lhs.annotate(agent, proc);
     if (_rhs !is null) {
-      _rhs.annotate(agent);
+      _rhs.annotate(agent, proc);
     }
   }
 
-  void writeExprString(ref _esdl__Sigbuf str) {
-    _lhs.writeExprString(str);
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
+    _lhs.writeExprString(proc, str);
     if (_rhs !is null) {
       if (_inclusive) str ~= " : ";
       else str ~= " .. ";
-      _rhs.writeExprString(str);
+      _rhs.writeExprString(proc, str);
     }
   }
   
@@ -540,19 +540,19 @@ class CstVecDistSetElem
     return _lhs.isSolved() && (_rhs is null || _rhs.isSolved());
   }
 
-  void annotate(CstSolverAgent agent) {
-    _lhs.annotate(agent);
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
+    _lhs.annotate(agent, proc);
     if (_rhs !is null) {
-      _rhs.annotate(agent);
+      _rhs.annotate(agent, proc);
     }
   }
   
-  void writeExprString(ref _esdl__Sigbuf str) {
-    _lhs.writeExprString(str);
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
+    _lhs.writeExprString(proc, str);
     if (_rhs !is null) {
       if (_inclusive) str ~= " : ";
       else str ~= " .. ";
-      _rhs.writeExprString(str);
+      _rhs.writeExprString(proc, str);
     }
   }
   
@@ -669,19 +669,19 @@ class CstUniqueSetElem
     return false;
   }
 
-  void annotate(CstSolverAgent agent) {
-    if (_arr !is null) _arr.annotate(agent);
-    else               _vec.annotate(agent);
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
+    if (_arr !is null) _arr.annotate(agent, proc);
+    else               _vec.annotate(agent, proc);
   }
   
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     if (_arr !is null) {
       str ~= "[ ";
-      _arr.writeExprString(str);
+      _arr.writeExprString(proc, str);
       str ~= " ]";
     }
     else {
-      _vec.writeExprString(str);
+      _vec.writeExprString(proc, str);
     }
   }
   
@@ -883,26 +883,26 @@ class CstInsideSetElem
     return false;
   }
 
-  void annotate(CstSolverAgent agent) {
-    if (_arr !is null) _arr.annotate(agent);
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
+    if (_arr !is null) _arr.annotate(agent, proc);
     else {
-      _lhs.annotate(agent);
-      if (_rhs !is null) _rhs.annotate(agent);
+      _lhs.annotate(agent, proc);
+      if (_rhs !is null) _rhs.annotate(agent, proc);
     }
   }
   
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     if (_arr !is null) {
       str ~= "[ ";
-      _arr.writeExprString(str);
+      _arr.writeExprString(proc, str);
       str ~= " ]";
     }
     else {
-      _lhs.writeExprString(str);
+      _lhs.writeExprString(proc, str);
       if (_rhs !is null) {
 	if (_inclusive) str ~= " : ";
 	else str ~= " .. ";
-	_rhs.writeExprString(str);
+	_rhs.writeExprString(proc, str);
       }
     }
   }
@@ -1099,13 +1099,13 @@ class CstLogicWeightedDistSetElem
     return _term.isSolved() && _weight.isSolved();
   }
 
-  void annotate(CstSolverAgent agent) {
-    _term.annotate(agent);
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
+    _term.annotate(agent, proc);
   }
 
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     import std.conv: to;
-    _term.writeExprString(str);
+    _term.writeExprString(proc, str);
     if (_perItem) str ~= " := ";
     else str ~= " :/ ";
     str ~= _weight.evaluate().to!string;
@@ -1179,13 +1179,13 @@ class CstVecWeightedDistSetElem
     return _range.isSolved() && _weight.isSolved();
   }
 
-  void annotate(CstSolverAgent agent) {
-    _range.annotate(agent);
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
+    _range.annotate(agent, proc);
   }
 
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     import std.conv: to;
-    _range.writeExprString(str);
+    _range.writeExprString(proc, str);
     if (_perItem) str ~= " := ";
     else str ~= " :/ ";
     str ~= _weight.evaluate().to!string;
@@ -1295,16 +1295,16 @@ class CstLogicDistExpr(T): CstLogicExpr
     return _vec.isSolved();
   }
 
-  void annotate(CstSolverAgent agent) {
-    _vec.annotate(agent);
-    foreach (dist; _dists) dist.annotate(agent);
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
+    _vec.annotate(agent, proc);
+    foreach (dist; _dists) dist.annotate(agent, proc);
   }
 
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     str ~= "DIST ";
-    _vec.writeExprString(str);
+    _vec.writeExprString(proc, str);
     foreach (dist; _dists) {
-      dist.writeExprString(str);
+      dist.writeExprString(proc, str);
     }
   }
   
@@ -1436,16 +1436,16 @@ class CstVecDistExpr(T): CstLogicExpr
     return _vec.isSolved();
   }
 
-  void annotate(CstSolverAgent agent) {
-    _vec.annotate(agent);
-    foreach (dist; _dists) dist.annotate(agent);
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
+    _vec.annotate(agent, proc);
+    foreach (dist; _dists) dist.annotate(agent, proc);
   }
   
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     str ~= "DIST ";
-    _vec.writeExprString(str);
+    _vec.writeExprString(proc, str);
     foreach (dist; _dists) {
-      dist.writeExprString(str);
+      dist.writeExprString(proc, str);
     }
   }
   
@@ -1551,13 +1551,13 @@ class CstVecDistExpr(T): CstLogicExpr
 //     else return _lhs.isSolved() && _rhs.isSolved() && _vec.isSolved();
 //   }
   
-//   override void writeExprString(ref _esdl__Sigbuf str) {
-//     _vec.writeExprString(str);
+//   override void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
+//     _vec.writeExprString(proc, str);
 //     str ~= '[';
-//     _lhs.writeExprString(str);
+//     _lhs.writeExprString(proc, str);
 //     if (_rhs !is null) {
 //       str ~= "..";
-//       _rhs.writeExprString(str);
+//       _rhs.writeExprString(proc, str);
 //     }
 //     str ~= ']';
 //   }
@@ -1647,15 +1647,15 @@ class CstVecSliceExpr: CstVecExpr
     return _range.isSolved() && _vec.isSolved();
   }
   
-  void annotate(CstSolverAgent agent) {
-    _vec.annotate(agent);
-    _range.annotate(agent);
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
+    _vec.annotate(agent, proc);
+    _range.annotate(agent, proc);
   }
 
-  void writeExprString(ref _esdl__Sigbuf str) {
-    _vec.writeExprString(str);
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
+    _vec.writeExprString(proc, str);
     str ~= '[';
-    _range.writeExprString(str);
+    _range.writeExprString(proc, str);
     str ~= ']';
   }
 
@@ -1737,10 +1737,10 @@ class CstVecSliceExpr: CstVecExpr
 //     return _index.isSolved() && _vec.isSolved();
 //   }
   
-//   override void writeExprString(ref _esdl__Sigbuf str) {
-//     _vec.writeExprString(str);
+//   override void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
+//     _vec.writeExprString(proc, str);
 //     str ~= '[';
-//     _index.writeExprString(str);
+//     _index.writeExprString(proc, str);
 //     str ~= ']';
 //   }
 // }
@@ -1814,13 +1814,13 @@ class CstNotVecExpr: CstVecExpr
     return _expr.isSolved();
   }
 
-  void annotate(CstSolverAgent agent) {
-    _expr.annotate(agent);
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
+    _expr.annotate(agent, proc);
   }
   
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     str ~= "(NOT ";
-    _expr.writeExprString(str);
+    _expr.writeExprString(proc, str);
     str ~= ')';
   }
   
@@ -1920,13 +1920,13 @@ class CstNegVecExpr: CstVecExpr
     return _expr.isSolved();
   }
 
-  void annotate(CstSolverAgent agent) {
-    _expr.annotate(agent);
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
+    _expr.annotate(agent, proc);
   }
   
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     str ~= "(NEG ";
-    _expr.writeExprString(str);
+    _expr.writeExprString(proc, str);
     str ~= ')';
   }
   
@@ -1997,19 +1997,19 @@ class CstLogic2LogicExpr: CstLogicExpr
   
   bool isSolved() { return _lhs.isSolved && _rhs.isSolved(); }
 
-  void annotate(CstSolverAgent agent) {
-    _lhs.annotate(agent);
-    _rhs.annotate(agent);
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
+    _lhs.annotate(agent, proc);
+    _rhs.annotate(agent, proc);
   }
 
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     str ~= '(';
     str.addReserve(16);
     str.writef!("%s")(_op);
     str ~= ' ';
-    _lhs.writeExprString(str);
+    _lhs.writeExprString(proc, str);
     str ~= ' ';
-    _rhs.writeExprString(str);
+    _rhs.writeExprString(proc, str);
     str ~= ")\n";
   }
 
@@ -2210,18 +2210,18 @@ class CstInsideArrExpr: CstLogicExpr
   
   bool isSolved() { return false; }
 
-  void annotate(CstSolverAgent agent) {
-    _term.annotate(agent);
-    foreach (elem; _elems) elem.annotate(agent);
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
+    _term.annotate(agent, proc);
+    foreach (elem; _elems) elem.annotate(agent, proc);
   }
   
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     if (_notinside) str ~= "(! INSIDE ";
     else            str ~= "(INSIDE ";
-    _term.writeExprString(str);
+    _term.writeExprString(proc, str);
     str ~= " [ ";
     foreach (elem; _elems) {
-      elem.writeExprString(str);
+      elem.writeExprString(proc, str);
       str ~= ' ';
     }
     str ~= "])\n";
@@ -2331,15 +2331,15 @@ class CstUniqueArrExpr: CstLogicExpr
   
   bool isSolved() { return false; }
 
-  void annotate(CstSolverAgent agent) {
-    foreach (elem; _elems) elem.annotate(agent);
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
+    foreach (elem; _elems) elem.annotate(agent, proc);
   }
   
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     str ~= "(UNIQUE ";
     str ~= " [";
     foreach (elem; _elems)
-      elem.writeExprString(str);
+      elem.writeExprString(proc, str);
     str ~= "])\n";
   }
   
@@ -2435,11 +2435,11 @@ class CstIteLogicExpr: CstLogicExpr
 
   CstDistSolverBase getDist() { assert (false); }
 
-  void annotate(CstSolverAgent agent) {
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
     assert (false, "TBD");
   }
 
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     assert (false, "TBD");
   }
 
@@ -2558,19 +2558,19 @@ class CstVec2LogicExpr: CstLogicExpr
     return _lhs.isSolved && _rhs.isSolved();
   }
 
-  void annotate(CstSolverAgent agent) {
-    _lhs.annotate(agent);
-    _rhs.annotate(agent);
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
+    _lhs.annotate(agent, proc);
+    _rhs.annotate(agent, proc);
   }
 
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     str ~= '(';
     str.addReserve(16);
     str.writef!("%s")(_op);
     str ~= ' ';
-    _lhs.writeExprString(str);
+    _lhs.writeExprString(proc, str);
     str ~= ' ';
-    _rhs.writeExprString(str);
+    _rhs.writeExprString(proc, str);
     str ~= ")\n";
   }
 
@@ -2763,13 +2763,13 @@ class CstNotLogicExpr: CstLogicExpr
     return _expr.isSolved();
   }
 
-  void annotate(CstSolverAgent agent) {
-    _expr.annotate(agent);
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
+    _expr.annotate(agent, proc);
   }
 
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     str ~= "(NOT ";
-    _expr.writeExprString(str);
+    _expr.writeExprString(proc, str);
     str ~= ")\n";
   }
 
@@ -2844,9 +2844,9 @@ class CstVarVisitorExpr: CstLogicExpr
     return false;
   }
 
-  void annotate(CstSolverAgent agent) { }
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) { }
 
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     str ~= this.describe(true);
   }
 

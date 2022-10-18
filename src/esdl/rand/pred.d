@@ -888,7 +888,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   bool tryResolveAllDeps(_esdl__CstProcessor proc) {
     assert (proc !is null);
-    assert (proc is _proc, _proc._esdl__getFullName() ~ " ~= " ~ proc._esdl__getFullName());
     bool resolved = true;
     // import std.stdio;
     // writeln("pred: ", _esdl__getFullName());
@@ -1127,19 +1126,19 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     
   }
 
-  void annotate(CstSolverAgent agent) {
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
     if (_guard !is null) {
       if (_guard._state is State.SOLVED) {
 	assert (_guard._exprVal ^ _guardInv);
       }
       else {
-	_guard.annotate(agent);
+	_guard.annotate(agent, proc);
       }
     }
-    _expr.annotate(agent);
+    _expr.annotate(agent, proc);
   }
 
-  void writeSignature(ref _esdl__Sigbuf str, CstSolverAgent agent) {
+  void writeSignature(_esdl__CstProcessor proc, ref _esdl__Sigbuf str, CstSolverAgent agent) {
     if (_soft != 0) {
       str.addReserve(16);
       str.writef!("!%d:")(_soft); // _soft.to!string();
@@ -1150,11 +1149,11 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       }
       else {
 	if (_guardInv) str ~= " ! ";
-	_guard.writeSignature(str, agent);
+	_guard.writeSignature(proc, str, agent);
 	str ~= " >> ";
       }
     }
-    _expr.writeExprString(str);
+    _expr.writeExprString(proc, str);
   }
 
   void calcHash(ref Hash hash){
@@ -1216,8 +1215,6 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   
   bool tryResolveDep(_esdl__CstProcessor proc) {
     assert (proc !is null);
-    assert (proc is _proc, _proc._esdl__getFullName() ~ " ~= " ~
-	    proc._esdl__getFullName());
     assert (isGuard());
     if (_unresolvedVarArrs.length > 0 ||
 	_unresolvedRndArrs.length > 0) return false;
@@ -1230,7 +1227,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       }
       if (success) {
 	this.markPredSolved(proc);
-	_proc.solvedSome();
+	proc.solvedSome();
       }
       return success;
     }
@@ -1339,7 +1336,7 @@ class CstVisitorPredicate: CstPredicate
 	// writeln("Collecting constraints from: ", _uwPreds[i]._expr.describe());
       }
       else {
-	_proc.addNewPredicate(_uwPreds[i]);
+	proc.addNewPredicate(_uwPreds[i]);
       }
     }
 

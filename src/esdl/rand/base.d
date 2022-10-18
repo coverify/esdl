@@ -572,11 +572,11 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
     _domN = n;
   }
   
-  final void annotate(CstSolverAgent agent) {
-    this._esdl__getResolvedNode().annotateResolved(agent);
+  final void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
+    this._esdl__getResolvedNode().annotateResolved(agent, proc);
   }
 
-  final void annotateResolved(CstSolverAgent agent) {
+  final void annotateResolved(CstSolverAgent agent, _esdl__CstProcessor proc) {
     assert (this is this._esdl__getResolvedNode());
     // import std.conv: to;
     // import std.stdio;
@@ -641,7 +641,7 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
     }
   }
 
-  // abstract void annotate(CstSolverAgent agent);
+  // abstract void annotate(CstSolverAgent agent, _esdl__CstProcessor proc);
   abstract bool visitDomain(CstSolver solver);
   
   // init value has to be different from proxy._cycle init value
@@ -976,12 +976,12 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     _domSetN = n;
   }
   
-  final void annotate(CstSolverAgent agent) {
+  final void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
     assert (isDepResolved());
     CstDomSet resolved = this._esdl__getResolvedNode();
-    if (resolved !is this) resolved.annotate(agent);
+    if (resolved !is this) resolved.annotate(agent, proc);
     else {
-      foreach (dom; this[]) dom.annotate(agent);
+      foreach (dom; this[]) dom.annotate(agent, proc);
       // import std.conv: to;
       // import std.stdio;
       // writeln("annotate: ", this._esdl__getName());
@@ -996,10 +996,10 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   }
 
   
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     assert (isDepResolved());
     foreach (dom; this[]) {
-      dom.writeExprString(str);
+      dom.writeExprString(proc, str);
       str ~= ' ';
     }
   }
@@ -1215,8 +1215,8 @@ interface CstTerm
   void visit(CstSolver solver, _esdl__CstProcessor proc);
   void visit(CstDistSolverBase dist, _esdl__CstProcessor proc);
 
-  void annotate(CstSolverAgent agent);
-  void writeExprString(ref _esdl__Sigbuf str);
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc);
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str);
   void calcHash(ref Hash hash);
   void makeHash();
   size_t hashValue();
