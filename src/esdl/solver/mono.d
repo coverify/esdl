@@ -963,7 +963,7 @@ class CstMonoSolver (S): CstSolver
   //   }
   //   return false;
   // }
-  override bool solve(CstSolverAgent agent) {
+  override bool solve(CstSolverAgent agent, _esdl__CstProcessor proc) {
     CstDomBase [] doms = agent.annotatedDoms();
     assert (doms.length == 1);
 

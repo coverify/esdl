@@ -747,7 +747,7 @@ class _esdl__CstProcessor
 	    }
 	  }
 	}
-	agent.solve();
+	agent.solve(this);
       }
 
       _resolvedDistPreds.reset();
@@ -930,7 +930,7 @@ class _esdl__CstProcessor
 		  agent.describe() ~ " predicate: " ~ pred.describe());
 	  agent.setSolverContext(pred, level);
 
-	  agent.solve();
+	  agent.solve(this);
 	  _solvedDomains ~= agent.annotatedDoms();
 	  _solvedDomainArrs ~= agent.annotatedDomArrs();
 	  agent.reset();
@@ -978,7 +978,7 @@ class _esdl__CstProcessor
       }
     }
     agent.setOrderAndBools();
-    agent.solve();
+    agent.solve(this);
     _solvedDomains ~= agent.annotatedDoms();
     _solvedDomainArrs ~= agent.annotatedDomArrs();
     agent.reset();

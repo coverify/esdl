@@ -465,7 +465,7 @@ class CstDistPredSolver	// agent of dist and related predicates
     return _state == State.SOLVED;
   }
 
-  void solve() {
+  void solve(_esdl__CstProcessor proc) {
     if (_proc.debugSolver()) {
       import std.stdio;
       writeln(describe());
