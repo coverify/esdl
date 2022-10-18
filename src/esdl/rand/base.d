@@ -263,18 +263,12 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
 
 
   _esdl__Proxy _root;
-  _esdl__CstProcessor _proc;
 
-  final _esdl__CstProcessor _esdl__getProc() {
-    return _proc;
-  }
-  
   string _esdl__name;
 
   this(string name, _esdl__Proxy root) {
     _esdl__name = name;
     _root = root;
-    _proc = _root._esdl__getProc();
   }
 
   string _esdl__getName() {
@@ -744,17 +738,11 @@ abstract class CstObjSet: CstObjArrVoid, CstObjArrIntf
   string _esdl__name;
 
   private _esdl__Proxy _root;
-  _esdl__CstProcessor _proc;
-  
-  final _esdl__CstProcessor _esdl__getProc() {
-    return _proc;
-  }
   
   this(string name, _esdl__Proxy root) {
     assert (root !is null);
     _esdl__name = name;
     _root = root;
-    _proc = _root._esdl__getProc();
   }
 
   _esdl__Proxy _esdl__getRootProxy() {
@@ -789,16 +777,10 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   string _esdl__name;
 
   _esdl__Proxy _root;
-  _esdl__CstProcessor _proc;
-  
-  final _esdl__CstProcessor _esdl__getProc() {
-    return _proc;
-  }
   
   this(string name, _esdl__Proxy root) {
     _esdl__name = name;
     _root = root;
-    _proc = _root._esdl__getProc();
   }
 
   _esdl__Proxy _esdl__getRootProxy() {
