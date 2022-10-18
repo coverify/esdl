@@ -242,8 +242,6 @@ class CstZ3Solver: CstSolver
   Optimize _optimize;
   bool _needOptimize;
 
-  _esdl__CstProcessor _proc;
-
   uint _countStable;
   uint _countVariable;
 
@@ -260,11 +258,9 @@ class CstZ3Solver: CstSolver
   CstVectorOp _state;
   // the agent is used only for the purpose of constructing the Z3 solver
   // otherwise the solver identifies with the signature only
-  this(string signature, CstSolverAgent agent) {
+  this(string signature, CstSolverAgent agent, _esdl__CstProcessor proc) {
     import std.stdio;
     super(signature);
-
-    _proc = agent.getProcessor();
 
     setParam("auto_config", false);
     setParam("parallel.enable", false);
@@ -375,7 +371,7 @@ class CstZ3Solver: CstSolver
 	.array();
     }
 
-    _seed = _proc.getRandGen.gen!uint();
+    _seed = proc.getRandGen.gen!uint();
     _solver.set("random_seed", _seed);
     
 
@@ -510,7 +506,7 @@ class CstZ3Solver: CstSolver
     updateVars(agent);
     if (_needOptimize) {
       if (updateOptimize() || (_optimizeInit is false)) {
-	if (_proc.debugSolver()) {
+	if (proc.debugSolver()) {
 	  import std.stdio;
 	  writeln(_optimize);
 	}
@@ -560,7 +556,7 @@ class CstZ3Solver: CstSolver
       }
     }
 
-    if (_proc.debugSolver()) {
+    if (proc.debugSolver()) {
       import std.stdio;
       writeln(_solver);
     }
@@ -580,12 +576,12 @@ class CstZ3Solver: CstSolver
       if (dom._type == Z3Term.Type.BOOLEXPR) {
 	BoolExpr vdom = dom.toBool.mapTo(model, true);
 	bool val = vdom.getBool();
-	doms[i].setBool(val, _proc);
+	doms[i].setBool(val, proc);
       }
       else {
 	BvExpr vdom = dom.toBv.mapTo(model, true);
 	ulong val = vdom.getNumeralUint64();
-	doms[i].setVal(val, _proc);
+	doms[i].setVal(val, proc);
       }
 
       // writeln("Value for Domain ", doms[i].name(), ": ",

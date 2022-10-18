@@ -342,7 +342,7 @@ class CstSolverAgent			// agent of related predicates
 	    }
 	    writeln(describe());
 	  }
-	  _solver = new CstZ3Solver(immutableSig, this);
+	  _solver = new CstZ3Solver(immutableSig, this, proc);
 	  _solver.solve(this, proc);
 	}
 	else {
@@ -361,11 +361,11 @@ class CstSolverAgent			// agent of related predicates
 	      writeln("Invoking Z3 because of > 32 bits");
 	      writeln(describe());
 	    }
-	    _solver = new CstZ3Solver(immutableSig, this);
+	    _solver = new CstZ3Solver(immutableSig, this, proc);
 	    _solver.solve(this, proc);
 	  }
 	  else {
-	    _solver = new CstBuddySolver(immutableSig, this);
+	    _solver = new CstBuddySolver(immutableSig, this, proc);
 	    _solver.solve(this, proc);
 	  }
 	}
