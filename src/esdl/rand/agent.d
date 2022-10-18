@@ -184,25 +184,25 @@ class CstSolverAgent			// agent of related predicates
     _predGroup.reset();
   }
 
-  void annotate() {
+  void annotate(_esdl__CstProcessor proc) {
     foreach (pred; _preds) {
       // import std.stdio;
       // writeln("Annotating: ", pred._esdl__getFullName());
       assert (! pred.isBlocked());
       if (! hasDistConstraints)
-	pred.annotate(this);
+	pred.annotate(this, proc);
     }
   }
 
   _esdl__Sigbuf _sig;
   
-  char[] signature() {
+  char[] signature(_esdl__CstProcessor proc) {
     _sig.reset();
     _sig ~= "HANDLER:\n";
     foreach (pred; _preds) {
       assert (! pred.isBlocked());
       if (! hasDistConstraints)
-	pred.writeSignature(_sig, this);
+	pred.writeSignature(proc, _sig, this);
     }
     return _sig[];
   }
@@ -263,18 +263,18 @@ class CstSolverAgent			// agent of related predicates
   void solve(_esdl__CstProcessor proc) {
     // import std.stdio;
     // writeln("Solving: ", this.describe());
-    if (_proc.debugSolver()) {
+    if (proc.debugSolver()) {
       import std.stdio;
       writeln(describe());
     }
 
     assert (_distPred is null || (! _distPred.distDomain()._esdl__isRand()));
-    annotate();
+    annotate(proc);
     bool monoFlag = false;
     if (!(_softPredicateCount != 0 || _hasVectorConstraints)) {
       if (_preds.length == 1 && _preds[0].isVisitor()) {
 	_preds[0]._state = CstPredicate.State.SOLVED;
-	_proc.addSolvedDomain(_preds[0]._domain);
+	proc.addSolvedDomain(_preds[0]._domain);
 	monoFlag = true;
       }
       else if (_annotatedDoms.length == 1 && (! _annotatedDoms[0].isBool())) {
@@ -310,10 +310,10 @@ class CstSolverAgent			// agent of related predicates
     }
     if (!monoFlag) {
       
-      char[] mutableSig = signature();
+      char[] mutableSig = signature(proc);
       // assert(sig1 == mutableSig);
 
-      if (_proc.debugSolver()) {
+      if (proc.debugSolver()) {
 	import std.stdio;
 	writeln(mutableSig);
       }
@@ -333,7 +333,7 @@ class CstSolverAgent			// agent of related predicates
 	// cast and use the same char buffer memory
 	string immutableSig = mutableSig.to!string();
 	if (_softPredicateCount != 0 || _hasVectorConstraints) {
-	  if (_proc.debugSolver()) {
+	  if (proc.debugSolver()) {
 	    import std.stdio;
 	    writeln("Invoking Z3 because of Soft/Vector Constraints");
 	    writeln("_preds: ", _preds[]);
@@ -356,7 +356,7 @@ class CstSolverAgent			// agent of related predicates
 	  }
 	  foreach (var; _annotatedVars) totalBits += var.bitcount();
 	  if (totalBits > 32 || _hasUniqueConstraints) {
-	    if (_proc.debugSolver()) {
+	    if (proc.debugSolver()) {
 	      import std.stdio;
 	      writeln("Invoking Z3 because of > 32 bits");
 	      writeln(describe());

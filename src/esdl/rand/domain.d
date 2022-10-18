@@ -254,13 +254,13 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
     }
   }
 
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     alias TYPE = typeof(this);
     TYPE resolved = _esdl__staticCast!TYPE(this._esdl__getResolvedNode());
-    resolved.writeExprStringResolved(str);
+    resolved.writeExprStringResolved(proc, str);
   }
 
-  void writeExprStringResolved(ref _esdl__Sigbuf str) {
+  void writeExprStringResolved(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     assert (this is this._esdl__getResolvedNode());
     if (this.isSolved()) {
       // import std.stdio;
@@ -651,8 +651,8 @@ class CstArrIterator(RV): CstIterator
     return _arrVar._arrLen.isSolved();
   }
 
-  void annotate(CstSolverAgent agent) { }
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) { }
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     // assert(false);
   }
   void calcHash(ref Hash hash) { }
@@ -1260,9 +1260,9 @@ class CstLogicValue: CstValue, CstLogicTerm
     pred.addVal(this, context);
   }
 
-  void annotate(CstSolverAgent agent) { }
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) { }
 
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     // VSxxxxx or VUxxxxx
     str ~= 'V';
     _val.writeHexString(str);
@@ -1396,9 +1396,9 @@ class CstVecValue(T): CstVecValueBase
     pred.addVal(this, context);
   }
 
-  void annotate(CstSolverAgent agent) { }
+  void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) { }
 
-  void writeExprString(ref _esdl__Sigbuf str) {
+  void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     // VSxxxxx or VUxxxxx
     str ~= 'V';
     static if (isBoolean!T) {
