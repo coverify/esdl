@@ -105,7 +105,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   final bool _esdl__isObjArray() { return false; }
   final CstIterator _esdl__iter() { return null; }
   final CstVarNodeIntf _esdl__getChild(ulong n) { assert (false); }
-  void _esdl__scan() { }		// when an object is unrolled
+  void _esdl__scan(_esdl__CstProcessor proc) { }		// when an object is unrolled
 
   CstVarGlobIntf[string] _esdl__globalLookups;
 
@@ -696,7 +696,7 @@ class _esdl__CstProcessor
       }
 
       foreach (pred; _unresolvedPreds) {
-	if (pred.checkResolved()) {
+	if (pred.checkResolved(this)) {
 	  _solvedSome = true;
 	  if (! pred.isBlocked()) {
 	    pred.markResolved();
@@ -880,9 +880,9 @@ class _esdl__CstProcessor
 	if (resolved) pred.procResolvedGuard();
 	else _predGuards ~= pred;
       }
-      // else if (pred.checkResolved(true)) _toResolvedPreds ~= pred;
+      // else if (pred.checkResolved(proc, true)) _toResolvedPreds ~= pred;
       else if (resolved) {
-	pred.processResolved();
+	pred.processResolved(this);
 	if (! pred.isBlocked()) {
 	  pred.markResolved();
 	  if (pred.isDistPredicate()) {

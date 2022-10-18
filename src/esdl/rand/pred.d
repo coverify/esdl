@@ -386,8 +386,8 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     if (_iters.length == 0) {
       _resolvedDepsCount += 1;
       _markResolve = true;
-      checkResolved();
-      // if (this.isGuard() && this.checkResolved())
+      checkResolved(proc);
+      // if (this.isGuard() && this.checkResolved(proc))
       // 	this.procResolvedGuard();
     }
   }
@@ -474,7 +474,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   uint _resolvedDepsCount = 0;
   
-  final bool checkResolved(bool init_=false) {
+  final bool checkResolved(_esdl__CstProcessor proc, bool init_=false) {
     // if (_markResolve || init_) {
     if (_resolvedDepsCount == _deps.length) {
       _markResolve = false;
@@ -491,7 +491,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 		_resolvedDepsCount.to!string ~ " != " ~ _deps.length.to!string() ~
 		" _markResolve: " ~ _markResolve.to!string() ~ " init_: " ~ init_.to!string());
 	if (isGuard()) procResolvedGuard();
-	else processResolved();
+	else processResolved(proc);
       }
       return resolved;
     }
@@ -670,14 +670,14 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return _resolvedVarArrs[];
   }
 
-  void processResolved() {
+  void processResolved(_esdl__CstProcessor proc) {
     _resolvedRnds.reset();
     _resolvedVars.reset();
     _resolvedRndArrs.reset();
     _resolvedVarArrs.reset();
 
     foreach (rnd; _unresolvedRnds) {
-      CstDomBase resolved = rnd._esdl__getResolvedNode();
+      CstDomBase resolved = rnd._esdl__getResolvedNode(proc);
       if (resolved._esdl__isRand()) {
 	addResolvedRnd(resolved);
 	resolved.addResolvedPred(this);
@@ -686,7 +686,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
     
     foreach (rnd; _unresolvedRndArrs) {
-      CstDomSet resolved = rnd._esdl__getResolvedNode();
+      CstDomSet resolved = rnd._esdl__getResolvedNode(proc);
       if (resolved._esdl__isRand()) {
 	addResolvedRndArr(resolved);
 	resolved.addResolvedPred(this);
@@ -695,11 +695,11 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     }
     
     foreach (rnd; _unresolvedVars) {
-      addResolvedVar(rnd._esdl__getResolvedNode());
+      addResolvedVar(rnd._esdl__getResolvedNode(proc));
     }
     
     foreach (rnd; _unresolvedVarArrs) {
-      addResolvedVarArr(rnd._esdl__getResolvedNode());
+      addResolvedVarArr(rnd._esdl__getResolvedNode(proc));
     }
     
   }
@@ -1331,7 +1331,7 @@ class CstVisitorPredicate: CstPredicate
     // array than the current value of currLen
     for (size_t i=0; i!=currLen; ++i) {
       if (_uwPreds[i]._iters.length == 0) { // completely unrolled
-	_uwPreds[i]._expr._esdl__scan();
+	_uwPreds[i]._expr._esdl__scan(proc);
 	// import std.stdio;
 	// writeln("Collecting constraints from: ", _uwPreds[i]._expr.describe());
       }

@@ -67,7 +67,7 @@ abstract class CstDomain(V, rand RAND_ATTR) if (is (V == bool)):
 	return cast(long) eval();
       }
 
-      override void _esdl__scan() { }
+      override void _esdl__scan(_esdl__CstProcessor proc) { }
 
       override uint bitcount() { return 1; }
       
@@ -256,12 +256,12 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
 
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     alias TYPE = typeof(this);
-    TYPE resolved = _esdl__staticCast!TYPE(this._esdl__getResolvedNode());
+    TYPE resolved = _esdl__staticCast!TYPE(this._esdl__getResolvedNode(proc));
     resolved.writeExprStringResolved(proc, str);
   }
 
   void writeExprStringResolved(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
-    assert (this is this._esdl__getResolvedNode());
+    assert (this is this._esdl__getResolvedNode(proc));
     if (this.isSolved()) {
       // import std.stdio;
       // writeln(_esdl__getFullName(), " has a value of: ", value());
@@ -838,9 +838,9 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     return _parent._esdl__unroll(iter, n, proc).arrLen();
   }
 
-  override AV _esdl__getResolvedNode() {
+  override AV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
     if (_parent._esdl__depsAreResolved()) return this;
-    else return _parent._esdl__getResolvedNode().arrLen;
+    else return _parent._esdl__getResolvedNode(proc).arrLen;
   }
 
   override bool _esdl__depsAreResolved() {
@@ -1111,9 +1111,9 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
     return _parent._esdl__unroll(iter, n, proc).arrLen();
   }
 
-  override AV _esdl__getResolvedNode() {
+  override AV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
     if (_parent._esdl__depsAreResolved()) return this;
-    else return _parent._esdl__getResolvedNode().arrHierLen;
+    else return _parent._esdl__getResolvedNode(proc).arrHierLen;
   }
 
   override bool _esdl__depsAreResolved() {
