@@ -134,7 +134,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return false;
   }
 
-  bool visit(CstSolver solver, bool inv=false) {
+  bool visit(CstSolver solver, _esdl__CstProcessor proc, bool inv=false) {
     // import std.stdio;
     // writeln ("Visiting: ", _esdl__getFullName());
     assert (_state !is State.BLOCKED);
@@ -146,28 +146,28 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	// writeln (_exprVal, ": ", inv);
       }
       else {
-	_expr.visit(solver);
+	_expr.visit(solver, proc);
 	if (inv) solver.processEvalStack(CstLogicOp.LOGICNOT);
 	return true;
       }
     }
     else {
       assert (this.isGuard() || inv is false);
-      bool implication = _guard.visit(solver, _guardInv);
+      bool implication = _guard.visit(solver, proc, _guardInv);
       if (this.isGuard()) {
 	if (_state == State.SOLVED) {
 	  assert (inv ^ _exprVal);
 	  return implication;
 	}
 	else {
-	  _expr.visit(solver);
+	  _expr.visit(solver, proc);
 	  if (inv) solver.processEvalStack(CstLogicOp.LOGICNOT);
 	  solver.processEvalStack(CstLogicOp.LOGICAND);
 	  return true;
 	}
       }
       else {
-	_expr.visit(solver);
+	_expr.visit(solver, proc);
 	if (implication) solver.processEvalStack(CstLogicOp.LOGICIMP);
 	return true;
       }

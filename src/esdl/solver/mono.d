@@ -998,7 +998,7 @@ class CstMonoSolver (S): CstSolver
     foreach (pred; predSet){
       if (! pred.isGuard()) {
 	reset();
-	pred.visit(this);
+	pred.visit(this, proc);
 	if (_endFlag == 3){
 	  resetSolver();
 	  return false;
@@ -1034,7 +1034,7 @@ class CstMonoSolver (S): CstSolver
        _testfinalRange = [S.min, S.max];
        foreach (pred; predSet){
        reset();
-       pred.visit(this);
+       pred.visit(this, proc);
        assert(_rangeStack.length == 1);
        if(_rangeStack[0].getType() == RangeType.DYN){
        assert(_rangeStack[0].getD() == [S.min, S.max]);
