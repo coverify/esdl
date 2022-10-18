@@ -45,7 +45,7 @@ class CstVecArrExpr: CstVecExpr
     return "( " ~ _arr._esdl__getFullName ~ " " ~ _op.to!string() ~ " )";
   }
 
-  void visit(CstSolver solver) {
+  void visit(CstSolver solver, _esdl__CstProcessor proc) {
     CstVecArrIntf.Range range = _arr[];
     solver.pushToEvalStack(0, 32, true);
 
@@ -65,7 +65,7 @@ class CstVecArrExpr: CstVecExpr
     //   if (bitcount <= 32) solver.processEvalStack(CstVectorOp.BEGIN_UINT);
     //   else                solver.processEvalStack(CstVectorOp.BEGIN_ULONG);
     // }
-    // _arr.visit(solver);
+    // _arr.visit(solver, proc);
     // solver.processEvalStack(_op);
   }
 
@@ -182,7 +182,7 @@ class CstVecArrExpr: CstVecExpr
   
   void _esdl__scan() { }
 
-  final void visit(CstDistSolverBase dist) { assert(false); }
+  final void visit(CstDistSolverBase dist, _esdl__CstProcessor proc) { assert(false); }
 
   final override CstVecType getVecType() {
     return _arr.getVecType();
@@ -203,9 +203,9 @@ class CstVec2VecExpr: CstVecExpr
     return "( " ~ _lhs.describe(true) ~ " " ~ _op.to!string() ~ " " ~ _rhs.describe(true) ~ " )";
   }
 
-  void visit(CstSolver solver) {
-    _lhs.visit(solver);
-    _rhs.visit(solver);
+  void visit(CstSolver solver, _esdl__CstProcessor proc) {
+    _lhs.visit(solver, proc);
+    _rhs.visit(solver, proc);
     solver.processEvalStack(_op);
   }
 
@@ -379,7 +379,7 @@ class CstVec2VecExpr: CstVecExpr
   
   void _esdl__scan() { }
 
-  final void visit(CstDistSolverBase dist) { assert(false); }
+  final void visit(CstDistSolverBase dist, _esdl__CstProcessor proc) { assert(false); }
 
   final override CstVecType getVecType() {
     return getCommonVecType(_lhs.getVecType(), _rhs.getVecType);
@@ -947,8 +947,8 @@ class CstInsideSetElem
     }
   }
   
-  final void visit(CstDistSolverBase dist) {
-    if (_arr !is null) _arr.visit(dist);
+  final void visit(CstDistSolverBase dist, _esdl__CstProcessor proc) {
+    if (_arr !is null) _arr.visit(dist, proc);
     else if (_lhs !is null) {
       if (_rhs !is null) {
 	if (_inclusive) {
@@ -1254,13 +1254,13 @@ class CstLogicDistExpr(T): CstLogicExpr
     return str;
   }
 
-  void visit(CstSolver solver) {
+  void visit(CstSolver solver, _esdl__CstProcessor proc) {
     solver.pushToEvalStack(false);
-    _vec.visit(solver);
+    _vec.visit(solver, proc);
     solver.processEvalStack(CstInsideOp.INSIDE);
     foreach (dist; _dists) {
       auto elem = dist._term;
-      elem.visit(solver);
+      elem.visit(solver, proc);
       solver.processEvalStack(CstInsideOp.EQUAL);
     }
     solver.processEvalStack(CstInsideOp.DONE);
@@ -1333,7 +1333,7 @@ class CstLogicDistExpr(T): CstLogicExpr
 
   bool isCompatWithDist(CstDomBase dom) { return false; }
 
-  void visit (CstDistSolverBase solver) { assert (false); }
+  void visit(CstDistSolverBase solver, _esdl__CstProcessor proc) { assert (false); }
   
   bool eval() {assert (false, "Unable to evaluate CstLogicDistExpr");}
 
@@ -1387,15 +1387,15 @@ class CstVecDistExpr(T): CstLogicExpr
     return str;
   }
 
-  void visit(CstSolver solver) {
+  void visit(CstSolver solver, _esdl__CstProcessor proc) {
     solver.pushToEvalStack(false);
-    _vec.visit(solver);
+    _vec.visit(solver, proc);
     solver.processEvalStack(CstInsideOp.INSIDE);
     foreach (dist; _dists) {
       auto elem = dist._range;
-      elem._lhs.visit(solver);
+      elem._lhs.visit(solver, proc);
       if (elem._rhs !is null) {
-	elem._rhs.visit(solver);
+	elem._rhs.visit(solver, proc);
 	if (elem._inclusive) solver.processEvalStack(CstInsideOp.RANGEINCL);
 	else solver.processEvalStack(CstInsideOp.RANGE);
 	// solver.processEvalStack(CstLogicOp.LOGICAND);
@@ -1474,7 +1474,7 @@ class CstVecDistExpr(T): CstLogicExpr
 
   bool isCompatWithDist(CstDomBase dom) { return false; }
 
-  void visit (CstDistSolverBase solver) { assert (false); }
+  void visit(CstDistSolverBase solver, _esdl__CstProcessor proc) { assert (false); }
   
   bool eval() {assert (false, "Unable to evaluate CstVecDistExpr");}
 
@@ -1494,8 +1494,8 @@ class CstVecDistExpr(T): CstLogicExpr
 //       return _vec.describe(true) ~ "[ " ~ _lhs.describe(true) ~ " .. " ~ _rhs.describe(true) ~ " ]";
 //   }
 
-//   void visit(CstSolver solver) {
-//     _vec.visit(solver);
+//   void visit(CstSolver solver, _esdl__CstProcessor proc) {
+//     _vec.visit(solver, proc);
 //     assert (_lhs.isSolved());
 //     if (_rhs !is null) assert (_rhs.isSolved());
 //     solver.pushIndexToEvalStack(_lhs.evaluate());
@@ -1572,9 +1572,9 @@ class CstVecSliceExpr: CstVecExpr
     return _vec.describe(true) ~ "[ " ~ _range.describe(true) ~ " ]";
   }
 
-  void visit(CstSolver solver) {
-    _vec.visit(solver);
-    // _range.visit(solver);
+  void visit(CstSolver solver, _esdl__CstProcessor proc) {
+    _vec.visit(solver, proc);
+    // _range.visit(solver, proc);
     assert (_range._lhs.isSolved());
     if (_range._rhs !is null) assert (_range._rhs.isSolved());
     solver.pushIndexToEvalStack(_range._lhs.evaluate());
@@ -1681,7 +1681,7 @@ class CstVecSliceExpr: CstVecExpr
 
   void _esdl__scan() { }
 
-  final void visit(CstDistSolverBase dist) { assert(false); }
+  final void visit(CstDistSolverBase dist, _esdl__CstProcessor proc) { assert(false); }
 
 }
 
@@ -1694,8 +1694,8 @@ class CstVecSliceExpr: CstVecExpr
 //     return _vec.describe(true) ~ "[ " ~ _index.describe(true) ~ " ]";
 //   }
 
-//   void visit(CstSolver solver) {
-//     _vec.visit(solver);
+//   void visit(CstSolver solver, _esdl__CstProcessor proc) {
+//     _vec.visit(solver, proc);
 //     assert (_index.isSolved());
 //     solver.pushIndexToEvalStack(_index.evaluate());
 //     solver.pushIndexToEvalStack(_index.evaluate() + 1);
@@ -1755,8 +1755,8 @@ class CstNotVecExpr: CstVecExpr
     return "( ~ " ~ _expr.describe(true) ~ " )";
   }
 
-  void visit(CstSolver solver) {
-    _expr.visit(solver);
+  void visit(CstSolver solver, _esdl__CstProcessor proc) {
+    _expr.visit(solver, proc);
     solver.processEvalStack(CstUnaryOp.NOT);
   }
 
@@ -1847,7 +1847,7 @@ class CstNotVecExpr: CstVecExpr
 
   void _esdl__scan() { }
 
-  final void visit(CstDistSolverBase dist) { assert(false); }
+  final void visit(CstDistSolverBase dist, _esdl__CstProcessor proc) { assert(false); }
 
 }
 
@@ -1861,8 +1861,8 @@ class CstNegVecExpr: CstVecExpr
     return "( - " ~ _expr.describe(true) ~ " )";
   }
 
-  void visit(CstSolver solver) {
-    _expr.visit(solver);
+  void visit(CstSolver solver, _esdl__CstProcessor proc) {
+    _expr.visit(solver, proc);
     solver.processEvalStack(CstUnaryOp.NEG);
   }
 
@@ -1952,7 +1952,7 @@ class CstNegVecExpr: CstVecExpr
 
   void _esdl__scan() { }
 
-  final void visit(CstDistSolverBase dist) { assert(false); }
+  final void visit(CstDistSolverBase dist, _esdl__CstProcessor proc) { assert(false); }
 
 }
 
@@ -1975,9 +1975,9 @@ class CstLogic2LogicExpr: CstLogicExpr
     return "( " ~ _lhs.describe(true) ~ " " ~ _op.to!string ~ " " ~ _rhs.describe(true) ~ " )";
   }
 
-  void visit(CstSolver solver) {
-    _lhs.visit(solver);
-    _rhs.visit(solver);
+  void visit(CstSolver solver, _esdl__CstProcessor proc) {
+    _lhs.visit(solver, proc);
+    _rhs.visit(solver, proc);
     solver.processEvalStack(_op);
   }
 
@@ -1992,7 +1992,7 @@ class CstLogic2LogicExpr: CstLogicExpr
   }
 
   bool isCompatWithDist(CstDomBase dom) { return false; }
-  void visit (CstDistSolverBase solver) { assert (false); }
+  void visit(CstDistSolverBase solver, _esdl__CstProcessor proc) { assert (false); }
 
   
   bool isSolved() { return _lhs.isSolved && _rhs.isSolved(); }
@@ -2119,16 +2119,16 @@ class CstInsideArrExpr: CstLogicExpr
     return description;
   }
 
-  void visit(CstSolver solver) {
+  void visit(CstSolver solver, _esdl__CstProcessor proc) {
     solver.pushToEvalStack(false);
-    _term.visit(solver);
+    _term.visit(solver, proc);
     solver.processEvalStack(CstInsideOp.INSIDE);
     foreach (elem; _elems) {
       if (elem._lhs !is null) {
 	assert (elem._arr is null);
-	elem._lhs.visit(solver);
+	elem._lhs.visit(solver, proc);
 	if (elem._rhs !is null) {
-	  elem._rhs.visit(solver);
+	  elem._rhs.visit(solver, proc);
 	  if (elem._inclusive) solver.processEvalStack(CstInsideOp.RANGEINCL);
 	  else solver.processEvalStack(CstInsideOp.RANGE);
 	  // solver.processEvalStack(CstLogicOp.LOGICAND);
@@ -2141,7 +2141,7 @@ class CstInsideArrExpr: CstLogicExpr
       else {
 	assert (elem._arr !is null);
 	foreach (dom; elem._arr[]) {
-	  dom.visit(solver);
+	  dom.visit(solver, proc);
 	  solver.processEvalStack(CstInsideOp.EQUAL);
 	  // solver.processEvalStack(CstLogicOp.LOGICOR);
 	}
@@ -2151,13 +2151,13 @@ class CstInsideArrExpr: CstLogicExpr
     if (_notinside) solver.processEvalStack(CstLogicOp.LOGICNOT);
   }
 
-  void visit(CstDistSolverBase solver) {
+  void visit(CstDistSolverBase solver, _esdl__CstProcessor proc) {
     assert (_term == solver.getDomain());
     assert (_notinside is true);
     foreach (elem; _elems) {
       // import std.stdio;
       // writeln("visit CstDistSolverBase");
-      elem.visit(solver);
+      elem.visit(solver, proc);
     }
   }
   
@@ -2287,17 +2287,17 @@ class CstUniqueArrExpr: CstLogicExpr
     return description;
   }
 
-  void visit(CstSolver solver) {
+  void visit(CstSolver solver, _esdl__CstProcessor proc) {
     CstUniqueOp intT = CstUniqueOp.INT;
     foreach (elem; _elems) elem.fixIntType(intT);
     foreach (elem; _elems) {
       if (elem._vec !is null) {
-	elem._vec.visit(solver);
+	elem._vec.visit(solver, proc);
 	solver.processEvalStack(intT);
       }
       else {
 	foreach (arrElem; elem._arr[]) {
-	  arrElem.visit(solver);
+	  arrElem.visit(solver, proc);
 	  solver.processEvalStack(intT);
 	}
       }
@@ -2327,7 +2327,7 @@ class CstUniqueArrExpr: CstLogicExpr
   }
 
   bool isCompatWithDist(CstDomBase dom) { return false; }
-  void visit (CstDistSolverBase solver) { assert (false); }
+  void visit(CstDistSolverBase solver, _esdl__CstProcessor proc) { assert (false); }
   
   bool isSolved() { return false; }
 
@@ -2422,14 +2422,14 @@ class CstIteLogicExpr: CstLogicExpr
   }
 
   bool isCompatWithDist(CstDomBase dom) { return false; }
-  void visit (CstDistSolverBase solver) { assert (false); }
+  void visit(CstDistSolverBase solver, _esdl__CstProcessor proc) { assert (false); }
   
 
   override CstLogicTerm _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     assert(false, "TBD");
   }
 
-  void visit(CstSolver solver) { assert(false, "TBD"); }
+  void visit(CstSolver solver, _esdl__CstProcessor proc) { assert(false, "TBD"); }
 
   bool isSolved() { assert(false, "TBD"); }
 
@@ -2479,9 +2479,9 @@ class CstVec2LogicExpr: CstLogicExpr
     return "( " ~ _lhs.describe(true) ~ " " ~ _op.to!string ~ " " ~ _rhs.describe(true) ~ " )";
   }
 
-  void visit(CstSolver solver) {
-    _lhs.visit(solver);
-    _rhs.visit(solver);
+  void visit(CstSolver solver, _esdl__CstProcessor proc) {
+    _lhs.visit(solver, proc);
+    _rhs.visit(solver, proc);
     solver.processEvalStack(_op);
   }
 
@@ -2540,7 +2540,7 @@ class CstVec2LogicExpr: CstLogicExpr
     return false;
   }
 
-  void visit (CstDistSolverBase solver) {
+  void visit(CstDistSolverBase solver, _esdl__CstProcessor proc) {
     assert (_op is CstCompareOp.NEQ);
     // try considering LHS as dom
     CstDomBase ldom = _lhs.getDomain();
@@ -2743,8 +2743,8 @@ class CstNotLogicExpr: CstLogicExpr
     return "( " ~ "!" ~ " " ~ _expr.describe(true) ~ " )";
   }
 
-  void visit(CstSolver solver) {
-    _expr.visit(solver);
+  void visit(CstSolver solver, _esdl__CstProcessor proc) {
+    _expr.visit(solver, proc);
     solver.processEvalStack(CstLogicOp.LOGICNOT);
   }
 
@@ -2757,7 +2757,7 @@ class CstNotLogicExpr: CstLogicExpr
   }
 
   bool isCompatWithDist(CstDomBase dom) { return false; }
-  void visit (CstDistSolverBase solver) { assert (false); }
+  void visit(CstDistSolverBase solver, _esdl__CstProcessor proc) { assert (false); }
 
   bool isSolved() {
     return _expr.isSolved();
@@ -2816,7 +2816,7 @@ class CstVarVisitorExpr: CstLogicExpr
     return "Visitor: " ~ _obj._esdl__getFullName() ~ '\n';
   }
 
-  void visit(CstSolver solver) {
+  void visit(CstSolver solver, _esdl__CstProcessor proc) {
     solver.pushToEvalStack(true);
   }
 
@@ -2867,7 +2867,7 @@ class CstVarVisitorExpr: CstLogicExpr
   }
 
   bool isCompatWithDist(CstDomBase dom) { return false; }
-  void visit (CstDistSolverBase solver) { assert (false); }
+  void visit(CstDistSolverBase solver, _esdl__CstProcessor proc) { assert (false); }
 
   CstDistSolverBase getDist() {
     assert (false);

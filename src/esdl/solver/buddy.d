@@ -523,7 +523,7 @@ class CstBuddySolver: CstSolver
       assert (! pred.isGuard());
       // import std.stdio;
       // writeln(pred.describe());
-      pred.visit(this);
+      pred.visit(this, proc);
       _context.addRule(_evalStack[0].toBool());
       popEvalStack();
       assert(_evalStack.length == 0);

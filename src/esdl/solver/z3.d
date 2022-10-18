@@ -346,7 +346,7 @@ class CstZ3Solver: CstSolver
       // assert(_evalStack.length == 0);
       uint softWeight = pred.getSoftWeight();
       if (softWeight == 0) {
-	pred.visit(this);
+	pred.visit(this, proc);
 	assert(_evalStack.length == 1);
 	addRule(_solver, _evalStack[0].toBool());
 	if (_needOptimize) addRule(_optimize, _evalStack[0].toBool());
@@ -354,7 +354,7 @@ class CstZ3Solver: CstSolver
       else {
 	// ignore the soft constraint
 	if (_needOptimize) {
-	  pred.visit(this);
+	  pred.visit(this, proc);
 	  assert(_evalStack.length == 1);
 	  addRule(_optimize, _evalStack[0].toBool(), softWeight, "@soft");
 	}
@@ -546,7 +546,7 @@ class CstZ3Solver: CstSolver
       if (_softPreds.length > 0) {
 	foreach (pred; _softPreds) {
 	  pushSolver();
-	  pred.visit(this);
+	  pred.visit(this, proc);
 	  assert(_evalStack.length == 1);
 	  addRule(_solver, _evalStack[0].toBool());
 	  _evalStack.length = 0;

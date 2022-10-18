@@ -476,7 +476,7 @@ class CstDistPredSolver	// agent of dist and related predicates
 	bool compat = wp._expr.isCompatWithDist(distDomain);
 	if (compat is false)
 	  assert (false, "can only use != or !inside operator on distributed domains");
-	wp._expr.visit(dist);
+	wp._expr.visit(dist, proc);
 	wp.markPredSolved(proc);
       }
       else {

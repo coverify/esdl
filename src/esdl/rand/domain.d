@@ -34,7 +34,7 @@ abstract class CstDomain(V, rand RAND_ATTR) if (is (V == bool)):
       CstDistSolverBase getDist() { assert (false); }
 
       bool isCompatWithDist(CstDomBase A) { return false; }
-      void visit(CstDistSolverBase solver) { assert (false); }
+      void visit(CstDistSolverBase solver, _esdl__CstProcessor proc) { assert (false); }
 
       override bool getBool() {	return eval(); }
 
@@ -625,7 +625,7 @@ class CstArrIterator(RV): CstIterator
     return _arrVar._esdl__unroll(iter, n, null).arrLen().makeIterVar();
   }
 
-  void visit(CstSolver solver) {
+  void visit(CstSolver solver, _esdl__CstProcessor proc) {
     assert (false, "Can not visit an Iter Variable without unrolling");
   }
 
@@ -934,7 +934,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     }
   }
 
-  final void visit(CstDistSolverBase dist) { assert(false); }
+  final void visit(CstDistSolverBase dist, _esdl__CstProcessor proc) { assert(false); }
 
   override CstDomBase getDomain() { return this; }
 
@@ -1191,7 +1191,7 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
     }
   }
 
-  final void visit(CstDistSolverBase dist) { assert(false); }
+  final void visit(CstDistSolverBase dist, _esdl__CstProcessor proc) { assert(false); }
 
   override CstDomBase getDomain() { return this; }
 
@@ -1244,7 +1244,7 @@ class CstLogicValue: CstValue, CstLogicTerm
     return _val.to!string();
   }
 
-  void visit(CstSolver solver) {
+  void visit(CstSolver solver, _esdl__CstProcessor proc) {
     solver.pushToEvalStack(_val);
   }
 
@@ -1284,7 +1284,7 @@ class CstLogicValue: CstValue, CstLogicTerm
 
   override CstDistSolverBase getDist() { assert(false); }
   override bool isCompatWithDist(CstDomBase A) { assert(false); }
-  override void visit(CstDistSolverBase solver) { assert(false); }
+  override void visit(CstDistSolverBase solver, _esdl__CstProcessor proc) { assert(false); }
   override CstLogicValue _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) { return this; }
   override void setDistPredContext(CstPredicate pred) { }
   override CstDomBase getDomain() { return null; }
@@ -1371,7 +1371,7 @@ class CstVecValue(T): CstVecValueBase
     _val = value;
   }
 
-  void visit(CstSolver solver) {
+  void visit(CstSolver solver, _esdl__CstProcessor proc) {
     solver.pushToEvalStack(this);
   }
 

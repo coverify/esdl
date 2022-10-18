@@ -703,7 +703,7 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
   void _esdl__scan() { }
   CstDomBase getDomain() { return this; }
 
-  final void visit(CstSolver solver) {
+  final void visit(CstSolver solver, _esdl__CstProcessor proc) {
     solver.pushToEvalStack(this._esdl__getResolvedNode());
   }
 
@@ -944,15 +944,15 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
 
   bool tryResolveDep(_esdl__CstProcessor proc) { return false; }
 	
-  void visit(CstSolver solver) {
+  void visit(CstSolver solver, _esdl__CstProcessor proc) {
     foreach (dom; this[]) {
       // import std.stdio;
       // writeln("Visiting: ", dom._esdl__getFullName());
-      dom.visit(solver);
+      dom.visit(solver, proc);
     }
   }
 
-  void visit(CstDistSolverBase solver) {
+  void visit(CstDistSolverBase solver, _esdl__CstProcessor proc) {
     foreach (dom; this[]) {
       // import std.stdio;
       // writeln("Visiting: ", dom._esdl__getFullName());
@@ -1212,8 +1212,8 @@ interface CstTerm
 
   void setDomainContext(CstPredicate pred, DomainContextEnum context);
   bool isSolved();
-  void visit(CstSolver solver);
-  void visit(CstDistSolverBase dist);
+  void visit(CstSolver solver, _esdl__CstProcessor proc);
+  void visit(CstDistSolverBase dist, _esdl__CstProcessor proc);
 
   void annotate(CstSolverAgent agent);
   void writeExprString(ref _esdl__Sigbuf str);
