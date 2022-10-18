@@ -506,7 +506,7 @@ class CstZ3Solver: CstSolver
     }
   }
   
-  override bool solve(CstSolverAgent agent) {
+  override bool solve(CstSolverAgent agent, _esdl__CstProcessor proc) {
     updateVars(agent);
     if (_needOptimize) {
       if (updateOptimize() || (_optimizeInit is false)) {

@@ -260,7 +260,7 @@ class CstSolverAgent			// agent of related predicates
 
   CstSolver _solver;
 
-  void solve() {
+  void solve(_esdl__CstProcessor proc) {
     // import std.stdio;
     // writeln("Solving: ", this.describe());
     if (_proc.debugSolver()) {
@@ -303,7 +303,7 @@ class CstSolverAgent			// agent of related predicates
 	}
 	if ( _solver !is null ) {
 	  // import std.stdio;
-	  monoFlag = _solver.solve(this);
+	  monoFlag = _solver.solve(this, proc);
 	  // writeln("here mono. ", monoFlag);
 	}
       }
@@ -325,7 +325,7 @@ class CstSolverAgent			// agent of related predicates
 
       if (solverp !is null) {
 	_solver = *solverp;
-	_solver.solve(this);
+	_solver.solve(this, proc);
       }
       else {
 	import std.conv: to;
@@ -343,7 +343,7 @@ class CstSolverAgent			// agent of related predicates
 	    writeln(describe());
 	  }
 	  _solver = new CstZ3Solver(immutableSig, this);
-	  _solver.solve(this);
+	  _solver.solve(this, proc);
 	}
 	else {
 	  uint totalBits;
@@ -362,11 +362,11 @@ class CstSolverAgent			// agent of related predicates
 	      writeln(describe());
 	    }
 	    _solver = new CstZ3Solver(immutableSig, this);
-	    _solver.solve(this);
+	    _solver.solve(this, proc);
 	  }
 	  else {
 	    _solver = new CstBuddySolver(immutableSig, this);
-	    _solver.solve(this);
+	    _solver.solve(this, proc);
 	  }
 	}
 	// _hasHashBeenCalculated = true;
@@ -376,7 +376,7 @@ class CstSolverAgent			// agent of related predicates
     }
     // import std.stdio;
     // writeln(_solver.describe());
-    // _solver.solve(this);
+    // _solver.solve(this, proc);
     foreach (pred; _preds) {
       // import std.stdio;
       // writeln("Marking Solved: ", pred._esdl__getName());

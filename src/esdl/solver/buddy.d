@@ -557,7 +557,7 @@ class CstBuddySolver: CstSolver
     _context.pop();
   }
 
-  override bool solve(CstSolverAgent agent) {
+  override bool solve(CstSolverAgent agent, _esdl__CstProcessor proc) {
     Buddy.enableBddGC();
     
     CstDomBase[] doms = agent.annotatedDoms();

@@ -37,7 +37,7 @@ abstract class CstSolver
   // abstract void registerDomain(CstDomBase domain);
   // abstract void registerValue(CstVecValueBase value);
 
-  abstract bool solve(CstSolverAgent agent);
+  abstract bool solve(CstSolverAgent agent, _esdl__CstProcessor proc);
 
   // abstract void pushToEvalStack();
   abstract void pushToEvalStack(CstDomBase domain);
