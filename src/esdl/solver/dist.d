@@ -413,7 +413,6 @@ class CstLogicDistSolver(T): CstDistSolverBase
 class CstDistPredSolver	// agent of dist and related predicates
 {
   void initialize(_esdl__CstProcessor proc) {
-    _proc = proc;
     _preds.reset();
 
     _distPred = null;
@@ -425,12 +424,6 @@ class CstDistPredSolver	// agent of dist and related predicates
 
   CstPredicate[] predicates() {
     return _preds[];
-  }
-
-  _esdl__CstProcessor _proc;
-
-  _esdl__CstProcessor getProc() {
-    return _proc;
   }
 
   void distPred(CstPredicate pred) {
@@ -466,7 +459,7 @@ class CstDistPredSolver	// agent of dist and related predicates
   }
 
   void solve(_esdl__CstProcessor proc) {
-    if (_proc.debugSolver()) {
+    if (proc.debugSolver()) {
       import std.stdio;
       writeln(describe());
     }
@@ -484,15 +477,15 @@ class CstDistPredSolver	// agent of dist and related predicates
 	if (compat is false)
 	  assert (false, "can only use != or !inside operator on distributed domains");
 	wp._expr.visit(dist);
-	wp.markPredSolved(_proc);
+	wp.markPredSolved(proc);
       }
       else {
-	wp.markPredSolved(_proc);
+	wp.markPredSolved(proc);
       }
     }
-    dist.uniform(distDomain, _proc.getRandGen(), _proc);
-    _proc.addSolvedDomain(distDomain);
-    _distPred.markPredSolved(_proc);
+    dist.uniform(distDomain, proc.getRandGen(), proc);
+    proc.addSolvedDomain(distDomain);
+    _distPred.markPredSolved(proc);
 
 
     this.markSolved();

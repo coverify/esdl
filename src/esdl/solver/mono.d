@@ -597,7 +597,6 @@ class CstMonoSolver (S): CstSolver
   RangeStack!S _rangeStack;
   Range!S  _finalRange;
   ulong _count;
-  _esdl__CstProcessor _proc;
   TermArray _insideEqual;
   TermArray _insideRange; // inclusive
   TermArray _tempStack;
@@ -903,7 +902,6 @@ class CstMonoSolver (S): CstSolver
     _rangeStack.reset();
     _finalRange.clear();
     _count = 0;
-    _proc = null;
   
     debug (CHECKMONO){
       _debugFlag = false;
@@ -970,9 +968,9 @@ class CstMonoSolver (S): CstSolver
     
     // if(!checkDifference()){
     //   _count = counter();
-    //   auto rand = _proc.getRandGen.gen(0, _count);
+    //   auto rand = proc.getRandGen.gen(0, _count);
     //   ulong num = choose(rand);
-    //   doms[0].setVal(num, _proc);
+    //   doms[0].setVal(num, proc);
     //   debug (MONOSOLVER){
     // 	import std.stdio;
     // 	writeln("no difference found, reusing same solver");
@@ -997,7 +995,6 @@ class CstMonoSolver (S): CstSolver
     if(isEnum){
       _finalRange.and(_rangeStack[0]);
     }
-    _proc = agent.getProcessor();
     foreach (pred; predSet){
       if (! pred.isGuard()) {
 	reset();
@@ -1086,9 +1083,9 @@ class CstMonoSolver (S): CstSolver
       assert (false, "No solution found");
     }
     _count = counter();
-    auto rand = _proc.getRandGen.gen(0, _count);
+    auto rand = proc.getRandGen.gen(0, _count);
     ulong num = choose(rand);
-    doms[0].setVal(num, _proc);
+    doms[0].setVal(num, proc);
     _hasBeenSolved = true;
     debug (MONOSOLVER){
       import std.stdio;

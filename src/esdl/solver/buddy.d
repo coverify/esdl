@@ -430,8 +430,6 @@ class CstBuddySolver: CstSolver
 
   BuddyContext _context;
 
-  _esdl__CstProcessor _proc;
-
   void print() {
     import std.stdio;
     writeln("CstBuddySolver:");
@@ -464,12 +462,10 @@ class CstBuddySolver: CstSolver
   }
 
 
-  this(string signature, CstSolverAgent agent) {
+  this(string signature, CstSolverAgent agent, _esdl__CstProcessor proc) {
     Buddy.enableBddGC();
 
     super(signature);
-
-    _proc = agent.getProcessor();
 
     if (_esdl__buddy is null) {
       _esdl__buddy = new Buddy(1000, 1000);
@@ -566,14 +562,14 @@ class CstBuddySolver: CstSolver
 
     ubvec!MAXBDDLEVELS vec;
 
-    vec = _proc.getRandGen.gen!(ubvec!MAXBDDLEVELS);
+    vec = proc.getRandGen.gen!(ubvec!MAXBDDLEVELS);
 
-    uint sol = _context.getBDD().getRandSat(vec, _proc.getRandGen.get(),
+    uint sol = _context.getBDD().getRandSat(vec, proc.getRandGen.get(),
 					    _context._bddDist);
     // import std.stdio;
     // writeln (vec);
 
-    // BDD solution = _context.getBDD().randSatOne(_proc.getRandGen.get(),
+    // BDD solution = _context.getBDD().randSatOne(proc.getRandGen.get(),
     // 						_context._bddDist);
     // byte[][] solVecs = solution.toVector();
 
@@ -588,12 +584,12 @@ class CstBuddySolver: CstSolver
       if (dom.isBool()) {
 	assert (bitindices.length == 1);
 	int index = bitindices[0];
-	dom.setBool(vec[index], _proc);
+	dom.setBool(vec[index], proc);
 	// if (bits.length == 0 || bits[index] == -1) {
-	//   dom.setBool(_proc.getRandGen.flip(), _proc);
+	//   dom.setBool(proc.getRandGen.flip(), proc);
 	// }
 	// else {
-	//   dom.setBool(bits[index] == 1, _proc);
+	//   dom.setBool(bits[index] == 1, proc);
 	// }
       }
       else {
@@ -611,7 +607,7 @@ class CstBuddySolver: CstSolver
 	  uint word = (cast(uint) i) / WORDSIZE;
 	  v = v + ((vec[j] ? 1UL : 0UL) << pos);
 	  // if (bits.length == 0 || bits[j] == -1) {
-	  //   v = v + ((cast(size_t) _proc.getRandGen.flip()) << pos);
+	  //   v = v + ((cast(size_t) proc.getRandGen.flip()) << pos);
 	  // }
 	  // else if (bits[j] == 1) {
 	  //   v = v + ((cast(ulong) 1) << pos);
@@ -622,7 +618,7 @@ class CstBuddySolver: CstSolver
 	  }
 	}
 	
-	dom.setVal(array(_solveValue[0..NUMWORDS]), _proc);
+	dom.setVal(array(_solveValue[0..NUMWORDS]), proc);
       }
     }
     // _context.print();
