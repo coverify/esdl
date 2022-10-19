@@ -126,32 +126,15 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _esdl__globalVisitors ~= visitor;
   }
 
-  void _esdl__setContextGlobalVisitors() {
+  void _esdl__setContextGlobalVisitors(_esdl__CstProcessor proc) {
     foreach (visitor; _esdl__globalVisitors[]) {
-      visitor.doSetDomainContext();
-      visitor.doProcDomainContext();
+      visitor.doSetDomainContext(proc);
+      visitor.doProcDomainContext(proc);
     }
   }
 
   _esdl__ConstraintBase[] _esdl__getGlobalVisitors() {
     return _esdl__globalVisitors[];
-  }
-
-  Vector!(_esdl__ConstraintBase, "argVisitors") _esdl__argVisitors;
-
-  void _esdl__addArgVisitor(_esdl__ConstraintBase visitor) {
-    _esdl__argVisitors ~= visitor;
-  }
-
-  void _esdl__setContextArgVisitors() {
-    foreach (visitor; _esdl__argVisitors) {
-      visitor.doSetDomainContext();
-      visitor.doProcDomainContext();
-    }
-  }
-
-  _esdl__ConstraintBase[] _esdl__getArgVisitors() {
-    return _esdl__argVisitors[];
   }
 
 
@@ -205,6 +188,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   abstract bool _esdl__debugSolver();
 
+  // overridden by Randomization mixin -- see meta.d
+  abstract void _esdl__doRandomize(_esdl__RandGen randGen);
+  abstract void _esdl__doConstrain(_esdl__CstProcessor proc, bool callPreRandomize);
+
   // Keep a list of constraints in the class
   _esdl__ConstraintBase _esdl__lambdaCst;
 
@@ -220,23 +207,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   // 	    "Override _esdl__createProxyInst in the derived proxy class");
   // }
 
-
-  // overridden by Randomization mixin -- see meta.d
-  abstract void _esdl__doRandomize(_esdl__RandGen randGen);
-  abstract void _esdl__doConstrain(_esdl__CstProcessor proc, bool callPreRandomize);
-
-  Vector!(CstVecNodeIntf, "lambdaCstDoms") _esdl__lambdaCstDoms;
-
-  final void _esdl__addLambdaCstDom(CstVecNodeIntf dom) {
-    _esdl__lambdaCstDoms ~= dom;
-  }
-
-  final void _esdl__doResetLambdaPreds() {
-    foreach (lambdaCstDom; _esdl__lambdaCstDoms) lambdaCstDom.resetLambdaPreds();
-    _esdl__lambdaCstDoms.reset();
-    // reset lambda arg visitors
-    _esdl__argVisitors.reset();
-  }
 
   _esdl__CstProcessor _esdl__proc;
 
@@ -281,7 +251,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
     // only the root proxy shall have a processor
     if (_esdl__root is this) _esdl__proc = make!_esdl__CstProcessor(this);
-    else _esdl__proc = _esdl__getRootProxy()._esdl__getProc();
+    // else keep the _esdl__proc as null
+    // else _esdl__proc = _esdl__getRootProxy()._esdl__getProc();
 
     // scopes for constraint parsing
     _esdl__rootScope = make!CstScope(null, null);
@@ -338,6 +309,36 @@ class _esdl__CstProcessor
     return _distPredSolver;
   }
 
+  Vector!(CstVecNodeIntf, "lambdaCstDoms") _esdl__lambdaCstDoms;
+
+  final void _esdl__addLambdaCstDom(CstVecNodeIntf dom) {
+    _esdl__lambdaCstDoms ~= dom;
+  }
+
+  final void _esdl__doResetLambdaPreds() {
+    foreach (lambdaCstDom; _esdl__lambdaCstDoms) lambdaCstDom.resetLambdaPreds();
+    _esdl__lambdaCstDoms.reset();
+    // reset lambda arg visitors
+    _esdl__argVisitors.reset();
+  }
+
+  Vector!(_esdl__ConstraintBase, "argVisitors") _esdl__argVisitors;
+
+  void _esdl__addArgVisitor(_esdl__ConstraintBase visitor) {
+    _esdl__argVisitors ~= visitor;
+  }
+
+  void _esdl__setContextArgVisitors(_esdl__CstProcessor proc) {
+    foreach (visitor; _esdl__argVisitors) {
+      visitor.doSetDomainContext(proc);
+      visitor.doProcDomainContext(proc);
+    }
+  }
+
+  _esdl__ConstraintBase[] _esdl__getArgVisitors() {
+    return _esdl__argVisitors[];
+  }
+
   Vector!(CstPredicate, "unrolledNewPreds") _unrolledNewPreds;
 
   void addUnrolledNewPredicate(CstPredicate pred) {
@@ -345,8 +346,8 @@ class _esdl__CstProcessor
   }
 
   void procUnrolledNewPredicates() {
-    foreach (pred; _unrolledNewPreds) pred.doSetDomainContext(pred);
-    foreach (pred; _unrolledNewPreds) pred.doProcDomainContext();
+    foreach (pred; _unrolledNewPreds) pred.doSetDomainContext(pred, this);
+    foreach (pred; _unrolledNewPreds) pred.doProcDomainContext(this);
     _unrolledNewPreds.reset();
   }
 
@@ -992,4 +993,5 @@ class _esdl__CstProcessor
   //     elem._orderLevel = 0;
   //   }
   // }
+
 }

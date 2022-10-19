@@ -218,6 +218,9 @@ void _esdl__doInitRandObjectElems(P, int I=0)(P p) {
 		   (is (M == U*, U) && is (U == struct))) { // class or struct*
 	  p.tupleof[I] = make!Q(NAME, p, t.tupleof[Q._esdl__INDEX]);
 	}
+	else static if (is (M == struct)) {
+	  p.tupleof[I] = make!Q(NAME, p, &(t.tupleof[Q._esdl__INDEX]));
+	}
 	else static if (isPointer!M) {
 	  p.tupleof[I] = make!Q(NAME, p, t.tupleof[Q._esdl__INDEX]);
 	}
@@ -305,10 +308,14 @@ void _esdl__doInitCoverageElems(P, int I=0)(P p) {
 }
 
 
-void _esdl__doSetDomainContext(_esdl__ConstraintBase cst) { cst.doSetDomainContext(); }
-void _esdl__doProcDomainContext(_esdl__ConstraintBase cst) { cst.doProcDomainContext(); }
+void _esdl__doSetDomainContext(_esdl__ConstraintBase cst,
+			       _esdl__CstProcessor proc) { cst.doSetDomainContext(proc); }
+void _esdl__doProcDomainContext(_esdl__ConstraintBase cst,
+				_esdl__CstProcessor proc) { cst.doProcDomainContext(proc); }
 
-void _esdl__doProcPredicateElems(P, int I=0)(P p, void function(_esdl__ConstraintBase cst) func) {
+void _esdl__doProcPredicateElems(P, int I=0)(P p, _esdl__CstProcessor proc,
+					     void function(_esdl__ConstraintBase cst,
+							   _esdl__CstProcessor proc) func) {
   // static if (I == 0 &&
   // 	     is (P B == super) &&
   // 	     is (B[0]: _esdl__Proxy) &&
@@ -323,9 +330,9 @@ void _esdl__doProcPredicateElems(P, int I=0)(P p, void function(_esdl__Constrain
     alias Q = typeof (P.tupleof[I]);
     // pragma(msg, Q.stringof);
     static if (is (Q: _esdl__ConstraintBase)) {
-      func(p.tupleof[I]);
+      func(p.tupleof[I], proc);
     }
-    _esdl__doProcPredicateElems!(P, I+1)(p, func);
+    _esdl__doProcPredicateElems!(P, I+1)(p, proc, func);
   }
 }
 
@@ -640,13 +647,13 @@ void _esdl__randomize(T) (ref T t) if (is (T == struct))
       _esdl__ProxyType._esdl__proxyInst = proxyInst;
     }
 
-    proxyInst._esdl__doResetLambdaPreds();
+    _esdl__CstProcessor proc = proxyInst._esdl__getProc();
+    assert(proc !is null);
+    proc._esdl__doResetLambdaPreds();
 
     _esdl__preRandomize(t);
 
     proxyInst._esdl__doSetOuter(&t, true);
-
-    _esdl__CstProcessor proc = proxyInst._esdl__getProc();
 
     proxyInst._esdl__lambdaCst = null;
     proc.reset();
@@ -684,13 +691,13 @@ void _esdl__randomize(T) (T t) if (is (T == class))
       _esdl__ProxyType._esdl__proxyInst = proxyInst;
     }
 
-    proxyInst._esdl__doResetLambdaPreds();
+    _esdl__CstProcessor proc = proxyInst._esdl__getProc();
+    assert(proc !is null);
+    proc._esdl__doResetLambdaPreds();
 
     _esdl__preRandomize(t);
 
     proxyInst._esdl__doSetOuter(t, true);
-
-    _esdl__CstProcessor proc = proxyInst._esdl__getProc();
 
     proxyInst._esdl__lambdaCst = null;
     proc.reset();
@@ -738,7 +745,7 @@ void _esdl__randomizeWith(T)(T t, _esdl__Proxy proxy,
     _esdl__preRandomize(t);
 
     _esdl__CstProcessor proc = proxy._esdl__getProc();
-
+    assert(proc !is null);
     proxyInst._esdl__doSetOuter(t, true);
 
     // lambdaCst._esdl__doSetOuter();
@@ -771,7 +778,7 @@ void _esdl__randomizeWith(T) (ref T t, _esdl__Proxy proxy,
     _esdl__preRandomize(t);
 
     _esdl__CstProcessor proc = proxy._esdl__getProc();
-
+    assert(proc !is null);
     proxyInst._esdl__doSetOuter(&t, true);
 
     // lambdaCst._esdl__doSetOuter();
@@ -928,9 +935,11 @@ mixin template Randomization()
 	_esdl__outer = outer;
 	_esdl__doInitRandObjectElems(this);
 	_esdl__doInitConstraintElems(this, outer);
-	_esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);
-	_esdl__doProcPredicateElems(this, &_esdl__doProcDomainContext);
-	_esdl__setContextGlobalVisitors();
+	_esdl__doProcPredicateElems(this, this._esdl__getProc(),
+				    &_esdl__doSetDomainContext);
+	_esdl__doProcPredicateElems(this, this._esdl__getProc(),
+				    &_esdl__doProcDomainContext);
+	_esdl__setContextGlobalVisitors(this._esdl__getProc());
       }
     }
   }
@@ -965,9 +974,11 @@ mixin template Randomization()
 	_esdl__outer = outer;
 	_esdl__doInitRandObjectElems(this);
 	_esdl__doInitConstraintElems(this, outer);
-	_esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);
-	_esdl__doProcPredicateElems(this, &_esdl__doProcDomainContext);
-	_esdl__setContextGlobalVisitors();
+	_esdl__doProcPredicateElems(this, this._esdl__getProc(),
+				    &_esdl__doSetDomainContext);
+	_esdl__doProcPredicateElems(this, this._esdl__getProc(),
+				    &_esdl__doProcDomainContext);
+	_esdl__setContextGlobalVisitors(this._esdl__getProc());
       }
     }
   }
@@ -1135,9 +1146,11 @@ class _esdl__ProxyNoRand(_esdl__T)
 	  _esdl__outer = outer;
 	  _esdl__doInitRandObjectElems(this);
 	  _esdl__doInitConstraintElems(this, outer);
-	  _esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);
-	  _esdl__doProcPredicateElems(this, &_esdl__doProcDomainContext);
-	  _esdl__setContextGlobalVisitors();
+	  _esdl__doProcPredicateElems(this, this._esdl__getProc(),
+				      &_esdl__doSetDomainContext);
+	  _esdl__doProcPredicateElems(this, this._esdl__getProc(),
+				      &_esdl__doProcDomainContext);
+	  _esdl__setContextGlobalVisitors(this._esdl__getProc());
 	}
 
       }
@@ -1174,9 +1187,11 @@ class _esdl__ProxyNoRand(_esdl__T)
 	  _esdl__outer = outer;
 	  _esdl__doInitRandObjectElems(this);
 	  _esdl__doInitConstraintElems(this, outer);
-	  _esdl__doProcPredicateElems(this, &_esdl__doSetDomainContext);
-	  _esdl__doProcPredicateElems(this, &_esdl__doProcDomainContext);
-	  _esdl__setContextGlobalVisitors();
+	  _esdl__doProcPredicateElems(this, this._esdl__getProc(),
+				      &_esdl__doSetDomainContext);
+	  _esdl__doProcPredicateElems(this, this._esdl__getProc(),
+				      &_esdl__doProcDomainContext);
+	  _esdl__setContextGlobalVisitors(this._esdl__getProc());
 	}
       }
 
@@ -1259,12 +1274,12 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       return [_pred];
     }
 
-    final override void doSetDomainContext() {
-      _pred.doSetDomainContext(_pred);
+    final override void doSetDomainContext(_esdl__CstProcessor proc) {
+      _pred.doSetDomainContext(_pred, proc);
     }
 
-    final override void doProcDomainContext() {
-      _pred.doProcDomainContext();
+    final override void doProcDomainContext(_esdl__CstProcessor proc) {
+      _pred.doProcDomainContext(proc);
     }
 
     override string getCode() {return "";}
@@ -1363,15 +1378,17 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   }
 
   void _esdl__with(string _esdl__CstString, string FILE, size_t LINE, ARGS...)(ARGS values) {
-    this._esdl__doResetLambdaPreds();
+    _esdl__CstProcessor proc = this._esdl__getProc();
+    assert(proc !is null);
+    proc._esdl__doResetLambdaPreds();
     auto cstLambda =
       make!(_esdl__ConstraintLambdaImpl!(_esdl__CstString,
 					 FILE, LINE, ARGS))(this, this, "lambdaConstraint", values);
-    cstLambda.doSetDomainContext();
-    cstLambda.doProcDomainContext();
+    cstLambda.doSetDomainContext(proc);
+    cstLambda.doProcDomainContext(proc);
     // cstLambda.lambdaArgs(values);
     _esdl__lambdaCst = cstLambda;
-    _esdl__setContextArgVisitors();
+    proc._esdl__setContextArgVisitors(proc);
   }
 
 
@@ -1382,7 +1399,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     foreach (visitor; _esdl__getGlobalVisitors()) {
       foreach (pred; visitor.getConstraints()) proc.addNewPredicate(pred);
     }
-     foreach (visitor; _esdl__getArgVisitors()) {
+    foreach (visitor; proc._esdl__getArgVisitors()) {
       foreach (pred; visitor.getConstraints()) proc.addNewPredicate(pred);
     }
   }
@@ -1488,12 +1505,12 @@ class _esdl__VisitorCst(TOBJ): _esdl__ConstraintBase, _esdl__VisitorCstIntf
     return [_pred];
   }
 
-  final override void doSetDomainContext() {
-    _pred.doSetDomainContext(_pred);
+  final override void doSetDomainContext(_esdl__CstProcessor proc) {
+    _pred.doSetDomainContext(_pred, proc);
   }
 
-  final override void doProcDomainContext() {
-    _pred.doProcDomainContext();
+  final override void doProcDomainContext(_esdl__CstProcessor proc) {
+    _pred.doProcDomainContext(proc);
   }
 
   override string getCode() {return "";}
@@ -1708,7 +1725,7 @@ auto _esdl__arg_proxy(L, X, P)(size_t idx, string name, ref L arg, X proxy, P pa
       CstVecArrType vvar = make!CstVecArrType(name, parent, &arg);
       auto visitor =
 	make!(_esdl__VisitorCst!CstVecArrType)(parent, name ~ "_CstVisitor", vvar);
-      parent._esdl__addArgVisitor(visitor);
+      parent._esdl__getProc()._esdl__addArgVisitor(visitor);
       proxy._proxyLambdaArgs[idx] = vvar;
       return vvar;
     }

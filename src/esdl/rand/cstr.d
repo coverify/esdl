@@ -2,7 +2,7 @@ module esdl.rand.cstr;
 import esdl.rand.pred: CstPredicate;
 import esdl.rand.parser: CstParseData, CstParser;
 import esdl.rand.misc;
-import esdl.rand.proxy: _esdl__Proxy;
+import esdl.rand.proxy: _esdl__Proxy, _esdl__CstProcessor;
 import esdl.data.vector: Vector;
 
 
@@ -65,8 +65,8 @@ abstract class _esdl__ConstraintBase: rand.disable
   void _esdl__updateCst() { }
   
   abstract void makeConstraints();
-  abstract void doSetDomainContext();
-  abstract void doProcDomainContext();
+  abstract void doSetDomainContext(_esdl__CstProcessor proc);
+  abstract void doProcDomainContext(_esdl__CstProcessor proc);
 
   abstract CstPredicate[] getConstraintGuards();
   abstract CstPredicate[] getConstraints();
@@ -150,15 +150,15 @@ abstract class _esdl__Constraint(string CONSTRAINT, string FILE=__FILE__, size_t
     return _preds[];
   }
 
-  final override void doSetDomainContext() {
+  final override void doSetDomainContext(_esdl__CstProcessor proc) {
     // guards should always be processed before the usual predicates
-    foreach (pred; _guards) pred.doSetDomainContext(pred);
-    foreach (pred; _preds)  pred.doSetDomainContext(pred);
+    foreach (pred; _guards) pred.doSetDomainContext(pred, proc);
+    foreach (pred; _preds)  pred.doSetDomainContext(pred, proc);
   }
 
-  final override void doProcDomainContext() {
-    foreach (pred; _guards) pred.doProcDomainContext();
-    foreach (pred; _preds)  pred.doProcDomainContext();
+  final override void doProcDomainContext(_esdl__CstProcessor proc) {
+    foreach (pred; _guards) pred.doProcDomainContext(proc);
+    foreach (pred; _preds)  pred.doProcDomainContext(proc);
   }
 
   override string getCode() {
