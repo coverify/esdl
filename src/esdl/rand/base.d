@@ -24,7 +24,6 @@ import esdl.data.vector;
 
 interface CstVarNodeIntf {
   bool _esdl__isRand();
-  _esdl__Proxy _esdl__getRootProxy();
   string _esdl__getName();
   string _esdl__getFullName();
   bool _esdl__isDomainInRange();
@@ -261,14 +260,10 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
   uint         _domN = uint.max;
   uint         _varN = uint.max;
 
-
-  _esdl__Proxy _root;
-
   string _esdl__name;
 
-  this(string name, _esdl__Proxy root) {
+  this(string name) {
     _esdl__name = name;
-    _root = root;
   }
 
   string _esdl__getName() {
@@ -295,7 +290,6 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
   abstract bool _esdl__isRand();
   abstract bool signed();
   abstract uint bitcount();
-  abstract _esdl__Proxy _esdl__getRootProxy();
   abstract void _esdl__doRandomize(_esdl__RandGen randGen);
   abstract CstDomBase _esdl__getResolvedNode(_esdl__CstProcessor proc);
   abstract bool updateVal(_esdl__CstProcessor proc);
@@ -738,17 +732,8 @@ abstract class CstObjSet: CstObjArrVoid, CstObjArrIntf
 {
   string _esdl__name;
 
-  private _esdl__Proxy _root;
-  
-  this(string name, _esdl__Proxy root) {
-    assert (root !is null);
+  this(string name) {
     _esdl__name = name;
-    _root = root;
-  }
-
-  _esdl__Proxy _esdl__getRootProxy() {
-    assert (_root !is null);
-    return _root;
   }
 
   string _esdl__getName() {
@@ -777,16 +762,8 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   
   string _esdl__name;
 
-  _esdl__Proxy _root;
-  
-  this(string name, _esdl__Proxy root) {
+  this(string name) {
     _esdl__name = name;
-    _root = root;
-  }
-
-  _esdl__Proxy _esdl__getRootProxy() {
-    assert (_root !is null);
-    return _root;
   }
 
   override string _esdl__getName() {

@@ -112,13 +112,13 @@ class CstObjectIdx(V, rand RAND_ATTR, VT, int IDX,
   }
   else {
     override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
-      if (_parent !is _root) {
+      if (_parent._esdl__isRoot()) {
+	return this;
+      }
+      else {
 	P uparent = cast(P)(_parent._esdl__unroll(iter, n, proc));
 	assert (uparent !is null);
 	return uparent.tupleof[PIDX];
-      }
-      else {
-	return this;
       }
     }
     override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
@@ -141,7 +141,7 @@ class CstObjectIdx(V, rand RAND_ATTR, VT, int IDX,
   }
 }
 
-abstract class _esdl__ProxyStub(T): CstObjectIntf, rand.disable, rand.barrier
+abstract class _esdl__ObjStub(T): CstObjectIntf, rand.disable, rand.barrier
 {
   // import esdl.rand.meta: _esdl__ProxyResolve;
 
@@ -181,7 +181,7 @@ abstract class _esdl__ProxyStub(T): CstObjectIntf, rand.disable, rand.barrier
   
   PROXYT _esdl__get()() {
     if (_proxy is null) {
-      assert(_parent !is null);
+      // assert(_parent !is null);
       _proxy = make!PROXYT(_parent, this, _outer);
     }
     return _esdl__staticCast!PROXYT(_proxy);
@@ -212,7 +212,7 @@ abstract class _esdl__ProxyStub(T): CstObjectIntf, rand.disable, rand.barrier
 
 abstract class CstObjectBase(V, rand RAND_ATTR, int N)
   if (_esdl__ArrOrder!(V, N) == 0):
-    _esdl__ProxyStub!(LeafElementType!V), rand.disable, rand.barrier
+    _esdl__ObjStub!(LeafElementType!V), rand.disable, rand.barrier
       {
 	enum HAS_RAND_ATTRIB = RAND_ATTR.isRand();
 	alias LEAF = LeafElementType!V;
@@ -232,7 +232,6 @@ abstract class CstObjectBase(V, rand RAND_ATTR, int N)
 	}
 
 	string _esdl__name;
-	_esdl__Proxy _root;
 
 	override string _esdl__getName() {
 	  return _esdl__name;
@@ -270,11 +269,14 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
       _esdl__Proxy _parent;
       bool _parentsDepsAreResolved;
       
+      _esdl__Proxy _esdl__getParentProxy() {
+	return _parent;
+      }
+
       // Call super only after the _parent has been set
       static if (is (LEAF == struct)) {
 	this(string name, _esdl__Proxy parent, V* var) {
 	  _parent = parent;
-	  _root = _parent._esdl__getRootProxy();
 	  _parentsDepsAreResolved = _parent._esdl__depsAreResolved();
 	  super(name, parent, var);
 	}
@@ -282,7 +284,6 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
       else {
 	this(string name, _esdl__Proxy parent, V var) {
 	  _parent = parent;
-	  _root = _parent._esdl__getRootProxy();
 	  _parentsDepsAreResolved = _parent._esdl__depsAreResolved();
 	  super(name, parent, var);
 	}
@@ -295,16 +296,11 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
       final override bool _esdl__isDomainInRange() { return _parent._esdl__isDomainInRange(); }
 
       final override string _esdl__getFullName() {
-	if (_parent is _root) return _esdl__name;
+	if (_parent._esdl__isRoot()) return _esdl__name;
 	else  
 	  return _parent._esdl__getFullName() ~ "." ~ _esdl__getName();
       }
       
-      _esdl__Proxy _esdl__getRootProxy()() {
-	assert (_root !is null);
-	return _root;
-      }
-
       final bool _esdl__isStatic() {
 	return _parent._esdl__isStatic();
       }
@@ -364,6 +360,11 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
       alias P = CstObjArr!(V, RAND_ATTR, N-1);
       P _parent;
 
+      _esdl__Proxy _esdl__getParentProxy() {
+	assert (_parent !is null);
+	return _parent._esdl__getParentProxy();
+      }
+
       bool _parentsDepsAreResolved;
 
       CstVecTerm _indexExpr = null;
@@ -381,11 +382,10 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	// }
 	// else {
 	assert (parent !is null);
+	_parent = parent;
 	_nodeIsMapped = isMapped;
 	_esdl__name = name ~ (isMapped ? "[#" : "[%") ~ indexExpr.describe() ~ "]";
-	super(_esdl__name, parent._esdl__getRootProxy(), null);
-	_parent = parent;
-	_root = _parent._esdl__getRootProxy();
+	super(_esdl__name, _esdl__getParentProxy(), null);
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
 	_indexExpr = indexExpr;
 	// }
@@ -395,12 +395,11 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
       this(string name, P parent, ulong index, bool isMapped) {
 	import std.conv: to;
 	assert (parent !is null);
+	_parent = parent;
 	_nodeIsMapped = isMapped;
 	_esdl__name = name ~ (isMapped ? "[#" : "[%") ~ index.to!string() ~ "]";
-	super(_esdl__name, parent._esdl__getRootProxy(), null);
-	_parent = parent;
+	super(_esdl__name, _esdl__getParentProxy(), null);
 	_pindex = index;
-	_root = _parent._esdl__getRootProxy();
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
       }
 
@@ -441,11 +440,6 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	return _parent._esdl__getFullName() ~ "." ~ _esdl__getName();
       }
       
-      _esdl__Proxy _esdl__getRootProxy()() {
-	assert (_root !is null);
-	return _root;
-      }
-
       override bool _esdl__depsAreResolved() {
 	return _parentsDepsAreResolved && _nodeIsMapped;
       }
@@ -571,7 +565,7 @@ class CstObjArrGlobEnum(V, rand RAND_ATTR, int N)
   }
 
   override void _esdl__fixRef() {
-    _esdl__setValRef (& _var);
+    _esdl__setValRef (&_var);
   }
   
   // no unrolling is possible without adding rand proxy
@@ -601,13 +595,13 @@ class CstObjArrIdx(V, rand RAND_ATTR, VT, int IDX,
   }
   else {
     override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
-      if (_parent !is _esdl__getRootProxy()) {
+      if (_parent._esdl__isRoot()) {
+	return this;
+      }
+      else {
 	P uparent = cast(P)(_parent._esdl__unroll(iter, n, proc));
 	assert (uparent !is null);
 	return uparent.tupleof[PIDX];
-      }
-      else {
-	return this;
       }
     }
     override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
@@ -657,8 +651,8 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
 		  "Only top level Associative Arrays are supported for now");
   }
 
-  this(string name, _esdl__Proxy root) {
-    super(name, root);
+  this(string name) {
+    super(name);
   }
     
   CstArrLength!RV _arrLen;
@@ -864,10 +858,14 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
       void _esdl__setValRef(V* var) {
 	_var = var;
       }
+
+      _esdl__Proxy _esdl__getParentProxy() {
+	return _parent;
+      }
       
       // Call super only after the _parent has been set
       this(string name, _esdl__Proxy parent, V* var) {
-	super(name, parent._esdl__getRootProxy());
+	super(name);
 	_var = var;
 	_parent = parent;
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
@@ -896,7 +894,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       final string _esdl__getFullName() {
-	if (_parent is _esdl__getRootProxy()) return _esdl__name;
+	if (_parent._esdl__isRoot()) return _esdl__name;
 	else  
 	  return _parent._esdl__getFullName() ~ "." ~ _esdl__getName();
       }
@@ -992,6 +990,10 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
       alias P = CstObjArr!(V, RAND_ATTR, N-1);
       P _parent;
 
+      _esdl__Proxy _esdl__getParentProxy() {
+	return _parent._esdl__getParentProxy();
+      }
+
       bool _parentsDepsAreResolved;
       
       CstVecTerm _indexExpr = null;
@@ -1007,11 +1009,10 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	// writeln("New ", name);
 	assert (parent !is null);
 	string iname = name ~ (isMapped ? "[#" : "[%") ~ indexExpr.describe() ~ "]";
-	super(iname, parent._esdl__getRootProxy());
+	super(iname);
 	_nodeIsMapped = isMapped;
 	_parent = parent;
 	_indexExpr = indexExpr;
-	// _root = _parent._esdl__getRootProxy();
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
 	_arrLen = make!(CstArrLength!RV)(iname ~ "->length", this);
 	_arrHierLen = make!(CstArrHierLength!RV)(name ~ "->hierLength", this);
@@ -1024,12 +1025,11 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	// writeln("New ", name);
 	assert (parent !is null);
 	string iname = name ~ (isMapped ? "[#" : "[%") ~ index.to!string() ~ "]";
-	super(iname, parent._esdl__getRootProxy());
+	super(iname);
 	_nodeIsMapped = isMapped;
 	_parent = parent;
 	// _indexExpr = _esdl__cstVal(index);
 	_pindex = index;
-	// _root = _parent._esdl__getRootProxy();
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
 	_arrLen = make!(CstArrLength!RV)(iname ~ "->length", this);
 	_arrHierLen = make!(CstArrHierLength!RV)(name ~ "->hierLength", this);
