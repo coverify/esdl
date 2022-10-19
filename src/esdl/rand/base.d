@@ -61,7 +61,7 @@ interface CstVecNodeIntf: CstVarNodeIntf, CstDepIntf {
   // This function is used in setDomainArrContext to register all the
   // predicates with the domain variables that this predicate
   // constrains
-  abstract void registerRndPred(CstPredicate rndPred);  
+  abstract void registerRndPred(CstPredicate rndPred, _esdl__CstProcessor proc);  
 
   abstract void setSolverContext(CstSolverAgent agent);
   abstract void setProcContext(_esdl__CstProcessor proc);
@@ -302,7 +302,7 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
   abstract bool hasChanged();
   abstract bool _esdl__isStatic();
   abstract bool _esdl__isRolled(_esdl__CstProcessor proc);
-  // abstract void registerRndPred(CstPredicate rndPred);
+  // abstract void registerRndPred(CstPredicate rndPred, _esdl__CstProcessor proc);
   abstract CstDomSet getParentDomSet();
   abstract long evaluate();
 
@@ -512,11 +512,12 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
     _lambdaDomainPreds ~= pred;
   }
   
-  override void registerRndPred(CstPredicate rndPred) {
+  override void registerRndPred(CstPredicate rndPred, _esdl__CstProcessor proc) {
     if (rndPred.isLambdaPred()) {
       if (! _lambdaDomainPreds[].canFind(rndPred)) {
+	assert (proc !is null);
 	_lambdaDomainPreds ~= rndPred;
-	_root._esdl__addLambdaCstDom(this);
+	proc._esdl__addLambdaCstDom(this);
       }
     }
     else {
@@ -1029,11 +1030,12 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
     _lambdaDomainPreds ~= pred;
   }
   
-  override void registerRndPred(CstPredicate rndPred) {
+  override void registerRndPred(CstPredicate rndPred, _esdl__CstProcessor proc) {
     if (rndPred.isLambdaPred()) {
       if (! _lambdaDomainPreds[].canFind(rndPred)) {
+	assert(proc !is null);
 	_lambdaDomainPreds ~= rndPred;
-	_root._esdl__addLambdaCstDom(this);
+	proc._esdl__addLambdaCstDom(this);
       }
     }
     else {

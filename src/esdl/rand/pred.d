@@ -756,7 +756,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
   // A temporary context useful only for setDomainContext
   bool _isCurrentContext;
 
-  final void doSetDomainContext(CstPredicate pred) {
+  final void doSetDomainContext(CstPredicate pred, _esdl__CstProcessor proc) {
     if (pred is this) {
       if (_domainContextSet) return;
       else _domainContextSet = true;
@@ -808,13 +808,13 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
       // guard will enroll the predicate and will block or enable it
       // when triggered
       if (pred is this) _guard.addDepPred(this);
-      _guard.doSetDomainContext(pred);
+      _guard.doSetDomainContext(pred, proc);
     }
 
     if (pred is this) {
     
-      foreach (rnd; _unresolvedRnds) rnd.registerRndPred(this);
-      foreach (rnd; _unresolvedRndArrs) rnd.registerRndPred(this);
+      foreach (rnd; _unresolvedRnds) rnd.registerRndPred(this, proc);
+      foreach (rnd; _unresolvedRndArrs) rnd.registerRndPred(this, proc);
 
       foreach (idx; _idxs) // if (! idx.isSolved())
 	addDep(idx);
@@ -863,7 +863,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     if (_guard !is null) _guard.procDependency(dep);
   }
   
-  void doProcDomainContext() {
+  void doProcDomainContext(_esdl__CstProcessor proc) {
     import std.algorithm.searching: canFind;
     foreach (rnd; _unresolvedRnds) {
       foreach (dep; rnd.getDeps()) {
@@ -1320,7 +1320,7 @@ class CstVisitorPredicate: CstPredicate
 	_uwPreds ~= uwPred;
       }
       for (size_t i=prevLen; i!=currLen; ++i) {
-	_uwPreds[i].doSetDomainContext(_uwPreds[i]);
+	_uwPreds[i].doSetDomainContext(_uwPreds[i], proc);
       }
     }
 
