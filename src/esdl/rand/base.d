@@ -428,7 +428,7 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
     assert (this._esdl__depsAreResolved());
     auto resolved = this._esdl__getResolvedNode(proc);
     if (this._esdl__isRand())
-      resolved._esdl__doRandomize(_esdl__getRootProxy()._esdl__getRandGen());
+      resolved._esdl__doRandomize(proc.getRandGen());
     proc.solvedSome();
     resolved.markSolved(proc);
     proc.addSolvedDomain(resolved);

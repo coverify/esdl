@@ -23,19 +23,19 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   // _esdl__Proxy _parent;
   _esdl__Proxy _esdl__root;
 
-  private _esdl__ConstraintBase[string] _esdl__cstNames;
+  // private _esdl__ConstraintBase[string] _esdl__cstNames;
 
-  void _esdl__addConstraintName(_esdl__ConstraintBase cst) {
-    auto cstName = cst._esdl__getName();
-    _esdl__ConstraintBase* prevCst = cstName in _esdl__cstNames;
-    if (prevCst !is null) {
-      prevCst.markOverridden();
-      _esdl__cstNames[cstName] = cst;
-    }
-    else {
-      _esdl__cstNames[cstName] = cst;
-    }
-  }
+  // void _esdl__addConstraintName(_esdl__ConstraintBase cst) {
+  //   auto cstName = cst._esdl__getName();
+  //   _esdl__ConstraintBase* prevCst = cstName in _esdl__cstNames;
+  //   if (prevCst !is null) {
+  //     prevCst.markOverridden();
+  //     _esdl__cstNames[cstName] = cst;
+  //   }
+  //   else {
+  //     _esdl__cstNames[cstName] = cst;
+  //   }
+  // }
 
   // _esdl__objIntf provides the interface to the objx instance
   // would be null for root proxy
@@ -138,33 +138,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   }
 
 
-  _esdl__RandGen _esdl__rGen;
-
-  _esdl__RandGen _esdl__getRandGen() {
-    assert (_esdl__root !is null);
-    return _esdl__root._esdl__rGen;
-  }
-
-  uint _esdl__seed;
-  bool _esdl__seeded = false;
-
-  uint _esdl__getRandomSeed() {
-    assert (_esdl__root is this);
-    return _esdl__seed;
-  }
-
-  bool _esdl__isRandomSeeded() {
-    assert (_esdl__root is this);
-    return _esdl__seeded;
-  }
-
-  void seedRandom(uint seed) {
-    assert (_esdl__root is this);
-    _esdl__seeded = true;
-    _esdl__seed = seed;
-    _esdl__rGen.seed(seed);    
-  }
-  
   
   // Scope for foreach
   CstScope _esdl__rootScope;
@@ -232,25 +205,25 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
     _esdl__objIntf = obj;
     
-    // import std.random: uniform;
-    debug(NOCONSTRAINTS) {
-      assert(false, "Constraint engine started");
-    }
-    else {
-      import esdl.base.core: Procedure;
-      auto proc = Procedure.self;
-      if (proc !is null) {
-	_esdl__seed = 0; // uniform!(uint)(procRgen);
+    // only the root proxy shall have a processor
+    if (_esdl__root is this) {
+      _esdl__proc = make!_esdl__CstProcessor(this);
+      // import std.random: uniform;
+      debug(NOCONSTRAINTS) {
+	assert(false, "Constraint engine started");
       }
       else {
-	// no active simulation -- use global rand generator
-	_esdl__seed = 0; // uniform!(uint)();
+	import esdl.base.core: Procedure;
+	auto proc = Procedure.self;
+	if (proc !is null) {
+	  _esdl__proc._seed = 0; // uniform!(uint)(procRgen);
+	}
+	else {
+	  // no active simulation -- use global rand generator
+	  _esdl__proc._seed = 0; // uniform!(uint)();
+	}
       }
     }
-    _esdl__rGen = make!_esdl__RandGen(_esdl__seed);
-
-    // only the root proxy shall have a processor
-    if (_esdl__root is this) _esdl__proc = make!_esdl__CstProcessor(this);
     // else keep the _esdl__proc as null
     // else _esdl__proc = _esdl__getRootProxy()._esdl__getProc();
 
@@ -267,7 +240,7 @@ class _esdl__CstProcessor
   this(_esdl__Proxy proxy) {
     _proxy = proxy;
     _debugSolver = _proxy._esdl__debugSolver();
-    _randGen = _proxy._esdl__getRandGen();
+    _randGen = make!_esdl__RandGen(_seed);
     assert (_randGen !is null);
   }
   
@@ -282,6 +255,23 @@ class _esdl__CstProcessor
     return _proxy;
   }
 
+  uint _seed;
+  bool _seeded = false;
+
+  uint getRandomSeed() {
+    return _seed;
+  }
+
+  bool isRandomSeeded() {
+    return _seeded;
+  }
+
+  void seedRandom(uint seed) {
+    _seeded = true;
+    _seed = seed;
+    _randGen.seed(seed);    
+  }
+  
   _esdl__RandGen _randGen;
 
   final _esdl__RandGen getRandGen() {

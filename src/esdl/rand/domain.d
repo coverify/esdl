@@ -458,7 +458,6 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
   override bool updateVal(_esdl__CstProcessor proc) {
     assert(_esdl__isRand() !is true);
     Unconst!VT newVal;
-    assert (_root !is null);
     if (! this.isSolved()) {
       static if (ISPACKED) {
 	newVal = cast(VT) ((*(getRef()))[OFFSET..OFFSET+tSize]);
@@ -867,8 +866,6 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   override void execIterCbs(_esdl__CstProcessor proc) {
     assert(_iterVar !is null);
     _iterVar.unrollCbs(proc);
-    // assert (_root !is null);
-    // _root.procUnrolledNewPredicates();
   }
 
   override uint* getRef() {
@@ -878,7 +875,6 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   override bool updateVal(_esdl__CstProcessor proc) {
     assert(_esdl__isRand() !is true);
     uint newVal;
-    assert(_root !is null);
     if (! this.isSolved()) {
       newVal = cast(uint)_parent.getLen();
       this.markSolved(proc);
@@ -1140,8 +1136,6 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
   // override void execIterCbs(_esdl__CstProcessor proc) {
   //   assert(_iterVar !is null);
   //   _iterVar.unrollCbs(proc);
-  //   // assert (_root !is null);
-  //   // _root.procUnrolledNewPredicates();
   // }
 
   override uint* getRef() {
