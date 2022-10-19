@@ -23,8 +23,7 @@ import std.range: ElementType;
 import esdl.rand.misc;
 import esdl.rand.expr: CstVarVisitorExpr;
 import esdl.rand.base: CstVecPrim, CstVarGlobIntf, CstVarNodeIntf,
-  CstObjectIntf, CstObjArrIntf, CstObjectStubBase,
-  CstObjArrStubBase;
+  CstObjectIntf, CstObjArrIntf;
 import esdl.rand.pred: CstPredicate, CstVisitorPredicate;
 import esdl.rand.vecx: CstVectorIdx, CstVecArrIdx,
   CstVectorGlob, CstVecArrGlob, CstVectorGlobEnum, CstVecArrGlobEnum;

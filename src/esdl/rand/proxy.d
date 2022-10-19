@@ -21,7 +21,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 {
   // compositional parent -- not inheritance based
   // _esdl__Proxy _parent;
-  _esdl__Proxy _esdl__root;
+  bool _esdl__isRootProxy;
 
   // private _esdl__ConstraintBase[string] _esdl__cstNames;
 
@@ -90,15 +90,8 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     else return _esdl__objIntf._esdl__isRolled(proc);
   }
 
-  
-  final _esdl__Proxy _esdl__getRootProxy() {
-    assert (_esdl__root !is null);
-    return _esdl__root;
-  }
-
   final bool _esdl__isRoot() {
-    if (_esdl__root is this) return true;
-    else return false;
+    return _esdl__isRootProxy;
   }
 
   // CstObjNodeIntf
@@ -200,13 +193,12 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   }
 
   this(_esdl__Proxy parent, CstObjectIntf obj) {
-    if (parent is null) _esdl__root = this;
-    else _esdl__root = parent._esdl__getRootProxy();
+    if (parent is null) _esdl__isRootProxy = true;
 
     _esdl__objIntf = obj;
     
     // only the root proxy shall have a processor
-    if (_esdl__root is this) {
+    if (_esdl__isRoot()) {
       _esdl__proc = make!_esdl__CstProcessor(this);
       // import std.random: uniform;
       debug(NOCONSTRAINTS) {
@@ -225,7 +217,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
       }
     }
     // else keep the _esdl__proc as null
-    // else _esdl__proc = _esdl__getRootProxy()._esdl__getProc();
+    // // else _esdl__proc = _esdl__getRootProxy()._esdl__getProc();
 
     // scopes for constraint parsing
     _esdl__rootScope = make!CstScope(null, null);

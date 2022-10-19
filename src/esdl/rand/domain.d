@@ -26,8 +26,8 @@ import esdl.base.rand: _esdl__RandGen;
 abstract class CstDomain(V, rand RAND_ATTR) if (is (V == bool)):
   CstVecDomain!(V, RAND_ATTR), CstLogicTerm
     {
-      this(string name, _esdl__Proxy root) {
-	super(name, root);
+      this(string name) {
+	super(name);
       }
 
 
@@ -80,8 +80,8 @@ abstract class CstDomain(V, rand RAND_ATTR) if (is (V == bool)):
 abstract class CstDomain(V, rand RAND_ATTR) if (!is (V == bool)):
   CstVecDomain!(V, RAND_ATTR), CstVecTerm
     {
-      this(string name, _esdl__Proxy root) {
-	super(name, root);
+      this(string name) {
+	super(name);
       }
 
       final override bool isBool() {return false;}
@@ -329,8 +329,8 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
     _hash.modify(VT.stringof);
   }
   
-  this(string name, _esdl__Proxy root) {
-    super(name, root);
+  this(string name) {
+    super(name);
   }
 
   
@@ -686,19 +686,15 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     return _parent._esdl__getFullName() ~ "->length";
   }
 
-  this(string _esdl__getName, RV parent) {
+  this(string name, RV parent) {
     assert (parent !is null);
-    super(_esdl__getName, parent._esdl__getRootProxy());
-    _esdl__name = _esdl__getName;
+    super(name);
+    _esdl__name = name;
     _parent = parent;
     _iterVar = new CstArrIterator!RV(_parent);
   }
 
   ~this() { }
-
-  override _esdl__Proxy _esdl__getRootProxy() {
-    return _parent._esdl__getRootProxy();
-  }
 
   override bool tryResolveDep(_esdl__CstProcessor proc) {
     import std.algorithm.iteration: filter;
@@ -973,19 +969,15 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
     return _parent._esdl__getFullName() ~ "->hierLength";
   }
 
-  this(string _esdl__getName, RV parent) {
+  this(string name, RV parent) {
     assert (parent !is null);
-    super(_esdl__getName, parent._esdl__getRootProxy());
-    _esdl__name = _esdl__getName;
+    super(name);
+    _esdl__name = name;
     _parent = parent;
     // _iterVar = new CstArrIterator!RV(_parent);
   }
 
   ~this() { }
-
-  override _esdl__Proxy _esdl__getRootProxy() {
-    return _parent._esdl__getRootProxy();
-  }
 
   override bool tryResolveDep(_esdl__CstProcessor proc) {
     // import std.stdio;
