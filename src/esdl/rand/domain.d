@@ -647,7 +647,7 @@ class CstArrIterator(RV): CstIterator
   }
   
   bool isSolved() {
-    return _arrVar._arrLen.isSolved();
+    return _arrVar.arrLen().isSolved();
   }
 
   void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) { }
