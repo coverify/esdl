@@ -728,6 +728,15 @@ abstract class CstVecValueBase: CstValue, CstVecTerm {
 }
 
 
+
+interface CstObjSetIntf
+{
+  abstract string _esdl__getName();
+  abstract uint _esdl__leafsCount();
+  abstract bool isDepResolved();
+  abstract void markHierResolved(_esdl__CstProcessor proc);
+}
+
 abstract class CstObjSet: CstObjArrVoid, CstObjArrIntf
 {
   string _esdl__name;
