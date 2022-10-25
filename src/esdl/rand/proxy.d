@@ -2,7 +2,7 @@ module esdl.rand.proxy;
 
 import esdl.solver.base: CstSolver, CstDistSolverBase;
 import esdl.rand.base: CstVecPrim, CstScope, CstDomBase,
-  CstObjectVoid, CstVarNodeIntf, CstObjectIntf,
+  CstObjectVoid, CstVarNodeIntf, CstObjectIntf, CstObjStub,
   CstIterator, CstDomSet, CstVarGlobIntf, CstVecNodeIntf;
 import esdl.rand.pred: CstPredicate;
 import esdl.rand.agent: CstSolverAgent;
@@ -37,57 +37,61 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   //   }
   // }
 
-  // _esdl__objIntf provides the interface to the objx instance
+  // _esdl__stub provides the interface to the objx instance
   // would be null for root proxy
-  CstObjectIntf _esdl__objIntf;
+  CstObjStub _esdl__stub;
 
+  _esdl__CstProcessor _esdl__getProc() {
+    return _esdl__stub._esdl__getProc();
+  }
+  
   _esdl__Proxy _esdl__getProxy() {
     return this;
   }
   
   string _esdl__getFullName() {
-    if (_esdl__objIntf is null) return "$root";
-    else return "$root." ~ _esdl__objIntf._esdl__getFullName();
+    if (_esdl__stub is null) return "$root";
+    else return "$root." ~ _esdl__stub._esdl__getFullName();
   }
   string _esdl__getName() {
-    if (_esdl__objIntf is null) return "$root";
-    else return _esdl__objIntf._esdl__getName();
+    if (_esdl__stub is null) return "$root";
+    else return _esdl__stub._esdl__getName();
   }
   
   bool _esdl__isRand() {
-    if (_esdl__objIntf is null) return true; // root proxy
-    else return _esdl__objIntf._esdl__isRand();
+    if (_esdl__stub is null) return true; // root proxy
+    else return _esdl__stub._esdl__isRand();
   }
   
   bool _esdl__isDomainInRange() {
-    if (_esdl__objIntf is null) return true; // root proxy
-    else return _esdl__objIntf._esdl__isDomainInRange();
+    if (_esdl__stub is null) return true; // root proxy
+    else return _esdl__stub._esdl__isDomainInRange();
   }
 
   override bool _esdl__depsAreResolved() {
-    if (_esdl__objIntf is null) return true; // root proxy
-    else return _esdl__objIntf._esdl__depsAreResolved();
+    if (_esdl__stub is null) return true; // root proxy
+    else return _esdl__stub._esdl__depsAreResolved();
   }
 
   _esdl__Proxy _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
-    if (_esdl__objIntf is null) return this;
-    else return _esdl__objIntf._esdl__unroll(iter, n, proc)._esdl__getProxy();
+    if (_esdl__stub is null) return this;
+    else return _esdl__stub._esdl__unroll(iter, n, proc)._esdl__getProxy();
   }
 
   // the root proxy is always static
   bool _esdl__isStatic() {
-    if (_esdl__objIntf is null) return true;
-    else return _esdl__objIntf._esdl__isStatic();
+    if (_esdl__stub is null) return true;
+    else return _esdl__stub._esdl__isStatic();
   }
 
   bool _esdl__isReal() {
-    if (_esdl__objIntf is null) return true;
-    else return _esdl__objIntf._esdl__isReal();
+    if (_esdl__stub is null) return true;
+    else return _esdl__stub._esdl__isReal();
   }
 
   bool _esdl__isRolled(_esdl__CstProcessor proc) {
-    if (_esdl__objIntf is null) return false;
-    else return _esdl__objIntf._esdl__isRolled(proc);
+    if (_esdl__stub is null) return false;
+    else return _esdl__stub._esdl__isRolled(proc);
   }
 
   final bool _esdl__isRoot() {
@@ -162,63 +166,35 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   _esdl__ConstraintBase _esdl__lambdaCst;
 
   // _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-  // 				      CstObjectIntf obj, void* outer) {
+  // 				      CstObjStub obj, void* outer) {
   //   assert (false,
   // 	    "Override _esdl__createProxyInst in the derived proxy class");
   // }
 
   // _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-  // 				      CstObjectIntf obj, Object outer) {
+  // 				      CstObjStub obj, Object outer) {
   //   assert (false,
   // 	    "Override _esdl__createProxyInst in the derived proxy class");
   // }
 
 
-  _esdl__CstProcessor _esdl__proc;
-
-  final _esdl__CstProcessor _esdl__getProc() {
-    return _esdl__proc;
-  }
-  
-  this(_esdl__Proxy parent, CstObjectIntf obj, Object outer) {
+  this(_esdl__Proxy parent, CstObjStub obj, Object outer) {
     this(parent, obj);
   }
 
-  this(_esdl__Proxy parent, CstObjectIntf obj, void* outer) {
+  this(_esdl__Proxy parent, CstObjStub obj, void* outer) {
     this(parent, obj);
   }
 
-  this(T)(_esdl__Proxy parent, CstObjectIntf obj, T outer) {
+  this(T)(_esdl__Proxy parent, CstObjStub obj, T outer) {
     this(parent, obj);
   }
 
-  this(_esdl__Proxy parent, CstObjectIntf obj) {
+  this(_esdl__Proxy parent, CstObjStub obj) {
     if (parent is null) _esdl__isRootProxy = true;
 
-    _esdl__objIntf = obj;
+    _esdl__stub = obj;
     
-    // only the root proxy shall have a processor
-    if (_esdl__isRoot()) {
-      _esdl__proc = make!_esdl__CstProcessor(this);
-      // import std.random: uniform;
-      debug(NOCONSTRAINTS) {
-	assert(false, "Constraint engine started");
-      }
-      else {
-	import esdl.base.core: Procedure;
-	auto proc = Procedure.self;
-	if (proc !is null) {
-	  _esdl__proc._seed = 0; // uniform!(uint)(procRgen);
-	}
-	else {
-	  // no active simulation -- use global rand generator
-	  _esdl__proc._seed = 0; // uniform!(uint)();
-	}
-      }
-    }
-    // else keep the _esdl__proc as null
-    // // else _esdl__proc = _esdl__getRootProxy()._esdl__getProc();
-
     // scopes for constraint parsing
     _esdl__rootScope = make!CstScope(null, null);
     _esdl__currentScope = _esdl__rootScope;
@@ -229,9 +205,9 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
 class _esdl__CstProcessor
 {
-  this(_esdl__Proxy proxy) {
-    _proxy = proxy;
-    _debugSolver = _proxy._esdl__debugSolver();
+  this(CstObjStub stub) {
+    _stub = stub;
+    _debugSolver = _stub._esdl__debugSolver();
     _randGen = make!_esdl__RandGen(_seed);
     assert (_randGen !is null);
   }
@@ -241,11 +217,7 @@ class _esdl__CstProcessor
     return _debugSolver;
   }
   
-  _esdl__Proxy _proxy;
-
-  _esdl__Proxy getProxy() {
-    return _proxy;
-  }
+  CstObjStub _stub;
 
   uint _seed;
   bool _seeded = false;
@@ -273,14 +245,6 @@ class _esdl__CstProcessor
   static CstSolverAgent _agent;
   static CstDistPredSolver _distPredSolver;
 
-  string _esdl__getName() {
-    return _proxy._esdl__getName() ~ "->processor";
-  }
-  
-  string _esdl__getFullName() {
-    return _proxy._esdl__getFullName() ~ "->processor";
-  }
-  
   static getPredSolver() {
     if (_agent is null) _agent = make!CstSolverAgent();
     return _agent;

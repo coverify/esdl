@@ -8,9 +8,9 @@ import std.traits: isIntegral, isBoolean, isArray, KeyType,
 
 import esdl.rand.misc;
 import esdl.rand.base: CstValue, CstVecTerm, CstIterator,
-  CstDomBase, CstDomSet, CstObjSet, CstVarNodeIntf, CstVecNodeIntf,
+  CstDomBase, CstDomSet, CstVarNodeIntf, CstVecNodeIntf,
   CstObjArrIntf, CstVarGlobIntf, CstObjectVoid, CstObjArrVoid,
-  CstDepIntf, CstObjectIntf, CstObjSetIntf;
+  CstDepIntf, CstObjectIntf, CstObjSetIntf, CstObjSet, CstObjStub;
 import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy, _esdl__CstProcessor;
 import esdl.rand.expr: CstRangeExpr;
@@ -141,7 +141,60 @@ class CstObjectIdx(V, rand RAND_ATTR, VT, int IDX,
   }
 }
 
-abstract class _esdl__ObjStub(V, rand RAND_ATTR, int N): CstObjectIntf, rand.disable, rand.barrier
+class CstRootProxy(V) if (is (V == class) || is (V == struct) ||
+			  (is (V == S*, S) && is (S == struct))):
+  CstObject!(V, rand.init, 0)
+    {
+      enum _esdl__ISRAND = true;
+      enum _esdl__HASPROXY = true;
+
+      this() {
+	import esdl.base.core: Procedure;
+	super("$root", null, null);
+	_esdl__proc = new _esdl__CstProcessor(this);
+	auto proc = Procedure.self;
+	if (proc !is null) {
+	  _esdl__proc._seed = 0; // uniform!(uint)(procRgen);
+	}
+	else {
+	  // no active simulation -- use global rand generator
+	  _esdl__proc._seed = 0; // uniform!(uint)();
+	}
+      }
+  
+      override RV _esdl__unroll(CstIterator iter, ulong n,
+				_esdl__CstProcessor proc) {
+	return this;
+      }
+      override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
+	return this;
+      }
+
+      override bool rand_mode() {
+	return true;
+      }
+
+      _esdl__CstProcessor _esdl__proc;
+
+      final override _esdl__CstProcessor _esdl__getProc() {
+	return _esdl__proc;
+      }
+
+      debug (CSTSOLVER) {
+	enum bool _esdl__DEBUGSOVER = true;
+      }
+      else {
+	enum bool _esdl__DEBUGSOVER = false;
+      }
+
+      override bool _esdl__debugSolver() {
+	return _esdl__DEBUGSOVER;
+      }
+
+
+    }
+
+abstract class _esdl__ObjStub(V, rand RAND_ATTR, int N): CstObjStub, rand.disable, rand.barrier
 {
   // import esdl.rand.meta: _esdl__ProxyResolve;
 
@@ -282,23 +335,29 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
       static if (is (LEAF == struct)) {
 	this(string name, _esdl__Proxy parent, V* var) {
 	  _parent = parent;
-	  _parentsDepsAreResolved = _parent._esdl__depsAreResolved();
+	  if (_parent is null) _parentsDepsAreResolved = true; // root
+	  else _parentsDepsAreResolved = _parent._esdl__depsAreResolved();
 	  super(name, parent, var);
 	}
       }
       else {
 	this(string name, _esdl__Proxy parent, V var) {
 	  _parent = parent;
-	  _parentsDepsAreResolved = _parent._esdl__depsAreResolved();
+	  if (_parent is null) _parentsDepsAreResolved = true; // root
+	  else _parentsDepsAreResolved = _parent._esdl__depsAreResolved();
 	  super(name, parent, var);
 	}
       }
 
       final override bool _esdl__isRand() {
+	if (_parent is null) return true;
 	return HAS_RAND_ATTRIB && rand_mode() && _parent._esdl__isRand();
       }
 
-      final override bool _esdl__isDomainInRange() { return _parent._esdl__isDomainInRange(); }
+      final override bool _esdl__isDomainInRange() {
+	if (_parent is null) return true;
+	return _parent._esdl__isDomainInRange();
+      }
 
       final override string _esdl__getFullName() {
 	if (_parent._esdl__isRoot()) return _esdl__name;
@@ -307,14 +366,17 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
       }
       
       final bool _esdl__isStatic() {
+	if (_parent is null) return true;
 	return _parent._esdl__isStatic();
       }
 
       final bool _esdl__isReal() {
+	if (_parent is null) return true;
 	return _parent._esdl__isReal();
       }
 
       final bool _esdl__isRolled(_esdl__CstProcessor proc) {
+	if (_parent is null) return false;
 	return _parent._esdl__isRolled(proc);		// N == 0
       }
 
@@ -355,7 +417,18 @@ class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	// no parent
       }
 
-    }
+      static if (is (_esdl__T == struct)) {
+	void _esdl__doSetOuter()(V* obj, bool changed) {
+	  _proxy._esdl__doSetOuter(obj, changed);
+	}
+      }
+      else {
+	void _esdl__doSetOuter()(V obj, bool changed) {
+	  _proxy._esdl__doSetOuter(obj, changed);
+	}
+      }
+
+}
 
 // Array Element
 class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
