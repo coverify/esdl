@@ -23,11 +23,12 @@ import std.range: ElementType;
 import esdl.rand.misc;
 import esdl.rand.expr: CstVarVisitorExpr;
 import esdl.rand.base: CstVecPrim, CstVarGlobIntf, CstVarNodeIntf,
-  CstObjectIntf, CstObjArrIntf;
+  CstObjectIntf, CstObjArrIntf, CstObjStub;
 import esdl.rand.pred: CstPredicate, CstVisitorPredicate;
 import esdl.rand.vecx: CstVectorIdx, CstVecArrIdx,
   CstVectorGlob, CstVecArrGlob, CstVectorGlobEnum, CstVecArrGlobEnum;
-import esdl.rand.objx: CstObjectIdx, CstObjArrIdx, CstObjectGlob;
+import esdl.rand.objx: CstObjectIdx, CstObjArrIdx, CstObjectGlob,
+  CstRootProxy;
 import esdl.rand.domain: CstVecValue, CstLogicValue;
 import esdl.rand.proxy;
 import esdl.rand.cstr;
@@ -627,10 +628,10 @@ void _esdl__randomize(T) (ref T t) if (is (T == struct))
 
     alias _esdl__ProxyType = _esdl__ProxyResolve!T;
 
-    _esdl__ProxyType _esdl__createProxy() {
+    CstRootProxy!T _esdl__createProxy() {
       // import std.stdio;
       // writeln("New: ", _esdl__ProxyType.stringof);
-      return new _esdl__ProxyType(null, null, null);
+      return new CstRootProxy!T();
       // _esdl__ProxyType proxy =
       // 	make!_esdl__ProxyType(null, null, null);
       // if (proxy is null) {
@@ -639,14 +640,18 @@ void _esdl__randomize(T) (ref T t) if (is (T == struct))
       // return proxy;
     }
 
-    _esdl__ProxyType proxyInst = _esdl__ProxyType._esdl__proxyInst;
+    CstRootProxy!T proxyRoot = _esdl__ProxyType._esdl__proxyRootInst;
 
-    if (proxyInst is null) {
-      proxyInst = _esdl__createProxy();
-      _esdl__ProxyType._esdl__proxyInst = proxyInst;
+    if (proxyRoot is null) {
+      proxyRoot = _esdl__createProxy();
+      _esdl__ProxyType._esdl__proxyRootInst = proxyRoot;
     }
 
+    _esdl__ProxyType proxyInst = _esdl__staticCast!(_esdl__ProxyType)
+      (proxyRoot._esdl__getProxy());
+
     _esdl__CstProcessor proc = proxyInst._esdl__getProc();
+
     assert(proc !is null);
     proc._esdl__doResetLambdaPreds();
 
@@ -671,10 +676,10 @@ void _esdl__randomize(T) (T t) if (is (T == class))
 
     alias _esdl__ProxyType = _esdl__ProxyResolve!T;
 
-    _esdl__ProxyType _esdl__createProxy() {
+    CstRootProxy!T _esdl__createProxy() {
       // import std.stdio;
       // writeln("New: ", _esdl__ProxyType.stringof);
-      return new _esdl__ProxyType(null, null, null);
+      return new CstRootProxy!T();
       // _esdl__ProxyType proxy =
       // 	make!_esdl__ProxyType(null, null, null);
       // if (proxy is null) {
@@ -683,12 +688,15 @@ void _esdl__randomize(T) (T t) if (is (T == class))
       // return proxy;
     }
 
-    _esdl__ProxyType proxyInst = _esdl__ProxyType._esdl__proxyInst;
+    CstRootProxy!T proxyRoot = _esdl__ProxyType._esdl__proxyRootInst;
 
-    if (proxyInst is null) {
-      proxyInst = _esdl__createProxy();
-      _esdl__ProxyType._esdl__proxyInst = proxyInst;
+    if (proxyRoot is null) {
+      proxyRoot = _esdl__createProxy();
+      _esdl__ProxyType._esdl__proxyRootInst = proxyRoot;
     }
+
+    _esdl__ProxyType proxyInst = _esdl__staticCast!(_esdl__ProxyType)
+      (proxyRoot._esdl__getProxy());
 
     _esdl__CstProcessor proc = proxyInst._esdl__getProc();
     assert(proc !is null);
@@ -709,10 +717,10 @@ void _esdl__randomize(T) (T t) if (is (T == class))
 _esdl__Proxy _esdl__getProxyInst(T)(T t) {
   alias _esdl__ProxyType = _esdl__ProxyResolve!T;
 
-  _esdl__ProxyType _esdl__createProxy() {
+  CstRootProxy!T _esdl__createProxy() {
     // import std.stdio;
     // writeln("New: ", _esdl__ProxyType.stringof);
-    return new _esdl__ProxyType(null, null, null);
+    return new CstRootProxy!T();
     // _esdl__ProxyType proxy =
     //   make!_esdl__ProxyType(null, null, null);
     // if (proxy is null) {
@@ -721,14 +729,14 @@ _esdl__Proxy _esdl__getProxyInst(T)(T t) {
     // return proxy;
   }
 
-  _esdl__ProxyType proxyInst = _esdl__ProxyType._esdl__proxyInst;
+  CstRootProxy!T proxyRoot = _esdl__ProxyType._esdl__proxyRootInst;
 
-  if (proxyInst is null) {
-    proxyInst = _esdl__createProxy();
-    _esdl__ProxyType._esdl__proxyInst = proxyInst;
+  if (proxyRoot is null) {
+    proxyRoot = _esdl__createProxy();
+    _esdl__ProxyType._esdl__proxyRootInst = proxyRoot;
   }
 
-  return proxyInst;
+  return proxyRoot._esdl__getProxy();
 }
 
 void _esdl__randomizeWith(T)(T t, _esdl__Proxy proxy,
@@ -866,7 +874,7 @@ mixin template Randomization()
     // This instance would be populated only to avoid
     // proxy duplication -- in cases where proxy objects
     // are instanciated inside other proxy objects
-    _esdl__Proxy _esdl__proxyInst;
+    // CstRootProxy!T _esdl__proxyRootInst;
   }
 
   import esdl.base.rand: _esdl__RandGen, getRandGen;
@@ -918,7 +926,7 @@ mixin template Randomization()
 
       enum bool _esdl__HAS_RAND_INFO = true;
       // override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-      // 						   CstObjectIntf obj, Object outer) {
+      // 						   CstObjStub obj, Object outer) {
       // 	_esdl__T outer_ = _esdl__staticCast!_esdl__T(outer);
       // 	return new _esdl__ProxyRand!(_esdl__T)(parent, obj, outer_);
       // }
@@ -929,7 +937,7 @@ mixin template Randomization()
 	  this._esdl__doSetOuter(true);
 	}
       }
-      this(_esdl__Proxy parent, CstObjectIntf obj, _esdl__T outer) {
+      this(_esdl__Proxy parent, CstObjStub obj, _esdl__T outer) {
 	super(parent, obj, outer);
 	_esdl__outer = outer;
 	_esdl__doInitRandObjectElems(this);
@@ -952,7 +960,7 @@ mixin template Randomization()
 
       enum bool _esdl__HAS_RAND_INFO = true;
       // override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-      // 						   CstObjectIntf obj, void* outer) {
+      // 						   CstObjStub obj, void* outer) {
       // 	_esdl__T* outer_ = cast(_esdl__T*)(outer);
       // 	return new _esdl__ProxyRand!(_esdl__T)(parent, obj, outer_);
       // }
@@ -968,7 +976,7 @@ mixin template Randomization()
 	  this._esdl__doSetOuter(true);
 	}
       }
-      this(_esdl__Proxy parent, CstObjectIntf obj, _esdl__T* outer) {
+      this(_esdl__Proxy parent, CstObjStub obj, _esdl__T* outer) {
 	super(parent, obj);
 	_esdl__outer = outer;
 	_esdl__doInitRandObjectElems(this);
@@ -1122,14 +1130,14 @@ class _esdl__ProxyNoRand(_esdl__T)
 	enum bool _esdl__HAS_RAND_INFO = false;
 	// static if (is (_esdl__T == class)) {
 	//   override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-	// 					       CstObjectIntf obj, Object outer) {
+	// 					       CstObjStub obj, Object outer) {
 	//     _esdl__T outer_ = _esdl__staticCast!_esdl__T(outer);
 	//     return new _esdl__ProxyNoRand!(_esdl__T)(parent, obj, outer_);
 	//   }
 	// }
 	// else {
 	//   override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-	// 					       CstObjectIntf obj, void* outer) {
+	// 					       CstObjStub obj, void* outer) {
 	//     _esdl__T outer_ = cast(_esdl__T)(outer);
 	//     return new _esdl__ProxyNoRand!(_esdl__T)(parent, obj, outer_);
 	//   }
@@ -1140,7 +1148,7 @@ class _esdl__ProxyNoRand(_esdl__T)
 	    this._esdl__doSetOuter(true);
 	  }
 	}
-	this(_esdl__Proxy parent, CstObjectIntf obj, _esdl__T outer) {
+	this(_esdl__Proxy parent, CstObjStub obj, _esdl__T outer) {
 	  super(parent, obj, outer);
 	  _esdl__outer = outer;
 	  _esdl__doInitRandObjectElems(this);
@@ -1165,7 +1173,7 @@ class _esdl__ProxyNoRand(_esdl__T)
 
 	enum bool _esdl__HAS_RAND_INFO = false;
 	// override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-	// 					     CstObjectIntf obj, void* outer) {
+	// 					     CstObjStub obj, void* outer) {
 	//   _esdl__T* outer_ = cast(_esdl__T*)(outer);
 	//   return new _esdl__ProxyNoRand!(_esdl__T)(parent, obj, outer_);
 	// }
@@ -1181,7 +1189,7 @@ class _esdl__ProxyNoRand(_esdl__T)
 	    this._esdl__doSetOuter(true);
 	  }
 	}
-	this(_esdl__Proxy parent, CstObjectIntf obj, _esdl__T* outer) {
+	this(_esdl__Proxy parent, CstObjStub obj, _esdl__T* outer) {
 	  super(parent, obj);
 	  _esdl__outer = outer;
 	  _esdl__doInitRandObjectElems(this);
@@ -1200,9 +1208,10 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   alias _esdl__PROXYT = typeof(this);
   alias _esdl__Type = _esdl__T;
 
-  static _esdl__PROXYT _esdl__proxyInst;
+  static CstRootProxy!_esdl__T _esdl__proxyRootInst;
+
   // static ~this() {
-  //   if (_esdl__proxyInst !is null) proxyAllocator.dispose(_esdl__proxyInst);
+  //   if (_esdl__proxyRootInst !is null) proxyAllocator.dispose(_esdl__proxyRootInst);
   // }
 
   debug(CSTPARSER) {

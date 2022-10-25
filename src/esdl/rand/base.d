@@ -112,6 +112,14 @@ interface CstVecArrIntf: CstVecNodeIntf {
 
 interface CstObjNodeIntf: CstVarNodeIntf {}
 
+abstract class CstObjStub: CstObjectIntf
+{
+  bool _esdl__debugSolver() { assert (false); }
+
+  // proc is null for the non-root proxies
+  _esdl__CstProcessor _esdl__getProc() { return null; }
+}
+
 interface CstObjectIntf: CstObjNodeIntf
 {
   string _esdl__getFullName();
