@@ -134,6 +134,8 @@ size_t writeHexString(T)(T val, ref _esdl__Sigbuf str) {
 struct rand
 {
   // enum phony;
+  enum ignore;
+  
   static interface disable { }
   static interface barrier { }
 
