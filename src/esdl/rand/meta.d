@@ -51,15 +51,28 @@ template _esdl__PackedRandProxyType(PCT, int I, RAND, P, int PI)
   alias _esdl__PackedRandProxyType = CstVectorIdx!(PCT, RAND, PCT, I, P, PI);
 }
 
+template _esdl__randIgnore(ATTR...)
+{
+  static if (ATTR.length == 0)
+    enum bool _esdl__randIgnore = false;
+  else static if (is (ATTR[0] == rand.ignore))
+    enum bool _esdl__randIgnore = true;
+  else
+    enum bool _esdl__randIgnore =
+      _esdl__randIgnore!(ATTR[1..$]);
+}
+
 template _esdl__RandProxyType(T, int I, P, int PI)
 {
   import std.traits;
   alias L = typeof(T.tupleof[I]);
   enum rand RAND = getRandAttr!(T, I);
   // pragma(msg, "Looking at: ", T.tupleof[I].stringof);
-  static if (is (L: rand.disable)) {
+  static if (_esdl__randIgnore!(__traits(getAttributes, T.tupleof[I]))
+	     || is (L: rand.disable)) {
     alias _esdl__RandProxyType = _esdl__NotMappedForRandomization;
   }
+
   else static if (is (L: Constraint!(CST, FILE, LINE),
 		      string CST, string FILE, size_t LINE)) {
     alias _esdl__RandProxyType = _esdl__NotMappedForRandomization;
@@ -1063,7 +1076,7 @@ mixin template Randomization()
     _esdl__RandInfoInst._randGen.seed(seed);
   }
 
-  _esdl__RandInfo _esdl__RandInfoInst;
+  @(rand.ignore) _esdl__RandInfo _esdl__RandInfoInst;
 
   _esdl__RandGen _esdl__getRandGen()() {
     return _esdl__RandInfoInst._randGen;
