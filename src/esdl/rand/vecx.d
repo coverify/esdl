@@ -21,8 +21,6 @@ import esdl.base.rand: _esdl__RandGen;
 
 import std.algorithm.searching: canFind;
 
-alias CstBoolVar = CstVector!(bool, rand(true, true), 0);
-  
 interface CstVecIndexed { }
 
 // V represents the type of the declared array/non-array member
@@ -136,7 +134,7 @@ class CstVectorIdx(V, rand RAND_ATTR, VT, int IDX,
 }
 
 
-class CstVectorBase(V, rand RAND_ATTR, int N)
+abstract class CstVectorBase(V, rand RAND_ATTR, int N)
   if (_esdl__ArrOrder!(V, N) == 0):
     CstDomain!(LeafElementType!V, RAND_ATTR), CstVecPrim
       {
@@ -180,7 +178,7 @@ class CstVectorBase(V, rand RAND_ATTR, int N)
       }
 
 // Primary Vector -- not an element of any array
-class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
+abstract class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
   CstVectorBase!(V, RAND_ATTR, N)
     {
       alias RV = typeof(this);

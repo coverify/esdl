@@ -1466,13 +1466,17 @@ struct CstParser {
       fillGuardDecl(gcount);
       fillGuardDecl(";\n");
 
-      fillGuardDecl("  CstBoolVar  _esdl__guardProxy_");
+      fillGuardDecl("  CstVectorGlob!(bool, rand(true, true), _esdl__guard_");
+      fillGuardDecl(gcount);
+      fillGuardDecl(") _esdl__guardProxy_");
       fillGuardDecl(gcount);
       fillGuardDecl(";\n");
 
       fillGuardInit("  _esdl__guardProxy_");
       fillGuardInit(gcount);
-      fillGuardInit(" = new CstBoolVar(\"_esdl__guard_");
+      fillGuardInit(" = new CstVectorGlob!(bool, rand(true, true), _esdl__guard_");
+      fillGuardInit(gcount);
+      fillGuardInit(")(\"_esdl__guard_");
       fillGuardInit(gcount);
       fillGuardInit("\", this._proxy, &_esdl__guard_");
       fillGuardInit(gcount);
