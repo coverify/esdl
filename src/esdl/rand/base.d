@@ -118,6 +118,7 @@ abstract class CstObjStub: CstObjectIntf
 
   // proc is null for the non-root proxies
   _esdl__CstProcessor _esdl__getProc() { return null; }
+  bool _esdl__isRoot() { return false; }
 }
 
 interface CstObjectIntf: CstObjNodeIntf
