@@ -251,6 +251,7 @@ class CstRootProxy(V) if (is (V == class) || is (V == struct) ||
 	}
       }
 
+      final override bool _esdl__isRoot() { return true; }
     }
 
 abstract class _esdl__TypedStub(LEAF): CstObjStub
@@ -304,7 +305,7 @@ abstract class _esdl__ObjStub(V, rand RAND_ATTR, int N):
   PROXYT _esdl__get()() {
     if (_proxy is null) {
       // assert(_parent !is null);
-      _proxy = make!PROXYT(_parent, this, _outer);
+      _proxy = make!PROXYT(this, _outer);
     }
     return _esdl__staticCast!PROXYT(_proxy);
   }

@@ -19,9 +19,7 @@ import std.algorithm.mutation: swap;
 
 abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 {
-  // compositional parent -- not inheritance based
-  // _esdl__Proxy _parent;
-  bool _esdl__isRootProxy;
+  immutable bool _esdl__isRootProxy;
 
   // private _esdl__ConstraintBase[string] _esdl__cstNames;
 
@@ -165,35 +163,23 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   // Keep a list of constraints in the class
   _esdl__ConstraintBase _esdl__lambdaCst;
 
-  // _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-  // 				      CstObjStub obj, void* outer) {
-  //   assert (false,
-  // 	    "Override _esdl__createProxyInst in the derived proxy class");
-  // }
 
-  // _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-  // 				      CstObjStub obj, Object outer) {
-  //   assert (false,
-  // 	    "Override _esdl__createProxyInst in the derived proxy class");
-  // }
-
-
-  this(_esdl__Proxy parent, CstObjStub obj, Object outer) {
-    this(parent, obj);
+  this(CstObjStub stub, Object outer) {
+    this(stub);
   }
 
-  this(_esdl__Proxy parent, CstObjStub obj, void* outer) {
-    this(parent, obj);
+  this(CstObjStub stub, void* outer) {
+    this(stub);
   }
 
-  this(T)(_esdl__Proxy parent, CstObjStub obj, T outer) {
-    this(parent, obj);
+  this(T)(CstObjStub stub, T outer) {
+    this(stub);
   }
 
-  this(_esdl__Proxy parent, CstObjStub obj) {
-    if (parent is null) _esdl__isRootProxy = true;
+  this(CstObjStub stub) {
+    if (stub._esdl__isRoot()) _esdl__isRootProxy = true;
 
-    _esdl__stub = obj;
+    _esdl__stub = stub;
     
     // scopes for constraint parsing
     _esdl__rootScope = make!CstScope(null, null);

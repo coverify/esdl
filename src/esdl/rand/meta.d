@@ -968,10 +968,9 @@ mixin template Randomization()
       }
 
       enum bool _esdl__HAS_RAND_INFO = true;
-      // override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-      // 						   CstObjStub obj, Object outer) {
+      // override _esdl__Proxy _esdl__createProxyInst(CstObjStub obj, Object outer) {
       // 	_esdl__T outer_ = _esdl__staticCast!_esdl__T(outer);
-      // 	return new _esdl__ProxyRand!(_esdl__T)(parent, obj, outer_);
+      // 	return new _esdl__ProxyRand!(_esdl__T)(obj, outer_);
       // }
   
       void _esdl__setValRef()(_esdl__T outer) {
@@ -980,8 +979,8 @@ mixin template Randomization()
 	  this._esdl__doSetOuter(true);
 	}
       }
-      this(_esdl__Proxy parent, CstObjStub obj, _esdl__T outer) {
-	super(parent, obj, outer);
+      this(CstObjStub obj, _esdl__T outer) {
+	super(obj, outer);
 	_esdl__outer = outer;
 	_esdl__doInitRandObjectElems(this);
 	_esdl__doInitConstraintElems(this, outer);
@@ -1006,10 +1005,9 @@ mixin template Randomization()
       }
 
       enum bool _esdl__HAS_RAND_INFO = true;
-      // override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-      // 						   CstObjStub obj, void* outer) {
+      // override _esdl__Proxy _esdl__createProxyInst(CstObjStub obj, void* outer) {
       // 	_esdl__T* outer_ = cast(_esdl__T*)(outer);
-      // 	return new _esdl__ProxyRand!(_esdl__T)(parent, obj, outer_);
+      // 	return new _esdl__ProxyRand!(_esdl__T)(obj, outer_);
       // }
       void _esdl__setValRef()(ref _esdl__T outer) {
 	if (_esdl__outer !is &outer) {
@@ -1023,8 +1021,8 @@ mixin template Randomization()
 	  this._esdl__doSetOuter(true);
 	}
       }
-      this(_esdl__Proxy parent, CstObjStub obj, _esdl__T* outer) {
-	super(parent, obj);
+      this(CstObjStub obj, _esdl__T* outer) {
+	super(obj);
 	_esdl__outer = outer;
 	_esdl__doInitRandObjectElems(this);
 	_esdl__doInitConstraintElems(this, outer);
@@ -1050,16 +1048,16 @@ mixin template Randomization()
       LEAF _esdl__ref()() {
         return _esdl__staticCast!(STUBT)(_esdl__stub)._esdl__ref();
       }
-      this(_esdl__Proxy parent, CstObjStub obj, LEAF outer) {
-	super(parent, obj, outer);
+      this(CstObjStub obj, LEAF outer) {
+	super(obj, outer);
       }
     }
     else {
       LEAF* _esdl__ref()() {
         return _esdl__staticCast!(STUBT)(_esdl__stub)._esdl__ref();
       }
-      this(_esdl__Proxy parent, CstObjStub obj, LEAF* outer) {
-	super(parent, obj, outer);
+      this(CstObjStub obj, LEAF* outer) {
+	super(obj, outer);
       }
     }  
   }
@@ -1198,16 +1196,16 @@ static class _esdl__ProxyNoRand(V, rand RAND_ATTR, int N): _esdl__ProxyNoRand!(L
       LEAF _esdl__ref()() {
         return _esdl__staticCast!(STUBT)(_esdl__stub)._esdl__ref();
       }
-      this(_esdl__Proxy parent, CstObjStub obj, LEAF outer) {
-	super(parent, obj, outer);
+      this(CstObjStub obj, LEAF outer) {
+	super(obj, outer);
       }
     }
   else {
     LEAF* _esdl__ref()() {
       return _esdl__staticCast!(STUBT)(_esdl__stub)._esdl__ref();
     }
-    this(_esdl__Proxy parent, CstObjStub obj, LEAF* outer) {
-      super(parent, obj, outer);
+    this(CstObjStub obj, LEAF* outer) {
+      super(obj, outer);
     }
   }
 }
@@ -1227,17 +1225,15 @@ class _esdl__ProxyNoRand(_esdl__T)
 
 	enum bool _esdl__HAS_RAND_INFO = false;
 	// static if (is (_esdl__T == class)) {
-	//   override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-	// 					       CstObjStub obj, Object outer) {
+	//   override _esdl__Proxy _esdl__createProxyInst(CstObjStub obj, Object outer) {
 	//     _esdl__T outer_ = _esdl__staticCast!_esdl__T(outer);
-	//     return new _esdl__ProxyNoRand!(_esdl__T)(parent, obj, outer_);
+	//     return new _esdl__ProxyNoRand!(_esdl__T)(obj, outer_);
 	//   }
 	// }
 	// else {
-	//   override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-	// 					       CstObjStub obj, void* outer) {
+	//   override _esdl__Proxy _esdl__createProxyInst(CstObjStub obj, void* outer) {
 	//     _esdl__T outer_ = cast(_esdl__T)(outer);
-	//     return new _esdl__ProxyNoRand!(_esdl__T)(parent, obj, outer_);
+	//     return new _esdl__ProxyNoRand!(_esdl__T)(obj, outer_);
 	//   }
 	// }
 	void _esdl__setValRef()(_esdl__T outer) {
@@ -1246,8 +1242,8 @@ class _esdl__ProxyNoRand(_esdl__T)
 	    this._esdl__doSetOuter(true);
 	  }
 	}
-	this(_esdl__Proxy parent, CstObjStub obj, _esdl__T outer) {
-	  super(parent, obj, outer);
+	this(CstObjStub obj, _esdl__T outer) {
+	  super(obj, outer);
 	  _esdl__outer = outer;
 	  _esdl__doInitRandObjectElems(this);
 	  _esdl__doInitConstraintElems(this, outer);
@@ -1274,10 +1270,9 @@ class _esdl__ProxyNoRand(_esdl__T)
 	}
 
 	enum bool _esdl__HAS_RAND_INFO = false;
-	// override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
-	// 					     CstObjStub obj, void* outer) {
+	// override _esdl__Proxy _esdl__createProxyInst(CstObjStub obj, void* outer) {
 	//   _esdl__T* outer_ = cast(_esdl__T*)(outer);
-	//   return new _esdl__ProxyNoRand!(_esdl__T)(parent, obj, outer_);
+	//   return new _esdl__ProxyNoRand!(_esdl__T)(obj, outer_);
 	// }
 	void _esdl__setValRef()(ref _esdl__T outer) {
 	  if (_esdl__outer !is &outer) {
@@ -1291,8 +1286,8 @@ class _esdl__ProxyNoRand(_esdl__T)
 	    this._esdl__doSetOuter(true);
 	  }
 	}
-	this(_esdl__Proxy parent, CstObjStub obj, _esdl__T* outer) {
-	  super(parent, obj);
+	this(CstObjStub obj, _esdl__T* outer) {
+	  super(obj);
 	  _esdl__outer = outer;
 	  _esdl__doInitRandObjectElems(this);
 	  _esdl__doInitConstraintElems(this, outer);
