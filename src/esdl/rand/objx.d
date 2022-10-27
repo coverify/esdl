@@ -126,7 +126,7 @@ class CstObjectIdx(V, rand RAND_ATTR, VV, int IDX,
       return this;
     }
     else {
-      P uparent = cast(P)(_parent._esdl__unroll(iter, n, proc));
+      P uparent = _esdl__staticCast!(P)(_parent._esdl__unroll(iter, n, proc));
       assert (uparent !is null);
       return uparent.tupleof[PIDX];
     }
@@ -135,7 +135,7 @@ class CstObjectIdx(V, rand RAND_ATTR, VV, int IDX,
   override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
     if (_parentsDepsAreResolved) return this;
     else {
-      P uparent = cast(P)(_parent._esdl__getResolvedNode(proc));
+      P uparent = _esdl__staticCast!(P)(_parent._esdl__getResolvedNode(proc));
       assert (uparent !is null);
       return uparent.tupleof[PIDX];
     }
@@ -750,7 +750,7 @@ class CstObjArrIdx(V, rand RAND_ATTR, VV, int IDX,
       return this;
     }
     else {
-      P uparent = cast(P)(_parent._esdl__unroll(iter, n, proc));
+      P uparent = _esdl__staticCast!(P)(_parent._esdl__unroll(iter, n, proc));
       assert (uparent !is null);
       return uparent.tupleof[PIDX];
     }
@@ -759,7 +759,7 @@ class CstObjArrIdx(V, rand RAND_ATTR, VV, int IDX,
   override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
     if (_parentsDepsAreResolved) return this;
     else {
-      P uparent = cast(P)(_parent._esdl__getResolvedNode(proc));
+      P uparent = _esdl__staticCast!(P)(_parent._esdl__getResolvedNode(proc));
       assert (uparent !is null);
       return uparent.tupleof[PIDX];
     }

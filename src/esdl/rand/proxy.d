@@ -76,6 +76,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     else return _esdl__stub._esdl__unroll(iter, n, proc)._esdl__getProxy();
   }
 
+  override _esdl__Proxy _esdl__getResolvedNode(_esdl__CstProcessor proc) {
+    assert (false);
+  }
+
   // the root proxy is always static
   bool _esdl__isStatic() {
     if (_esdl__stub is null) return true;

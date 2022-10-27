@@ -135,7 +135,7 @@ class CstVectorIdx(V, rand RAND_ATTR, VV, int IDX,
       return this;
     }
     else {
-      P uparent = cast(P)(_parent._esdl__unroll(iter, n, proc));
+      P uparent = _esdl__staticCast!(P)(_parent._esdl__unroll(iter, n, proc));
       assert (uparent !is null);
       return uparent.tupleof[PIDX];
     }
@@ -143,7 +143,7 @@ class CstVectorIdx(V, rand RAND_ATTR, VV, int IDX,
   override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
     if (_parentsDepsAreResolved) return this;
     else {
-      P uparent = cast(P)(_parent._esdl__getResolvedNode(proc));
+      P uparent = _esdl__staticCast!(P)(_parent._esdl__getResolvedNode(proc));
       assert (uparent !is null);
       return uparent.tupleof[PIDX];
     }
@@ -620,7 +620,7 @@ class CstVecArrIdx(V, rand RAND_ATTR, VV, int IDX,
 
   override RV _esdl__unroll(CstIterator iter, ulong n,
 			    _esdl__CstProcessor proc) {
-    P uparent = cast(P)(_parent._esdl__unroll(iter, n, proc));
+    P uparent = _esdl__staticCast!(P)(_parent._esdl__unroll(iter, n, proc));
     assert (uparent !is null);
     assert (this is uparent.tupleof[PIDX]);
     return this;
@@ -629,7 +629,7 @@ class CstVecArrIdx(V, rand RAND_ATTR, VV, int IDX,
   override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
     if (_parentsDepsAreResolved) return this;
     else {
-      P uparent = cast(P)(_parent._esdl__getResolvedNode(proc));
+      P uparent = _esdl__staticCast!(P)(_parent._esdl__getResolvedNode(proc));
       assert (uparent !is null);
       return uparent.tupleof[PIDX];
     }
