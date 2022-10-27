@@ -142,13 +142,13 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
 
   static if (is (V == _esdl__packed_type!(T, AT, OFFSET),
 		 T, AT, int OFFSET)) {
-    alias AT* VPTR;
+    alias VREF = AT*;
     enum uint VOFFSET = OFFSET;
     alias T   VT;
     enum bool ISPACKED = true;
   }
   else {
-    alias V* VPTR;
+    alias VREF = V*;
     enum uint VOFFSET = 0;
     alias V VT;
     enum bool ISPACKED = false;
@@ -334,7 +334,7 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
   }
 
   
-  abstract VPTR getRef();
+  abstract VREF getRef();
 
   override long value() {
     return cast(long) *(getRef());
