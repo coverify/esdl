@@ -48,10 +48,6 @@ do {
   return cast(T) cast(void*) from;
  }
 
-struct _esdl__ARG {
-  enum bool _esdl__HAS_RAND_INFO = false;
-}
-
 // https://stackoverflow.com/questions/46073295/implicit-type-promotion-rules
 // Mainly two things:
 // 1. if a number smaller than int can fit into an int, it will be promoted to int

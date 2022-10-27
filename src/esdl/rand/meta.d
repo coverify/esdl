@@ -25,8 +25,9 @@ import esdl.rand.expr: CstVarVisitorExpr;
 import esdl.rand.base: CstVecPrim, CstVarGlobIntf, CstVarNodeIntf,
   CstObjectIntf, CstObjArrIntf, CstObjStub;
 import esdl.rand.pred: CstPredicate, CstVisitorPredicate;
-import esdl.rand.vecx: CstVectorIdx, CstVecArrIdx,
-  CstVectorGlob, CstVecArrGlob, CstVectorGlobEnum, CstVecArrGlobEnum;
+import esdl.rand.vecx: CstVectorIdx, CstVecArrIdx, CstVectorArg,
+  CstVecArrArg, CstVectorGlob, CstVecArrGlob, CstVectorGlobEnum,
+  CstVecArrGlobEnum;
 import esdl.rand.objx: CstObjectIdx, CstObjArrIdx, CstObjectGlob,
   CstRootProxy, _esdl__ObjStub, _esdl__TypedStub;
 import esdl.rand.domain: CstVecValue, CstLogicValue;
@@ -1473,10 +1474,10 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       else {
 	alias L = typeof(_lambdaArgs[I]);
 	static if (isRandomizable!L) {
-	  alias TYPE = CstVectorIdx!(L, rand(true, true), L, -1, _esdl__ARG, -1);
+	  alias TYPE = CstVectorArg!(L);
 	}
 	else static if (isRandVectorSet!L) {
-	  alias TYPE = CstVecArrIdx!(L, rand(true, true), L, -1, _esdl__ARG, -1);
+	  alias TYPE = CstVecArrArg!(L);
 	}
 	auto vvar = cast (TYPE) (_proxyLambdaArgs[I]);
 	vvar._esdl__setValRef(& _lambdaArgs[I]);
@@ -1816,7 +1817,7 @@ auto _esdl__arg_proxy(L, X, P)(size_t idx, string name, ref L arg, X proxy, P pa
   static if (isRandomizable!L) {
     // import std.stdio;
     // writeln("Creating VarVec, ", name);
-    alias CstVectorType = CstVectorIdx!(L, rand(true, true), L, -1, _esdl__ARG, -1);
+    alias CstVectorType = CstVectorArg!(L);
     CstVarNodeIntf var = proxy._proxyLambdaArgs[idx];
     if (var is null) {
       CstVectorType vvar = make!CstVectorType(name, parent, &arg);
@@ -1830,7 +1831,7 @@ auto _esdl__arg_proxy(L, X, P)(size_t idx, string name, ref L arg, X proxy, P pa
     }
   }
   else static if (isRandVectorSet!L) {
-    alias CstVecArrType = CstVecArrIdx!(L, rand(true, true), L, -1, _esdl__ARG, -1);
+    alias CstVecArrType = CstVecArrArg!(L);
     CstVarNodeIntf var = proxy._proxyLambdaArgs[idx];
     if (var is null) {
       CstVecArrType vvar = make!CstVecArrType(name, parent, &arg);
