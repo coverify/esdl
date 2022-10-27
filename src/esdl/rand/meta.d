@@ -28,7 +28,7 @@ import esdl.rand.pred: CstPredicate, CstVisitorPredicate;
 import esdl.rand.vecx: CstVectorIdx, CstVecArrIdx,
   CstVectorGlob, CstVecArrGlob, CstVectorGlobEnum, CstVecArrGlobEnum;
 import esdl.rand.objx: CstObjectIdx, CstObjArrIdx, CstObjectGlob,
-  CstRootProxy;
+  CstRootProxy, _esdl__ObjStub, _esdl__TypedStub;
 import esdl.rand.domain: CstVecValue, CstLogicValue;
 import esdl.rand.proxy;
 import esdl.rand.cstr;
@@ -644,7 +644,7 @@ void _esdl__randomize(T) (ref T t) if (is (T == struct))
     CstRootProxy!T _esdl__createProxy() {
       // import std.stdio;
       // writeln("New: ", _esdl__ProxyType.stringof);
-      return new CstRootProxy!T();
+      return new CstRootProxy!T(&t);
       // _esdl__ProxyType proxy =
       // 	make!_esdl__ProxyType(null, null, null);
       // if (proxy is null) {
@@ -692,7 +692,7 @@ void _esdl__randomize(T) (T t) if (is (T == class))
     CstRootProxy!T _esdl__createProxy() {
       // import std.stdio;
       // writeln("New: ", _esdl__ProxyType.stringof);
-      return new CstRootProxy!T();
+      return new CstRootProxy!T(t);
       // _esdl__ProxyType proxy =
       // 	make!_esdl__ProxyType(null, null, null);
       // if (proxy is null) {
@@ -727,13 +727,13 @@ void _esdl__randomize(T) (T t) if (is (T == class))
     // _esdl__postRandomize(t);
   }
 
-_esdl__Proxy _esdl__getProxyInst(T)(T t) {
+_esdl__Proxy _esdl__getProxyInst(T)(T t) if (is (T == class)) {
   alias _esdl__ProxyType = _esdl__ProxyResolve!T;
 
-  CstRootProxy!T _esdl__createProxy() {
+  CstRootProxy!T _esdl__createProxy(T t) {
     // import std.stdio;
     // writeln("New: ", _esdl__ProxyType.stringof);
-    return new CstRootProxy!T();
+    return new CstRootProxy!T(t);
     // _esdl__ProxyType proxy =
     //   make!_esdl__ProxyType(null, null, null);
     // if (proxy is null) {
@@ -745,7 +745,32 @@ _esdl__Proxy _esdl__getProxyInst(T)(T t) {
   CstRootProxy!T proxyRoot = _esdl__ProxyType._esdl__proxyRootInst;
 
   if (proxyRoot is null) {
-    proxyRoot = _esdl__createProxy();
+    proxyRoot = _esdl__createProxy(t);
+    _esdl__ProxyType._esdl__proxyRootInst = proxyRoot;
+  }
+
+  return proxyRoot._esdl__getProxy();
+}
+
+_esdl__Proxy _esdl__getProxyInst(T)(T t) if (is (T == struct)) {
+  alias _esdl__ProxyType = _esdl__ProxyResolve!T;
+
+  CstRootProxy!T _esdl__createProxy(T* t) {
+    // import std.stdio;
+    // writeln("New: ", _esdl__ProxyType.stringof);
+    return new CstRootProxy!T(t);
+    // _esdl__ProxyType proxy =
+    //   make!_esdl__ProxyType(null, null, null);
+    // if (proxy is null) {
+    //   assert (false, "Unable to allocate proxy instance");
+    // }
+    // return proxy;
+  }
+
+  CstRootProxy!T proxyRoot = _esdl__ProxyType._esdl__proxyRootInst;
+
+  if (proxyRoot is null) {
+    proxyRoot = _esdl__createProxy(&t);
     _esdl__ProxyType._esdl__proxyRootInst = proxyRoot;
   }
 
@@ -937,6 +962,10 @@ mixin template Randomization()
       _esdl__T _esdl__outer;
       _esdl__T _esdl__getRef()() {return _esdl__outer;}
 
+      _esdl__T _esdl__ref()() {
+	return _esdl__staticCast!(_esdl__TypedStub!_esdl__T)(_esdl__stub)._esdl__ref();
+      }
+
       enum bool _esdl__HAS_RAND_INFO = true;
       // override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
       // 						   CstObjStub obj, Object outer) {
@@ -970,6 +999,10 @@ mixin template Randomization()
 
       _esdl__T* _esdl__outer;
       _esdl__T* _esdl__getRef() {return _esdl__outer;}
+
+      _esdl__T* _esdl__ref()() {
+	return _esdl__staticCast!(_esdl__TypedStub!_esdl__T)(_esdl__stub)._esdl__ref();
+      }
 
       enum bool _esdl__HAS_RAND_INFO = true;
       // override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
@@ -1007,6 +1040,28 @@ mixin template Randomization()
 		   typeof(this).stringof);
   }
 
+  static class _esdl__ProxyRand(V, rand RAND_ATTR, int N): _esdl__ProxyRand!(LeafElementType!V)
+  {
+    alias LEAF = LeafElementType!V;
+    alias STUBT = _esdl__ObjStub!(V, RAND_ATTR, N);
+
+    static if (is (LEAF == class)) {
+      LEAF _esdl__ref()() {
+        return _esdl__staticCast!(STUBT)(_esdl__stub)._esdl__ref();
+      }
+      this(_esdl__Proxy parent, CstObjStub obj, LEAF outer) {
+	super(parent, obj, outer);
+      }
+    }
+    else {
+      LEAF* _esdl__ref()() {
+        return _esdl__staticCast!(STUBT)(_esdl__stub)._esdl__ref();
+      }
+      this(_esdl__Proxy parent, CstObjStub obj, LEAF* outer) {
+	super(parent, obj, outer);
+      }
+    }  
+  }
 
   alias _esdl__ProxyType = _esdl__ProxyResolve!(typeof(this));
 
@@ -1131,6 +1186,31 @@ mixin template Randomization()
   }
 }
 
+static class _esdl__ProxyNoRand(V, rand RAND_ATTR, int N): _esdl__ProxyNoRand!(LeafElementType!V)
+{
+  alias LEAF = LeafElementType!V;
+  alias STUBT = _esdl__ObjStub!(V, RAND_ATTR, N);
+
+  static if ((is (LEAF == class) && is (LEAF: Object)) ||
+	     (is (LEAF == U*, U) && is (U == struct)))
+    {
+      LEAF _esdl__ref()() {
+        return _esdl__staticCast!(STUBT)(_esdl__stub)._esdl__ref();
+      }
+      this(_esdl__Proxy parent, CstObjStub obj, LEAF outer) {
+	super(parent, obj, outer);
+      }
+    }
+  else {
+    LEAF* _esdl__ref()() {
+      return _esdl__staticCast!(STUBT)(_esdl__stub)._esdl__ref();
+    }
+    this(_esdl__Proxy parent, CstObjStub obj, LEAF* outer) {
+      super(parent, obj, outer);
+    }
+  }
+}
+
 class _esdl__ProxyNoRand(_esdl__T)
    if ((is (_esdl__T == class) && is (_esdl__T: Object)) ||
        (is (_esdl__T == U*, U) && is (U == struct))):
@@ -1139,6 +1219,10 @@ class _esdl__ProxyNoRand(_esdl__T)
 	mixin _esdl__ProxyMixin!_esdl__T;
 	_esdl__T _esdl__outer;
 	_esdl__T _esdl__getRef()() {return _esdl__outer;}
+
+	_esdl__T _esdl__ref()() {
+	  return _esdl__staticCast!(_esdl__TypedStub!_esdl__T)(_esdl__stub)._esdl__ref();
+	}
 
 	enum bool _esdl__HAS_RAND_INFO = false;
 	// static if (is (_esdl__T == class)) {
@@ -1182,7 +1266,11 @@ class _esdl__ProxyNoRand(_esdl__T)
 	mixin _esdl__ProxyMixin!_esdl__T;
 
 	_esdl__T* _esdl__outer;
-	_esdl__T* _esdl__getRef() {return _esdl__outer;}
+	_esdl__T* _esdl__getRef()() {return _esdl__outer;}
+
+	_esdl__T* _esdl__ref()() {
+	  return _esdl__staticCast!(_esdl__TypedStub!_esdl__T)(_esdl__stub)._esdl__ref();
+	}
 
 	enum bool _esdl__HAS_RAND_INFO = false;
 	// override _esdl__Proxy _esdl__createProxyInst(_esdl__Proxy parent,
@@ -1322,6 +1410,8 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     mixin (CST_PARSE_DATA.cstDefines);
     mixin (CST_PARSE_DATA.guardDecls);
     mixin (CST_PARSE_DATA.guardInits);
+    // pragma (msg, CST_PARSE_DATA.guardDecls);
+    // pragma (msg, CST_PARSE_DATA.guardInits);
     mixin (CST_PARSE_DATA.guardUpdts);
   
     static if (INDX >= 0) {	// only for user defined constraints
@@ -1785,6 +1875,33 @@ template _esdl__ProxyResolve(T) {
     static assert(false, "Unable to resolve proxy for type: " ~ T.stringof);
   }
 }
+
+template _esdl__ProxyResolve(T, rand RAND_ATTR, int N) {
+  // pragma(msg, "_esdl__ProxyResolve called for: " ~ T.stringof);
+  // static if(__traits(compiles, T._esdl__hasRandomization)) {
+  static if (is (T == class) || is (T == struct)) {
+    // pragma(msg, T.stringof);
+    static if (__traits(compiles, T._esdl__HasRandomizationMixin)) {
+      // pragma(msg, "ProxyRand: ", T.stringof);
+      alias _esdl__ProxyResolve = T._esdl__ProxyRand!(T, RAND_ATTR, N);
+    }
+    else {
+      // pragma(msg, "ProxyNoRand: ", T.stringof);
+      alias _esdl__ProxyResolve = _esdl__ProxyNoRand!(T, RAND_ATTR, N);
+    }
+  }
+  // else static if (is (T == struct)) {
+  //   alias _esdl__ProxyResolve = _esdl__ProxyNoRand!T;
+  // }
+  else static if (is (T == U*, U) && is (U == struct)) {
+    alias _esdl__ProxyResolve = _esdl__ProxyNoRand!(T, RAND_ATTR, N);
+  }
+  else {
+    static assert(false, "Unable to resolve proxy for type: " ~ T.stringof);
+  }
+}
+
+
 
 // For a given class, this template returns the Proxy for first
 // class in the ancestory that has Randomization mixin -- if there is
