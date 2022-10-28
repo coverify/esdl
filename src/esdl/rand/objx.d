@@ -33,15 +33,8 @@ class CstObjectGlob(V, rand RAND_ATTR, alias SYM)
   enum _esdl__ISRAND = RAND_ATTR.isRand();
   enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
 
-  static if (is (V == struct)) {
-    this(string name, _esdl__Proxy parent, V* var) {
-      super(name, parent, var);
-    }
-  }
-  else {
-    this(string name, _esdl__Proxy parent, V var) {
-      super(name, parent, var);
-    }
+  this(string name, _esdl__Proxy parent) {
+    super(name, parent);
   }
 
   // no unrolling is possible without adding rand proxy
@@ -77,7 +70,7 @@ class CstObjectGlobEnum(V, rand RAND_ATTR)
 
   this(string name, _esdl__Proxy parent, V var) {
     _var = var;
-    super(name, parent, & _var);
+    super(name, parent);
   }
 
   static assert (is (V == struct));
@@ -104,18 +97,10 @@ class CstObjectIdx(V, rand RAND_ATTR, VV, int IDX,
   enum int _esdl__INDEX = IDX;
   enum int _esdl__PROXYINDEX = PIDX;
 
-  static if (is (V == struct)) {
-    this(string name, _esdl__Proxy parent, V* var) {
-      assert(parent !is null);
-      super(name, parent, var);
-    }
+  this(string name, _esdl__Proxy parent) {
+    assert(parent !is null);
+    super(name, parent);
   }
-  else {
-    this(string name, _esdl__Proxy parent, V var) {
-      assert(parent !is null);
-      super(name, parent, var);
-    }
-  }    
 
   override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     if (_parent._esdl__isRoot()) {
@@ -182,7 +167,7 @@ class CstRootProxy(V) if (is (V == class) || is (V == struct) ||
       static if (is (V == class) || (is (V == S*, S) && is (S == struct))) {
 	this(V v) {
 	  import esdl.base.core: Procedure;
-	  super("$root", null, v);
+	  super("$root", null);
 	  _esdl__randObj = v;
 	  _esdl__proc = new _esdl__CstProcessor(this);
 	  auto proc = Procedure.self;
@@ -201,7 +186,7 @@ class CstRootProxy(V) if (is (V == class) || is (V == struct) ||
       else {
 	this(V* v) {
 	  import esdl.base.core: Procedure;
-	  super("$root", null, v);
+	  super("$root", null);
 	  _esdl__randObj = v;
 	  _esdl__proc = new _esdl__CstProcessor(this);
 	  auto proc = Procedure.self;
@@ -289,27 +274,15 @@ abstract class _esdl__ObjStub(V, rand RAND_ATTR, int N):
   _esdl__Proxy _proxy;
   _esdl__Proxy _parent;
 
-  static if (is (LEAF == struct)) {
-    LEAF* _outer;
-    this(_esdl__Proxy parent, void* outer) {
-      _parent = parent;
-      _outer = cast(LEAF*) outer;
-      assert (_proxy is null);
-    }
-  }
-  else {
-    LEAF _outer;
-    this(_esdl__Proxy parent, LEAF outer) {
-      _parent = parent;
-      _outer = outer;
-      assert (_proxy is null);
-    }
+  this(_esdl__Proxy parent) {
+    _parent = parent;
+    assert (_proxy is null);
   }
   
   PROXYT _esdl__get()() {
     if (_proxy is null) {
       // assert(_parent !is null);
-      _proxy = make!PROXYT(this, _outer);
+      _proxy = make!PROXYT(this);
     }
     return _esdl__staticCast!PROXYT(_proxy);
   }
@@ -350,17 +323,9 @@ abstract class CstObjectBase(V, rand RAND_ATTR, int N)
 	alias LEAF = LeafElementType!V;
 	alias RAND = RAND_ATTR;
 
-	static if (is (LEAF == struct)) {
-	  this(string name, _esdl__Proxy parent, LEAF* var) {
-	    _esdl__name = name;
-	    super(parent, var);
-	  }
-	}
-	else {
-	  this(string name, _esdl__Proxy parent, LEAF var) {
-	    _esdl__name = name;
-	    super(parent, var);
-	  }
+	this(string name, _esdl__Proxy parent) {
+	  _esdl__name = name;
+	  super(parent);
 	}
 
 	string _esdl__name;
@@ -406,21 +371,11 @@ abstract class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       // Call super only after the _parent has been set
-      static if (is (LEAF == struct)) {
-	this(string name, _esdl__Proxy parent, V* var) {
-	  _parent = parent;
-	  if (_parent is null) _parentsDepsAreResolved = true; // root
-	  else _parentsDepsAreResolved = _parent._esdl__depsAreResolved();
-	  super(name, parent, var);
-	}
-      }
-      else {
-	this(string name, _esdl__Proxy parent, V var) {
-	  _parent = parent;
-	  if (_parent is null) _parentsDepsAreResolved = true; // root
-	  else _parentsDepsAreResolved = _parent._esdl__depsAreResolved();
-	  super(name, parent, var);
-	}
+      this(string name, _esdl__Proxy parent) {
+	_parent = parent;
+	if (_parent is null) _parentsDepsAreResolved = true; // root
+	else _parentsDepsAreResolved = _parent._esdl__depsAreResolved();
+	super(name, parent);
       }
 
       final override bool _esdl__isRand() {
@@ -532,7 +487,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	_parent = parent;
 	_nodeIsMapped = isMapped;
 	_esdl__name = name ~ (isMapped ? "[#" : "[%") ~ indexExpr.describe() ~ "]";
-	super(_esdl__name, _esdl__getParentProxy(), null);
+	super(_esdl__name, _esdl__getParentProxy());
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
 	_indexExpr = indexExpr;
       }
@@ -544,7 +499,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	_parent = parent;
 	_nodeIsMapped = isMapped;
 	_esdl__name = name ~ (isMapped ? "[#" : "[%") ~ index.to!string() ~ "]";
-	super(_esdl__name, _esdl__getParentProxy(), null);
+	super(_esdl__name, _esdl__getParentProxy());
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
 	_pindex = index;
       }
@@ -693,8 +648,8 @@ class CstObjArrGlob(V, rand RAND_ATTR, int N, alias SYM)
   enum _esdl__ISRAND = RAND_ATTR.isRand();
   enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
 
-  this(string name, _esdl__Proxy parent, V* var) {
-    super(name, parent, var);
+  this(string name, _esdl__Proxy parent) {
+    super(name, parent);
   }
 
   // no unrolling is possible without adding rand proxy
@@ -719,7 +674,7 @@ class CstObjArrGlobEnum(V, rand RAND_ATTR, int N)
   
   this(string name, _esdl__Proxy parent, V var) {
     _var = var;
-    super(name, parent, & _var);
+    super(name, parent);
   }
 
   // no unrolling is possible without adding rand proxy
@@ -744,8 +699,8 @@ class CstObjArrIdx(V, rand RAND_ATTR, VV, int IDX,
   enum int _esdl__INDEX = IDX;
   enum int _esdl__PROXYINDEX = PIDX;
 
-  this(string name, _esdl__Proxy parent, V* var) {
-    super(name, parent, var);
+  this(string name, _esdl__Proxy parent) {
+    super(name, parent);
   }
   override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     if (_parent._esdl__isRoot()) {
@@ -1367,9 +1322,8 @@ abstract class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
       abstract V* _esdl__ref();
 
       // Call super only after the _parent has been set
-      this(string name, _esdl__Proxy parent, V* var) {
+      this(string name, _esdl__Proxy parent) {
 	super(name);
-	_var = var;
 	_parent = parent;
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
       }

@@ -1478,9 +1478,7 @@ struct CstParser {
       fillGuardInit(gcount);
       fillGuardInit(")(\"_esdl__guard_");
       fillGuardInit(gcount);
-      fillGuardInit("\", this._proxy, &_esdl__guard_");
-      fillGuardInit(gcount);
-      fillGuardInit(");\n");
+      fillGuardInit("\", this._proxy);\n");
 
       fillGuardUpdt("  _esdl__guard_");
       fillGuardUpdt(gcount);
