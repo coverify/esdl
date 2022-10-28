@@ -1484,7 +1484,7 @@ struct CstParser {
 
       fillGuardUpdt("  _esdl__guard_");
       fillGuardUpdt(gcount);
-      fillGuardUpdt(" = this.outer._esdl__outer._esdl__guardEval!q{");
+      fillGuardUpdt(" = this.outer._esdl__outer()._esdl__guardEval!q{");
       fillGuardUpdt(CST[srcTag..srcCursor]);
       fillGuardUpdt("}();\n");
       // fillGuardUpdt("  writeln(_esdl__guard_");
