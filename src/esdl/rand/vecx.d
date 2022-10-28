@@ -36,8 +36,8 @@ class CstVectorGlob(V, rand RAND_ATTR, alias SYM)
 
   static assert (_esdl__ISRAND == false);
 
-  this(string name, _esdl__Proxy parent, VREF var) {
-    super(name, parent, var);
+  this(string name, _esdl__Proxy parent) {
+    super(name, parent);
   }
 
   // no unrolling is possible without adding rand proxy
@@ -65,7 +65,7 @@ class CstVectorGlobEnum(V, rand RAND_ATTR)
 
   this(string name, _esdl__Proxy parent, V var) {
     _var = var;
-    super(name, parent, &_var);
+    super(name, parent);
   }
 
   // no unrolling is possible without adding rand proxy
@@ -90,7 +90,7 @@ class CstVectorArg(V)
 
   this(string name, _esdl__Proxy parent, VREF var) {
     _val = var;
-    super(name, parent, var);
+    super(name, parent);
   }
 
   override RV _esdl__unroll(CstIterator iter, ulong n,
@@ -117,8 +117,8 @@ class CstVectorIdx(V, rand RAND_ATTR, VV, int IDX,
   enum int _esdl__INDEX = IDX;
   enum int _esdl__PROXYINDEX = PIDX;
 
-  this(string name, _esdl__Proxy parent, VREF var) {
-    super(name, parent, var);
+  this(string name, _esdl__Proxy parent) {
+    super(name, parent);
   }
 
   override RV _esdl__unroll(CstIterator iter, ulong n,
@@ -221,9 +221,8 @@ abstract class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
       _esdl__Proxy _parent;
       bool _parentsDepsAreResolved;
       
-      this(string name, _esdl__Proxy parent, VREF var) {
+      this(string name, _esdl__Proxy parent) {
 	super(name);
-	_var = var;
 	_parent = parent;
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
       }
@@ -319,18 +318,12 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
       RV _resolvedVec;
 
       this(string name, P parent, CstVecTerm indexExpr, bool isMapped) {
-	// if (indexExpr.isConst()) {
-	//   ulong index = indexExpr.evaluate();
-	//   this(name, parent, index);
-	// }
-	// else {
 	assert (parent !is null);
 	super(name ~ (isMapped ? "[#" : "[%") ~ indexExpr.describe() ~ "]");
 	_nodeIsMapped = isMapped;
 	_parent = parent;
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
 	_indexExpr = indexExpr;
-	// }
       }
 
       this(string name, P parent, ulong index, bool isMapped) {
@@ -510,8 +503,8 @@ class CstVecArrGlob(V, rand RAND_ATTR, alias SYM)
   enum _esdl__ISRAND = RAND_ATTR.isRand();
   enum _esdl__HASPROXY = RAND_ATTR.hasProxy();
 
-  this(string name, _esdl__Proxy parent, VREF var) {
-    super(name, parent, var);
+  this(string name, _esdl__Proxy parent) {
+    super(name, parent);
   }
 
   // no unrolling is possible without adding rand proxy
@@ -539,7 +532,7 @@ class CstVecArrGlobEnum(V, rand RAND_ATTR)
 
   this(string name, _esdl__Proxy parent, V var) {
     _var = var;
-    super(name, parent, &_var);
+    super(name, parent);
   }
 
   // no unrolling is possible without adding rand proxy
@@ -564,7 +557,7 @@ class CstVecArrArg(V)
 
   this(string name, _esdl__Proxy parent, VREF var) {
     _val = var;
-    super(name, parent, var);
+    super(name, parent);
   }
 
   override RV _esdl__unroll(CstIterator iter, ulong n,
@@ -592,8 +585,8 @@ class CstVecArrIdx(V, rand RAND_ATTR, VV, int IDX,
   enum int _esdl__INDEX = IDX;
   enum int _esdl__PROXYINDEX = PIDX;
 
-  this(string name, _esdl__Proxy parent, VREF var) {
-    super(name, parent, var);
+  this(string name, _esdl__Proxy parent) {
+    super(name, parent);
   }
 
   override RV _esdl__unroll(CstIterator iter, ulong n,
@@ -949,9 +942,8 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
     
       abstract VREF _esdl__ref();
 
-      this(string name, _esdl__Proxy parent, VREF var) {
+      this(string name, _esdl__Proxy parent) {
 	super(name);
-	_var = var;
 	_parent = parent;
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
 	_arrLen = make!(CstArrLength!RV)(name ~ "->length", this);

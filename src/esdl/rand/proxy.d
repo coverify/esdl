@@ -168,18 +168,6 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   _esdl__ConstraintBase _esdl__lambdaCst;
 
 
-  this(CstObjStub stub, Object outer) {
-    this(stub);
-  }
-
-  this(CstObjStub stub, void* outer) {
-    this(stub);
-  }
-
-  this(T)(CstObjStub stub, T outer) {
-    this(stub);
-  }
-
   this(CstObjStub stub) {
     if (stub._esdl__isRoot()) _esdl__isRootProxy = true;
 

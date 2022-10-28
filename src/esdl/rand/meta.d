@@ -226,37 +226,38 @@ void _esdl__doInitRandObjectElems(P, int I=0)(P p) {
       // }
       T t = p._esdl__outer();
       // pragma(msg, p.tupleof[I].stringof);
-      if (t !is null) {
-	alias M = typeof(t.tupleof[Q._esdl__INDEX]);
-	static if ((is (M == class) && is (M: Object)) ||
-		   (is (M == U*, U) && is (U == struct))) { // class or struct*
-	  p.tupleof[I] = make!Q(NAME, p, t.tupleof[Q._esdl__INDEX]);
-	}
-	else static if (is (M == struct)) {
-	  p.tupleof[I] = make!Q(NAME, p, &(t.tupleof[Q._esdl__INDEX]));
-	}
-	else static if (isPointer!M) {
-	  p.tupleof[I] = make!Q(NAME, p, t.tupleof[Q._esdl__INDEX]);
-	}
-	else {
-	  p.tupleof[I] = make!Q(NAME, p, &(t.tupleof[Q._esdl__INDEX]));
-	}
-      }
-      else {
-	debug (CSTSOLVERTRACE) {
-	  import std.stdio;
-	  writeln("Outer not set for: ", p._esdl__getFullName(),
-		  " of type: ", P.stringof);
-	}
-	p.tupleof[I] = make!Q(NAME, p, null);
-      }
+      p.tupleof[I] = make!Q(NAME, p);
+      // if (t !is null) {
+      // 	alias M = typeof(t.tupleof[Q._esdl__INDEX]);
+      // 	static if ((is (M == class) && is (M: Object)) ||
+      // 		   (is (M == U*, U) && is (U == struct))) { // class or struct*
+      // 	  p.tupleof[I] = make!Q(NAME, p, t.tupleof[Q._esdl__INDEX]);
+      // 	}
+      // 	else static if (is (M == struct)) {
+      // 	  p.tupleof[I] = make!Q(NAME, p, &(t.tupleof[Q._esdl__INDEX]));
+      // 	}
+      // 	else static if (isPointer!M) {
+      // 	  p.tupleof[I] = make!Q(NAME, p, t.tupleof[Q._esdl__INDEX]);
+      // 	}
+      // 	else {
+      // 	  p.tupleof[I] = make!Q(NAME, p, &(t.tupleof[Q._esdl__INDEX]));
+      // 	}
       // }
+      // else {
+      // 	debug (CSTSOLVERTRACE) {
+      // 	  import std.stdio;
+      // 	  writeln("Outer not set for: ", p._esdl__getFullName(),
+      // 		  " of type: ", P.stringof);
+      // 	}
+      // 	p.tupleof[I] = make!Q(NAME, p, null);
+      // }
+      // // }
     }
     _esdl__doInitRandObjectElems!(P, I+1)(p);
   }
 }
 
-void _esdl__doInitConstraintElems(P, Q, int I=0)(P p, Q q) {
+void _esdl__doInitConstraintElems(P, int I=0)(P p) {
   // Every proxy class will inherit from _esdl__Proxy
   static if (is (P B == super) &&
 	     is (B[0]: _esdl__Proxy) &&
@@ -264,6 +265,7 @@ void _esdl__doInitConstraintElems(P, Q, int I=0)(P p, Q q) {
     B[0] b = p;			// super object
     //   _esdl__doInitConstraintElems(b);
     // }
+    alias Q = P._esdl__Type;
     static if (I == P.tupleof.length) {
       return;
     }
@@ -272,11 +274,11 @@ void _esdl__doInitConstraintElems(P, Q, int I=0)(P p, Q q) {
       // pragma(msg, E.stringof);
       static if (is (E: _esdl__ConstraintBase)) {
 	enum string EN = p.tupleof[I].stringof[2..$];
-	enum bool IS_USER_DEFINED = __traits(hasMember, q, EN);
+	enum bool IS_USER_DEFINED = __traits(hasMember, Q, EN);
 	enum bool OVERRIDES = __traits(hasMember, b, EN);
 	static if ((IS_USER_DEFINED && OVERRIDES) is true) {
 	  static assert (_esdl__ConstraintIsOverride
-			 !(__traits(getAttributes, __traits(getMember, q, EN))),
+			 !(__traits(getAttributes, __traits(getMember, Q, EN))),
 			 "Constraint " ~ EN ~ " in class '" ~ Q.stringof ~
 			 "' overrides a base class constraint; " ~
 			 "Add @constraint_override attribute or change its name");
@@ -285,7 +287,7 @@ void _esdl__doInitConstraintElems(P, Q, int I=0)(P p, Q q) {
 	auto cst = make!(E)(p, p, EN);
 	p.tupleof[I] = cst;
       }
-      _esdl__doInitConstraintElems!(P, Q, I+1)(p, q);
+      _esdl__doInitConstraintElems!(P, I+1)(p);
     }
   }
   else {
@@ -985,11 +987,10 @@ mixin template Randomization()
       // 	return new _esdl__ProxyRand!(_esdl__T)(obj, outer_);
       // }
   
-      this(CstObjStub obj, _esdl__T outer) {
-	super(obj, outer);
-	_esdl__outerAlt = outer;
+      this(CstObjStub obj) {
+	super(obj);
 	_esdl__doInitRandObjectElems(this);
-	_esdl__doInitConstraintElems(this, outer);
+	_esdl__doInitConstraintElems(this);
 	_esdl__doProcPredicateElems(this, this._esdl__getProc(),
 				    &_esdl__doSetDomainContext);
 	_esdl__doProcPredicateElems(this, this._esdl__getProc(),
@@ -1018,11 +1019,10 @@ mixin template Randomization()
       // 	_esdl__T* outer_ = cast(_esdl__T*)(outer);
       // 	return new _esdl__ProxyRand!(_esdl__T)(obj, outer_);
       // }
-      this(CstObjStub obj, _esdl__T* outer) {
+      this(CstObjStub obj) {
 	super(obj);
-	_esdl__outerAlt = outer;
 	_esdl__doInitRandObjectElems(this);
-	_esdl__doInitConstraintElems(this, outer);
+	_esdl__doInitConstraintElems(this);
 	_esdl__doProcPredicateElems(this, this._esdl__getProc(),
 				    &_esdl__doSetDomainContext);
 	_esdl__doProcPredicateElems(this, this._esdl__getProc(),
@@ -1041,20 +1041,18 @@ mixin template Randomization()
     alias LEAF = LeafElementType!V;
     alias STUBT = _esdl__ObjStub!(V, RAND_ATTR, N);
 
+    this(CstObjStub obj) {
+      super(obj);
+    }
+
     static if (is (LEAF == class)) {
       LEAF _esdl__ref()() {
 	return cast(LEAF) _esdl__stub._esdl__refPtr();
-      }
-      this(CstObjStub obj, LEAF outer) {
-	super(obj, outer);
       }
     }
     else {
       LEAF* _esdl__ref()() {
 	return cast(LEAF*) _esdl__stub._esdl__refPtr();
-      }
-      this(CstObjStub obj, LEAF* outer) {
-	super(obj, outer);
       }
     }  
   }
@@ -1187,22 +1185,20 @@ static class _esdl__ProxyNoRand(V, rand RAND_ATTR, int N): _esdl__ProxyNoRand!(L
   alias LEAF = LeafElementType!V;
   alias STUBT = _esdl__ObjStub!(V, RAND_ATTR, N);
 
+  this(CstObjStub obj) {
+    super(obj);
+  }
+
   static if ((is (LEAF == class) && is (LEAF: Object)) ||
 	     (is (LEAF == U*, U) && is (U == struct)))
     {
       LEAF _esdl__ref()() {
 	return cast(LEAF) _esdl__stub._esdl__refPtr();
       }
-      this(CstObjStub obj, LEAF outer) {
-	super(obj, outer);
-      }
     }
   else {
     LEAF* _esdl__ref()() {
       return cast(LEAF*) _esdl__stub._esdl__refPtr();
-    }
-    this(CstObjStub obj, LEAF* outer) {
-      super(obj, outer);
     }
   }
 }
@@ -1235,11 +1231,10 @@ class _esdl__ProxyNoRand(_esdl__T)
 	//     return new _esdl__ProxyNoRand!(_esdl__T)(obj, outer_);
 	//   }
 	// }
-	this(CstObjStub obj, _esdl__T outer) {
-	  super(obj, outer);
-	  _esdl__outerAlt = outer;
+	this(CstObjStub obj) {
+	  super(obj);
 	  _esdl__doInitRandObjectElems(this);
-	  _esdl__doInitConstraintElems(this, outer);
+	  _esdl__doInitConstraintElems(this);
 	  _esdl__doProcPredicateElems(this, this._esdl__getProc(),
 				      &_esdl__doSetDomainContext);
 	  _esdl__doProcPredicateElems(this, this._esdl__getProc(),
@@ -1269,11 +1264,10 @@ class _esdl__ProxyNoRand(_esdl__T)
 	//   _esdl__T* outer_ = cast(_esdl__T*)(outer);
 	//   return new _esdl__ProxyNoRand!(_esdl__T)(obj, outer_);
 	// }
-	this(CstObjStub obj, _esdl__T* outer) {
+	this(CstObjStub obj) {
 	  super(obj);
-	  _esdl__outerAlt = outer;
 	  _esdl__doInitRandObjectElems(this);
-	  _esdl__doInitConstraintElems(this, outer);
+	  _esdl__doInitConstraintElems(this);
 	  _esdl__doProcPredicateElems(this, this._esdl__getProc(),
 				      &_esdl__doSetDomainContext);
 	  _esdl__doProcPredicateElems(this, this._esdl__getProc(),
@@ -1645,23 +1639,24 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
   import esdl.data.queue: Queue, isQueue;
   static if (is (L: CstVarNodeIntf)) {
     if (V is null) {
-      L._esdl__PROXYT p = parent;
-      if (p is null) {
-	V = make!L(name, parent, null);
-      }
-      else {
-	alias M = typeof(p._esdl__outer().tupleof[L._esdl__INDEX]);
-	static if ((is (M == class) && is (M: Object)) ||
-		   (is (M == U*, U) && is (U == struct))) {
-	  V = make!L(name, parent, p._esdl__outer().tupleof[L._esdl__INDEX]);
-	}
-	else static if (isPointer!M) {
-	  V = make!L(name, parent, p._esdl__outer().tupleof[L._esdl__INDEX]);
-	}
-	else {
-	  V = make!L(name, parent, &(p._esdl__outer().tupleof[L._esdl__INDEX]));
-	}
-      }
+      V = make!L(name, parent);
+      // L._esdl__PROXYT p = parent;
+      // if (p is null) {
+      // 	V = make!L(name, parent, null);
+      // }
+      // else {
+      // 	alias M = typeof(p._esdl__outer().tupleof[L._esdl__INDEX]);
+      // 	static if ((is (M == class) && is (M: Object)) ||
+      // 		   (is (M == U*, U) && is (U == struct))) {
+      // 	  V = make!L(name, parent, p._esdl__outer().tupleof[L._esdl__INDEX]);
+      // 	}
+      // 	else static if (isPointer!M) {
+      // 	  V = make!L(name, parent, p._esdl__outer().tupleof[L._esdl__INDEX]);
+      // 	}
+      // 	else {
+      // 	  V = make!L(name, parent, &(p._esdl__outer().tupleof[L._esdl__INDEX]));
+      // 	}
+      // }
     }
     return V;
   }
@@ -1672,7 +1667,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       if (global !is null)
 	return cast(CstVecType) global;
       else {
-	CstVecType obj = make!CstVecType(name, parent, &V);
+	CstVecType obj = make!CstVecType(name, parent);
 	parent._esdl__addGlobalLookup(obj, V.stringof);
 	return obj;
       }
@@ -1700,12 +1695,13 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       return cast(CstObjType) global;
     else {
       // pragma(msg, CstObjType.stringof);
-      static if (is (L == struct) && !isQueue!L) {
-	CstObjType obj = make!CstObjType(name, parent, &V);
-      }
-      else {
-	CstObjType obj = make!CstObjType(name, parent, V);
-      }
+      CstObjType obj = make!CstObjType(name, parent);
+      // static if (is (L == struct) && !isQueue!L) {
+      // 	CstObjType obj = make!CstObjType(name, parent, &V);
+      // }
+      // else {
+      // 	CstObjType obj = make!CstObjType(name, parent, V);
+      // }
       parent._esdl__addGlobalLookup(obj, V.stringof);
       return obj;
     }
@@ -1719,7 +1715,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       if (global !is null)
 	return cast(CstVecArrType) global;
       else {
-	CstVecArrType obj = make!CstVecArrType(name, parent, &V);
+	CstVecArrType obj = make!CstVecArrType(name, parent);
 	parent._esdl__addGlobalLookup(obj, V.stringof);
 	auto visitor =
 	  make!(_esdl__VisitorCst!CstVecArrType)(parent, name ~ "_CstVisitor", obj);
@@ -1750,7 +1746,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
     if (global !is null)
       return cast(CstObjArrType) global;
     else {
-      CstObjArrType obj = make!CstObjArrType(name, parent, &V);
+      CstObjArrType obj = make!CstObjArrType(name, parent);
       parent._esdl__addGlobalLookup(obj, V.stringof);
       auto visitor =
 	make!(_esdl__VisitorCst!CstObjArrType)(parent, name ~ "_CstVisitor", obj);
