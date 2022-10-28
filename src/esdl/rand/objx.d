@@ -127,8 +127,8 @@ class CstObjectIdx(V, rand RAND_ATTR, VV, int IDX,
     else {
       assert (_parent !is null);
       _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
-      assert (proxy._esdl__outer() !is null);
-      return proxy._esdl__outer().rand_mode!(PIDX)();
+      assert (proxy._esdl__ref() !is null);
+      return proxy._esdl__ref().rand_mode!(PIDX)();
     }
   }
 
@@ -140,18 +140,16 @@ class CstObjectIdx(V, rand RAND_ATTR, VV, int IDX,
     final override V* _esdl__ref() {
       assert (_parent !is null);
       _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
-      auto vptr = proxy._esdl__ref();
-      if (vptr is null) return null;
-      else return &(vptr.tupleof[IDX]);
+      assert (proxy._esdl__ref() !is null);
+      return &(proxy._esdl__ref().tupleof[IDX]);
     }
   }
   else {
     final override V _esdl__ref() {
       assert (_parent !is null);
       _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
-      auto vptr = proxy._esdl__ref();
-      if (vptr is null) return null;
-      else return vptr.tupleof[IDX];
+      assert (proxy._esdl__ref() !is null);
+      return proxy._esdl__ref().tupleof[IDX];
     }
   }
 
@@ -727,17 +725,16 @@ class CstObjArrIdx(V, rand RAND_ATTR, VV, int IDX,
     else {
       assert (_parent !is null);
       _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
-      assert (proxy._esdl__outer() !is null);
-      return proxy._esdl__outer().rand_mode!(PIDX)();
+      assert (proxy._esdl__ref() !is null);
+      return proxy._esdl__ref().rand_mode!(PIDX)();
     }
   }
 
   final override V* _esdl__ref() {
     assert (_parent !is null);
     _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
-    auto vptr = proxy._esdl__ref();
-    if (vptr is null) return null;
-    else return &(vptr.tupleof[IDX]);
+    assert (proxy._esdl__ref() !is null);
+    return &(proxy._esdl__ref().tupleof[IDX]);
   }
 }
 
