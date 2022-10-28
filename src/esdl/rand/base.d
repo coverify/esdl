@@ -177,10 +177,7 @@ interface CstObjArrIntf: CstObjNodeIntf {
 
 }
 
-interface CstVarGlobIntf
-{
-  void _esdl__fixRef();
-}
+interface CstVarGlobIntf { }
 
 abstract class CstObjectStubBase { }
 abstract class CstObjArrStubBase { }

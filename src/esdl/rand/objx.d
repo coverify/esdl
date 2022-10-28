@@ -44,14 +44,6 @@ class CstObjectGlob(V, rand RAND_ATTR, alias SYM)
     }
   }
 
-  override void _esdl__fixRef() {
-    static if (is (V == struct)) {
-      _esdl__setValRef(& SYM);
-    }
-    else
-      _esdl__setValRef(SYM);
-  }
-  
   // no unrolling is possible without adding rand proxy
   override typeof(this) _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     return this;
@@ -86,10 +78,6 @@ class CstObjectGlobEnum(V, rand RAND_ATTR)
   this(string name, _esdl__Proxy parent, V var) {
     _var = var;
     super(name, parent, & _var);
-  }
-
-  override void _esdl__fixRef() {
-    _esdl__setValRef(& _var);
   }
 
   static assert (is (V == struct));
@@ -303,11 +291,6 @@ abstract class _esdl__ObjStub(V, rand RAND_ATTR, int N):
 
   static if (is (LEAF == struct)) {
     LEAF* _outer;
-    LEAF* _esdl__getRef()() {return _outer;}
-    void _esdl__setValRef()(LEAF* outer) {
-      _outer = outer;
-      this._esdl__get()._esdl__setValRef(outer);
-    }
     this(_esdl__Proxy parent, void* outer) {
       _parent = parent;
       _outer = cast(LEAF*) outer;
@@ -316,11 +299,6 @@ abstract class _esdl__ObjStub(V, rand RAND_ATTR, int N):
   }
   else {
     LEAF _outer;
-    LEAF _esdl__getRef()() {return _outer;}
-    void _esdl__setValRef()(LEAF outer) {
-      _outer = outer;
-      this._esdl__get()._esdl__setValRef(outer);
-    }
     this(_esdl__Proxy parent, LEAF outer) {
       _parent = parent;
       _outer = outer;
@@ -492,12 +470,12 @@ abstract class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 
       static if (is (LEAF == struct)) {
 	LEAF* getRef() {
-	  return _esdl__getRef();
+	  return _esdl__ref();
 	}
       }
       else {
 	LEAF getRef() {	// 
-	  return _esdl__getRef();
+	  return _esdl__ref();
 	}
       }
 
@@ -506,7 +484,6 @@ abstract class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 	// writeln("Visiting: ", this._esdl__getFullName());
 	assert (false);
 	// assert (this.getRef() !is null);
-	// _esdl__setValRef(this.getRef());
 	// _esdl__doConstrain(_esdl__getRootProxy());
       }
 
@@ -681,7 +658,6 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	// import std.stdio;
 	// writeln("Visiting: ", this._esdl__getFullName());
 	assert (this.getRef() !is null);
-	_esdl__setValRef(this.getRef());
 	if (this._esdl__isRand()) {
 	  _esdl__doConstrain(proc, true);
 	}
@@ -721,10 +697,6 @@ class CstObjArrGlob(V, rand RAND_ATTR, int N, alias SYM)
     super(name, parent, var);
   }
 
-  override void _esdl__fixRef() {
-    _esdl__setValRef (& SYM);
-  }
-  
   // no unrolling is possible without adding rand proxy
   override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     return this;
@@ -750,10 +722,6 @@ class CstObjArrGlobEnum(V, rand RAND_ATTR, int N)
     super(name, parent, & _var);
   }
 
-  override void _esdl__fixRef() {
-    _esdl__setValRef (&_var);
-  }
-  
   // no unrolling is possible without adding rand proxy
   override RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     return this;
@@ -1392,10 +1360,6 @@ abstract class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
       _esdl__Proxy _parent;
       bool _parentsDepsAreResolved;
     
-      void _esdl__setValRef(V* var) {
-	_var = var;
-      }
-
       _esdl__Proxy _esdl__getParentProxy() {
 	return _parent;
       }
@@ -1469,7 +1433,7 @@ abstract class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
 
       override ulong mapIter(size_t iter) {
 	static if (isAssociativeArray!V) {
-	  auto keys = (*_var).keys;
+	  auto keys = (*(_esdl__ref())).keys;
 	  if (keys.length <= iter) assert (false);
 	  else return keys[iter];
 	}
@@ -1481,7 +1445,7 @@ abstract class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
       override size_t mapIndex(ulong index) {
 	import std.string: format;
 	static if (isAssociativeArray!V) {
-	  foreach (i, key; (*_var).keys) {
+	  foreach (i, key; (*(_esdl__ref())).keys) {
 	    if (key == index) return i;
 	  }
 	  assert (false, format("Can not find key %s in Associative Array",
@@ -1711,7 +1675,7 @@ private auto getRefTmpl(RV, J...)(RV rv, J indx)
 	}
       }
     else {
-      return getArrElemTmpl(*(rv._var), indx);
+      return getArrElemTmpl(*(rv._esdl__ref()), indx);
     }
  }
 
@@ -1734,7 +1698,7 @@ private size_t getLenTmpl(RV, N...)(RV rv, N indx) {
     return getLenTmpl(rv._parent, rv._pindex, indx);
   }
   else {
-    return getArrLenTmpl(*(rv._var), indx);
+    return getArrLenTmpl(*(rv._esdl__ref()), indx);
   }
 }
 
@@ -1760,7 +1724,7 @@ private void setLenTmpl(RV, N...)(RV rv, size_t v, N indx) {
     setLenTmpl(rv._parent, v, rv._pindex, indx);
   }
   else {
-    setArrLen(*(rv._var), v, indx);
+    setArrLen(*(rv._esdl__ref()), v, indx);
 	  
   }
 }

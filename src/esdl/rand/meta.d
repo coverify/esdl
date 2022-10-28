@@ -372,10 +372,8 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 	static if (isPointer!LL) {
 	  // assert (p._esdl__outer.tupleof[IDX] !is null,
 	  // 	  p._esdl__outer.tupleof[IDX].stringof ~ " is null");
-	  p.tupleof[I]._esdl__setValRef(p._esdl__outer().tupleof[IDX]);
 	}
 	else {
-	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer().tupleof[IDX]));
 	}
       }
     }
@@ -383,12 +381,10 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 		   L, rand RAND, LL, int IDX, P, int PIDX)) {
       if (p.tupleof[I] !is null) {
 	static if (is (L == struct) && !isQueue!L) {
-	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer().tupleof[IDX]));
 	}
 	else {
 	  // assert (p._esdl__outer.tupleof[IDX] !is null,
 	  // 	  p._esdl__outer.tupleof[IDX].stringof ~ " is null");
-	  p.tupleof[I]._esdl__setValRef(p._esdl__outer().tupleof[IDX]);
 	}
       }
     }
@@ -398,10 +394,8 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 	static if (isPointer!LL) {
 	  // assert (p._esdl__outer.tupleof[IDX] !is null,
 	  // 	  p._esdl__outer.tupleof[IDX].stringof ~ " is null");
-	  p.tupleof[I]._esdl__setValRef(p._esdl__outer().tupleof[IDX]);
 	}
 	else {
-	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer().tupleof[IDX]));
 	}
       }
     }
@@ -411,10 +405,8 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 	static if (isPointer!LL) {
 	  // assert (p._esdl__outer.tupleof[IDX] !is null,
 	  // 	  p._esdl__outer.tupleof[IDX].stringof ~ " is null");
-	  p.tupleof[I]._esdl__setValRef(p._esdl__outer().tupleof[IDX]);
 	}
 	else {
-	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer().tupleof[IDX]));
 	}
       }
     }
@@ -975,15 +967,13 @@ mixin template Randomization()
       _esdl__T _esdl__outerAlt;
       _esdl__T _esdl__outer()() {
 	auto vptr = _esdl__ref();
-	if (_esdl__outerAlt != vptr) {
-	  import std.stdio;
-	  writefln("%s != %s", _esdl__outerAlt, vptr);
-	  assert (false);
-	}
+	// if (_esdl__outerAlt != vptr) {
+	//   import std.stdio;
+	//   writefln("%s != %s", _esdl__outerAlt, vptr);
+	//   assert (false);
+	// }
 	return vptr;
       }
-
-      _esdl__T _esdl__getRef()() {return _esdl__outer();}
 
       _esdl__T _esdl__ref()() {
 	return cast(_esdl__T) _esdl__stub._esdl__refPtr();
@@ -995,12 +985,6 @@ mixin template Randomization()
       // 	return new _esdl__ProxyRand!(_esdl__T)(obj, outer_);
       // }
   
-      void _esdl__setValRef()(_esdl__T outer) {
-	if (_esdl__outerAlt !is outer) {
-	  _esdl__outerAlt = outer;
-	  this._esdl__doSetOuter(true);
-	}
-      }
       this(CstObjStub obj, _esdl__T outer) {
 	super(obj, outer);
 	_esdl__outerAlt = outer;
@@ -1021,8 +1005,6 @@ mixin template Randomization()
 
       _esdl__T* _esdl__outerAlt;
 
-      _esdl__T* _esdl__getRef() {return _esdl__outer();}
-
       _esdl__T* _esdl__outer()() {
 	return _esdl__ref();
       }
@@ -1036,18 +1018,6 @@ mixin template Randomization()
       // 	_esdl__T* outer_ = cast(_esdl__T*)(outer);
       // 	return new _esdl__ProxyRand!(_esdl__T)(obj, outer_);
       // }
-      void _esdl__setValRef()(ref _esdl__T outer) {
-	if (_esdl__outerAlt !is &outer) {
-	  _esdl__outerAlt = &outer;
-	  this._esdl__doSetOuter(true);
-	}
-      }
-      void _esdl__setValRef()(_esdl__T* outer) {
-	if (_esdl__outerAlt !is outer) {
-	  _esdl__outerAlt = outer;
-	  this._esdl__doSetOuter(true);
-	}
-      }
       this(CstObjStub obj, _esdl__T* outer) {
 	super(obj);
 	_esdl__outerAlt = outer;
@@ -1244,8 +1214,6 @@ class _esdl__ProxyNoRand(_esdl__T)
       {
 	mixin _esdl__ProxyMixin!_esdl__T;
 	_esdl__T _esdl__outerAlt;
-	_esdl__T _esdl__getRef()() {return _esdl__outer();}
-
 	_esdl__T _esdl__outer()() {
 	  return _esdl__ref();
 	}
@@ -1267,12 +1235,6 @@ class _esdl__ProxyNoRand(_esdl__T)
 	//     return new _esdl__ProxyNoRand!(_esdl__T)(obj, outer_);
 	//   }
 	// }
-	void _esdl__setValRef()(_esdl__T outer) {
-	  if (_esdl__outerAlt !is outer) {
-	    _esdl__outerAlt = outer;
-	    this._esdl__doSetOuter(true);
-	  }
-	}
 	this(CstObjStub obj, _esdl__T outer) {
 	  super(obj, outer);
 	  _esdl__outerAlt = outer;
@@ -1294,8 +1256,6 @@ class _esdl__ProxyNoRand(_esdl__T)
 	mixin _esdl__ProxyMixin!_esdl__T;
 
 	_esdl__T* _esdl__outerAlt;
-	_esdl__T* _esdl__getRef()() {return _esdl__outer();}
-
 	_esdl__T* _esdl__outer()() {
 	  return _esdl__ref();
 	}
@@ -1309,18 +1269,6 @@ class _esdl__ProxyNoRand(_esdl__T)
 	//   _esdl__T* outer_ = cast(_esdl__T*)(outer);
 	//   return new _esdl__ProxyNoRand!(_esdl__T)(obj, outer_);
 	// }
-	void _esdl__setValRef()(ref _esdl__T outer) {
-	  if (_esdl__outerAlt !is &outer) {
-	    _esdl__outerAlt = &outer;
-	    this._esdl__doSetOuter(true);
-	  }
-	}
-	void _esdl__setValRef()(_esdl__T* outer) {
-	  if (_esdl__outerAlt !is outer) {
-	    _esdl__outerAlt = outer;
-	    this._esdl__doSetOuter(true);
-	  }
-	}
 	this(CstObjStub obj, _esdl__T* outer) {
 	  super(obj);
 	  _esdl__outerAlt = outer;
@@ -1510,7 +1458,6 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 	  alias TYPE = CstVecArrArg!(L);
 	}
 	auto vvar = cast (TYPE) (_proxyLambdaArgs[I]);
-	vvar._esdl__setValRef(& _lambdaArgs[I]);
       }
     }
 
@@ -1553,27 +1500,18 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   }
 
   void _esdl__doSetOuter()(bool changed) {
-    foreach (name, lookup; _esdl__globalLookups) {
-      lookup._esdl__fixRef();
-    }
     _esdl__doSetOuterElems(this, changed);
   }
 
   static if (is (_esdl__T == struct)) {
     void _esdl__doSetOuter()(_esdl__T* obj, bool changed) {
       _esdl__outerAlt = obj;
-      foreach (name, lookup; _esdl__globalLookups) {
-	lookup._esdl__fixRef();
-      }
       _esdl__doSetOuterElems(this, changed);
     }
   }
   else {
     void _esdl__doSetOuter()(_esdl__T obj, bool changed) {
       _esdl__outerAlt = obj;
-      foreach (name, lookup; _esdl__globalLookups) {
-	lookup._esdl__fixRef();
-      }
       _esdl__doSetOuterElems(this, changed);
     }
   }

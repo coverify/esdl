@@ -40,10 +40,6 @@ class CstVectorGlob(V, rand RAND_ATTR, alias SYM)
     super(name, parent, var);
   }
 
-  override void _esdl__fixRef() {
-    _esdl__setValRef(& SYM);
-  }
-  
   // no unrolling is possible without adding rand proxy
   override RV _esdl__unroll(CstIterator iter, ulong n,
 			    _esdl__CstProcessor proc) {
@@ -72,10 +68,6 @@ class CstVectorGlobEnum(V, rand RAND_ATTR)
     super(name, parent, &_var);
   }
 
-  override void _esdl__fixRef() {
-    _esdl__setValRef(& _var);
-  }
-  
   // no unrolling is possible without adding rand proxy
   override RV _esdl__unroll(CstIterator iter, ulong n,
 			    _esdl__CstProcessor proc) {
@@ -252,10 +244,6 @@ abstract class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 	  return _parent._esdl__getFullName() ~ "." ~ _esdl__getName();
       }
       
-      void _esdl__setValRef(VREF var) {
-	_var = var;
-      }
-      
       final override bool _esdl__isStatic() {
 	return _parent._esdl__isStatic();		// N == 0
       }
@@ -279,7 +267,7 @@ abstract class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       override VREF getRef() {
-	return _var;
+	return _esdl__ref();
       }
 
       bool isConst() {
@@ -526,10 +514,6 @@ class CstVecArrGlob(V, rand RAND_ATTR, alias SYM)
     super(name, parent, var);
   }
 
-  override void _esdl__fixRef() {
-    _esdl__setValRef (& SYM);
-  }
-  
   // no unrolling is possible without adding rand proxy
   override RV _esdl__unroll(CstIterator iter, ulong n,
 			    _esdl__CstProcessor proc) {
@@ -558,10 +542,6 @@ class CstVecArrGlobEnum(V, rand RAND_ATTR)
     super(name, parent, &_var);
   }
 
-  override void _esdl__fixRef() {
-    _esdl__setValRef (& _var);
-  }
-  
   // no unrolling is possible without adding rand proxy
   override RV _esdl__unroll(CstIterator iter, ulong n,
 			    _esdl__CstProcessor proc) {
@@ -580,10 +560,10 @@ class CstVecArrArg(V)
   enum _esdl__ISRAND = false;
   enum _esdl__HASPROXY = false;
 
-  V _val;
+  V* _val;
 
   this(string name, _esdl__Proxy parent, VREF var) {
-    _val = *var;
+    _val = var;
     super(name, parent, var);
   }
 
@@ -597,7 +577,7 @@ class CstVecArrArg(V)
   }
 
   override VREF _esdl__ref() {
-    return &_val;
+    return _val;
   }
 }
 
@@ -967,10 +947,6 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
       _esdl__Proxy _parent;
       bool _parentsDepsAreResolved;
     
-      void _esdl__setValRef(VREF var) {
-	_var = var;
-      }
-      
       abstract VREF _esdl__ref();
 
       this(string name, _esdl__Proxy parent, VREF var) {
@@ -1042,7 +1018,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 
       override ulong mapIter(size_t iter) {
 	static if (isAssociativeArray!V) {
-	  auto keys = (*_var).keys;
+	  auto keys = (*(_esdl__ref())).keys;
 	  if (keys.length <= iter) assert (false);
 	  else return keys[iter];
 	}
@@ -1054,7 +1030,7 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
       override size_t mapIndex(ulong index) {
 	import std.string: format;
 	static if (isAssociativeArray!V) {
-	  foreach (i, key; (*_var).keys) {
+	  foreach (i, key; (*(_esdl__ref())).keys) {
 	    if (key == index) return i;
 	  }
 	  assert (false, format("Can not find key %s in Associative Array",
@@ -1403,7 +1379,7 @@ private auto getRefTmpl(RV, J...)(RV rv, J indx)
       }
     }
     else {
-      return getArrElemTmpl(*(rv._var), indx);
+      return getArrElemTmpl(*(rv._esdl__ref()), indx);
     }
   }
 
@@ -1425,7 +1401,7 @@ size_t getLenTmpl(RV, N...)(RV rv, N indx) {
     return getLenTmpl(rv._parent, rv._pindex, indx);
   }
   else {
-    return getArrLenTmpl(*(rv._var), indx);
+    return getArrLenTmpl(*(rv._esdl__ref()), indx);
   }
 }
 
@@ -1451,7 +1427,7 @@ private void setLenTmpl(RV, N...)(RV rv, size_t v, N indx) {
     setLenTmpl(rv._parent, v, rv._pindex, indx);
   }
   else {
-    assert (rv._var !is null);
-    setArrLen(*(rv._var), v, indx);
+    assert (rv._esdl__ref() !is null);
+    setArrLen(*(rv._esdl__ref()), v, indx);
   }
 }
