@@ -40,16 +40,17 @@ abstract class CstDomain(V, rand RAND_ATTR) if (is (V == bool)):
 
       override void setBool(bool val, _esdl__CstProcessor proc) {
 	static if (HAS_RAND_ATTRIB) {
-	  assert (getRef() !is null,
+	  auto vptr = _esdl__ref();
+	  assert (vptr !is null,
 		  "Domain does not have a valid R-Value pointer: " ~
 		  _esdl__getFullName());
-	  if (val != *(getRef())) {
+	  if (val != *vptr) {
 	    _valueChanged = true;
 	  }
 	  else {
 	    _valueChanged = false;
 	  }
-	  *(getRef()) = val;
+	  *vptr = val;
 	  markSolved(proc);
 	}
 	else {
@@ -60,7 +61,7 @@ abstract class CstDomain(V, rand RAND_ATTR) if (is (V == bool)):
       override bool isBool() {return true;}
       
       bool eval() {
-	return cast(bool) *(getRef());
+	return cast(bool) *(_esdl__ref());
       }
 
       override long evaluate() {
@@ -337,12 +338,13 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
   abstract VREF getRef();
 
   override long value() {
-    return cast(long) *(getRef());
+    return cast(long) *(_esdl__ref());
   }
 
   override void setVal(ulong[] value, _esdl__CstProcessor proc) {
     static if (HAS_RAND_ATTRIB) {
       Unconst!VT newVal;
+      auto vptr = _esdl__ref();
       foreach (i, v; value) {
 	static if(isIntegral!VT || isBoolean!VT) {
 	  if (i == 0) {
@@ -356,7 +358,7 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
 	  newVal._setNthWord(v, i);
 	}
       }
-      if (newVal != *(getRef())) {
+      if (newVal != *vptr) {
 	_valueChanged = true;
       }
       else {
@@ -367,10 +369,10 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
 	writeln("Setting value of ", _esdl__getFullName(), " to: ", newVal);
       }
       static if (ISPACKED) {
-	(*(getRef()))[OFFSET..OFFSET+tSize] = newVal;
+	(*vptr)[OFFSET..OFFSET+tSize] = newVal;
       }
       else {
-	*(getRef()) = newVal;
+	*vptr = newVal;
       }
       markSolved(proc);
     }
@@ -385,16 +387,17 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
     }
     static if (HAS_RAND_ATTRIB) {
       Unconst!VT newVal;
+      auto vptr = _esdl__ref();
       static if (isIntegral!VT || isBoolean!VT) {
 	newVal = cast(VT) val;
       }
       else {
 	newVal._setNthWord(val, 0);
       }
-      assert (getRef() !is null,
+      assert (vptr !is null,
 	      "Domain does not have a valid R-Value pointer: " ~
 	      _esdl__getFullName());
-      if (newVal != *(getRef())) {
+      if (newVal != *vptr) {
 	_valueChanged = true;
       }
       else {
@@ -405,10 +408,10 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
 	writeln("Setting value of ", _esdl__getFullName(), " to: ", newVal);
       }
       static if (ISPACKED) {
-	(*(getRef()))[OFFSET..OFFSET+tSize] = newVal;
+	(*vptr)[OFFSET..OFFSET+tSize] = newVal;
       }
       else {
-	*(getRef()) = newVal;
+	*vptr = newVal;
       }
       markSolved(proc);
     }
@@ -421,21 +424,22 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
     static if (HAS_RAND_ATTRIB) {
       if (! isSolved()) {
 	Unconst!VT newVal;
+	auto vptr = _esdl__ref();
 	assert (randGen !is null);
 	randGen.gen(newVal);
 	static if (ISPACKED) {
-	  if (newVal != cast(VT) ((*(getRef()))[OFFSET..OFFSET+tSize])) {
+	  if (newVal != cast(VT) ((*vptr)[OFFSET..OFFSET+tSize])) {
 	    _valueChanged = true;
-	    (*(getRef()))[OFFSET..OFFSET+tSize] = newVal;
+	    (*vptr)[OFFSET..OFFSET+tSize] = newVal;
 	  }
 	  else {
 	    _valueChanged = false;
 	  }
 	}
 	else {
-	  if (newVal != *(getRef())) {
+	  if (newVal != *vptr) {
 	    _valueChanged = true;
-	    *(getRef()) = newVal;
+	    *vptr = newVal;
 	  }
 	  else {
 	    _valueChanged = false;
@@ -458,12 +462,13 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
   override bool updateVal(_esdl__CstProcessor proc) {
     assert(_esdl__isRand() !is true);
     Unconst!VT newVal;
+    auto vptr = _esdl__ref();
     if (! this.isSolved()) {
       static if (ISPACKED) {
-	newVal = cast(VT) ((*(getRef()))[OFFSET..OFFSET+tSize]);
+	newVal = cast(VT) ((*vptr)[OFFSET..OFFSET+tSize]);
       }
       else {
-	newVal = *(getRef());
+	newVal = *vptr;
       }
       this.markSolved(proc);
       if (newVal != _shadowValue) {
@@ -550,6 +555,9 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
       return desc;
     }
   }
+
+  abstract VREF _esdl__ref();
+
 }
 
 class CstArrIterator(RV): CstIterator
@@ -864,9 +872,9 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     _iterVar.unrollCbs(proc);
   }
 
-  override uint* getRef() {
-    assert(false);
-  }
+  override uint* getRef() { assert(false); }
+
+  override VREF _esdl__ref() { assert (false); }
 
   override bool updateVal(_esdl__CstProcessor proc) {
     assert(_esdl__isRand() !is true);
@@ -1130,9 +1138,9 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
   //   _iterVar.unrollCbs(proc);
   // }
 
-  override uint* getRef() {
-    assert(false);
-  }
+  override uint* getRef() { assert(false); }
+
+  override VREF _esdl__ref() { assert (false); }
 
   override bool updateVal(_esdl__CstProcessor proc) {
     return true;

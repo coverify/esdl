@@ -974,12 +974,13 @@ mixin template Randomization()
 
       _esdl__T _esdl__outerAlt;
       _esdl__T _esdl__outer()() {
-	if (_esdl__outerAlt != _esdl__ref()) {
+	auto vptr = _esdl__ref();
+	if (_esdl__outerAlt != vptr) {
 	  import std.stdio;
-	  writefln("%s != %s", _esdl__outerAlt, _esdl__ref());
+	  writefln("%s != %s", _esdl__outerAlt, vptr);
 	  assert (false);
 	}
-	return _esdl__ref();
+	return vptr;
       }
 
       _esdl__T _esdl__getRef()() {return _esdl__outer();}
