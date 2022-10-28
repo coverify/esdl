@@ -154,8 +154,8 @@ class CstVectorIdx(V, rand RAND_ATTR, VV, int IDX,
     else {
       assert (_parent !is null);
       _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
-      assert (proxy._esdl__outer !is null);
-      return proxy._esdl__outer.rand_mode!(PIDX)();
+      assert (proxy._esdl__outer() !is null);
+      return proxy._esdl__outer().rand_mode!(PIDX)();
     }
   }
 
@@ -640,8 +640,8 @@ class CstVecArrIdx(V, rand RAND_ATTR, VV, int IDX,
     else {
       assert (_parent !is null);
       _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
-      assert (proxy._esdl__outer !is null);
-      return proxy._esdl__outer.rand_mode!(PIDX)();
+      assert (proxy._esdl__outer() !is null);
+      return proxy._esdl__outer().rand_mode!(PIDX)();
     }
   }
 

@@ -215,7 +215,7 @@ void _esdl__doInitRandObjectElems(P, int I=0)(P p) {
       // static if (Q._esdl__HASPROXY // && Q._esdl__ISRAND // not just @rand
       // 		 ) {
       // pragma(msg, "#" ~ Q.stringof);
-      alias T = typeof(p._esdl__outer);
+      alias T = typeof(p._esdl__outerAlt);
       enum string NAME = __traits(identifier, P.tupleof[I]);
       // static if (is (T == class)) { // class
       // 	enum NAME = __traits(identifier, T.tupleof[Q._esdl__INDEX]);
@@ -224,7 +224,7 @@ void _esdl__doInitRandObjectElems(P, int I=0)(P p) {
       // 	alias U = PointerTarget!T;
       // 	enum NAME = __traits(identifier, U.tupleof[Q._esdl__INDEX]);
       // }
-      T t = p._esdl__outer;
+      T t = p._esdl__outer();
       // pragma(msg, p.tupleof[I].stringof);
       if (t !is null) {
 	alias M = typeof(t.tupleof[Q._esdl__INDEX]);
@@ -357,7 +357,7 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 	     is (B[0] == class)) {
     static if (! is (B[0] == _esdl__Proxy)) {
       B[0] b = p;			// super object
-      b._esdl__outer = p._esdl__outer;
+      b._esdl__outerAlt = p._esdl__outer();
       _esdl__doSetOuterElems(b, changed);
     }
   }
@@ -372,10 +372,10 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 	static if (isPointer!LL) {
 	  // assert (p._esdl__outer.tupleof[IDX] !is null,
 	  // 	  p._esdl__outer.tupleof[IDX].stringof ~ " is null");
-	  p.tupleof[I]._esdl__setValRef(p._esdl__outer.tupleof[IDX]);
+	  p.tupleof[I]._esdl__setValRef(p._esdl__outer().tupleof[IDX]);
 	}
 	else {
-	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
+	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer().tupleof[IDX]));
 	}
       }
     }
@@ -383,12 +383,12 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 		   L, rand RAND, LL, int IDX, P, int PIDX)) {
       if (p.tupleof[I] !is null) {
 	static if (is (L == struct) && !isQueue!L) {
-	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
+	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer().tupleof[IDX]));
 	}
 	else {
 	  // assert (p._esdl__outer.tupleof[IDX] !is null,
 	  // 	  p._esdl__outer.tupleof[IDX].stringof ~ " is null");
-	  p.tupleof[I]._esdl__setValRef(p._esdl__outer.tupleof[IDX]);
+	  p.tupleof[I]._esdl__setValRef(p._esdl__outer().tupleof[IDX]);
 	}
       }
     }
@@ -398,10 +398,10 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 	static if (isPointer!LL) {
 	  // assert (p._esdl__outer.tupleof[IDX] !is null,
 	  // 	  p._esdl__outer.tupleof[IDX].stringof ~ " is null");
-	  p.tupleof[I]._esdl__setValRef(p._esdl__outer.tupleof[IDX]);
+	  p.tupleof[I]._esdl__setValRef(p._esdl__outer().tupleof[IDX]);
 	}
 	else {
-	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
+	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer().tupleof[IDX]));
 	}
       }
     }
@@ -411,10 +411,10 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
 	static if (isPointer!LL) {
 	  // assert (p._esdl__outer.tupleof[IDX] !is null,
 	  // 	  p._esdl__outer.tupleof[IDX].stringof ~ " is null");
-	  p.tupleof[I]._esdl__setValRef(p._esdl__outer.tupleof[IDX]);
+	  p.tupleof[I]._esdl__setValRef(p._esdl__outer().tupleof[IDX]);
 	}
 	else {
-	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer.tupleof[IDX]));
+	  p.tupleof[I]._esdl__setValRef(&(p._esdl__outer().tupleof[IDX]));
 	}
       }
     }
@@ -660,6 +660,9 @@ void _esdl__randomize(T) (ref T t) if (is (T == struct))
       proxyRoot = _esdl__createProxy();
       _esdl__ProxyType._esdl__proxyRootInst = proxyRoot;
     }
+    else {
+      proxyRoot.updateRandObj(&t);
+    }
 
     _esdl__ProxyType proxyInst = _esdl__staticCast!(_esdl__ProxyType)
       (proxyRoot._esdl__getProxy());
@@ -708,6 +711,9 @@ void _esdl__randomize(T) (T t) if (is (T == class))
       proxyRoot = _esdl__createProxy();
       _esdl__ProxyType._esdl__proxyRootInst = proxyRoot;
     }
+    else {
+      proxyRoot.updateRandObj(t);
+    }
 
     _esdl__ProxyType proxyInst = _esdl__staticCast!(_esdl__ProxyType)
       (proxyRoot._esdl__getProxy());
@@ -749,11 +755,14 @@ _esdl__Proxy _esdl__getProxyInst(T)(T t) if (is (T == class)) {
     proxyRoot = _esdl__createProxy(t);
     _esdl__ProxyType._esdl__proxyRootInst = proxyRoot;
   }
+  else {
+    proxyRoot.updateRandObj(t);
+  }
 
   return proxyRoot._esdl__getProxy();
 }
 
-_esdl__Proxy _esdl__getProxyInst(T)(T t) if (is (T == struct)) {
+_esdl__Proxy _esdl__getProxyInst(T)(ref T t) if (is (T == struct)) {
   alias _esdl__ProxyType = _esdl__ProxyResolve!T;
 
   CstRootProxy!T _esdl__createProxy(T* t) {
@@ -773,6 +782,9 @@ _esdl__Proxy _esdl__getProxyInst(T)(T t) if (is (T == struct)) {
   if (proxyRoot is null) {
     proxyRoot = _esdl__createProxy(&t);
     _esdl__ProxyType._esdl__proxyRootInst = proxyRoot;
+  }
+  else {
+    proxyRoot.updateRandObj(&t);
   }
 
   return proxyRoot._esdl__getProxy();
@@ -794,7 +806,7 @@ void _esdl__randomizeWith(T)(T t, _esdl__Proxy proxy,
     assert(proc !is null);
     proxyInst._esdl__doSetOuter(t, true);
 
-    // lambdaCst._esdl__doSetOuter();
+    lambdaCst._esdl__doSetOuter();
   
     proc.reset();
     proxyInst._esdl__doConstrain(proc, false);
@@ -827,7 +839,7 @@ void _esdl__randomizeWith(T) (ref T t, _esdl__Proxy proxy,
     assert(proc !is null);
     proxyInst._esdl__doSetOuter(&t, true);
 
-    // lambdaCst._esdl__doSetOuter();
+    lambdaCst._esdl__doSetOuter();
   
     proc.reset();
     proxyInst._esdl__doConstrain(proc, false);
@@ -960,11 +972,20 @@ mixin template Randomization()
     {
       mixin _esdl__ProxyMixin!_esdl__T;
 
-      _esdl__T _esdl__outer;
-      _esdl__T _esdl__getRef()() {return _esdl__outer;}
+      _esdl__T _esdl__outerAlt;
+      _esdl__T _esdl__outer()() {
+	if (_esdl__outerAlt != _esdl__ref()) {
+	  import std.stdio;
+	  writefln("%s != %s", _esdl__outerAlt, _esdl__ref());
+	  assert (false);
+	}
+	return _esdl__ref();
+      }
+
+      _esdl__T _esdl__getRef()() {return _esdl__outer();}
 
       _esdl__T _esdl__ref()() {
-	return _esdl__staticCast!(_esdl__TypedStub!_esdl__T)(_esdl__stub)._esdl__ref();
+	return cast(_esdl__T) _esdl__stub._esdl__refPtr();
       }
 
       enum bool _esdl__HAS_RAND_INFO = true;
@@ -974,14 +995,14 @@ mixin template Randomization()
       // }
   
       void _esdl__setValRef()(_esdl__T outer) {
-	if (_esdl__outer !is outer) {
-	  _esdl__outer = outer;
+	if (_esdl__outerAlt !is outer) {
+	  _esdl__outerAlt = outer;
 	  this._esdl__doSetOuter(true);
 	}
       }
       this(CstObjStub obj, _esdl__T outer) {
 	super(obj, outer);
-	_esdl__outer = outer;
+	_esdl__outerAlt = outer;
 	_esdl__doInitRandObjectElems(this);
 	_esdl__doInitConstraintElems(this, outer);
 	_esdl__doProcPredicateElems(this, this._esdl__getProc(),
@@ -997,11 +1018,16 @@ mixin template Randomization()
     {
       mixin _esdl__ProxyMixin!_esdl__T;
 
-      _esdl__T* _esdl__outer;
-      _esdl__T* _esdl__getRef() {return _esdl__outer;}
+      _esdl__T* _esdl__outerAlt;
+
+      _esdl__T* _esdl__getRef() {return _esdl__outer();}
+
+      _esdl__T* _esdl__outer()() {
+	return _esdl__ref();
+      }
 
       _esdl__T* _esdl__ref()() {
-	return _esdl__staticCast!(_esdl__TypedStub!_esdl__T)(_esdl__stub)._esdl__ref();
+	return cast(_esdl__T*) _esdl__stub._esdl__refPtr();
       }
 
       enum bool _esdl__HAS_RAND_INFO = true;
@@ -1010,20 +1036,20 @@ mixin template Randomization()
       // 	return new _esdl__ProxyRand!(_esdl__T)(obj, outer_);
       // }
       void _esdl__setValRef()(ref _esdl__T outer) {
-	if (_esdl__outer !is &outer) {
-	  _esdl__outer = &outer;
+	if (_esdl__outerAlt !is &outer) {
+	  _esdl__outerAlt = &outer;
 	  this._esdl__doSetOuter(true);
 	}
       }
       void _esdl__setValRef()(_esdl__T* outer) {
-	if (_esdl__outer !is outer) {
-	  _esdl__outer = outer;
+	if (_esdl__outerAlt !is outer) {
+	  _esdl__outerAlt = outer;
 	  this._esdl__doSetOuter(true);
 	}
       }
       this(CstObjStub obj, _esdl__T* outer) {
 	super(obj);
-	_esdl__outer = outer;
+	_esdl__outerAlt = outer;
 	_esdl__doInitRandObjectElems(this);
 	_esdl__doInitConstraintElems(this, outer);
 	_esdl__doProcPredicateElems(this, this._esdl__getProc(),
@@ -1046,7 +1072,7 @@ mixin template Randomization()
 
     static if (is (LEAF == class)) {
       LEAF _esdl__ref()() {
-        return _esdl__staticCast!(STUBT)(_esdl__stub)._esdl__ref();
+	return cast(LEAF) _esdl__stub._esdl__refPtr();
       }
       this(CstObjStub obj, LEAF outer) {
 	super(obj, outer);
@@ -1054,7 +1080,7 @@ mixin template Randomization()
     }
     else {
       LEAF* _esdl__ref()() {
-        return _esdl__staticCast!(STUBT)(_esdl__stub)._esdl__ref();
+	return cast(LEAF*) _esdl__stub._esdl__refPtr();
       }
       this(CstObjStub obj, LEAF* outer) {
 	super(obj, outer);
@@ -1194,7 +1220,7 @@ static class _esdl__ProxyNoRand(V, rand RAND_ATTR, int N): _esdl__ProxyNoRand!(L
 	     (is (LEAF == U*, U) && is (U == struct)))
     {
       LEAF _esdl__ref()() {
-        return _esdl__staticCast!(STUBT)(_esdl__stub)._esdl__ref();
+	return cast(LEAF) _esdl__stub._esdl__refPtr();
       }
       this(CstObjStub obj, LEAF outer) {
 	super(obj, outer);
@@ -1202,7 +1228,7 @@ static class _esdl__ProxyNoRand(V, rand RAND_ATTR, int N): _esdl__ProxyNoRand!(L
     }
   else {
     LEAF* _esdl__ref()() {
-      return _esdl__staticCast!(STUBT)(_esdl__stub)._esdl__ref();
+      return cast(LEAF*) _esdl__stub._esdl__refPtr();
     }
     this(CstObjStub obj, LEAF* outer) {
       super(obj, outer);
@@ -1216,11 +1242,15 @@ class _esdl__ProxyNoRand(_esdl__T)
     _esdl__ProxyBase!_esdl__T
       {
 	mixin _esdl__ProxyMixin!_esdl__T;
-	_esdl__T _esdl__outer;
-	_esdl__T _esdl__getRef()() {return _esdl__outer;}
+	_esdl__T _esdl__outerAlt;
+	_esdl__T _esdl__getRef()() {return _esdl__outer();}
 
+	_esdl__T _esdl__outer()() {
+	  return _esdl__ref();
+	}
+	
 	_esdl__T _esdl__ref()() {
-	  return _esdl__staticCast!(_esdl__TypedStub!_esdl__T)(_esdl__stub)._esdl__ref();
+	  return cast(_esdl__T) _esdl__stub._esdl__refPtr();
 	}
 
 	enum bool _esdl__HAS_RAND_INFO = false;
@@ -1237,14 +1267,14 @@ class _esdl__ProxyNoRand(_esdl__T)
 	//   }
 	// }
 	void _esdl__setValRef()(_esdl__T outer) {
-	  if (_esdl__outer !is outer) {
-	    _esdl__outer = outer;
+	  if (_esdl__outerAlt !is outer) {
+	    _esdl__outerAlt = outer;
 	    this._esdl__doSetOuter(true);
 	  }
 	}
 	this(CstObjStub obj, _esdl__T outer) {
 	  super(obj, outer);
-	  _esdl__outer = outer;
+	  _esdl__outerAlt = outer;
 	  _esdl__doInitRandObjectElems(this);
 	  _esdl__doInitConstraintElems(this, outer);
 	  _esdl__doProcPredicateElems(this, this._esdl__getProc(),
@@ -1262,11 +1292,15 @@ class _esdl__ProxyNoRand(_esdl__T)
       {
 	mixin _esdl__ProxyMixin!_esdl__T;
 
-	_esdl__T* _esdl__outer;
-	_esdl__T* _esdl__getRef()() {return _esdl__outer;}
+	_esdl__T* _esdl__outerAlt;
+	_esdl__T* _esdl__getRef()() {return _esdl__outer();}
+
+	_esdl__T* _esdl__outer()() {
+	  return _esdl__ref();
+	}
 
 	_esdl__T* _esdl__ref()() {
-	  return _esdl__staticCast!(_esdl__TypedStub!_esdl__T)(_esdl__stub)._esdl__ref();
+	  return cast(_esdl__T*) _esdl__stub._esdl__refPtr();
 	}
 
 	enum bool _esdl__HAS_RAND_INFO = false;
@@ -1275,20 +1309,20 @@ class _esdl__ProxyNoRand(_esdl__T)
 	//   return new _esdl__ProxyNoRand!(_esdl__T)(obj, outer_);
 	// }
 	void _esdl__setValRef()(ref _esdl__T outer) {
-	  if (_esdl__outer !is &outer) {
-	    _esdl__outer = &outer;
+	  if (_esdl__outerAlt !is &outer) {
+	    _esdl__outerAlt = &outer;
 	    this._esdl__doSetOuter(true);
 	  }
 	}
 	void _esdl__setValRef()(_esdl__T* outer) {
-	  if (_esdl__outer !is outer) {
-	    _esdl__outer = outer;
+	  if (_esdl__outerAlt !is outer) {
+	    _esdl__outerAlt = outer;
 	    this._esdl__doSetOuter(true);
 	  }
 	}
 	this(CstObjStub obj, _esdl__T* outer) {
 	  super(obj);
-	  _esdl__outer = outer;
+	  _esdl__outerAlt = outer;
 	  _esdl__doInitRandObjectElems(this);
 	  _esdl__doInitConstraintElems(this, outer);
 	  _esdl__doProcPredicateElems(this, this._esdl__getProc(),
@@ -1412,11 +1446,11 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   
     static if (INDX >= 0) {	// only for user defined constraints
       final override void constraintMode(bool mode) {
-	this.outer._esdl__outer.tupleof[INDX].constraintMode(mode);
+	this.outer._esdl__outer().tupleof[INDX].constraintMode(mode);
       }
 
       final override bool constraintMode() {
-	return this.outer._esdl__outer.tupleof[INDX].constraintMode();
+	return this.outer._esdl__outer().tupleof[INDX].constraintMode();
       }
     }
 
@@ -1500,8 +1534,8 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 
 
   override void _esdl__doConstrain(_esdl__CstProcessor proc, bool callPreRandomize) {
-    assert (this._esdl__outer !is null);
-    if (callPreRandomize) _esdl__preRandomize(this._esdl__outer);
+    assert (this._esdl__outer() !is null);
+    if (callPreRandomize) _esdl__preRandomize(this._esdl__outer());
     _esdl__doConstrainElems(this, proc);
     foreach (visitor; _esdl__getGlobalVisitors()) {
       foreach (pred; visitor.getConstraints()) proc.addNewPredicate(pred);
@@ -1513,8 +1547,8 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 
   override void _esdl__doRandomize(_esdl__RandGen randGen) {
     _esdl__doRandomizeElems(this, randGen);
-    assert (this._esdl__outer !is null);
-    _esdl__postRandomize(this._esdl__outer);
+    assert (this._esdl__outer() !is null);
+    _esdl__postRandomize(this._esdl__outer());
   }
 
   void _esdl__doSetOuter()(bool changed) {
@@ -1526,7 +1560,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 
   static if (is (_esdl__T == struct)) {
     void _esdl__doSetOuter()(_esdl__T* obj, bool changed) {
-      _esdl__outer = obj;
+      _esdl__outerAlt = obj;
       foreach (name, lookup; _esdl__globalLookups) {
 	lookup._esdl__fixRef();
       }
@@ -1535,7 +1569,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   }
   else {
     void _esdl__doSetOuter()(_esdl__T obj, bool changed) {
-      _esdl__outer = obj;
+      _esdl__outerAlt = obj;
       foreach (name, lookup; _esdl__globalLookups) {
 	lookup._esdl__fixRef();
       }
@@ -1677,16 +1711,16 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
 	V = make!L(name, parent, null);
       }
       else {
-	alias M = typeof(p._esdl__outer.tupleof[L._esdl__INDEX]);
+	alias M = typeof(p._esdl__outer().tupleof[L._esdl__INDEX]);
 	static if ((is (M == class) && is (M: Object)) ||
 		   (is (M == U*, U) && is (U == struct))) {
-	  V = make!L(name, parent, p._esdl__outer.tupleof[L._esdl__INDEX]);
+	  V = make!L(name, parent, p._esdl__outer().tupleof[L._esdl__INDEX]);
 	}
 	else static if (isPointer!M) {
-	  V = make!L(name, parent, p._esdl__outer.tupleof[L._esdl__INDEX]);
+	  V = make!L(name, parent, p._esdl__outer().tupleof[L._esdl__INDEX]);
 	}
 	else {
-	  V = make!L(name, parent, &(p._esdl__outer.tupleof[L._esdl__INDEX]));
+	  V = make!L(name, parent, &(p._esdl__outer().tupleof[L._esdl__INDEX]));
 	}
       }
     }

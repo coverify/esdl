@@ -57,13 +57,17 @@ class CstObjectGlob(V, rand RAND_ATTR, alias SYM)
     return this;
   }
 
+  override void* _esdl__refPtr() {
+    return cast(void*) _esdl__ref();
+  }
+
   static if (is (V == struct)) {
-    override V* _esdl__ref() {
+    final override V* _esdl__ref() {
       return & SYM;
     }
   }
   else {
-    override V _esdl__ref() {
+    final override V _esdl__ref() {
       return SYM;
     }
   }
@@ -89,8 +93,12 @@ class CstObjectGlobEnum(V, rand RAND_ATTR)
   }
 
   static assert (is (V == struct));
-  override V* _esdl__ref() {
+  final override V* _esdl__ref() {
     return &_var;
+  }
+
+  override void* _esdl__refPtr() {
+    return cast(void*) _esdl__ref();
   }
 
   // no unrolling is possible without adding rand proxy
@@ -146,23 +154,29 @@ class CstObjectIdx(V, rand RAND_ATTR, VV, int IDX,
     else {
       assert (_parent !is null);
       _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
-      assert (proxy._esdl__outer !is null);
-      return proxy._esdl__outer.rand_mode!(PIDX)();
+      assert (proxy._esdl__outer() !is null);
+      return proxy._esdl__outer().rand_mode!(PIDX)();
     }
   }
 
+  override void* _esdl__refPtr() {
+    return cast(void*) _esdl__ref();
+  }
+
   static if (is (V == struct)) {
-    override V* _esdl__ref() {
+    final override V* _esdl__ref() {
       assert (_parent !is null);
       _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
-      return &(proxy._esdl__ref().tupleof[IDX]);
+      if (proxy._esdl__ref() is null) return null;
+      else return &(proxy._esdl__ref().tupleof[IDX]);
     }
   }
   else {
-    override V _esdl__ref() {
+    final override V _esdl__ref() {
       assert (_parent !is null);
       _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
-      return proxy._esdl__ref().tupleof[IDX];
+      if (proxy._esdl__ref() is null) return null;
+      else return proxy._esdl__ref().tupleof[IDX];
     }
   }
 
@@ -190,6 +204,9 @@ class CstRootProxy(V) if (is (V == class) || is (V == struct) ||
 	    _esdl__proc._seed = 0; // uniform!(uint)();
 	  }
 	}
+	void updateRandObj(V v) {
+	  _esdl__randObj = v;
+	}
       }
       else {
 	this(V* v) {
@@ -205,6 +222,9 @@ class CstRootProxy(V) if (is (V == class) || is (V == struct) ||
 	    // no active simulation -- use global rand generator
 	    _esdl__proc._seed = 0; // uniform!(uint)();
 	  }
+	}
+	void updateRandObj(V* v) {
+	  _esdl__randObj = v;
 	}
       }
 
@@ -238,15 +258,19 @@ class CstRootProxy(V) if (is (V == class) || is (V == struct) ||
 	return _esdl__DEBUGSOVER;
       }
 
+      override void* _esdl__refPtr() {
+	return cast(void*) _esdl__ref();
+      }
+
       static if (is (V == struct)) {
 	V* _esdl__randObj;
-	override V* _esdl__ref() {
+	final override V* _esdl__ref() {
 	  return _esdl__randObj;
 	}
       }
       else {
 	V _esdl__randObj;
-	override V _esdl__ref() {
+	final override V _esdl__ref() {
 	  return _esdl__randObj;
 	}
       }
@@ -430,6 +454,7 @@ abstract class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       final override string _esdl__getFullName() {
+	if (_parent is null) return "$root";
 	if (_parent._esdl__isRoot()) return _esdl__name;
 	else  
 	  return _parent._esdl__getFullName() ~ "." ~ _esdl__getName();
@@ -616,6 +641,13 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	}
       }
       
+      override void* _esdl__refPtr() {
+	if (_indexExpr is null // || _indexExpr.isConst()
+	    )
+	  return cast(void*) _esdl__ref();
+	else return null;
+      }
+
       static if (is (LEAF == struct)) {
 	LEAF* getRef() {
 	  if (_indexExpr) {
@@ -625,7 +657,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	    return getRefTmpl(_parent, this._pindex);
 	  }
 	}
-	override LEAF* _esdl__ref() {
+	final override LEAF* _esdl__ref() {
 	  return getRef();
 	}
       }
@@ -638,7 +670,7 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	    return getRefTmpl(_parent, this._pindex);
 	  }
 	}
-	override LEAF _esdl__ref() {
+	final override LEAF _esdl__ref() {
 	  return getRef();
 	}
       }
@@ -696,7 +728,7 @@ class CstObjArrGlob(V, rand RAND_ATTR, int N, alias SYM)
     return this;
   }
 
-  override V* _esdl__ref() {
+  final override V* _esdl__ref() {
     return & SYM;
   }
 }
@@ -725,7 +757,7 @@ class CstObjArrGlobEnum(V, rand RAND_ATTR, int N)
     return this;
   }
 
-  override V* _esdl__ref() {
+  final override V* _esdl__ref() {
     return &_var;
   }
 
@@ -770,15 +802,16 @@ class CstObjArrIdx(V, rand RAND_ATTR, VV, int IDX,
     else {
       assert (_parent !is null);
       _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
-      assert (proxy._esdl__outer !is null);
-      return proxy._esdl__outer.rand_mode!(PIDX)();
+      assert (proxy._esdl__outer() !is null);
+      return proxy._esdl__outer().rand_mode!(PIDX)();
     }
   }
 
-  override V* _esdl__ref() {
+  final override V* _esdl__ref() {
     assert (_parent !is null);
     _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
-    return &(proxy._esdl__ref().tupleof[IDX]);
+    if (proxy._esdl__ref() is null) return null;
+    else return &(proxy._esdl__ref().tupleof[IDX]);
   }
 }
 
