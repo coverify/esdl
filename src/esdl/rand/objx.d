@@ -1308,7 +1308,6 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
 abstract class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
   CstObjArrStub!(V, RAND_ATTR, N)
     {
-      V* _var;
       _esdl__Proxy _parent;
       bool _parentsDepsAreResolved;
     

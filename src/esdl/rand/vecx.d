@@ -217,7 +217,6 @@ abstract class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
     {
       alias RV = typeof(this);
 
-      VREF _var;
       _esdl__Proxy _parent;
       bool _parentsDepsAreResolved;
       
@@ -937,7 +936,6 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
 class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
   CstVecArrBase!(V, RAND_ATTR, N)
     {
-      VREF _var;
       _esdl__Proxy _parent;
       bool _parentsDepsAreResolved;
     
