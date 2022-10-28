@@ -94,10 +94,10 @@ class CstVectorArg(V)
   enum _esdl__ISRAND = false;
   enum _esdl__HASPROXY = false;
 
-  V _val;
+  V* _val;
 
   this(string name, _esdl__Proxy parent, VREF var) {
-    _val = *var;
+    _val = var;
     super(name, parent, var);
   }
 
@@ -111,7 +111,7 @@ class CstVectorArg(V)
   }
 
   override VREF _esdl__ref() {
-    return &_val;
+    return _val;
   }
 }
 
@@ -217,8 +217,6 @@ abstract class CstVectorBase(V, rand RAND_ATTR, int N)
 	  }
 	}
 
-	abstract VREF _esdl__ref();
-	
       }
 
 // Primary Vector -- not an element of any array
@@ -458,7 +456,7 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	}
       }
 
-      override LEAF* _esdl__ref() {
+      override VREF _esdl__ref() {
 	return getRef();
       }
 
