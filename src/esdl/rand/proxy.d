@@ -46,14 +46,16 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   _esdl__Proxy _esdl__getProxy() {
     return this;
   }
+
+  string _esdl__name() {
+    return _esdl__stub._esdl__name();
+  }
   
   string _esdl__getFullName() {
-    if (_esdl__stub is null) return "$root";
-    else return "$root." ~ _esdl__stub._esdl__getFullName();
+    return _esdl__stub._esdl__getFullName();
   }
   string _esdl__getName() {
-    if (_esdl__stub is null) return "$root";
-    else return _esdl__stub._esdl__getName();
+    return _esdl__stub._esdl__getName();
   }
   
   bool _esdl__isRand() {

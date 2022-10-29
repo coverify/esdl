@@ -26,10 +26,7 @@ import esdl.base.rand: _esdl__RandGen;
 abstract class CstDomain(V, rand RAND_ATTR) if (is (V == bool)):
   CstVecDomain!(V, RAND_ATTR), CstLogicTerm
     {
-      this(string name) {
-	super(name);
-      }
-
+      this() { super(); }
 
       CstDistSolverBase getDist() { assert (false); }
 
@@ -81,9 +78,7 @@ abstract class CstDomain(V, rand RAND_ATTR) if (is (V == bool)):
 abstract class CstDomain(V, rand RAND_ATTR) if (!is (V == bool)):
   CstVecDomain!(V, RAND_ATTR), CstVecTerm
     {
-      this(string name) {
-	super(name);
-      }
+      this() { super(); }
 
       final override bool isBool() {return false;}
 
@@ -99,7 +94,7 @@ abstract class CstDomain(V, rand RAND_ATTR) if (!is (V == bool)):
 	    return value();
 	  }
 	  else {
-	    assert (false, "Error evaluating " ~ _esdl__name);
+	    assert (false, "Error evaluating " ~ _esdl__name());
 	  }
 	}
 	else {
@@ -330,9 +325,7 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
     _hash.modify(VT.stringof);
   }
   
-  this(string name) {
-    super(name);
-  }
+  this() { super(); }
 
   
   abstract VREF getRef();
@@ -568,10 +561,14 @@ class CstArrIterator(RV): CstIterator
     return _arrVar;
   }
 
-  string _esdl__name;
+  string _esdl__nameStr;
+
+  string _esdl__name() {
+    return "iterVar";
+  }
 
   this(RV arrVar) {
-    _esdl__name = "iterVar";
+    _esdl__nameStr = "iterVar";
     _arrVar = arrVar;
     // _arrVar._arrLen.iterVar(this);
   }
@@ -596,13 +593,11 @@ class CstArrIterator(RV): CstIterator
   }
 
   override string _esdl__getName() {
-    string n = _arrVar._esdl__getName();
-    return n ~ "->iterator";
+    return _esdl__name();
   }
 
   override string _esdl__getFullName() {
-    string n = _arrVar._esdl__getFullName();
-    return n ~ "->iterator";
+    return _arrVar._esdl__getFullName() ~ "->" ~ _esdl__name();
   }
 
   string describe(bool descExpr=false) {
@@ -680,24 +675,25 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
 
   RV _parent;
 
-  string _esdl__name;
+  override string _esdl__name() {
+    return "length";
+  }
 
   CstVecPrim[] _preReqs;
 
   final override bool isDistVar() { return false; }
 
   override string _esdl__getName() {
-    return _esdl__name;
+    return _esdl__name();
   }
 
   override string _esdl__getFullName() {
-    return _parent._esdl__getFullName() ~ "->length";
+    return _parent._esdl__getFullName() ~ "->" ~ _esdl__name();
   }
 
-  this(string name, RV parent) {
+  this(RV parent) {
     assert (parent !is null);
-    super(name);
-    _esdl__name = name;
+    super();
     _parent = parent;
     _iterVar = new CstArrIterator!RV(_parent);
   }
@@ -760,10 +756,10 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
     if(is(T == string)) {
       import std.conv;
       if(_esdl__isRand) {
-	return "RAND-" ~ "#" ~ _esdl__name ~ ":" ~ value().to!string();
+	return "RAND-" ~ "#" ~ _esdl__name() ~ ":" ~ value().to!string();
       }
       else {
-	return "VAL#" ~ _esdl__name ~ ":" ~ value().to!string();
+	return "VAL#" ~ _esdl__name() ~ ":" ~ value().to!string();
       }
     }
 
@@ -922,7 +918,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
       }
       else {
 	import std.conv: to;
-	assert (false, "Error evaluating " ~ _esdl__name ~
+	assert (false, "Error evaluating " ~ _esdl__name() ~
 		" State: " ~ _state.to!string());
       }
     }
@@ -963,24 +959,25 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
 
   RV _parent;
 
-  string _esdl__name;
+  override string _esdl__name() {
+    return "hierLength";
+  }
 
   CstVecPrim[] _preReqs;
 
   final override bool isDistVar() { return false; }
 
   override string _esdl__getName() {
-    return _esdl__name;
+    return _esdl__name();
   }
 
   override string _esdl__getFullName() {
-    return _parent._esdl__getFullName() ~ "->hierLength";
+    return _parent._esdl__getFullName() ~ "->" ~ _esdl__name();
   }
 
-  this(string name, RV parent) {
+  this(RV parent) {
     assert (parent !is null);
-    super(name);
-    _esdl__name = name;
+    super();
     _parent = parent;
     // _iterVar = new CstArrIterator!RV(_parent);
   }
@@ -1018,10 +1015,10 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
     if(is(T == string)) {
       import std.conv;
       if(_esdl__isRand) {
-	return "RAND-" ~ "#" ~ _esdl__name ~ ":" ~ value().to!string();
+	return "RAND-" ~ "#" ~ _esdl__name() ~ ":" ~ value().to!string();
       }
       else {
-	return "VAL#" ~ _esdl__name ~ ":" ~ value().to!string();
+	return "VAL#" ~ _esdl__name() ~ ":" ~ value().to!string();
       }
     }
 
@@ -1173,7 +1170,7 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
       }
       else {
 	import std.conv: to;
-	assert (false, "Error evaluating " ~ _esdl__name ~
+	assert (false, "Error evaluating " ~ _esdl__name() ~
 		" State: " ~ _state.to!string());
       }
     }

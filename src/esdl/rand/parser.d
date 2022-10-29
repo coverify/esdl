@@ -739,9 +739,9 @@ struct CstParser {
 	mapped = varMap[indx].xLat;
 	parseMappedChain(mapped, mappedCursor);
 	if (mapped[0] == '$') {
-	  fillOut("_esdl__arg_proxy(");
+	  fillOut("_esdl__arg_proxy!(");
 	  fillOut(mapped[1..mappedCursor]);
-	  fillOut(", \"");
+	  fillOut(")(\"");
 	  fillOut(mapped[0..mappedCursor]);
 	  fillOut("\", _esdl__arg!");
 	  fillOut(mapped[1..mappedCursor]);
@@ -783,9 +783,9 @@ struct CstParser {
 	// fillOut(mapped[1..mappedCursor]);
 	// mappedPrevCursor = ++mappedCursor;
 	// fillOut("(), this, this.outer)");
-	fillOut("_esdl__arg_proxy(");
+	fillOut("_esdl__arg_proxy!(");
 	fillOut(CST[start+1..srcCursor]);
-	fillOut(", \"");
+	fillOut(")(\"");
 	fillOut(CST[start..srcCursor]);
 	fillOut("\", _esdl__arg!");
 	fillOut(CST[srcTag+1..srcCursor]);
@@ -1476,9 +1476,7 @@ struct CstParser {
       fillGuardInit(gcount);
       fillGuardInit(" = new CstVectorGlob!(bool, rand(true, true), _esdl__guard_");
       fillGuardInit(gcount);
-      fillGuardInit(")(\"_esdl__guard_");
-      fillGuardInit(gcount);
-      fillGuardInit("\", this._proxy);\n");
+      fillGuardInit(")(this._proxy);\n");
 
       fillGuardUpdt("  _esdl__guard_");
       fillGuardUpdt(gcount);

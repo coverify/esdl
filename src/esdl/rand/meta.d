@@ -215,7 +215,7 @@ void _esdl__doInitRandObjectElems(P, int I=0)(P p) {
       // static if (Q._esdl__HASPROXY // && Q._esdl__ISRAND // not just @rand
       // 		 ) {
       // pragma(msg, "#" ~ Q.stringof);
-      enum string NAME = __traits(identifier, P.tupleof[I]);
+      // enum string NAME = __traits(identifier, P.tupleof[I]);
       // static if (is (T == class)) { // class
       // 	enum NAME = __traits(identifier, T.tupleof[Q._esdl__INDEX]);
       // }
@@ -224,21 +224,21 @@ void _esdl__doInitRandObjectElems(P, int I=0)(P p) {
       // 	enum NAME = __traits(identifier, U.tupleof[Q._esdl__INDEX]);
       // }
       // pragma(msg, p.tupleof[I].stringof);
-      p.tupleof[I] = make!Q(NAME, p);
+      p.tupleof[I] = make!Q(p);
       // if (t !is null) {
       // 	alias M = typeof(t.tupleof[Q._esdl__INDEX]);
       // 	static if ((is (M == class) && is (M: Object)) ||
       // 		   (is (M == U*, U) && is (U == struct))) { // class or struct*
-      // 	  p.tupleof[I] = make!Q(NAME, p, t.tupleof[Q._esdl__INDEX]);
+      // 	  p.tupleof[I] = make!Q(p, t.tupleof[Q._esdl__INDEX]);
       // 	}
       // 	else static if (is (M == struct)) {
-      // 	  p.tupleof[I] = make!Q(NAME, p, &(t.tupleof[Q._esdl__INDEX]));
+      // 	  p.tupleof[I] = make!Q(p, &(t.tupleof[Q._esdl__INDEX]));
       // 	}
       // 	else static if (isPointer!M) {
-      // 	  p.tupleof[I] = make!Q(NAME, p, t.tupleof[Q._esdl__INDEX]);
+      // 	  p.tupleof[I] = make!Q(p, t.tupleof[Q._esdl__INDEX]);
       // 	}
       // 	else {
-      // 	  p.tupleof[I] = make!Q(NAME, p, &(t.tupleof[Q._esdl__INDEX]));
+      // 	  p.tupleof[I] = make!Q(p, &(t.tupleof[Q._esdl__INDEX]));
       // 	}
       // }
       // else {
@@ -247,7 +247,7 @@ void _esdl__doInitRandObjectElems(P, int I=0)(P p) {
       // 	  writeln("Outer not set for: ", p._esdl__getFullName(),
       // 		  " of type: ", P.stringof);
       // 	}
-      // 	p.tupleof[I] = make!Q(NAME, p, null);
+      // 	p.tupleof[I] = make!Q(p, null);
       // }
       // // }
     }
@@ -1417,10 +1417,10 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       else {
 	alias L = typeof(_lambdaArgs[I]);
 	static if (isRandomizable!L) {
-	  alias TYPE = CstVectorArg!(L);
+	  alias TYPE = CstVectorArg!(L, I);
 	}
 	else static if (isRandVectorSet!L) {
-	  alias TYPE = CstVecArrArg!(L);
+	  alias TYPE = CstVecArrArg!(L, I);
 	}
 	auto vvar = cast (TYPE) (_proxyLambdaArgs[I]);
       }
@@ -1572,11 +1572,15 @@ auto _esdl__sym(L)(L l, string name,
 
 struct _esdl__rand_type_proxy(T, P)
 {
-  string _esdl__name;
+  string _name;
   P _parent;
 
+  string _esdl__name() {
+    return _name;
+  }
+
   this(string name, P parent) {
-    _esdl__name = name;
+    _name = name;
     _parent = parent;
   }
 
@@ -1608,22 +1612,22 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
   import esdl.data.queue: Queue, isQueue;
   static if (is (L: CstVarNodeIntf)) {
     if (V is null) {
-      V = make!L(name, parent);
+      V = make!L(parent);
       // L._esdl__PROXYT p = parent;
       // if (p is null) {
-      // 	V = make!L(name, parent, null);
+      // 	V = make!L(parent, null);
       // }
       // else {
       // 	alias M = typeof(p._esdl__ref().tupleof[L._esdl__INDEX]);
       // 	static if ((is (M == class) && is (M: Object)) ||
       // 		   (is (M == U*, U) && is (U == struct))) {
-      // 	  V = make!L(name, parent, p._esdl__ref().tupleof[L._esdl__INDEX]);
+      // 	  V = make!L(parent, p._esdl__ref().tupleof[L._esdl__INDEX]);
       // 	}
       // 	else static if (isPointer!M) {
-      // 	  V = make!L(name, parent, p._esdl__ref().tupleof[L._esdl__INDEX]);
+      // 	  V = make!L(parent, p._esdl__ref().tupleof[L._esdl__INDEX]);
       // 	}
       // 	else {
-      // 	  V = make!L(name, parent, &(p._esdl__ref().tupleof[L._esdl__INDEX]));
+      // 	  V = make!L(parent, &(p._esdl__ref().tupleof[L._esdl__INDEX]));
       // 	}
       // }
     }
@@ -1636,7 +1640,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       if (global !is null)
 	return cast(CstVecType) global;
       else {
-	CstVecType obj = make!CstVecType(name, parent);
+	CstVecType obj = make!CstVecType(parent);
 	parent._esdl__addGlobalLookup(obj, V.stringof);
 	return obj;
       }
@@ -1664,12 +1668,12 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       return cast(CstObjType) global;
     else {
       // pragma(msg, CstObjType.stringof);
-      CstObjType obj = make!CstObjType(name, parent);
+      CstObjType obj = make!CstObjType(parent);
       // static if (is (L == struct) && !isQueue!L) {
-      // 	CstObjType obj = make!CstObjType(name, parent, &V);
+      // 	CstObjType obj = make!CstObjType(parent, &V);
       // }
       // else {
-      // 	CstObjType obj = make!CstObjType(name, parent, V);
+      // 	CstObjType obj = make!CstObjType(parent, V);
       // }
       parent._esdl__addGlobalLookup(obj, V.stringof);
       return obj;
@@ -1684,10 +1688,10 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       if (global !is null)
 	return cast(CstVecArrType) global;
       else {
-	CstVecArrType obj = make!CstVecArrType(name, parent);
+	CstVecArrType obj = make!CstVecArrType(parent);
 	parent._esdl__addGlobalLookup(obj, V.stringof);
 	auto visitor =
-	  make!(_esdl__VisitorCst!CstVecArrType)(parent, name ~ "_CstVisitor", obj);
+	  make!(_esdl__VisitorCst!CstVecArrType)(parent, name, obj);
 	parent._esdl__addGlobalVisitor(visitor);
 	return obj;
       }
@@ -1698,10 +1702,10 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       if (global !is null)
 	return cast(CstVecArrType) global;
       else {
-	CstVecArrType obj = make!CstVecArrType(name, parent, V);
+	CstVecArrType obj = make!CstVecArrType(parent, V);
 	parent._esdl__addGlobalLookup(obj, V.stringof);
 	auto visitor =
-	  make!(_esdl__VisitorCst!CstVecArrType)(parent, name ~ "_CstVisitor", obj);
+	  make!(_esdl__VisitorCst!CstVecArrType)(parent, name, obj);
 	parent._esdl__addGlobalVisitor(visitor);
 	return obj;
       }
@@ -1715,10 +1719,10 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
     if (global !is null)
       return cast(CstObjArrType) global;
     else {
-      CstObjArrType obj = make!CstObjArrType(name, parent);
+      CstObjArrType obj = make!CstObjArrType(parent);
       parent._esdl__addGlobalLookup(obj, V.stringof);
       auto visitor =
-	make!(_esdl__VisitorCst!CstObjArrType)(parent, name ~ "_CstVisitor", obj);
+	make!(_esdl__VisitorCst!CstObjArrType)(parent, name, obj);
       parent._esdl__addGlobalVisitor(visitor);
       return obj;
     }
@@ -1731,7 +1735,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
     // writeln(VS);
     // writeln(__traits(getMember, parent, VS).stringof);
     // if (__traits(getMember, parent, VS) is null) {
-    //   __traits(getMember, parent, VS) = make!L(name, parent, parent._esdl__ref.tupleof[L._esdl__INDEX]);
+    //   __traits(getMember, parent, VS) = make!L(parent, parent._esdl__ref.tupleof[L._esdl__INDEX]);
     // }
     // return __traits(getMember, parent, VS);
   }
@@ -1746,15 +1750,15 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
 // }
 
 
-auto _esdl__arg_proxy(L, X, P)(size_t idx, string name, ref L arg, X proxy, P parent) {
+auto _esdl__arg_proxy(size_t IDX, L, X, P)(string name, ref L arg, X proxy, P parent) {
   static if (isRandomizable!L) {
     // import std.stdio;
     // writeln("Creating VarVec, ", name);
-    alias CstVectorType = CstVectorArg!(L);
-    CstVarNodeIntf var = proxy._proxyLambdaArgs[idx];
+    alias CstVectorType = CstVectorArg!(L, IDX);
+    CstVarNodeIntf var = proxy._proxyLambdaArgs[IDX];
     if (var is null) {
-      CstVectorType vvar = make!CstVectorType(name, parent, &arg);
-      proxy._proxyLambdaArgs[idx] = vvar;
+      CstVectorType vvar = make!CstVectorType(parent, &arg);
+      proxy._proxyLambdaArgs[IDX] = vvar;
       return vvar;
     }
     else {
@@ -1764,14 +1768,14 @@ auto _esdl__arg_proxy(L, X, P)(size_t idx, string name, ref L arg, X proxy, P pa
     }
   }
   else static if (isRandVectorSet!L) {
-    alias CstVecArrType = CstVecArrArg!(L);
-    CstVarNodeIntf var = proxy._proxyLambdaArgs[idx];
+    alias CstVecArrType = CstVecArrArg!(L, IDX);
+    CstVarNodeIntf var = proxy._proxyLambdaArgs[IDX];
     if (var is null) {
-      CstVecArrType vvar = make!CstVecArrType(name, parent, &arg);
+      CstVecArrType vvar = make!CstVecArrType(parent, &arg);
       auto visitor =
-	make!(_esdl__VisitorCst!CstVecArrType)(parent, name ~ "_CstVisitor", vvar);
+	make!(_esdl__VisitorCst!CstVecArrType)(parent, name, vvar);
       parent._esdl__getProc()._esdl__addArgVisitor(visitor);
-      proxy._proxyLambdaArgs[idx] = vvar;
+      proxy._proxyLambdaArgs[IDX] = vvar;
       return vvar;
     }
     else {
