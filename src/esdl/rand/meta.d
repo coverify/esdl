@@ -350,14 +350,14 @@ void _esdl__doProcPredicateElems(P, int I=0)(P p, _esdl__CstProcessor proc,
   }
 }
 
-void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
+void _esdl__doSetStubElems(P, int I=0)(P p) {
   static if (I == 0 &&
 	     is (P B == super) &&
 	     is (B[0]: _esdl__Proxy) &&
 	     is (B[0] == class)) {
     static if (! is (B[0] == _esdl__Proxy)) {
       B[0] b = p;			// super object
-      _esdl__doSetOuterElems(b, changed);
+      _esdl__doSetStubElems(b);
     }
   }
   static if (I == P.tupleof.length) {
@@ -365,51 +365,37 @@ void _esdl__doSetOuterElems(P, int I=0)(P p, bool changed) {
   }
   else {
     alias Q = typeof (P.tupleof[I]);
-    static if (is (Q == CstVectorIdx!(L, RAND, LL, IDX, P, PIDX),
-		   L, rand RAND, LL, int IDX, P, int PIDX)) {
-      if (p.tupleof[I] !is null) {
-	static if (isPointer!LL) {
-	  // assert (p._esdl__ref.tupleof[IDX] !is null,
-	  // 	  p._esdl__ref.tupleof[IDX].stringof ~ " is null");
-	}
-	else {
-	}
-      }
-    }
+    // static if (is (Q == CstVectorIdx!(L, RAND, LL, IDX, P, PIDX),
+    // 		   L, rand RAND, LL, int IDX, P, int PIDX)) {
+    //   if (p.tupleof[I] !is null) {
+    // 	static if (isPointer!LL) {
+    // 	  // assert (p._esdl__ref.tupleof[IDX] !is null,
+    // 	  // 	  p._esdl__ref.tupleof[IDX].stringof ~ " is null");
+    // 	}
+    // 	else {
+    // 	}
+    //   }
+    // }
     static if (is (Q == CstObjectIdx!(L, RAND, LL, IDX, P, PIDX),
 		   L, rand RAND, LL, int IDX, P, int PIDX)) {
-      if (p.tupleof[I] !is null) {
-	static if (is (L == struct) && !isQueue!L) {
-	}
-	else {
-	  // assert (p._esdl__ref.tupleof[IDX] !is null,
-	  // 	  p._esdl__ref.tupleof[IDX].stringof ~ " is null");
-	}
-      }
+      p.tupleof[I]._esdl__setStub();
     }
-    static if (is (Q == CstVecArrIdx!(L, RAND, LL, IDX, P, PIDX),
-		   L, rand RAND, LL, int IDX, P, int PIDX)) {
-      if (p.tupleof[I] !is null) {
-	static if (isPointer!LL) {
-	  // assert (p._esdl__ref.tupleof[IDX] !is null,
-	  // 	  p._esdl__ref.tupleof[IDX].stringof ~ " is null");
-	}
-	else {
-	}
-      }
-    }
+    // static if (is (Q == CstVecArrIdx!(L, RAND, LL, IDX, P, PIDX),
+    // 		   L, rand RAND, LL, int IDX, P, int PIDX)) {
+    //   if (p.tupleof[I] !is null) {
+    // 	static if (isPointer!LL) {
+    // 	  // assert (p._esdl__ref.tupleof[IDX] !is null,
+    // 	  // 	  p._esdl__ref.tupleof[IDX].stringof ~ " is null");
+    // 	}
+    // 	else {
+    // 	}
+    //   }
+    // }
     static if (is (Q == CstObjArrIdx!(L, RAND, LL, IDX, P, PIDX),
 		   L, rand RAND, LL, int IDX, P, int PIDX)) {
-      if (p.tupleof[I] !is null) {
-	static if (isPointer!LL) {
-	  // assert (p._esdl__ref.tupleof[IDX] !is null,
-	  // 	  p._esdl__ref.tupleof[IDX].stringof ~ " is null");
-	}
-	else {
-	}
-      }
+      p.tupleof[I]._esdl__setStub();
     }
-    _esdl__doSetOuterElems!(P, I+1)(p, changed);
+    _esdl__doSetStubElems!(P, I+1)(p);
   }
 }
 
@@ -665,7 +651,7 @@ void _esdl__randomize(T) (ref T t) if (is (T == struct))
 
     _esdl__preRandomize(t);
 
-    proxyInst._esdl__doSetOuter(&t, true);
+    proxyInst._esdl__doSetStub();
 
     proxyInst._esdl__lambdaCst = null;
     proc.reset();
@@ -715,7 +701,7 @@ void _esdl__randomize(T) (T t) if (is (T == class))
 
     _esdl__preRandomize(t);
 
-    proxyInst._esdl__doSetOuter(t, true);
+    proxyInst._esdl__doSetStub();
 
     proxyInst._esdl__lambdaCst = null;
     proc.reset();
@@ -795,9 +781,9 @@ void _esdl__randomizeWith(T)(T t, _esdl__Proxy proxy,
 
     _esdl__CstProcessor proc = proxy._esdl__getProc();
     assert(proc !is null);
-    proxyInst._esdl__doSetOuter(t, true);
+    proxyInst._esdl__doSetStub();
 
-    lambdaCst._esdl__doSetOuter();
+    lambdaCst._esdl__doSyncArgs();
   
     proc.reset();
     proxyInst._esdl__doConstrain(proc, false);
@@ -828,9 +814,9 @@ void _esdl__randomizeWith(T) (ref T t, _esdl__Proxy proxy,
 
     _esdl__CstProcessor proc = proxy._esdl__getProc();
     assert(proc !is null);
-    proxyInst._esdl__doSetOuter(&t, true);
+    proxyInst._esdl__doSetStub();
 
-    lambdaCst._esdl__doSetOuter();
+    lambdaCst._esdl__doSyncArgs();
   
     proc.reset();
     proxyInst._esdl__doConstrain(proc, false);
@@ -1412,7 +1398,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     mixin (CST_PARSE_DATA.guardInits);
     mixin (CST_PARSE_DATA.guardUpdts);
 
-    void _esdl__doSetOuterElems(int I=0)() {
+    void _esdl__doSyncArgsElems(int I=0)() {
       static if (I == ARGS.length) return;
       else {
 	alias L = typeof(_lambdaArgs[I]);
@@ -1426,8 +1412,8 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       }
     }
 
-    override void _esdl__doSetOuter() {
-      _esdl__doSetOuterElems();
+    override void _esdl__doSyncArgs() {
+      _esdl__doSyncArgsElems();
     }
   }
 
@@ -1464,21 +1450,9 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     _esdl__postRandomize(this._esdl__ref());
   }
 
-  void _esdl__doSetOuter()(bool changed) {
-    _esdl__doSetOuterElems(this, changed);
+  void _esdl__doSetStub()() {
+    _esdl__doSetStubElems(this);
   }
-
-  static if (is (_esdl__T == struct)) {
-    void _esdl__doSetOuter()(_esdl__T* obj, bool changed) {
-      _esdl__doSetOuterElems(this, changed);
-    }
-  }
-  else {
-    void _esdl__doSetOuter()(_esdl__T obj, bool changed) {
-      _esdl__doSetOuterElems(this, changed);
-    }
-  }
-
 
   debug (CSTSOLVER) {
     enum bool _esdl__DEBUGSOVER = true;

@@ -181,7 +181,7 @@ class CstVectorIdx(V, rand RAND_ATTR, VV, int IDX,
 
   final override string _esdl__name() {
     alias TT = P._esdl__Type;
-    return TT.tupleof[IDX].stringof[3..$];
+    return TT.tupleof[IDX].stringof;
   }
 }
 
@@ -661,7 +661,7 @@ class CstVecArrIdx(V, rand RAND_ATTR, VV, int IDX,
 
   final override string _esdl__name() {
     alias TT = P._esdl__Type;
-    return TT.tupleof[IDX].stringof[3..$];
+    return TT.tupleof[IDX].stringof;
   }
 }
 
