@@ -121,6 +121,7 @@ abstract class CstObjStub: CstObjectIntf
   bool _esdl__isRoot() { return false; }
 
   abstract void* _esdl__refPtr();
+  abstract string _esdl__name();
 }
 
 interface CstObjectIntf: CstObjNodeIntf
@@ -268,14 +269,12 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
   uint         _domN = uint.max;
   uint         _varN = uint.max;
 
-  string _esdl__name;
+  abstract string _esdl__name();
 
-  this(string name) {
-    _esdl__name = name;
-  }
+  this() { }
 
   string _esdl__getName() {
-    return _esdl__name;
+    return _esdl__name();
   }
 
   // Dependencies
@@ -747,14 +746,12 @@ interface CstObjSetIntf
 
 abstract class CstObjSet: CstObjArrVoid, CstObjArrIntf
 {
-  string _esdl__name;
+  abstract string _esdl__name();
 
-  this(string name) {
-    _esdl__name = name;
-  }
+  this() { }
 
   string _esdl__getName() {
-    return _esdl__name;
+    return _esdl__name();
   }
 
   uint _esdl__domsetUnresolvedArrLen = uint.max;
@@ -777,14 +774,12 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
 {
   State _state;
   
-  string _esdl__name;
+  abstract string _esdl__name();
 
-  this(string name) {
-    _esdl__name = name;
-  }
+  this() { }
 
   override string _esdl__getName() {
-    return _esdl__name;
+    return _esdl__name();
   }
 
   // Callbacks
