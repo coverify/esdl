@@ -165,7 +165,7 @@ class CstObjectIdx(V, rand RAND_ATTR, VV, int IDX,
 
   final override string _esdl__name() {
     alias TT = P._esdl__Type;
-    return TT.tupleof[IDX].stringof[3..$];
+    return TT.tupleof[IDX].stringof;
   }
 }
 
@@ -288,8 +288,15 @@ abstract class _esdl__ObjStub(V, rand RAND_ATTR, int N):
 
   alias PROXYT = _esdl__ProxyResolve!(LEAF);
 
+  // can not store _proxy as PROXYT since that results in
+  // cyclic type dependency
   _esdl__Proxy _proxy;
   _esdl__Proxy _parent;
+
+  final void _esdl__setStub() {
+    // In case the Stub does not have a proxy yet
+    if (_proxy !is null) _proxy._esdl__setStub(this);
+  }
 
   this(_esdl__Proxy parent) {
     _parent = parent;
@@ -458,17 +465,6 @@ abstract class CstObject(V, rand RAND_ATTR, int N) if (N == 0):
 
       void setDomainContext(CstPredicate pred, DomainContextEnum context) {
 	// no parent
-      }
-
-      static if (is (_esdl__T == struct)) {
-	void _esdl__doSetOuter()(V* obj, bool changed) {
-	  _proxy._esdl__doSetOuter(obj, changed);
-	}
-      }
-      else {
-	void _esdl__doSetOuter()(V obj, bool changed) {
-	  _proxy._esdl__doSetOuter(obj, changed);
-	}
       }
 
 }
@@ -771,7 +767,7 @@ class CstObjArrIdx(V, rand RAND_ATTR, VV, int IDX,
 
   final override string _esdl__name() {
     alias TT = P._esdl__Type;
-    return TT.tupleof[IDX].stringof[3..$];
+    return TT.tupleof[IDX].stringof;
   }
 }
 
@@ -802,6 +798,11 @@ abstract class CstObjArrStub(V, rand RAND_ATTR, int N)
   }
 
   CstObjArrProxy!(V, RAND_ATTR, N) _proxy;
+
+  final void _esdl__setStub() {
+    assert (_proxy !is null);
+    _proxy._esdl__setStub(this);
+  }
   
   this() {
     _proxy = make!(CstObjArrProxy!(V, RAND_ATTR, N))(this);
@@ -896,6 +897,10 @@ class CstObjArrProxy(V, rand RAND_ATTR, int N)
   }
 
   CstObjArrStub!(V, RAND_ATTR, N) _stub;
+
+  final void _esdl__setStub(CstObjArrStub!(V, RAND_ATTR, N) stub) {
+    _stub = stub;
+  }
   
   this(CstObjArrStub!(V, RAND_ATTR, N) stub) {
     _stub = stub;

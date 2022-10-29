@@ -39,6 +39,10 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   // would be null for root proxy
   CstObjStub _esdl__stub;
 
+  final void _esdl__setStub(CstObjStub stub) {
+    _esdl__stub = stub;
+  }
+
   _esdl__CstProcessor _esdl__getProc() {
     return _esdl__stub._esdl__getProc();
   }
