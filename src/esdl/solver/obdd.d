@@ -22,6 +22,7 @@ import std.string: format;
 import core.stdc.string: memset;
 
 import esdl.data.bvec: ubvec;
+import esdl.data.vector: Vector;
 
 import core.memory: pureMalloc, pureRealloc, pureFree;
 alias malloc = pureMalloc;
@@ -718,7 +719,7 @@ struct BddVec
     }
   }
 
-  void initialize(Buddy buddy, ref Array!int var) {
+  void initialize(Buddy buddy, ref Vector!(int, "vars") var) {
     _buddy = buddy;
     for(int n = 0 ; n < size ; n++) {
       this[n] = buddy.ithVar(var[n]);
@@ -2997,7 +2998,7 @@ class Buddy
 
   struct BddCache
   {
-    Array!BddCacheData table;
+    Vector!(BddCacheData, "table") table;
     bool initialized = false;
 
     void init(uint size)
@@ -3168,15 +3169,15 @@ class Buddy
   uint _nodeSize() @property {return cast(uint) _nodes.length;}
   int _maxNodeSize; /* Maximum allowed number of _nodes */
   int _maxNodeIncr; /* Max. # of _nodes used to inc. table */
-  Array!BddNode _nodes; /* All of the BDD _nodes */
+  Vector!(BddNode, "nodes") _nodes; /* All of the BDD _nodes */
   int _freePos; /* First free node */
   int _freeNum; /* Number of free _nodes */
   int _produced; /* Number of new _nodes ever produced */
   int _varNum; /* Number of defined BDD variables */
-  Array!int _refStack; /* Internal node reference stack */
+  Vector!(int, "refStack") _refStack; /* Internal node reference stack */
   int _refStackTop; /* Internal node reference stack top */
-  Array!int _var2Level; /* Variable -> level table */
-  Array!int _level2Var; /* Level -> variable table */
+  Vector!(int, "var2Level") _var2Level; /* Variable -> level table */
+  Vector!(int, "level2Var") _level2Var; /* Level -> variable table */
   bool _resized; /* Flag indicating a resize of the nodetable */
 
   BddCacheStat bddcachestats;
@@ -3190,7 +3191,7 @@ class Buddy
 
   /*=== PRIVATE KERNEL VARIABLES =========================================*/
 
-  Array!int _varSet; /* Set of defined BDD variables */
+  Vector!(int, "varSet") _varSet; /* Set of defined BDD variables */
   int _gbCollectNum; /* Number of garbage collections */
   int _cacheSize; /* Size of the operator caches */
   long _gbcClock; /* Clock ticks used in GBC */
@@ -3268,7 +3269,7 @@ class Buddy
     return res;
   }
 
-  BDD makeSet(ref Array!int varset)
+  BDD makeSet(ref Vector!(int, "varset") varset)
   {
     BDD res = one();
     int varnum = cast(int) varset.length;
@@ -7036,7 +7037,7 @@ class Buddy
     return next;
   }
 
-  BddTree reorder_sift_seq(BddTree t, ref Array!BddTree seq, int num)
+  BddTree reorder_sift_seq(BddTree t, ref Vector!(BddTree, "seq") seq, int num)
   {
     BddTree dis;
     int n;
@@ -7188,7 +7189,7 @@ class Buddy
     import std.random;
 
     BddTree dis;
-    Array!BddTree seq;
+    Vector!(BddTree, "seq") seq;
     int n, num = 0;
 
     if(t is null)
@@ -7243,7 +7244,7 @@ class Buddy
   BddTree reorder_sift(BddTree t)
   {
     BddTree dis;
-    Array!BddTree seq;
+    Vector!(BddTree, "seq") seq;
     sizePair[] p;
     int n, num;
 
