@@ -18,6 +18,7 @@ import esdl.rand.domain: CstArrIterator, CstArrLength, CstArrHierLength, CstDoma
 import esdl.rand.misc: _esdl__staticCast;
 
 import esdl.base.rand: _esdl__RandGen;
+import esdl.base.alloc: make;
 
 import std.algorithm.searching: canFind;
 

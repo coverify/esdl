@@ -10,6 +10,7 @@ import esdl.rand.expr: CstVec2LogicExpr, CstRangeExpr, CstVecDistSetElem,
   CstVecWeightedDistSetElem, CstLogicWeightedDistSetElem,
   CstInsideArrExpr, CstVecDistExpr, CstLogicDistExpr, CstLogic2LogicExpr;
 import esdl.rand.domain: CstDomain;
+import esdl.base.alloc: make;
 
 
 

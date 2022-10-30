@@ -20,6 +20,7 @@ import esdl.rand.misc: _esdl__staticCast;
 
 import std.algorithm.searching: canFind;
 import esdl.base.rand: _esdl__RandGen, getRandGen;
+import esdl.base.alloc: make;
 
 interface CstObjIndexed { }
 

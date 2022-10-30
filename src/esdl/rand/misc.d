@@ -11,25 +11,10 @@ import std.range: ElementType;
 import std.meta: AliasSeq;
 private import std.typetuple: staticIndexOf, TypeTuple;
 
-import std.experimental.allocator.typed: TypedAllocator;
-// import std.experimental.allocator.gc_allocator : GCAllocator;
-import esdl.experimental.allocator.mallocator : Mallocator;
-// import std.experimental.allocator.mmap_allocator : MmapAllocator;
-
 // static alias Unconst(T) = T;
 // static alias Unconst(T: const U, U) = U;
 
 enum _esdl__NotMappedForRandomization;
-
-alias ProxyAllocator = TypedAllocator!(Mallocator);
-
-static ProxyAllocator proxyAllocator;
-
-auto make(T, U...)(U args) {
-  // import std.stdio;
-  // writeln("Make: ", T.stringof);
-  return proxyAllocator.make!T(args);
-}
 
 alias _esdl__Sigbuf = Charbuf!("Signature", 1024);
 

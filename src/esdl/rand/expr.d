@@ -5,9 +5,9 @@ import esdl.solver.base: CstSolver, CstDistSolverBase;
 import esdl.rand.misc: rand, isVecSigned, Unconst, CstVecType,
   CstVectorOp, CstInsideOp, CstBinaryOp, CstCompareOp, CstLogicOp,
   CstUnaryOp, CstSliceOp, writeHexString, CstUniqueOp, DomainContextEnum,
-  getCommonVecType, _esdl__Sigbuf, make, CstVectorOpStr, CstBinaryOpStr,
+  getCommonVecType, _esdl__Sigbuf, CstVectorOpStr, CstBinaryOpStr,
   CstLogicOpStr, CstCompareOpStr;
-
+import esdl.base.alloc: make;
 import esdl.rand.base: DomDistEnum, CstTerm, CstDomBase, CstDomSet,
   CstIterator, CstVecNodeIntf, CstVarNodeIntf, CstVecArrIntf,
   CstVecPrim, CstValue, CstVecTerm, CstLogicTerm, CstDepIntf;
