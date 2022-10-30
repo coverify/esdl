@@ -13,7 +13,7 @@ struct CstVecDistRange(T)
 {
   T _min;
   T _max;
-  T [] _purgeList;		// this should be sorted
+  Vector!(T, "purgeLsst") _purgeList;		// this should be sorted
   size_t _purgeLen;
 
   uint _weight;			// per item weight
@@ -169,7 +169,7 @@ class CstVecDistSolver(T): CstDistSolverBase
   import esdl.base.rand: _esdl__RandGen;
   import std.random: uniform;
 
-  CstVecDistRange!T [] _set;
+  Vector!(CstVecDistRange!T, "set") _set;
   CstDomBase _dom;
 
   this(CstDomBase dom) { _dom = dom; }
@@ -178,7 +178,7 @@ class CstVecDistSolver(T): CstDistSolverBase
 
   void opOpAssign(string op)(CstVecDistRange!T dist) if(op == "~") {
     import std.algorithm.searching: countUntil;
-    ptrdiff_t pos = countUntil!((a, b) {return a._min >= b._min;})(_set, dist);
+    ptrdiff_t pos = countUntil!((a, b) {return a._min >= b._min;})(_set[], dist);
     if (pos == -1) {
       // if (_set.length > 0 && _set[$-1]._max >= dist._min) {
       // 	assert(false, "Overlapping 'dist' constraint");
@@ -195,7 +195,7 @@ class CstVecDistSolver(T): CstDistSolverBase
       // if (pos != 0 && _set[pos-1]._max >= dist._min) {
       // 	assert(false, "Overlapping 'dist' constraint");
       // }
-      _set.length += 1;
+      _set.length = _set.length + 1;
       for (size_t i=_set.length-1; i!=pos; --i) {
 	_set[i] = _set[i-1];
       }
