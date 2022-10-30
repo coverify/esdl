@@ -1,7 +1,7 @@
 module esdl.rand.misc;
 
 import esdl.data.queue;
-import esdl.data.vector: Charbuf;
+import esdl.data.charbuf: Charbuf;
 import esdl.data.bvec: isBitVector;
 
 import std.traits: isIntegral, isBoolean, isArray, EnumMembers,
@@ -31,7 +31,7 @@ auto make(T, U...)(U args) {
   return proxyAllocator.make!T(args);
 }
 
-alias _esdl__Sigbuf = Charbuf!("Signature", 0);
+alias _esdl__Sigbuf = Charbuf!("Signature", 1024);
 
 public enum SolveOrder: ubyte { UNDECIDED, NOW, LATER }
 
@@ -105,23 +105,39 @@ size_t writeHexString(T)(T val, ref _esdl__Sigbuf str) {
     enum size_t NIBBLES = 2 * (T.SIZE + 7)/8;
     enum size_t NIBBLESPERWORD = 2 * T.STORE_T.sizeof;
     enum T.STORE_T NIBBLEMASK = 0xF;
-    for (size_t i=NIBBLES; i != 0; --i) {
-      import std.stdio;
-      size_t j = (i-1) / NIBBLESPERWORD;
-      size_t k = (i-1) % NIBBLESPERWORD;
-      auto C = (val.aVal[j] >> (k * 4)) & NIBBLEMASK;
-      if (C < 10) str ~= (cast(char) ('0' + C));
-      else str ~= cast(char) ('A' + C - 10);
+    if (val == 0) { str ~= '0'; }
+    else {
+      bool zero = true;
+      for (size_t i=NIBBLES; i != 0; --i) {
+	import std.stdio;
+	size_t j = (i-1) / NIBBLESPERWORD;
+	size_t k = (i-1) % NIBBLESPERWORD;
+	auto C = (val.aVal[j] >> (k * 4)) & NIBBLEMASK;
+	if (zero && C == 0) continue;
+	else {
+	  zero = false;
+	  if (C < 10) str ~= (cast(char) ('0' + C));
+	  else str ~= cast(char) ('A' + C - 10);
+	}
+      }
     }
     return NIBBLES;
   }
   else {
     enum size_t NIBBLES = 2 * T.sizeof;
     enum ubyte NIBBLEMASK = 0xF;
-    for (size_t i=NIBBLES; i != 0; --i) {
-      auto C = (val >> ((i-1) * 4)) & NIBBLEMASK;
-      if (C < 10) str ~= (cast(char) ('0' + C));
-      else str ~= cast(char) ('A' + C - 10);
+    if (val == 0) { str ~= '0'; }
+    else {
+      bool zero = true;
+      for (size_t i=NIBBLES; i != 0; --i) {
+	auto C = (val >> ((i-1) * 4)) & NIBBLEMASK;
+	if (zero && C == 0) continue;
+	else {
+	  zero = false;
+	  if (C < 10) str ~= (cast(char) ('0' + C));
+	  else str ~= cast(char) ('A' + C - 10);
+	}
+      }
     }
     return NIBBLES;
   }
@@ -650,6 +666,9 @@ enum CstUnaryOp: byte
     NEG,
     }
 
+enum string[__traits(allMembers, CstUnaryOp).length] CstUnaryOpStr =
+  ["~", "-"];
+
 enum CstBinaryOp: byte
 {   AND,
     OR ,
@@ -664,6 +683,10 @@ enum CstBinaryOp: byte
     LRSH,			// Logic shift right ">>>"
     }
 
+enum string[__traits(allMembers, CstBinaryOp).length] CstBinaryOpStr =
+  ["&", "|", "^", "+", "-", "*", "/", "%", "<<", ">>", ">>>"];
+  
+  
 enum CstSliceOp: byte
 {   SLICE,
     SLICEINC,
@@ -677,6 +700,8 @@ enum CstCompareOp: byte
     EQU,
     NEQ,
     }
+enum string[__traits(allMembers, CstCompareOp).length] CstCompareOpStr =
+  ["<", "<=", ">", ">=", "=", "~="];
 
 
 enum CstLogicOp: byte
@@ -688,6 +713,8 @@ enum CstLogicOp: byte
     LOGICNEQ
     }
 
+enum string[__traits(allMembers, CstLogicOp).length] CstLogicOpStr =
+  ["&&", "||", "->", "!", "==", "!="];
 
 enum CstVectorOp: byte
 {   NONE,
@@ -699,6 +726,9 @@ enum CstVectorOp: byte
     MULT
     }
 
+enum string[__traits(allMembers, CstVectorOp).length] CstVectorOpStr =
+  ["{}", "#i", "#I", "#l", "#L", "#+", "#*"];
+
 enum CstUniqueOp: byte
 {   INIT,
     INT,
@@ -708,6 +738,9 @@ enum CstUniqueOp: byte
     UNIQUE
     }
 
+enum string[__traits(allMembers, CstUniqueOp).length] CstUniqueOpStr =
+  [".", "#i", "#I", "#l", "#L", "#$"];
+
 
 enum CstInsideOp: byte
 {   INSIDE,
@@ -716,6 +749,9 @@ enum CstInsideOp: byte
     RANGEINCL,
     DONE
     }
+
+enum string[__traits(allMembers, CstInsideOp).length] CstInsideOpStr =
+  ["@I", "@=", "@R", "@r", "@@"];
 
 enum isLvalue(alias A) = is(typeof((ref _){}(A)));
 

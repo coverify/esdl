@@ -1137,17 +1137,16 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 
   void writeSignature(_esdl__CstProcessor proc, ref _esdl__Sigbuf str, CstSolverAgent agent) {
     if (_soft != 0) {
-      str.addReserve(16);
-      str.writef!("!%d:")(_soft); // _soft.to!string();
+      str.appendf!("!%d:")(_soft); // _soft.to!string();
     }
     if (_guard !is null) {
       if (_guard._state is State.SOLVED) {
 	assert (_guard._exprVal ^ _guardInv);
       }
       else {
-	if (_guardInv) str ~= " ! ";
+	if (_guardInv) str ~= "!";
 	_guard.writeSignature(proc, str, agent);
-	str ~= " >> ";
+	str ~= "~>";
       }
     }
     _expr.writeExprString(proc, str);

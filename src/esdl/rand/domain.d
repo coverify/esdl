@@ -262,43 +262,35 @@ abstract class CstVecDomain(V, rand RAND_ATTR): CstDomBase
       // import std.stdio;
       // writeln(_esdl__getFullName(), " has a value of: ", value());
       str ~= 'V';
-      if (_domN < 256) (cast(ubyte) _domN).writeHexString(str);
-      else (cast(ushort) _domN).writeHexString(str);
+      str.appendf!("%x")(_domN);
       // str ~= '#';
-      // if (_varN < 256) (cast(ubyte) _varN).writeHexString(str);
-      // else (cast(ushort) _varN).writeHexString(str);
     }
     else {
       str ~= 'R';
-      if (_domN < 256) (cast(ubyte) _domN).writeHexString(str);
-      else (cast(ushort) _domN).writeHexString(str);
-      str ~= VT.stringof;
-      // static if (isBitVector!VT) {
-      // 	static if (VT.ISSIGNED) {
-      // 	  str ~= 'S';
-      // 	}
-      // 	else {
-      // 	  str ~= 'U';
-      // 	}
-      // 	if (VT.SIZE < 256) (cast(ubyte) VT.SIZE).writeHexString(str);
-      // 	else (cast(ushort) VT.SIZE).writeHexString(str);
-      // }
-      // else static if (is (VT == enum)) {
-      // 	str ~= VT.stringof;
-      // }
-      // else static if (isIntegral!VT) {
-      // 	static if (isSigned!VT) {
-      // 	  str ~= 'S';
-      // 	}
-      // 	else {
-      // 	  str ~= 'U';
-      // 	}
-      // 	(cast(ubyte) (VT.sizeof * 8)).writeHexString(str);
-      // }
-      // else static if (isBoolean!VT) {
-      // 	str ~= 'U';
-      // 	(cast(ubyte) 1).writeHexString(str);
-      // }
+      str.appendf!("%x")(_domN);
+    }
+    // str ~= VT.stringof;
+    static if (isBitVector!VT) {
+      str.appendf!("%x")(VT.SIZE);
+      static if (VT.ISSIGNED) str ~= 'u'; // signed bit-vec
+      else str ~= 'U'; // unsigned bit-vec
+      // if (VT.SIZE < 256) (cast(ubyte) VT.SIZE).writeHexString(str);
+      // else (cast(ushort) VT.SIZE).writeHexString(str);
+    }
+    else static if (is (VT == enum)) { str ~= VT.stringof;}
+    else static if (isIntegral!VT) {
+      static if (is (VT == byte)) str ~= 'b';
+      static if (is (VT == ubyte)) str ~= 'B';
+      static if (is (VT == short)) str ~= 's';
+      static if (is (VT == ushort)) str ~= 'S';
+      static if (is (VT == int)) str ~= 'i';
+      static if (is (VT == uint)) str ~= 'I';
+      static if (is (VT == long)) str ~= 'l';
+      static if (is (VT == ulong)) str ~= 'L';
+      // (cast(ubyte) (VT.sizeof * 8)).writeHexString(str);
+    }
+    else static if (isBoolean!VT) {
+      str ~= '?';
     }
   }
 
@@ -1252,7 +1244,7 @@ class CstLogicValue: CstValue, CstLogicTerm
 
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     // VSxxxxx or VUxxxxx
-    str ~= 'V';
+    str ~= '?';
     _val.writeHexString(str);
   }
 
@@ -1388,25 +1380,24 @@ class CstVecValue(T): CstVecValueBase
 
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     // VSxxxxx or VUxxxxx
-    str ~= 'V';
+    str ~= 'C';
     static if (isBoolean!T) {
-      str ~= 'U';
+      str ~= '?';
     }
     else static if (isIntegral!T) {
-      static if (isSigned!T) {
-	str ~= 'S';
-      }
-      else {
-	str ~= 'U';
-      }
+      static if (is (T == byte)) str ~= 'b';
+      static if (is (T == ubyte)) str ~= 'B';
+      static if (is (T == short)) str ~= 's';
+      static if (is (T == ushort)) str ~= 'S';
+      static if (is (T == int)) str ~= 'i';
+      static if (is (T == uint)) str ~= 'I';
+      static if (is (T == long)) str ~= 'l';
+      static if (is (T == ulong)) str ~= 'L';
     }
     else static if (isBitVector!T) {
-      static if (T.ISSIGNED) {
-	str ~= 'S';
-      }
-      else {
-	str ~= 'U';
-      }
+      str.appendf!("%x")(T.SIZE);
+      static if (T.ISSIGNED) str ~= 'u'; // signed bit-vec
+      else str ~= 'U'; // unsigned bit-vec
     }
     else {
       static assert (false);

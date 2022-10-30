@@ -191,12 +191,16 @@ class CstSolverAgent			// agent of related predicates
   
   char[] signature(_esdl__CstProcessor proc) {
     _sig.reset();
-    _sig ~= "HANDLER:\n";
+    _sig ~= '?';
     foreach (pred; _preds) {
       assert (! pred.isBlocked());
-      if (! hasDistConstraints)
+      if (! hasDistConstraints) {
 	pred.writeSignature(proc, _sig, this);
+	// _sig ~= ',';
+      }
     }
+    // import std.stdio;
+    // writeln(_sig[]);
     return _sig[];
   }
 
