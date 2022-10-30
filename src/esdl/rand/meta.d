@@ -37,6 +37,7 @@ import esdl.rand.func;
 import esdl.rand.cover: _esdl__BaseCoverGroup;
 
 import esdl.base.rand: _esdl__RandGen, getRandGen;
+import esdl.base.alloc: make;
 
 
 /// C++ type static_cast for down-casting when you are sure
@@ -1087,6 +1088,7 @@ mixin template Randomization()
   }
 
   void _esdl__seedRandom()(int seed) {
+    import esdl.base.alloc: make;
     if (_esdl__RandInfoInst._randGen is null) _esdl__RandInfoInst._randGen = make!_esdl__RandGen(seed);
     _esdl__RandInfoInst._randGen.seed(seed);
   }
@@ -1296,6 +1298,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     final override bool isVisitorConstraint() { return true; }
 
     override void makeConstraints() {
+      import esdl.base.alloc: make;
       auto obj = mixin(OBJ);
       alias TOBJ = typeof(obj);
       _pred =
@@ -1418,6 +1421,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   }
 
   void _esdl__with(string _esdl__CstString, string FILE, size_t LINE, ARGS...)(ARGS values) {
+    import esdl.base.alloc: make;
     _esdl__CstProcessor proc = this._esdl__getProc();
     assert(proc !is null);
     proc._esdl__doResetLambdaPreds();
