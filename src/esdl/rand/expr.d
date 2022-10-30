@@ -5,7 +5,8 @@ import esdl.solver.base: CstSolver, CstDistSolverBase;
 import esdl.rand.misc: rand, isVecSigned, Unconst, CstVecType,
   CstVectorOp, CstInsideOp, CstBinaryOp, CstCompareOp, CstLogicOp,
   CstUnaryOp, CstSliceOp, writeHexString, CstUniqueOp, DomainContextEnum,
-  getCommonVecType, _esdl__Sigbuf, make;
+  getCommonVecType, _esdl__Sigbuf, make, CstVectorOpStr, CstBinaryOpStr,
+  CstLogicOpStr, CstCompareOpStr;
 
 import esdl.rand.base: DomDistEnum, CstTerm, CstDomBase, CstDomSet,
   CstIterator, CstVecNodeIntf, CstVarNodeIntf, CstVecArrIntf,
@@ -151,9 +152,8 @@ class CstVecArrExpr: CstVecExpr
   
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     str ~= '(';
-    str.addReserve(16);
-    str.writef!("%s")(_op);
-    str ~= ' ';
+    str ~= CstVectorOpStr[_op];// str.appendf!("%s")(_op);
+    // str ~= ' ';
     _arr.writeExprString(proc, str);
     str ~= ')';
   }
@@ -298,11 +298,10 @@ class CstVec2VecExpr: CstVecExpr
   
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     str ~= '(';
-    str.addReserve(16);
-    str.writef!("%s")(_op);
-    str ~= ' ';
+    str ~= CstBinaryOpStr[_op]; // str.appendf!("%s")(_op);
+    // str ~= ' ';
     _lhs.writeExprString(proc, str);
-    str ~= ' ';
+    // str ~= ' ';
     _rhs.writeExprString(proc, str);
     str ~= ')';
   }
@@ -452,8 +451,8 @@ class CstRangeExpr
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     _lhs.writeExprString(proc, str);
     if (_rhs !is null) {
-      if (_inclusive) str ~= " : ";
-      else str ~= " .. ";
+      if (_inclusive) str ~= ":";
+      else str ~= "..";
       _rhs.writeExprString(proc, str);
     }
   }
@@ -550,8 +549,8 @@ class CstVecDistSetElem
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     _lhs.writeExprString(proc, str);
     if (_rhs !is null) {
-      if (_inclusive) str ~= " : ";
-      else str ~= " .. ";
+      if (_inclusive) str ~= ':';
+      else str ~= "..";
       _rhs.writeExprString(proc, str);
     }
   }
@@ -675,10 +674,11 @@ class CstUniqueSetElem
   }
   
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
+    str ~= '#';
     if (_arr !is null) {
-      str ~= "[ ";
+      str ~= '[';
       _arr.writeExprString(proc, str);
-      str ~= " ]";
+      str ~= ']';
     }
     else {
       _vec.writeExprString(proc, str);
@@ -892,16 +892,17 @@ class CstInsideSetElem
   }
   
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
+    str ~= '@';
     if (_arr !is null) {
-      str ~= "[ ";
+      str ~= "[";
       _arr.writeExprString(proc, str);
-      str ~= " ]";
+      str ~= "]";
     }
     else {
       _lhs.writeExprString(proc, str);
       if (_rhs !is null) {
-	if (_inclusive) str ~= " : ";
-	else str ~= " .. ";
+	if (_inclusive) str ~= ":";
+	else str ~= "..";
 	_rhs.writeExprString(proc, str);
       }
     }
@@ -1106,8 +1107,8 @@ class CstLogicWeightedDistSetElem
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     import std.conv: to;
     _term.writeExprString(proc, str);
-    if (_perItem) str ~= " := ";
-    else str ~= " :/ ";
+    if (_perItem) str ~= ":=";
+    else str ~= ":/";
     str ~= _weight.evaluate().to!string;
   }
   
@@ -1186,8 +1187,8 @@ class CstVecWeightedDistSetElem
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     import std.conv: to;
     _range.writeExprString(proc, str);
-    if (_perItem) str ~= " := ";
-    else str ~= " :/ ";
+    if (_perItem) str ~= ":=";
+    else str ~= ":/";
     str ~= _weight.evaluate().to!string;
   }
 
@@ -1301,7 +1302,7 @@ class CstLogicDistExpr(T): CstLogicExpr
   }
 
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
-    str ~= "DIST ";
+    str ~= "#$";
     _vec.writeExprString(proc, str);
     foreach (dist; _dists) {
       dist.writeExprString(proc, str);
@@ -1442,7 +1443,7 @@ class CstVecDistExpr(T): CstLogicExpr
   }
   
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
-    str ~= "DIST ";
+    str ~= "#$";
     _vec.writeExprString(proc, str);
     foreach (dist; _dists) {
       dist.writeExprString(proc, str);
@@ -1819,7 +1820,7 @@ class CstNotVecExpr: CstVecExpr
   }
   
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
-    str ~= "(NOT ";
+    str ~= "~";
     _expr.writeExprString(proc, str);
     str ~= ')';
   }
@@ -1925,7 +1926,7 @@ class CstNegVecExpr: CstVecExpr
   }
   
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
-    str ~= "(NEG ";
+    str ~= "(-";
     _expr.writeExprString(proc, str);
     str ~= ')';
   }
@@ -2004,13 +2005,12 @@ class CstLogic2LogicExpr: CstLogicExpr
 
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     str ~= '(';
-    str.addReserve(16);
-    str.writef!("%s")(_op);
-    str ~= ' ';
+    str ~= CstLogicOpStr[_op]; // str.appendf!("%s")(_op);
+    // str ~= ' ';
     _lhs.writeExprString(proc, str);
-    str ~= ' ';
+    // str ~= ' ';
     _rhs.writeExprString(proc, str);
-    str ~= ")\n";
+    str ~= ')'; // str ~= ")\n";
   }
 
   void calcHash(ref Hash hash){
@@ -2216,15 +2216,15 @@ class CstInsideArrExpr: CstLogicExpr
   }
   
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
-    if (_notinside) str ~= "(! INSIDE ";
-    else            str ~= "(INSIDE ";
+    if (_notinside) str ~= "(><";
+    else            str ~= "(<>";
     _term.writeExprString(proc, str);
-    str ~= " [ ";
+    str ~= "[";
     foreach (elem; _elems) {
       elem.writeExprString(proc, str);
-      str ~= ' ';
+      // str ~= ' ';
     }
-    str ~= "])\n";
+    str ~= "])" ;//str ~= "])\n";
   }
   
   void calcHash(ref Hash hash){
@@ -2336,11 +2336,11 @@ class CstUniqueArrExpr: CstLogicExpr
   }
   
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
-    str ~= "(UNIQUE ";
-    str ~= " [";
+    str ~= "(#[]";
+    str ~= "[";
     foreach (elem; _elems)
       elem.writeExprString(proc, str);
-    str ~= "])\n";
+    str ~= "])"; // str ~= "])\n";
   }
   
   void calcHash(ref Hash hash){
@@ -2565,13 +2565,12 @@ class CstVec2LogicExpr: CstLogicExpr
 
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
     str ~= '(';
-    str.addReserve(16);
-    str.writef!("%s")(_op);
-    str ~= ' ';
+    str ~= CstCompareOpStr[_op]; // str.appendf!("%s")(_op);
+    // str ~= ' ';
     _lhs.writeExprString(proc, str);
-    str ~= ' ';
+    // str ~= ' ';
     _rhs.writeExprString(proc, str);
-    str ~= ")\n";
+    str ~= ')'; // str ~= ")\n";
   }
 
   void calcHash(ref Hash hash){
@@ -2768,9 +2767,9 @@ class CstNotLogicExpr: CstLogicExpr
   }
 
   void writeExprString(_esdl__CstProcessor proc, ref _esdl__Sigbuf str) {
-    str ~= "(NOT ";
+    str ~= "(!";
     _expr.writeExprString(proc, str);
-    str ~= ")\n";
+    str ~= ')'; // str ~= ")\n";
   }
 
   void calcHash(ref Hash hash){
