@@ -21,24 +21,27 @@ import esdl.base.rand: _esdl__RandGen, getRandGen;
 
 import esdl.data.bvec: isBitVector;
 import esdl.data.vector;
-
 interface CstVarNodeIntf {
-  bool _esdl__isRand();
   string _esdl__getName();
   string _esdl__getFullName();
   bool _esdl__isDomainInRange();
+  bool _esdl__isRand();
+  bool _esdl__isStatic();
+  bool _esdl__isRolled(_esdl__CstProcessor proc);
+  bool _esdl__depsAreResolved();
+  CstVarNodeIntf _esdl__getResolvedNode(_esdl__CstProcessor proc);
+  CstVarNodeIntf _esdl__unroll(CstIterator iter, ulong n,
+			       _esdl__CstProcessor proc);
+  
+  // used for solve a before b
   void _esdl__setOrder(SolveOrder order);
   SolveOrder _esdl__getOrder();
   uint _esdl__getOrderLevel();
   void _esdl__markOrderedAfter(uint level);
 
-  CstVarNodeIntf _esdl__getResolvedNode(_esdl__CstProcessor proc);
-  bool _esdl__depsAreResolved();
-  
-  bool _esdl__isObjArray();
   CstIterator _esdl__iter();
   CstVarNodeIntf _esdl__getChild(ulong n);
-  void _esdl__scan(_esdl__CstProcessor proc);			// when an object is unrolled
+  void _esdl__scan(_esdl__CstProcessor proc);			// when a predicate unrolls
 }
 
 interface CstDepIntf {
@@ -122,20 +125,16 @@ abstract class CstObjStub: CstObjectIntf
 
   abstract void* _esdl__refPtr();
   abstract string _esdl__name();
+  abstract _esdl__Proxy _esdl__parent();
 }
 
 interface CstObjectIntf: CstObjNodeIntf
 {
-  string _esdl__getFullName();
-  string _esdl__getName();
-  bool _esdl__isRand();
-  bool _esdl__isDomainInRange();
-  CstObjectIntf _esdl__unroll(CstIterator iter, ulong n,
-			      _esdl__CstProcessor proc);
+  bool _esdl__isReal();		// has an actual object for ref
   _esdl__Proxy _esdl__getProxy();
-  bool _esdl__isStatic();
-  bool _esdl__isReal();
-  bool _esdl__isRolled(_esdl__CstProcessor proc);
+  CstObjectIntf _esdl__unroll(CstIterator iter, ulong n,
+			       _esdl__CstProcessor proc);
+  CstObjectIntf _esdl__getResolvedNode(_esdl__CstProcessor proc);
 }
 
 interface CstObjArrIntf: CstObjNodeIntf {
@@ -273,9 +272,6 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
 
   this() { }
 
-  string _esdl__getName() {
-    return _esdl__name();
-  }
 
   // Dependencies
   CstDepIntf[] _deps;
@@ -283,6 +279,7 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
   void addDep(CstDepIntf dep) { if (! _deps.canFind(dep)) _deps ~= dep; }
   CstDepIntf[] getDeps() { return _deps; }
   
+  string _esdl__getName() { return _esdl__name(); }
   abstract string _esdl__getFullName();
   // abstract void collate(ulong v, int word=0);
   abstract void setVal(ulong[] v, _esdl__CstProcessor proc);
@@ -295,14 +292,14 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
   // abstract uint domIndex();
   // abstract void domIndex(uint s);
   abstract bool _esdl__isRand();
+  abstract bool _esdl__isStatic();
+  abstract bool _esdl__isRolled(_esdl__CstProcessor proc);
   abstract bool signed();
   abstract uint bitcount();
   abstract void _esdl__doRandomize(_esdl__RandGen randGen);
   abstract CstDomBase _esdl__getResolvedNode(_esdl__CstProcessor proc);
   abstract bool updateVal(_esdl__CstProcessor proc);
   abstract bool hasChanged();
-  abstract bool _esdl__isStatic();
-  abstract bool _esdl__isRolled(_esdl__CstProcessor proc);
   // abstract void registerRndPred(CstPredicate rndPred, _esdl__CstProcessor proc);
   abstract CstDomSet getParentDomSet();
   abstract long evaluate();
@@ -949,7 +946,8 @@ abstract class CstDomSet: CstVecArrVoid, CstVecPrim, CstVecArrIntf
   }
   
   final void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) {
-    assert (isDepResolved());
+    assert (isDepResolved(), this._esdl__getFullName() ~
+	    " has unresolved dependencies: " ~ this._esdl__isRand());
     CstDomSet resolved = this._esdl__getResolvedNode(proc);
     if (resolved !is this) resolved.annotate(agent, proc);
     else {

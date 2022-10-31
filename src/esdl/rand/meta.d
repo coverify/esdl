@@ -652,13 +652,14 @@ void _esdl__randomize(T) (ref T t) if (is (T == struct))
 
     _esdl__preRandomize(t);
 
-    proxyInst._esdl__doSetStub();
+    version (CACHEDPROXIES) { proxyInst._esdl__doSetStub(); }
 
     proxyInst._esdl__lambdaCst = null;
     proc.reset();
     proxyInst._esdl__doConstrain(proc, false);
     proc.solve();
     proxyInst._esdl__doRandomize(t._esdl__virtualGetRandGen());
+    version (CACHEDPROXIES) { proxyInst._esdl__resetCaches(); }
     // _esdl__postRandomize(t);
   }
 
@@ -702,13 +703,14 @@ void _esdl__randomize(T) (T t) if (is (T == class))
 
     _esdl__preRandomize(t);
 
-    proxyInst._esdl__doSetStub();
+    version (CACHEDPROXIES) { proxyInst._esdl__doSetStub(); }
 
     proxyInst._esdl__lambdaCst = null;
     proc.reset();
     proxyInst._esdl__doConstrain(proc, false);
     proc.solve();
     proxyInst._esdl__doRandomize(t._esdl__virtualGetRandGen());
+    version (CACHEDPROXIES) { proxyInst._esdl__resetCaches(); }
     // _esdl__postRandomize(t);
   }
 
@@ -782,7 +784,7 @@ void _esdl__randomizeWith(T)(T t, _esdl__Proxy proxy,
 
     _esdl__CstProcessor proc = proxy._esdl__getProc();
     assert(proc !is null);
-    proxyInst._esdl__doSetStub();
+    version (CACHEDPROXIES) { proxyInst._esdl__doSetStub(); }
 
     lambdaCst._esdl__doSyncArgs();
   
@@ -796,6 +798,7 @@ void _esdl__randomizeWith(T)(T t, _esdl__Proxy proxy,
     }
     proc.solve();
     proxyInst._esdl__doRandomize(t._esdl__virtualGetRandGen());
+    version (CACHEDPROXIES) { proxyInst._esdl__resetCaches(); }
     // _esdl__postRandomize(t);
 
   }
@@ -815,8 +818,7 @@ void _esdl__randomizeWith(T) (ref T t, _esdl__Proxy proxy,
 
     _esdl__CstProcessor proc = proxy._esdl__getProc();
     assert(proc !is null);
-    proxyInst._esdl__doSetStub();
-
+    version (CACHEDPROXIES) { proxyInst._esdl__doSetStub(); }
     lambdaCst._esdl__doSyncArgs();
   
     proc.reset();
@@ -829,6 +831,7 @@ void _esdl__randomizeWith(T) (ref T t, _esdl__Proxy proxy,
     }
     proc.solve();
     proxyInst._esdl__doRandomize(t._esdl__virtualGetRandGen());
+    version (CACHEDPROXIES) { proxyInst._esdl__resetCaches(); }
     // _esdl__postRandomize(t);
 
   }
@@ -1238,6 +1241,10 @@ class _esdl__ProxyNoRand(_esdl__T)
 mixin template _esdl__ProxyMixin(_esdl__T)
 {
   import esdl.base.rand: _esdl__RandGen, getRandGen;
+  version (CACHEDPROXIES) {
+    import esdl.data.vector: Vector;
+  }
+  
   alias _esdl__PROXYT = typeof(this);
   alias _esdl__Type = _esdl__T;
 
@@ -1484,6 +1491,42 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 	  _esdl__debugPrintElems!(B[0])();
 	}
       }
+    }
+  }
+
+  version (CACHEDPROXIES) {
+
+    static Vector!(_esdl__PROXYT, "proxyInsts") _esdl__proxyInsts;
+    static size_t _esdl__proxyIdx;
+
+    override void _esdl__resetCache() {
+      super._esdl__resetCache();
+      _esdl__proxyIdx = 0;
+    }
+
+    static _esdl__PROXYT _esdl__make(CstObjStub stub) {
+      import esdl.base.alloc: make;
+      _esdl__PROXYT proxy;
+      _esdl__Proxy parent = stub._esdl__parent;
+      if (parent !is null && parent._esdl__isRoot()) {
+	// import std.stdio;
+	// writeln ("Using cache for: ", _esdl__PROXYT.stringof);
+	if (_esdl__proxyInsts.length > _esdl__proxyIdx) {
+	  proxy = _esdl__proxyInsts[_esdl__proxyIdx];
+	}
+	else {
+	  proxy = make!_esdl__PROXYT(stub);
+	  _esdl__proxyInsts ~= proxy;
+	}
+	if (_esdl__proxyIdx == 0) {
+	  parent._esdl__addCachedProxy(proxy);
+	}
+	_esdl__proxyIdx += 1;
+      }
+      else {
+	proxy = make!_esdl__PROXYT(stub);
+      }
+      return proxy;
     }
   }
 }
@@ -1847,9 +1890,9 @@ void randomize(T, string FILE=__FILE__, size_t LINE=__LINE__)(T t)
   // missing mixin Randomization for some of the hierarchies
   debug (CSTSOLVER) {
     import std.stdio;
-    writeln("randomize() called from ", FILE, ":", LINE);
+    writeln("randomize() called from ", FILE, ":", LINE, " on: ", T.stringof);
     scope (success) {
-      writeln("randomize() finished at ", FILE, ":", LINE);
+      writeln("randomize() finished at ", FILE, ":", LINE, " on: ", T.stringof);
     }
   }
   t._esdl__virtualRandomize();
@@ -1860,10 +1903,10 @@ void randomizeWith(string C, string FILE=__FILE__, size_t LINE=__LINE__, T, ARGS
 {
   debug (CSTSOLVER) {
     import std.stdio;
-    writeln("randomize_with() called from ", FILE, ":", LINE);
+    writeln("randomize_with() called from ", FILE, ":", LINE, " on: ", T.stringof);
 
     scope (success) {
-      writeln("randomize_with() finished at ", FILE, ":", LINE);
+      writeln("randomize_with() finished at ", FILE, ":", LINE, " on: ", T.stringof);
     }
   }
 

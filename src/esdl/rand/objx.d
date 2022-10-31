@@ -294,6 +294,11 @@ abstract class _esdl__ObjStub(V, rand RAND_ATTR, int N):
   _esdl__Proxy _proxy;
   _esdl__Proxy _parent;
 
+  final override _esdl__Proxy _esdl__parent() {
+    // assert (_parent !is null);
+    return _parent;
+  }
+
   final void _esdl__setStub() {
     // In case the Stub does not have a proxy yet
     if (_proxy !is null) _proxy._esdl__setStub(this);
@@ -306,8 +311,13 @@ abstract class _esdl__ObjStub(V, rand RAND_ATTR, int N):
   
   PROXYT _esdl__get()() {
     if (_proxy is null) {
-      // assert(_parent !is null);
-      _proxy = make!PROXYT(this);
+      // assert (_parent !is null);
+      version (CACHEDPROXIES) {
+	_proxy = PROXYT._esdl__make(this);
+      }
+      else {
+	_proxy = make!PROXYT(this);
+      }
     }
     return _esdl__staticCast!PROXYT(_proxy);
   }
@@ -853,8 +863,6 @@ abstract class CstObjArrStub(V, rand RAND_ATTR, int N)
   EV _esdl__elems() { return _proxy._esdl__elems(); }
 
   
-  final bool _esdl__isObjArray() { return true; }
-
   final CstIterator _esdl__iter() { return  _proxy._esdl__iter(); }
 
   final CstVarNodeIntf _esdl__getChild(ulong n) { return _proxy._esdl__getChild(n); }
@@ -1092,8 +1100,6 @@ class CstObjArrProxy(V, rand RAND_ATTR, int N)
   }
 
   
-  final bool _esdl__isObjArray() {return true;}
-
   final CstIterator _esdl__iter() {
     CstArrIterator!RV iter = arrLen.makeIterVar();
     return iter;
@@ -1313,8 +1319,6 @@ abstract class CstObjArrBase(V, rand RAND_ATTR, int N)
   }
 
   
-  final bool _esdl__isObjArray() {return true;}
-
   final CstIterator _esdl__iter() {
     CstArrIterator!RV iter = arrLen.makeIterVar();
     return iter;

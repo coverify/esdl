@@ -64,23 +64,23 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
   }
   
   bool _esdl__isRand() {
-    if (_esdl__stub is null) return true; // root proxy
-    else return _esdl__stub._esdl__isRand();
+    assert (_esdl__stub !is null);
+    return _esdl__stub._esdl__isRand();
   }
   
   bool _esdl__isDomainInRange() {
-    if (_esdl__stub is null) return true; // root proxy
-    else return _esdl__stub._esdl__isDomainInRange();
+    assert (_esdl__stub !is null);
+    return _esdl__stub._esdl__isDomainInRange();
   }
 
   override bool _esdl__depsAreResolved() {
-    if (_esdl__stub is null) return true; // root proxy
-    else return _esdl__stub._esdl__depsAreResolved();
+    assert (_esdl__stub !is null);
+    return _esdl__stub._esdl__depsAreResolved();
   }
 
   _esdl__Proxy _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
-    if (_esdl__stub is null) return this;
-    else return _esdl__stub._esdl__unroll(iter, n, proc)._esdl__getProxy();
+    assert (_esdl__stub !is null);
+    return _esdl__stub._esdl__unroll(iter, n, proc)._esdl__getProxy();
   }
 
   override _esdl__Proxy _esdl__getResolvedNode(_esdl__CstProcessor proc) {
@@ -89,26 +89,51 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
 
   // the root proxy is always static
   bool _esdl__isStatic() {
-    if (_esdl__stub is null) return true;
-    else return _esdl__stub._esdl__isStatic();
+    assert (_esdl__stub !is null);
+    return _esdl__stub._esdl__isStatic();
   }
 
   bool _esdl__isReal() {
-    if (_esdl__stub is null) return true;
-    else return _esdl__stub._esdl__isReal();
+    assert (_esdl__stub !is null);
+    return _esdl__stub._esdl__isReal();
   }
 
   bool _esdl__isRolled(_esdl__CstProcessor proc) {
-    if (_esdl__stub is null) return false;
-    else return _esdl__stub._esdl__isRolled(proc);
+    assert (_esdl__stub !is null);
+    return _esdl__stub._esdl__isRolled(proc);
   }
 
   final bool _esdl__isRoot() {
     return _esdl__isRootProxy;
   }
 
+  version (CACHEDPROXIES) {
+    // Caches
+    Vector!(_esdl__Proxy, "cachedProxies") _esdl__cachedProxies;
+    private bool _esdl__cacheNeedsReset;
+
+    final void _esdl__addCachedProxy(_esdl__Proxy proxy) {
+      _esdl__cacheNeedsReset = true;
+      assert (_esdl__isRoot());
+      _esdl__cachedProxies ~= proxy;
+    }
+
+    final void _esdl__resetCaches() {
+      assert (_esdl__isRoot());
+      if (_esdl__cacheNeedsReset) {
+	foreach (proxy; _esdl__cachedProxies[]) {
+	  proxy._esdl__resetCache();
+	}
+	_esdl__cachedProxies.reset();
+	_esdl__cachedProxies.clear();
+	_esdl__cacheNeedsReset = false;
+      }
+    }
+
+    void _esdl__resetCache() { }
+  }
+
   // CstObjNodeIntf
-  final bool _esdl__isObjArray() { return false; }
   final CstIterator _esdl__iter() { return null; }
   final CstVarNodeIntf _esdl__getChild(ulong n) { assert (false); }
   void _esdl__scan(_esdl__CstProcessor proc) { }		// when an object is unrolled
