@@ -41,18 +41,24 @@ class CstVectorGlob(V, rand RAND_ATTR, alias SYM)
     super(parent);
   }
 
-  // no unrolling is possible without adding rand proxy
-  final override RV _esdl__unroll(CstIterator iter, ulong n,
-			    _esdl__CstProcessor proc) {
-    return this;
+  final override string _esdl__name() {
+    return SYM.stringof;
   }
 
   final override VREF _esdl__ref() {
     return & SYM;
   }
 
-  final override string _esdl__name() {
-    return SYM.stringof;
+  final override bool _esdl__isDomainInRange() { return true; }
+  final override bool _esdl__isRand() { return false; }
+  final override bool _esdl__isStatic() { return true; }
+  final override bool _esdl__isRolled(_esdl__CstProcessor proc) { return false; }
+  final override bool _esdl__depsAreResolved() { return true; }
+  final override typeof(this) _esdl__getResolvedNode(_esdl__CstProcessor proc) { return this; }
+  // no unrolling is possible without adding rand proxy
+  final override typeof(this) _esdl__unroll(CstIterator iter, ulong n,
+					    _esdl__CstProcessor proc) {
+    return this;
   }
 
 }
@@ -73,20 +79,27 @@ class CstVectorGlobEnum(V, rand RAND_ATTR)
     super(parent);
   }
 
-  // no unrolling is possible without adding rand proxy
-  final override RV _esdl__unroll(CstIterator iter, ulong n,
-			    _esdl__CstProcessor proc) {
-    return this;
+  final override string _esdl__name() {
+    import std.conv: to;
+    return _var.to!string();
   }
 
   final override VREF _esdl__ref() {
     return &_var;
   }
 
-  final override string _esdl__name() {
-    import std.conv: to;
-    return _var.to!string();
+  final override bool _esdl__isDomainInRange() { return true; }
+  final override bool _esdl__isRand() { return false; }
+  final override bool _esdl__isStatic() { return true; }
+  final override bool _esdl__isRolled(_esdl__CstProcessor proc) { return false; }
+  final override bool _esdl__depsAreResolved() { return true; }
+  final override typeof(this) _esdl__getResolvedNode(_esdl__CstProcessor proc) { return this; }
+  // no unrolling is possible without adding rand proxy
+  final override typeof(this) _esdl__unroll(CstIterator iter, ulong n,
+					    _esdl__CstProcessor proc) {
+    return this;
   }
+
 }
 
 class CstVectorArg(V, size_t IDX)
@@ -103,21 +116,27 @@ class CstVectorArg(V, size_t IDX)
     super(parent);
   }
 
-  final override RV _esdl__unroll(CstIterator iter, ulong n,
-			    _esdl__CstProcessor proc) {
-    return this;
-  }
-
-  final override bool rand_mode() {
-    return false;
+  final override string _esdl__name() {
+    return "$" ~ IDX.stringof;
   }
 
   final override VREF _esdl__ref() {
     return _val;
   }
 
-  final override string _esdl__name() {
-    return "$" ~ IDX.stringof;
+  final override bool rand_mode() {
+    return false;
+  }
+
+  final override bool _esdl__isDomainInRange() { return true; }
+  final override bool _esdl__isRand() { return false; }
+  final override bool _esdl__isStatic() { return true; }
+  final override bool _esdl__isRolled(_esdl__CstProcessor proc) { return false; }
+  final override bool _esdl__depsAreResolved() { return true; }
+  final override typeof(this) _esdl__getResolvedNode(_esdl__CstProcessor proc) { return this; }
+  final override RV _esdl__unroll(CstIterator iter, ulong n,
+			    _esdl__CstProcessor proc) {
+    return this;
   }
 }
 
@@ -135,35 +154,9 @@ class CstVectorIdx(V, rand RAND_ATTR, VV, int IDX,
     super(parent);
   }
 
-  final override RV _esdl__unroll(CstIterator iter, ulong n,
-			    _esdl__CstProcessor proc) {
-    if (_parent._esdl__isRoot()) {
-      return this;
-    }
-    else {
-      P uparent = _esdl__staticCast!(P)(_parent._esdl__unroll(iter, n, proc));
-      assert (uparent !is null);
-      return uparent.tupleof[PIDX];
-    }
-  }
-
-  final override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
-    if (_parentsDepsAreResolved) return this;
-    else {
-      P uparent = _esdl__staticCast!(P)(_parent._esdl__getResolvedNode(proc));
-      assert (uparent !is null);
-      return uparent.tupleof[PIDX];
-    }
-  }
-
-  final override bool rand_mode() {
-    static if (_esdl__PROXYT._esdl__HAS_RAND_INFO == false) return true;
-    else {
-      assert (_parent !is null);
-      _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
-      assert (proxy._esdl__ref() !is null);
-      return proxy._esdl__ref().rand_mode!(PIDX)();
-    }
+  final override string _esdl__name() {
+    alias TT = P._esdl__Type;
+    return TT.tupleof[IDX].stringof;
   }
 
   final override VREF _esdl__ref() {
@@ -180,10 +173,45 @@ class CstVectorIdx(V, rand RAND_ATTR, VV, int IDX,
     }
   }
 
-  final override string _esdl__name() {
-    alias TT = P._esdl__Type;
-    return TT.tupleof[IDX].stringof;
+  final override bool _esdl__isDomainInRange() { return _parent._esdl__isDomainInRange(); }
+  final override bool _esdl__isRand() {
+    return HAS_RAND_ATTRIB && rand_mode() && _parent._esdl__isRand();
   }
+  final override bool _esdl__isStatic() { return _parent._esdl__isStatic; }
+  final override bool _esdl__isRolled(_esdl__CstProcessor proc) { return _parent._esdl__isRolled(proc); }
+  final override bool _esdl__depsAreResolved() { return _parentsDepsAreResolved; }
+
+  final override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
+    if (_parentsDepsAreResolved) return this;
+    else {
+      P uparent = _esdl__staticCast!(P)(_parent._esdl__getResolvedNode(proc));
+      assert (uparent !is null);
+      return uparent.tupleof[PIDX];
+    }
+  }
+
+  final override RV _esdl__unroll(CstIterator iter, ulong n,
+			    _esdl__CstProcessor proc) {
+    if (_parent._esdl__isRoot()) {
+      return this;
+    }
+    else {
+      P uparent = _esdl__staticCast!(P)(_parent._esdl__unroll(iter, n, proc));
+      assert (uparent !is null);
+      return uparent.tupleof[PIDX];
+    }
+  }
+
+  final override bool rand_mode() {
+    static if (_esdl__PROXYT._esdl__HAS_RAND_INFO == false) return true;
+    else {
+      assert (_parent !is null);
+      _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
+      assert (proxy._esdl__ref() !is null);
+      return proxy._esdl__ref().rand_mode!(PIDX)();
+    }
+  }
+
 }
 
 
@@ -248,11 +276,11 @@ abstract class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 	return false;
       }
       
-      final override bool _esdl__isRand() {
+      override bool _esdl__isRand() {
 	return HAS_RAND_ATTRIB && rand_mode() && _parent._esdl__isRand();
       }
 
-      final override bool _esdl__isDomainInRange() { return _parent._esdl__isDomainInRange(); }
+      override bool _esdl__isDomainInRange() { return _parent._esdl__isDomainInRange(); }
 
       final override string _esdl__getFullName() {
 	if (_parent._esdl__isRoot()) return _esdl__name();
@@ -260,15 +288,15 @@ abstract class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
 	  return _parent._esdl__getFullName() ~ "." ~ _esdl__getName();
       }
 
-      final override bool _esdl__isStatic() {
+      override bool _esdl__isStatic() {
 	return _parent._esdl__isStatic();		// N == 0
       }
 
-      final override bool _esdl__isRolled(_esdl__CstProcessor proc) {
+      override bool _esdl__isRolled(_esdl__CstProcessor proc) {
 	return _parent._esdl__isRolled(proc);		// N == 0
       }
 
-      override bool _esdl__depsAreResolved() {
+      bool _esdl__depsAreResolved() {
 	return _parentsDepsAreResolved;
       }
 
@@ -368,8 +396,8 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	else return false;
       }
       
-      final override bool _esdl__isRand() {
-	return HAS_RAND_ATTRIB && rand_mode() && _parent._esdl__isRand();
+      final override bool _esdl__isRand() { // no rand_mode since it is an array member
+	return HAS_RAND_ATTRIB && _parent._esdl__isRand();
       }
 
       final override bool _esdl__isDomainInRange() {
@@ -531,18 +559,24 @@ class CstVecArrGlob(V, rand RAND_ATTR, alias SYM)
     super(parent);
   }
 
-  // no unrolling is possible without adding rand proxy
-  final override RV _esdl__unroll(CstIterator iter, ulong n,
-			    _esdl__CstProcessor proc) {
-    return this;
+  final override string _esdl__name() {
+    return SYM.stringof;
   }
 
   final override VREF _esdl__ref() {
     return & SYM;
   }
 
-  final override string _esdl__name() {
-    return SYM.stringof;
+  final override bool _esdl__isDomainInRange() { return true; }
+  final override bool _esdl__isRand() { return false; }
+  final override bool _esdl__isStatic() { return true; }
+  final override bool _esdl__isRolled(_esdl__CstProcessor proc) { return false; }
+  final override bool _esdl__depsAreResolved() { return true; }
+  final override typeof(this) _esdl__getResolvedNode(_esdl__CstProcessor proc) { return this; }
+  // no unrolling is possible without adding rand proxy
+  final override typeof(this) _esdl__unroll(CstIterator iter, ulong n,
+					    _esdl__CstProcessor proc) {
+    return this;
   }
 }
 
@@ -563,19 +597,25 @@ class CstVecArrGlobEnum(V, rand RAND_ATTR)
     super(parent);
   }
 
-  // no unrolling is possible without adding rand proxy
-  final override RV _esdl__unroll(CstIterator iter, ulong n,
-			    _esdl__CstProcessor proc) {
-    return this;
+  final override string _esdl__name() {
+    import std.conv: to;
+    return _var.to!string();
   }
 
   final override VREF _esdl__ref() {
     return &_var;
   }
 
-  final override string _esdl__name() {
-    import std.conv: to;
-    return _var.to!string();
+  final override bool _esdl__isDomainInRange() { return true; }
+  final override bool _esdl__isRand() { return false; }
+  final override bool _esdl__isStatic() { return true; }
+  final override bool _esdl__isRolled(_esdl__CstProcessor proc) { return false; }
+  final override bool _esdl__depsAreResolved() { return true; }
+  final override typeof(this) _esdl__getResolvedNode(_esdl__CstProcessor proc) { return this; }
+  // no unrolling is possible without adding rand proxy
+  final override typeof(this) _esdl__unroll(CstIterator iter, ulong n,
+					    _esdl__CstProcessor proc) {
+    return this;
   }
 }
 
@@ -593,22 +633,25 @@ class CstVecArrArg(V, size_t IDX)
     super(parent);
   }
 
-  final override RV _esdl__unroll(CstIterator iter, ulong n,
-				  _esdl__CstProcessor proc) {
-    return this;
-  }
-
-  final override bool rand_mode() {
-    return false;
+  final override string _esdl__name() {
+    return "$" ~ IDX.stringof;
   }
 
   final override VREF _esdl__ref() {
     return _val;
   }
 
-  final override string _esdl__name() {
-    return "$" ~ IDX.stringof;
+  final override bool _esdl__isDomainInRange() { return true; }
+  final override bool _esdl__isRand() { return false; }
+  final override bool _esdl__isStatic() { return true; }
+  final override bool _esdl__isRolled(_esdl__CstProcessor proc) { return false; }
+  final override bool _esdl__depsAreResolved() { return true; }
+  final override typeof(this) _esdl__getResolvedNode(_esdl__CstProcessor proc) { return this; }
+  final override typeof(this) _esdl__unroll(CstIterator iter, ulong n,
+					    _esdl__CstProcessor proc) {
+    return this;
   }
+
 }
 
 // Arrays (Multidimensional arrays as well)
@@ -626,21 +669,16 @@ class CstVecArrIdx(V, rand RAND_ATTR, VV, int IDX,
     super(parent);
   }
 
-  final override RV _esdl__unroll(CstIterator iter, ulong n,
-				  _esdl__CstProcessor proc) {
-    P uparent = _esdl__staticCast!(P)(_parent._esdl__unroll(iter, n, proc));
-    assert (uparent !is null);
-    assert (this is uparent.tupleof[PIDX]);
-    return this;
+  final override string _esdl__name() {
+    alias TT = P._esdl__Type;
+    return TT.tupleof[IDX].stringof;
   }
 
-  final override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
-    if (_parentsDepsAreResolved) return this;
-    else {
-      P uparent = _esdl__staticCast!(P)(_parent._esdl__getResolvedNode(proc));
-      assert (uparent !is null);
-      return uparent.tupleof[PIDX];
-    }
+  final override VREF _esdl__ref() {
+    assert (_parent !is null);
+    _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
+    assert (proxy._esdl__ref() !is null);
+    return &(proxy._esdl__ref().tupleof[IDX]);
   }
 
   final override bool rand_mode() {
@@ -653,16 +691,29 @@ class CstVecArrIdx(V, rand RAND_ATTR, VV, int IDX,
     }
   }
 
-  final override VREF _esdl__ref() {
-    assert (_parent !is null);
-    _esdl__PROXYT proxy = _esdl__staticCast!_esdl__PROXYT(_parent);
-    assert (proxy._esdl__ref() !is null);
-    return &(proxy._esdl__ref().tupleof[IDX]);
+  final override bool _esdl__isDomainInRange() { return _parent._esdl__isDomainInRange(); }
+  final override bool _esdl__isRand() {
+    return HAS_RAND_ATTRIB && rand_mode() && _parent._esdl__isRand();
+  }
+  final override bool _esdl__isStatic() { return _parent._esdl__isStatic; }
+  final override bool _esdl__isRolled(_esdl__CstProcessor proc) { return _parent._esdl__isRolled(proc); }
+  final override bool _esdl__depsAreResolved() { return _parentsDepsAreResolved; }
+
+  final override typeof(this) _esdl__getResolvedNode(_esdl__CstProcessor proc) {
+    if (_parentsDepsAreResolved) return this;
+    else {
+      P uparent = _esdl__staticCast!(P)(_parent._esdl__getResolvedNode(proc));
+      assert (uparent !is null);
+      return uparent.tupleof[PIDX];
+    }
   }
 
-  final override string _esdl__name() {
-    alias TT = P._esdl__Type;
-    return TT.tupleof[IDX].stringof;
+  final override typeof(this) _esdl__unroll(CstIterator iter, ulong n,
+					    _esdl__CstProcessor proc) {
+    P uparent = _esdl__staticCast!(P)(_parent._esdl__unroll(iter, n, proc));
+    assert (uparent !is null);
+    assert (this is uparent.tupleof[PIDX]);
+    return this;
   }
 }
 
@@ -994,19 +1045,19 @@ abstract class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	return false;
       }
       
-      final override bool _esdl__isRand() {
+      override bool _esdl__isRand() {
 	return HAS_RAND_ATTRIB && rand_mode() && _parent._esdl__isRand();
       }
 
-      final override bool _esdl__isDomainInRange() {
+      override bool _esdl__isDomainInRange() {
 	return _parent._esdl__isDomainInRange();
       }
 
-      final bool _esdl__isRolled(_esdl__CstProcessor proc) {
+      bool _esdl__isRolled(_esdl__CstProcessor proc) {
 	return _parent._esdl__isRolled(proc);
       }
 
-      final bool _esdl__isStatic() {
+      bool _esdl__isStatic() {
 	return _parent._esdl__isStatic(); 		// N == 0
       }
 
@@ -1016,7 +1067,7 @@ abstract class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	  return _parent._esdl__getFullName() ~ "." ~ _esdl__getName();
       }
       
-      override bool _esdl__depsAreResolved() {
+      bool _esdl__depsAreResolved() {
 	return _parentsDepsAreResolved;
       }
 

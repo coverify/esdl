@@ -335,6 +335,7 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     _unrollIterVal = unrollIterVal;
     _isInRange = true;
     if (parent is null) {
+      assert (_proxy !is null);
       _scope = _proxy._esdl__getCurrentScope();
       _level = 0;
     }
