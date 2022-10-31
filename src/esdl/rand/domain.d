@@ -732,8 +732,8 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   override bool _esdl__isRand() {
     static if (HAS_RAND_ATTRIB) {
       import std.traits;
-      if (isStaticArray!(RV.L)) return false;
-      else return true;
+      static if (isStaticArray!(RV.L)) return false;
+      else return _parent._esdl__isRand();
     }
     else {
       return false;
