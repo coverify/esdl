@@ -12,6 +12,8 @@ import esdl.rand.proxy: _esdl__CstProcessor;
 import esdl.rand.misc;
 import esdl.solver.obdd;
 
+import esdl.data.vector: Vector;
+
 import esdl.data.bvec: ubvec;
 
 import std.algorithm.searching: canFind;
@@ -19,11 +21,20 @@ import std.algorithm.searching: canFind;
 private import std.typetuple: staticIndexOf, TypeTuple;
 private import std.traits: BaseClassesTuple; // required for staticIndexOf
 
+alias Dist = Vector!(double, "_bddDistVec");
+
+enum DistType: bool {ASSOC, VEC};
+
 class BuddyContext
 {
   bdd _bdd;
   Buddy _buddy;
+
+  DistType _distType;
+  
   double[uint] _bddDist;
+  Dist _bddDistVec;
+
   bool _update = true;
 
   BDD getBDD() { return BDD(_bdd, _buddy); }
@@ -59,8 +70,20 @@ class BuddyContext
   void updateDist() {
     if (_update) {
       _update = false;
-      _bddDist.clear();
-      getBDD().satDist(_bddDist);
+
+      uint nodeSize = getBDD().nodeSize();
+
+      if (nodeSize < 65536) {
+	_distType = DistType.VEC;
+	_bddDistVec.reset();
+	_bddDistVec.length = nodeSize;
+	getBDD().satDist(_bddDistVec);
+      }
+      else {
+	_distType = DistType.ASSOC;
+	_bddDist.clear();
+	getBDD().satDist(_bddDist);
+      }
     }
   }
 
@@ -564,8 +587,16 @@ class CstBuddySolver: CstSolver
 
     vec = proc.getRandGen.gen!(ubvec!MAXBDDLEVELS);
 
-    uint sol = _context.getBDD().getRandSat(vec, proc.getRandGen.get(),
-					    _context._bddDist);
+    uint sol;
+
+    if (_context._distType is DistType.ASSOC) {
+      sol = _context.getBDD().getRandSat(vec, proc.getRandGen.get(),
+					 _context._bddDist);
+    }
+    else {
+      sol = _context.getBDD().getRandSat(vec, proc.getRandGen.get(),
+					 _context._bddDistVec);
+    }
     // import std.stdio;
     // writeln (vec);
 
@@ -618,7 +649,7 @@ class CstBuddySolver: CstSolver
 	  }
 	}
 	
-	dom.setVal(array(_solveValue[0..NUMWORDS]), proc);
+	dom.setVal(_solveValue[0..NUMWORDS], proc);
       }
     }
     // _context.print();
