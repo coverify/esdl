@@ -52,6 +52,7 @@ enum BddOp : ubyte {		// bdd.h:50
     SIMPLIFY = 11
     }
 
+alias Dist = Vector!(double, "_bddDistVec");
 
 struct BddDomain // fdd.c:52
 {
@@ -2109,6 +2110,10 @@ struct BDD
     return buddy.bdd_getrandsat(vec, rand, dist, _index);
   }
 
+  int getRandSat(ref ubvec!MAXBDDLEVELS vec, double rand, ref Dist dist)
+  {
+    return buddy.bdd_getrandsat(vec, rand, dist, _index);
+  }
 
 
   BDD fullSatOne()
@@ -2418,7 +2423,17 @@ struct BDD
     return buddy.bdd_pathcount(_index);
   }
 
+  uint nodeSize()
+  {
+    return buddy._nodeSize();
+  }
+
   void satDist(out double[uint] dist)
+  {
+    buddy.bdd_satdist(_index, dist);
+  }
+
+  void satDist(ref Dist dist)
   {
     buddy.bdd_satdist(_index, dist);
   }
@@ -5256,7 +5271,67 @@ class Buddy
     return res;
   }
 
+  int bdd_getrandsat(ref ubvec!MAXBDDLEVELS vec, double rnd, ref Dist dist, int index)
+  {
+    CHECKa(index, BddFalse);
+    if (index == 0)
+      return false;
+
+    int res;
+
+    bdd_disable_reorder();
+
+    INITREF();
+    res = getrandsat_rec(vec, rnd, dist, index);
+
+    bdd_enable_reorder();
+
+    checkresize();
+    return res;
+  }
+
   int getrandsat_rec(ref ubvec!MAXBDDLEVELS vec, double rnd, ref double[uint] dist, int r)
+  {
+    if(r < 2)
+      return r;
+
+    double limit = dist[r];
+    uint level = LEVEL(r);
+    assert (level < MAXBDDLEVELS);
+    
+    if (rnd < limit)
+      {
+	if (LOW(r) != 0)
+	  {
+	    // writeln("LL r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", level);
+	    vec[level] = false;
+	    int res = getrandsat_rec(vec, rnd/limit, dist, LOW(r));
+	    return res;
+	  }
+	else
+	  {
+	    writeln("-- r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", level);
+	    assert(false, "dist table gives wrong path");
+	  }
+      }
+    else
+      {
+	if (HIGH(r) != 0)
+	  {
+	    // writeln("HH r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", level);
+	    vec[level] = true;
+	    int res = getrandsat_rec(vec, (rnd - limit)/(1.0 - limit), dist, HIGH(r));
+	    return res;
+	  }
+	else
+	  {
+	    writeln("++ r: ", r, " dist[r]: ", dist[r], " rnd: ", rnd, " LEVEL: ", level);
+	    assert(false, "dist table gives wrong path");
+	  }
+      }
+  }
+
+  int getrandsat_rec(ref ubvec!MAXBDDLEVELS vec, double rnd, ref Dist dist, int r)
   {
     if(r < 2)
       return r;
@@ -5668,6 +5743,18 @@ class Buddy
     satdist_rec(r, dist);
   }
 
+  void bdd_satdist(int r, ref Dist dist)
+  {
+    // make sure that bdd_satcount has already initialized the sizes
+    version(NOLOG2) {
+      bdd_satcount(r);
+    }
+    else {
+      bdd_log2satcount(r);
+    }
+    satdist_rec(r, dist);
+  }
+
   double bdd_log2satcount(int r)
   {
     double size = 1;
@@ -5753,7 +5840,37 @@ class Buddy
     satdist_rec(HIGH(root), dist);
   }
 
+  void satdist_rec(int root, ref Dist dist)
+  {
+    if(root < 2) return;	// always take the path leading to one
 
+    if(dist[root] !is double.nan) return;
+
+    version(NOLOG2) {
+      double lCount = (2.0 ^^ (LEVEL(LOW(root)) - LEVEL(root) - 1)) *
+	satcount_rec(LOW(root));
+      double hCount = (2.0 ^^ (LEVEL(HIGH(root)) - LEVEL(root) - 1)) *
+	satcount_rec(HIGH(root));
+
+      double limit = lCount/(lCount + hCount);
+      // import std.stdio;
+      // writeln("lCount: ", lCount, " hCount: ", hCount, " limit: ", limit);
+    }
+    else {
+      auto log2l = log2satcount_rec(LOW(root)) + LEVEL(LOW(root)) - LEVEL(root) - 1;
+      auto log2h = log2satcount_rec(HIGH(root)) + LEVEL(HIGH(root)) - LEVEL(root) - 1;
+
+      auto limit = 1.0 / (1.0 + 2.0 ^^ (log2h - log2l));
+      // import std.stdio;
+      // writeln("log2l: ", log2l, " log2h: ", log2h, " limit: ", limit);
+    }      
+
+    dist[root] = limit;
+
+    satdist_rec(LOW(root), dist);
+    satdist_rec(HIGH(root), dist);
+  }
+  
   double log2satcount_rec(int root)
   {
     if(root < 2)
