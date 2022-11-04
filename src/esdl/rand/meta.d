@@ -29,7 +29,7 @@ import esdl.rand.vecx: CstVectorIdx, CstVecArrIdx, CstVectorArg,
   CstVecArrArg, CstVectorGlob, CstVecArrGlob, CstVectorGlobEnum,
   CstVecArrGlobEnum;
 import esdl.rand.objx: CstObjectIdx, CstObjArrIdx, CstObjectGlob,
-  CstRootProxy, _esdl__ObjStub, _esdl__TypedStub;
+  CstObjArrGlob, CstRootProxy, _esdl__ObjStub, _esdl__TypedStub;
 import esdl.rand.domain: CstVecValue, CstLogicValue;
 import esdl.rand.proxy;
 import esdl.rand.cstr;
@@ -97,6 +97,12 @@ template _esdl__RandProxyType(T, int I, P, int PI)
   // or are excluded  because of rand.disable or rand.barrier
   else static if (isRandObject!L) {
     alias _esdl__RandProxyType = CstObjectIdx!(L, RAND, L, I, P, PI);
+    // static if (RAND.isRand()) {
+    //   alias _esdl__RandProxyType = CstObjectIdx!(L, RAND, L, I, P, PI);
+    // }
+    // else {
+    //   alias _esdl__RandProxyType = _esdl__NotMappedForRandomization;
+    // }
   }
   else static if (isPointer!L && isRandObject!(PointerTarget!L)) {
     alias LT = PointerTarget!L;
@@ -104,6 +110,12 @@ template _esdl__RandProxyType(T, int I, P, int PI)
   }
   else static if (isRandObjectSet!L) {
     alias _esdl__RandProxyType = CstObjArrIdx!(L, RAND, L, I, P, PI);
+    // static if (RAND.isRand()) {
+    //   alias _esdl__RandProxyType = CstObjArrIdx!(L, RAND, L, I, P, PI);
+    // }
+    // else {
+    //   alias _esdl__RandProxyType = _esdl__NotMappedForRandomization;
+    // }
   }
   else static if (isPointer!L && isRandObjectSet!(PointerTarget!L)) {
     alias LT = PointerTarget!L;
@@ -491,6 +503,7 @@ template _esdl__ConstraintsDecl(T, int I=0)
   }
   else {
     alias L = typeof(T.tupleof[I]);
+    enum rand RAND = getRandAttr!(T, I);
     static if (is (T == U*, U) && is (U == struct)) {
       enum NAME = __traits(identifier, U.tupleof[I]);
     }
@@ -514,6 +527,7 @@ template _esdl__ConstraintsDecl(T, int I=0)
 	NAME ~ ";\n" ~ _esdl__ConstraintsDecl!(T, I+1);
     }
     else static if (isRandVectorSet!L || isRandObjectSet!L) {
+      // else static if (RAND.isRand() && (isRandVectorSet!L || isRandObjectSet!L)) {
       enum _esdl__ConstraintsDecl =
 	"  _esdl__VisitorCst!(\"" ~ NAME ~ "\") _esdl__visitorCst_"
 	~ NAME ~ ";\n"  ~ _esdl__ConstraintsDecl!(T, I+1);
@@ -1299,6 +1313,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     }
 
     CstPredicate _pred;
+    CstPredicate[1] _preds;
     protected bool _initialized;
 
     final override bool isLambdaConstraint() { return false; }
@@ -1311,6 +1326,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
       _pred =
 	make!CstVisitorPredicate(this, null, false, 0, this.outer, 0,
 				 make!CstVarVisitorExpr(obj), false);
+      _preds[0] = _pred;
       _initialized = true;
     }
 
@@ -1320,7 +1336,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 
     final override CstPredicate[] getConstraints() {
       assert (_initialized);
-      return [_pred];
+      return _preds[];
     }
 
     final override void doSetDomainContext(_esdl__CstProcessor proc) {
@@ -1546,6 +1562,7 @@ class _esdl__VisitorCst(TOBJ): _esdl__ConstraintBase, _esdl__VisitorCstIntf
   }
 
   CstPredicate _pred;
+  CstPredicate[1] _preds;
   protected bool _initialized;
 
   TOBJ _obj;
@@ -1557,6 +1574,7 @@ class _esdl__VisitorCst(TOBJ): _esdl__ConstraintBase, _esdl__VisitorCstIntf
     _pred =
       make!CstVisitorPredicate(this, null, false, 0, _proxy, 0,
 			       make!CstVarVisitorExpr(_obj), false);
+    _preds[0] = _pred;
     _initialized = true;
   }
 
@@ -1566,7 +1584,7 @@ class _esdl__VisitorCst(TOBJ): _esdl__ConstraintBase, _esdl__VisitorCstIntf
 
   final override CstPredicate[] getConstraints() {
     assert (_initialized);
-    return [_pred];
+    return _preds[];
   }
 
   final override void doSetDomainContext(_esdl__CstProcessor proc) {
