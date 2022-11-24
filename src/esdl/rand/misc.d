@@ -4,6 +4,8 @@ import esdl.data.queue;
 import esdl.data.charbuf: Charbuf;
 import esdl.data.bvec: isBitVector;
 
+public import esdl.base.rand;
+
 import std.traits: isIntegral, isBoolean, isArray, EnumMembers,
   isSigned, isSomeChar, isAssociativeArray, ValueType, KeyType,
   OriginalType, BaseClassesTuple;
@@ -13,8 +15,6 @@ private import std.typetuple: staticIndexOf, TypeTuple;
 
 // static alias Unconst(T) = T;
 // static alias Unconst(T: const U, U) = U;
-
-enum _esdl__NotMappedForRandomization;
 
 alias _esdl__Sigbuf = Charbuf!("Signature", 1024, 128);
 
@@ -127,48 +127,6 @@ size_t writeHexString(T)(T val, ref _esdl__Sigbuf str) {
     return NIBBLES;
   }
 }
-
-struct rand
-{
-  // enum phony;
-  enum ignore;
-  
-  static interface disable { }
-  static interface barrier { }
-
-  bool _noRand;
-  bool _noProxy;
-
-  uint[] _counts;
-
-  this(uint[] counts ...) {
-    _counts = counts;
-  }
-  
-  this(bool hasRand) {
-    _noRand  = ! hasRand;
-    _noProxy = false;
-  }
-
-  this(bool noRand, bool noProxy) {
-    _noRand = noRand;
-    _noProxy = noProxy;
-  }
-
-  bool hasProxy() {
-    return ! _noProxy;
-  }
-
-  bool isRand() {
-    return ! _noRand;
-  }
-
-  uint opIndex(size_t N) {
-    if (_counts.length <= N) return uint.max;
-    else return _counts[N];
-  }
-}
-
 
 // template rand(N...) if (CheckRandParams!N) {
 //   enum LENGTH = N.length;
@@ -588,7 +546,7 @@ template _esdl__TypeHasNorandAttr(T) {
     }
   }
   else {
-      enum bool _esdl__TypeHasNorandAttr = false;
+    enum bool _esdl__TypeHasNorandAttr = false;
   }
 }
 
@@ -647,93 +605,93 @@ template scanRandAttr(A...) {
 
 
 enum CstUnaryOp: byte
-{   NOT,
-    NEG,
-    }
+  {   NOT,
+      NEG,
+  }
 
 enum string[__traits(allMembers, CstUnaryOp).length] CstUnaryOpStr =
   ["~", "-"];
 
 enum CstBinaryOp: byte
-{   AND,
-    OR ,
-    XOR,
-    ADD,
-    SUB,
-    MUL,
-    DIV,
-    REM,
-    LSH,
-    RSH,			// Arith shift right ">>"
-    LRSH,			// Logic shift right ">>>"
-    }
+  {   AND,
+      OR ,
+      XOR,
+      ADD,
+      SUB,
+      MUL,
+      DIV,
+      REM,
+      LSH,
+      RSH,			// Arith shift right ">>"
+      LRSH,			// Logic shift right ">>>"
+  }
 
 enum string[__traits(allMembers, CstBinaryOp).length] CstBinaryOpStr =
   ["&", "|", "^", "+", "-", "*", "/", "%", "<<", ">>", ">>>"];
   
   
 enum CstSliceOp: byte
-{   SLICE,
-    SLICEINC,
-}
+  {   SLICE,
+      SLICEINC,
+  }
 
 enum CstCompareOp: byte
-{   LTH,
-    LTE,
-    GTH,
-    GTE,
-    EQU,
-    NEQ,
-    }
+  {   LTH,
+      LTE,
+      GTH,
+      GTE,
+      EQU,
+      NEQ,
+  }
 enum string[__traits(allMembers, CstCompareOp).length] CstCompareOpStr =
   ["<", "<=", ">", ">=", "=", "~="];
 
 
 enum CstLogicOp: byte
-{   LOGICAND,
-    LOGICOR,
-    LOGICIMP,
-    LOGICNOT,
-    LOGICEQ,
-    LOGICNEQ
-    }
+  {   LOGICAND,
+      LOGICOR,
+      LOGICIMP,
+      LOGICNOT,
+      LOGICEQ,
+      LOGICNEQ
+  }
 
 enum string[__traits(allMembers, CstLogicOp).length] CstLogicOpStr =
   ["&&", "||", "->", "!", "==", "!="];
 
 enum CstVectorOp: byte
-{   NONE,
-    BEGIN_INT,
-    BEGIN_UINT,
-    BEGIN_LONG,
-    BEGIN_ULONG,
-    SUM,
-    MULT
-    }
+  {   NONE,
+      BEGIN_INT,
+      BEGIN_UINT,
+      BEGIN_LONG,
+      BEGIN_ULONG,
+      SUM,
+      MULT
+  }
 
 enum string[__traits(allMembers, CstVectorOp).length] CstVectorOpStr =
   ["{}", "#i", "#I", "#l", "#L", "#+", "#*"];
 
 enum CstUniqueOp: byte
-{   INIT,
-    INT,
-    UINT,
-    LONG,
-    ULONG,
-    UNIQUE
-    }
+  {   INIT,
+      INT,
+      UINT,
+      LONG,
+      ULONG,
+      UNIQUE
+  }
 
 enum string[__traits(allMembers, CstUniqueOp).length] CstUniqueOpStr =
   [".", "#i", "#I", "#l", "#L", "#$"];
 
 
 enum CstInsideOp: byte
-{   INSIDE,
-    EQUAL,
-    RANGE,
-    RANGEINCL,
-    DONE
-    }
+  {   INSIDE,
+      EQUAL,
+      RANGE,
+      RANGEINCL,
+      DONE
+  }
 
 enum string[__traits(allMembers, CstInsideOp).length] CstInsideOpStr =
   ["@I", "@=", "@R", "@r", "@@"];
