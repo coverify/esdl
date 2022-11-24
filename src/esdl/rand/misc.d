@@ -16,7 +16,7 @@ private import std.typetuple: staticIndexOf, TypeTuple;
 
 enum _esdl__NotMappedForRandomization;
 
-alias _esdl__Sigbuf = Charbuf!("Signature", 1024);
+alias _esdl__Sigbuf = Charbuf!("Signature", 1024, 128);
 
 public enum SolveOrder: ubyte { UNDECIDED, NOW, LATER }
 

@@ -6106,6 +6106,7 @@ abstract class Process: Procedure, HierComp, EventClient
       import std.stdio: stderr;
       stderr.writefln("Thread threw exception %s:%s - %s",
 		      e.file, e.line, e.msg);
+      stderr.writeln(e.toString());
       debug(PROC) {
 	stderr.writefln("Thread threw exception %s", e);
       }
