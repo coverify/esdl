@@ -197,3 +197,46 @@ class _esdl__RandGen
 	 *t = uniform(a, b, _gen);
        }
 }
+
+enum _esdl__NotMappedForRandomization;
+
+struct rand
+{
+  // enum phony;
+  enum ignore;
+  
+  static interface disable { }
+  static interface barrier { }
+
+  bool _noRand;
+  bool _noProxy;
+
+  uint[] _counts;
+
+  this(uint[] counts ...) {
+    _counts = counts;
+  }
+  
+  this(bool hasRand) {
+    _noRand  = ! hasRand;
+    _noProxy = false;
+  }
+
+  this(bool noRand, bool noProxy) {
+    _noRand = noRand;
+    _noProxy = noProxy;
+  }
+
+  bool hasProxy() {
+    return ! _noProxy;
+  }
+
+  bool isRand() {
+    return ! _noRand;
+  }
+
+  uint opIndex(size_t N) {
+    if (_counts.length <= N) return uint.max;
+    else return _counts[N];
+  }
+}
