@@ -37,7 +37,7 @@ import esdl.rand.func;
 import esdl.rand.cover: _esdl__BaseCoverGroup;
 
 import esdl.base.rand: _esdl__RandGen, getRandGen;
-import esdl.base.alloc: make;
+// import esdl.base.alloc: make;
 
 
 /// C++ type static_cast for down-casting when you are sure
@@ -237,21 +237,21 @@ void _esdl__doInitRandObjectElems(P, int I=0)(P p) {
       // 	enum NAME = __traits(identifier, U.tupleof[Q._esdl__INDEX]);
       // }
       // pragma(msg, p.tupleof[I].stringof);
-      p.tupleof[I] = make!Q(p);
+      p.tupleof[I] = new Q(p);
       // if (t !is null) {
       // 	alias M = typeof(t.tupleof[Q._esdl__INDEX]);
       // 	static if ((is (M == class) && is (M: Object)) ||
       // 		   (is (M == U*, U) && is (U == struct))) { // class or struct*
-      // 	  p.tupleof[I] = make!Q(p, t.tupleof[Q._esdl__INDEX]);
+      // 	  p.tupleof[I] = new Q(p, t.tupleof[Q._esdl__INDEX]);
       // 	}
       // 	else static if (is (M == struct)) {
-      // 	  p.tupleof[I] = make!Q(p, &(t.tupleof[Q._esdl__INDEX]));
+      // 	  p.tupleof[I] = new Q(p, &(t.tupleof[Q._esdl__INDEX]));
       // 	}
       // 	else static if (isPointer!M) {
-      // 	  p.tupleof[I] = make!Q(p, t.tupleof[Q._esdl__INDEX]);
+      // 	  p.tupleof[I] = new Q(p, t.tupleof[Q._esdl__INDEX]);
       // 	}
       // 	else {
-      // 	  p.tupleof[I] = make!Q(p, &(t.tupleof[Q._esdl__INDEX]));
+      // 	  p.tupleof[I] = new Q(p, &(t.tupleof[Q._esdl__INDEX]));
       // 	}
       // }
       // else {
@@ -260,7 +260,7 @@ void _esdl__doInitRandObjectElems(P, int I=0)(P p) {
       // 	  writeln("Outer not set for: ", p._esdl__getFullName(),
       // 		  " of type: ", P.stringof);
       // 	}
-      // 	p.tupleof[I] = make!Q(p, null);
+      // 	p.tupleof[I] = new Q(p, null);
       // }
       // // }
     }
@@ -295,7 +295,7 @@ void _esdl__doInitConstraintElems(P, int I=0)(P p) {
 			 "Add @constraint_override attribute or change its name");
 	  __traits(getMember, b, EN).markOverridden();
 	}
-	auto cst = make!(E)(p, p, EN);
+	auto cst = p.new E(p, EN);
 	p.tupleof[I] = cst;
       }
       _esdl__doInitConstraintElems!(P, I+1)(p);
@@ -327,7 +327,7 @@ void _esdl__doInitCoverageElems(P, int I=0)(P p) {
     // pragma(msg, E.stringof);
     static if (is (E: _esdl__BaseCoverGroup)) {
       if (p.tupleof[I] is null) {
-	p.tupleof[I] = make!E(p);
+	p.tupleof[I] = new E(p);
       }
     }
     _esdl__doInitCoverageElems!(P, I+1)(p);
@@ -639,7 +639,7 @@ void _esdl__randomize(T) (ref T t) if (is (T == struct))
       // writeln("New: ", _esdl__ProxyType.stringof);
       return new CstRootProxy!T(&t);
       // _esdl__ProxyType proxy =
-      // 	make!_esdl__ProxyType(null, null, null);
+      // 	new _esdl__ProxyType(null, null, null);
       // if (proxy is null) {
       // 	assert (false, "Unable to allocate proxy instance");
       // }
@@ -691,7 +691,7 @@ void _esdl__randomize(T) (T t) if (is (T == class))
       // writeln("New: ", _esdl__ProxyType.stringof);
       return new CstRootProxy!T(t);
       // _esdl__ProxyType proxy =
-      // 	make!_esdl__ProxyType(null, null, null);
+      // 	new _esdl__ProxyType(null, null, null);
       // if (proxy is null) {
       // 	assert (false, "Unable to allocate proxy instance");
       // }
@@ -736,7 +736,7 @@ _esdl__Proxy _esdl__getProxyInst(T)(T t) if (is (T == class)) {
     // writeln("New: ", _esdl__ProxyType.stringof);
     return new CstRootProxy!T(t);
     // _esdl__ProxyType proxy =
-    //   make!_esdl__ProxyType(null, null, null);
+    //   new _esdl__ProxyType(null, null, null);
     // if (proxy is null) {
     //   assert (false, "Unable to allocate proxy instance");
     // }
@@ -764,7 +764,7 @@ _esdl__Proxy _esdl__getProxyInst(T)(ref T t) if (is (T == struct)) {
     // writeln("New: ", _esdl__ProxyType.stringof);
     return new CstRootProxy!T(t);
     // _esdl__ProxyType proxy =
-    //   make!_esdl__ProxyType(null, null, null);
+    //   new _esdl__ProxyType(null, null, null);
     // if (proxy is null) {
     //   assert (false, "Unable to allocate proxy instance");
     // }
@@ -1105,8 +1105,7 @@ mixin template Randomization()
   }
 
   void _esdl__seedRandom()(int seed) {
-    import esdl.base.alloc: make;
-    if (_esdl__RandInfoInst._randGen is null) _esdl__RandInfoInst._randGen = make!_esdl__RandGen(seed);
+    if (_esdl__RandInfoInst._randGen is null) _esdl__RandInfoInst._randGen = new _esdl__RandGen(seed);
     _esdl__RandInfoInst._randGen.seed(seed);
   }
 
@@ -1320,12 +1319,11 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     final override bool isVisitorConstraint() { return true; }
 
     override void makeConstraints() {
-      import esdl.base.alloc: make;
       auto obj = mixin(OBJ);
       alias TOBJ = typeof(obj);
       _pred =
-	make!CstVisitorPredicate(this, null, false, 0, this.outer, 0,
-				 make!CstVarVisitorExpr(obj), false);
+	new CstVisitorPredicate(this, null, false, 0, this.outer, 0,
+				 new CstVarVisitorExpr(obj), false);
       _preds[0] = _pred;
       _initialized = true;
     }
@@ -1444,13 +1442,12 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   }
 
   void _esdl__with(string _esdl__CstString, string FILE, size_t LINE, ARGS...)(ARGS values) {
-    import esdl.base.alloc: make;
     _esdl__CstProcessor proc = this._esdl__getProc();
     assert(proc !is null);
     proc._esdl__doResetLambdaPreds();
     auto cstLambda =
-      make!(_esdl__ConstraintLambdaImpl!(_esdl__CstString,
-					 FILE, LINE, ARGS))(this, this, "lambdaConstraint", values);
+      new _esdl__ConstraintLambdaImpl!(_esdl__CstString,
+				       FILE, LINE, ARGS)(this, "lambdaConstraint", values);
     cstLambda.doSetDomainContext(proc);
     cstLambda.doProcDomainContext(proc);
     // cstLambda.lambdaArgs(values);
@@ -1521,7 +1518,6 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     }
 
     static _esdl__PROXYT _esdl__make(CstObjStub stub) {
-      import esdl.base.alloc: make;
       _esdl__PROXYT proxy;
       _esdl__Proxy parent = stub._esdl__parent;
       if (parent !is null && parent._esdl__isRoot()) {
@@ -1531,7 +1527,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 	  proxy = _esdl__proxyInsts[_esdl__proxyIdx];
 	}
 	else {
-	  proxy = make!_esdl__PROXYT(stub);
+	  proxy = new _esdl__PROXYT(stub);
 	  _esdl__proxyInsts ~= proxy;
 	}
 	if (_esdl__proxyIdx == 0) {
@@ -1540,7 +1536,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 	_esdl__proxyIdx += 1;
       }
       else {
-	proxy = make!_esdl__PROXYT(stub);
+	proxy = new _esdl__PROXYT(stub);
       }
       return proxy;
     }
@@ -1572,8 +1568,8 @@ class _esdl__VisitorCst(TOBJ): _esdl__ConstraintBase, _esdl__VisitorCstIntf
   
   override void makeConstraints() {
     _pred =
-      make!CstVisitorPredicate(this, null, false, 0, _proxy, 0,
-			       make!CstVarVisitorExpr(_obj), false);
+      new CstVisitorPredicate(this, null, false, 0, _proxy, 0,
+			       new CstVarVisitorExpr(_obj), false);
     _preds[0] = _pred;
     _initialized = true;
   }
@@ -1602,10 +1598,10 @@ class _esdl__VisitorCst(TOBJ): _esdl__ConstraintBase, _esdl__VisitorCstIntf
 auto _esdl__sym(L)(L l, string name,
 		   _esdl__Proxy parent) if (isRandomizable!L) {
   static if (is (L: bool)) {
-    return make!CstLogicValue(l);
+    return new CstLogicValue(l);
   }
   else {
-    return make!(CstVecValue!L)(l); // CstVecValue!L.allocate(l);
+    return new CstVecValue!L(l); // CstVecValue!L.allocate(l);
   }
  }
 
@@ -1651,22 +1647,22 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
   import esdl.data.queue: Queue, isQueue;
   static if (is (L: CstVarNodeIntf)) {
     if (V is null) {
-      V = make!L(parent);
+      V = new L(parent);
       // L._esdl__PROXYT p = parent;
       // if (p is null) {
-      // 	V = make!L(parent, null);
+      // 	V = new L(parent, null);
       // }
       // else {
       // 	alias M = typeof(p._esdl__ref().tupleof[L._esdl__INDEX]);
       // 	static if ((is (M == class) && is (M: Object)) ||
       // 		   (is (M == U*, U) && is (U == struct))) {
-      // 	  V = make!L(parent, p._esdl__ref().tupleof[L._esdl__INDEX]);
+      // 	  V = new L(parent, p._esdl__ref().tupleof[L._esdl__INDEX]);
       // 	}
       // 	else static if (isPointer!M) {
-      // 	  V = make!L(parent, p._esdl__ref().tupleof[L._esdl__INDEX]);
+      // 	  V = new L(parent, p._esdl__ref().tupleof[L._esdl__INDEX]);
       // 	}
       // 	else {
-      // 	  V = make!L(parent, &(p._esdl__ref().tupleof[L._esdl__INDEX]));
+      // 	  V = new L(parent, &(p._esdl__ref().tupleof[L._esdl__INDEX]));
       // 	}
       // }
     }
@@ -1679,17 +1675,17 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       if (global !is null)
 	return cast(CstVecType) global;
       else {
-	CstVecType obj = make!CstVecType(parent);
+	CstVecType obj = new CstVecType(parent);
 	parent._esdl__addGlobalLookup(obj, V.stringof);
 	return obj;
       }
     }
     else {
       static if (is (L: bool)) {
-	return make!CstLogicValue(V);
+	return new CstLogicValue(V);
       }
       else {
-	return make!(CstVecValue!L)(V);
+	return new CstVecValue!L(V);
       }
     }
   }
@@ -1707,12 +1703,12 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       return cast(CstObjType) global;
     else {
       // pragma(msg, CstObjType.stringof);
-      CstObjType obj = make!CstObjType(parent);
+      CstObjType obj = new CstObjType(parent);
       // static if (is (L == struct) && !isQueue!L) {
-      // 	CstObjType obj = make!CstObjType(parent, &V);
+      // 	CstObjType obj = new CstObjType(parent, &V);
       // }
       // else {
-      // 	CstObjType obj = make!CstObjType(parent, V);
+      // 	CstObjType obj = new CstObjType(parent, V);
       // }
       parent._esdl__addGlobalLookup(obj, V.stringof);
       return obj;
@@ -1727,10 +1723,10 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       if (global !is null)
 	return cast(CstVecArrType) global;
       else {
-	CstVecArrType obj = make!CstVecArrType(parent);
+	CstVecArrType obj = new CstVecArrType(parent);
 	parent._esdl__addGlobalLookup(obj, V.stringof);
 	auto visitor =
-	  make!(_esdl__VisitorCst!CstVecArrType)(parent, name, obj);
+	  new _esdl__VisitorCst!CstVecArrType(parent, name, obj);
 	parent._esdl__addGlobalVisitor(visitor);
 	return obj;
       }
@@ -1741,10 +1737,10 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       if (global !is null)
 	return cast(CstVecArrType) global;
       else {
-	CstVecArrType obj = make!CstVecArrType(parent, V);
+	CstVecArrType obj = new CstVecArrType(parent, V);
 	parent._esdl__addGlobalLookup(obj, V.stringof);
 	auto visitor =
-	  make!(_esdl__VisitorCst!CstVecArrType)(parent, name, obj);
+	  new _esdl__VisitorCst!CstVecArrType(parent, name, obj);
 	parent._esdl__addGlobalVisitor(visitor);
 	return obj;
       }
@@ -1758,10 +1754,10 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
     if (global !is null)
       return cast(CstObjArrType) global;
     else {
-      CstObjArrType obj = make!CstObjArrType(parent);
+      CstObjArrType obj = new CstObjArrType(parent);
       parent._esdl__addGlobalLookup(obj, V.stringof);
       auto visitor =
-	make!(_esdl__VisitorCst!CstObjArrType)(parent, name, obj);
+	new _esdl__VisitorCst!CstObjArrType(parent, name, obj);
       parent._esdl__addGlobalVisitor(visitor);
       return obj;
     }
@@ -1774,7 +1770,7 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
     // writeln(VS);
     // writeln(__traits(getMember, parent, VS).stringof);
     // if (__traits(getMember, parent, VS) is null) {
-    //   __traits(getMember, parent, VS) = make!L(parent, parent._esdl__ref.tupleof[L._esdl__INDEX]);
+    //   __traits(getMember, parent, VS) = new L(parent, parent._esdl__ref.tupleof[L._esdl__INDEX]);
     // }
     // return __traits(getMember, parent, VS);
   }
@@ -1796,7 +1792,7 @@ auto _esdl__arg_proxy(size_t IDX, L, X, P)(string name, ref L arg, X proxy, P pa
     alias CstVectorType = CstVectorArg!(L, IDX);
     CstVarNodeIntf var = proxy._proxyLambdaArgs[IDX];
     if (var is null) {
-      CstVectorType vvar = make!CstVectorType(parent, &arg);
+      CstVectorType vvar = new CstVectorType(parent, &arg);
       proxy._proxyLambdaArgs[IDX] = vvar;
       return vvar;
     }
@@ -1810,9 +1806,9 @@ auto _esdl__arg_proxy(size_t IDX, L, X, P)(string name, ref L arg, X proxy, P pa
     alias CstVecArrType = CstVecArrArg!(L, IDX);
     CstVarNodeIntf var = proxy._proxyLambdaArgs[IDX];
     if (var is null) {
-      CstVecArrType vvar = make!CstVecArrType(parent, &arg);
+      CstVecArrType vvar = new CstVecArrType(parent, &arg);
       auto visitor =
-	make!(_esdl__VisitorCst!CstVecArrType)(parent, name, vvar);
+	new _esdl__VisitorCst!CstVecArrType(parent, name, vvar);
       parent._esdl__getProc()._esdl__addArgVisitor(visitor);
       proxy._proxyLambdaArgs[IDX] = vvar;
       return vvar;

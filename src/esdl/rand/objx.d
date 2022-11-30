@@ -20,7 +20,7 @@ import esdl.rand.misc: _esdl__staticCast;
 
 import std.algorithm.searching: canFind;
 import esdl.base.rand: _esdl__RandGen, getRandGen;
-import esdl.base.alloc: make;
+// import esdl.base.alloc: make;
 
 interface CstObjIndexed { }
 
@@ -338,7 +338,7 @@ abstract class _esdl__ObjStub(V, rand RAND_ATTR, int N):
 	_proxy = PROXYT._esdl__make(this);
       }
       else {
-	_proxy = make!PROXYT(this);
+	_proxy = new PROXYT(this);
       }
     }
     return _esdl__staticCast!PROXYT(_proxy);
@@ -854,7 +854,7 @@ abstract class CstObjArrStub(V, rand RAND_ATTR, int N)
   }
   
   this() {
-    _proxy = make!(CstObjArrProxy!(V, RAND_ATTR, N))(this);
+    _proxy = new CstObjArrProxy!(V, RAND_ATTR, N)(this);
   }
 
   abstract string _esdl__name();
@@ -951,8 +951,8 @@ class CstObjArrProxy(V, rand RAND_ATTR, int N)
   
   this(CstObjArrStub!(V, RAND_ATTR, N) stub) {
     _stub = stub;
-    _arrLen = make!(CstArrLength!RV)(_esdl__staticCast!RV(_stub));
-    _arrHierLen = make!(CstArrHierLength!RV)(_esdl__staticCast!RV(_stub));
+    _arrLen = new CstArrLength!RV(_esdl__staticCast!RV(_stub));
+    _arrHierLen = new CstArrHierLength!RV(_esdl__staticCast!RV(_stub));
     super();
   }
 
@@ -1495,11 +1495,11 @@ abstract class CstObjArr(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       override EV createElem(CstVecTerm indexExpr, bool isMapped) {
-	return make!EV(this, indexExpr, isMapped);
+	return new EV(this, indexExpr, isMapped);
       }
   
       override EV createElem(uint i, bool isMapped) {
-	return make!EV(this, cast(uint) i, isMapped);
+	return new EV(this, cast(uint) i, isMapped);
       }
   
     }
@@ -1665,11 +1665,11 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       final override EV createElem(CstVecTerm indexExpr, bool isMapped) {
-	return make!EV(this, indexExpr, isMapped);
+	return new EV(this, indexExpr, isMapped);
       }
   
       final override EV createElem(uint i, bool isMapped) {
-	return make!EV(this, cast(uint) i, isMapped);
+	return new EV(this, cast(uint) i, isMapped);
       }
   
       final override bool indexIsConst() { return (_indexExpr is null); }
