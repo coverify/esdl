@@ -18,7 +18,7 @@ import esdl.rand.base: CstDomBase, CstDomSet, CstIterCallback,
 import esdl.rand.base: CstValue, CstVarNodeIntf;
 
 import esdl.solver.base;
-import esdl.base.alloc: make;
+// import esdl.base.alloc: make;
 // import esdl.solver.mono: CstMonoSolver;
 // import esdl.solver.z3: CstZ3Solver;
 // import esdl.solver.buddy: CstBuddySolver;
@@ -450,11 +450,11 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	  assert (uwPred is null);
 	  CstPredicate guard = _guard;
 	  if (guardUnrolled) guard = _guard._uwPreds[i];
-	  uwPred = make!CstPredicate(_constraint, guard, _guardInv, _statement,
-				     _proxy, _soft, _expr._esdl__unroll(iter, iter.mapIter(i), proc),
-				     _isGuard, this, iter, i// ,
-				     // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
-				     );
+	  uwPred = new CstPredicate(_constraint, guard, _guardInv, _statement,
+				    _proxy, _soft, _expr._esdl__unroll(iter, iter.mapIter(i), proc),
+				    _isGuard, this, iter, i// ,
+				    // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
+				    );
 	  uwPred._unrolledIters ~= this._unrolledIters[];
 	  uwPred._unrolledIters ~= iter;
 	  _uwPreds[i] = uwPred;
@@ -1312,10 +1312,10 @@ class CstVisitorPredicate: CstPredicate
 	// import std.stdio;
 	// writeln("i: ", i, " mapped: ", iter.mapIter(i));
 	CstVisitorPredicate uwPred =
-	  make!CstVisitorPredicate(_constraint, _guard, _guardInv, _statement, _proxy, _soft,
-				   _expr._esdl__unroll(iter, iter.mapIter(i), proc), false, this, iter, i// ,
-				   // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
-				   );
+	  new CstVisitorPredicate(_constraint, _guard, _guardInv, _statement, _proxy, _soft,
+				  _expr._esdl__unroll(iter, iter.mapIter(i), proc), false, this, iter, i// ,
+				  // _iters[1..$].map!(tr => tr.unrollIterator(iter, i)).array
+				  );
 	uwPred._unrolledIters ~= this._unrolledIters[];
 	uwPred._unrolledIters ~= iter;
 	_uwPreds ~= uwPred;

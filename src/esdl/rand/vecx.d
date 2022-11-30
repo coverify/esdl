@@ -18,7 +18,7 @@ import esdl.rand.domain: CstArrIterator, CstArrLength, CstArrHierLength, CstDoma
 import esdl.rand.misc: _esdl__staticCast;
 
 import esdl.base.rand: _esdl__RandGen;
-import esdl.base.alloc: make;
+// import esdl.base.alloc: make;
 
 import std.algorithm.searching: canFind;
 
@@ -1037,8 +1037,8 @@ abstract class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
 	super();
 	_parent = parent;
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
-	_arrLen = make!(CstArrLength!RV)(this);
-	_arrHierLen = make!(CstArrHierLength!RV)(this);
+	_arrLen = new CstArrLength!RV(this);
+	_arrHierLen = new CstArrHierLength!RV(this);
       }
 
       final override bool _esdl__parentIsConstrained() {
@@ -1125,11 +1125,11 @@ abstract class CstVecArr(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       override EV createElem(uint i, bool isMapped) {
-	return make!EV(this, i, isMapped);
+	return new EV(this, i, isMapped);
       }
 
       override EV createElem(CstVecTerm index, bool isMapped) {
-	return make!EV(this, index, isMapped);
+	return new EV(this, index, isMapped);
       }
 
       override void markSolved(_esdl__CstProcessor proc) {
@@ -1205,8 +1205,8 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	_parent = parent;
 	_indexExpr = indexExpr;
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
-	_arrLen = make!(CstArrLength!RV) (this);
-	_arrHierLen = make!(CstArrHierLength!RV)(this);
+	_arrLen = new CstArrLength!RV (this);
+	_arrHierLen = new CstArrHierLength!RV(this);
       }
 
       this(P parent, ulong index, bool isMapped) {
@@ -1219,8 +1219,8 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	_parent = parent;
 	_pindex = index;
 	_parentsDepsAreResolved = _parent._esdl__depsAreResolved();
-	_arrLen = make!(CstArrLength!RV)(this);
-	_arrHierLen = make!(CstArrHierLength!RV)(this);
+	_arrLen = new CstArrLength!RV(this);
+	_arrHierLen = new CstArrHierLength!RV(this);
       }
 
       final override string _esdl__name() {
@@ -1367,11 +1367,11 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       override EV createElem(uint i, bool isMapped) {
-	return make!EV(this, i, isMapped);
+	return new EV(this, i, isMapped);
       }
 
       override EV createElem(CstVecTerm index, bool isMapped) {
-	return make!EV(this, index, isMapped);
+	return new EV(this, index, isMapped);
       }
 
       override void markHierResolved(_esdl__CstProcessor proc) {

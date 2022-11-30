@@ -14,7 +14,7 @@ import esdl.data.vector;
 import std.algorithm.searching: canFind;
 import esdl.rand.parser: CstParseData, CstParser;
 import esdl.base.rand: _esdl__RandGen, getRandGen;
-import esdl.base.alloc: make;
+// import esdl.base.alloc: make;
 import std.algorithm.mutation: swap;
 
 
@@ -206,7 +206,7 @@ abstract class _esdl__Proxy: CstObjectVoid, CstObjectIntf, rand.barrier
     _esdl__stub = stub;
     
     // scopes for constraint parsing
-    _esdl__rootScope = make!CstScope(null, null);
+    _esdl__rootScope = new CstScope(null, null);
     _esdl__currentScope = _esdl__rootScope;
 
   }
@@ -218,7 +218,7 @@ class _esdl__CstProcessor
   this(CstObjStub stub) {
     _stub = stub;
     _debugSolver = _stub._esdl__debugSolver();
-    _randGen = make!_esdl__RandGen(_seed);
+    _randGen = new _esdl__RandGen(_seed);
     assert (_randGen !is null);
   }
   
@@ -256,12 +256,12 @@ class _esdl__CstProcessor
   static CstDistPredSolver _distPredSolver;
 
   static getPredSolver() {
-    if (_agent is null) _agent = make!CstSolverAgent();
+    if (_agent is null) _agent = new CstSolverAgent();
     return _agent;
   }
 
   static getDistPredSolver() {
-    if (_distPredSolver is null) _distPredSolver = make!CstDistPredSolver();
+    if (_distPredSolver is null) _distPredSolver = new CstDistPredSolver();
     return _distPredSolver;
   }
 
