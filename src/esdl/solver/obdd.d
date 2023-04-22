@@ -5874,7 +5874,7 @@ class Buddy
   double log2satcount_rec(int root)
   {
     if(root < 2)
-      return log2(root);
+      return log2(cast(double) root);
 
     BddCacheData* entry = _log2countCache.lookup(LOG2SATCOUHASH(root));
     if((*entry).a == root &&(*entry).c == miscid)
