@@ -9,9 +9,14 @@
 module esdl.rand.cover;
 // Coverage
 import esdl.rand.misc: rand;
+import esdl.base.core: addCoverGroup;
 
 
 abstract class _esdl__BaseCoverGroup: rand.disable {
+  this() {
+    addCoverGroup(this);
+  }
+  abstract double get_coverage();
 }
 
 // import esdl.rand;
@@ -1581,7 +1586,7 @@ struct CoverGroupParser {
       outBuffer ~= cp_name ~ ".sample();";
     }
     outBuffer ~= "}\n";
-    outBuffer ~= "double get_coverage() {
+    outBuffer ~= "override double get_coverage() {
       double total = 0;
       size_t weightSum = 0;\n";
     foreach (cp_name; cp_names) {

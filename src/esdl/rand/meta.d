@@ -327,7 +327,7 @@ void _esdl__doInitCoverageElems(P, int I=0)(P p) {
     // pragma(msg, E.stringof);
     static if (is (E: _esdl__BaseCoverGroup)) {
       if (p.tupleof[I] is null) {
-	p.tupleof[I] = new E(p);
+	p.tupleof[I] = p.new E();
       }
     }
     _esdl__doInitCoverageElems!(P, I+1)(p);

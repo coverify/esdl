@@ -21,6 +21,7 @@ public import esdl.data.vector;
 public import esdl.base.comm;
 public import esdl.base.rand: RandomGen;
 import esdl.data.bvec: isBitVector;
+import esdl.rand.cover: _esdl__BaseCoverGroup;
 
 // use atomicStore and atomicLoad
 // This would get redundant later when share construct gets functional
@@ -2133,7 +2134,8 @@ final class IndexedSimEvent
   import core.memory;
 
   version(WEAKREF) {
-    WeakReference!SimEvent _client;
+    private size_t _client;
+    // WeakReference!SimEvent _client;
   }
   else {
     private SimEvent _client;
@@ -5069,6 +5071,16 @@ class EsdlThread: Thread
     synchronized(this) {
       return _esdl__root;
     }
+  }
+
+  private _esdl__BaseCoverGroup[] _covergroups;
+
+  static void addCoverGroup(_esdl__BaseCoverGroup cg) {
+    _self._covergroups ~= cg;
+  }
+
+  static _esdl__BaseCoverGroup[] getCoverGroups() {
+    return _self._covergroups;
   }
 
   // protected EsdlSimulator getSimulator() {
@@ -10041,4 +10053,16 @@ auto forkSim(T)(string name, string[] argv = []) {
   root.elaborate(name, argv);
   root.forkSim();
   return root;
+}
+
+static _esdl__BaseCoverGroup[] _covergroups;
+
+void addCoverGroup(_esdl__BaseCoverGroup cg) {
+  if (EsdlThread._self) EsdlThread.addCoverGroup(cg);
+  else _covergroups ~= cg;
+}
+
+_esdl__BaseCoverGroup[] getCoverGroups() {
+  if (EsdlThread._self) return EsdlThread.getCoverGroups();
+  return _covergroups;
 }
