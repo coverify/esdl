@@ -21,7 +21,7 @@ public:
   /// "cat" to be used to combine the header plus any number of data files.
   void openNext(bool incFilename = true) VL_MT_SAFE;
   /// Set size in megabytes after which new file should be created
-  void rolloverMB(size_t rolloverMB) VL_MT_SAFE;
+  void rolloverSize(size_t rolloverSize) VL_MT_SAFE;
   /// Close dump
   void close() VL_MT_SAFE;
   /// Flush dump
@@ -71,7 +71,7 @@ ESDLVerilatedVcdD::~ESDLVerilatedVcdD() { delete m_vcd_c; }
 bool ESDLVerilatedVcdD::isOpen() const VL_MT_SAFE  { return m_vcd_c->isOpen(); }
 void ESDLVerilatedVcdD::open(const char* filename) VL_MT_SAFE { m_vcd_c->open(filename); }
 void ESDLVerilatedVcdD::openNext(bool incFilename) VL_MT_SAFE { m_vcd_c->openNext(incFilename); }
-void ESDLVerilatedVcdD::rolloverMB(size_t rolloverMB) VL_MT_SAFE { m_vcd_c->rolloverMB(rolloverMB); }
+void ESDLVerilatedVcdD::rolloverSize(size_t rolloverSize) VL_MT_SAFE { m_vcd_c->rolloverSize(rolloverSize); }
 void ESDLVerilatedVcdD::close() VL_MT_SAFE { m_vcd_c->close(); }
 /// Flush dump
 void ESDLVerilatedVcdD::flush() VL_MT_SAFE { m_vcd_c->flush(); }
