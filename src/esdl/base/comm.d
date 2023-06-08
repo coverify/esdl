@@ -291,7 +291,7 @@ public class PortObj(IF, size_t N=1, size_t M=N) if(N == 1) : BasePort
 	if (is (U unused == Signal!(S, M), S, bool M)) {
 	  // if (simPhase == SimPhase.BINDPORTS) {
 	  import std.exception;
-	  enforce(this._channel is null, "Re-binding a port if not allowed: " ~
+	  enforce(this._channel is IF.init, "Re-binding a port if not allowed: " ~
 		  this.getFullName);
 	  synchronized(this) {
 	    this._channel = channel;
@@ -318,8 +318,8 @@ public class PortObj(IF, size_t N=1, size_t M=N) if(N == 1) : BasePort
       final void bind(IF channel) {
 	// if (simPhase == SimPhase.BINDPORTS) {
 	// import std.exception;
-	// enforce(this._channel is null, "Re-binding a port if not allowed: " ~
-	// 	this.getFullName);
+	enforce(this._channel is IF.init, "Re-binding a port if not allowed: " ~
+		this.getFullName);
 	synchronized(this) {
 	  this._channel = channel;
 	}
@@ -503,7 +503,7 @@ public class ExportObj(IF, size_t N=1, size_t M=N)
 	if(is(U unused == Signal!(S, M), S, bool M)) {
 	  if(simPhase == SimPhase.BINDEXPORTS) {
 	    import std.exception;
-	    enforce(_channel is null, "Re-binding a export if not allowed: " ~
+	    enforce(_channel is IF.init, "Re-binding a export if not allowed: " ~
 		    this.getFullName);
 	    this._channel = channel._esdl__objRef;
 	    // Bind all Proxy Events
@@ -528,7 +528,7 @@ public class ExportObj(IF, size_t N=1, size_t M=N)
     final void bind(IF channel) {
       if(simPhase == SimPhase.BINDEXPORTS) {
 	import std.exception;
-	enforce(_channel is null, "Re-binding a export if not allowed: " ~
+	enforce(_channel is IF.init, "Re-binding a export if not allowed: " ~
 		this.getFullName);
 	this._channel = channel;
 	// Bind all Proxy Events
