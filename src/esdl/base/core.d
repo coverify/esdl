@@ -2133,43 +2133,73 @@ final class IndexedSimEvent
   import core.atomic;
   import core.memory;
 
-  version(WEAKREF) {
-    private size_t _client;
-    // WeakReference!SimEvent _client;
-  }
-  else {
+  version(NOWEAKREF) {
     private SimEvent _client;
   }
+  else {
+    enum size_t MASK = 0xa5a5a5a5;
+    private size_t _client;
+  }
 
-
-  // SimEvent client = void;
   size_t index = void;
 
   this(SimEvent event, size_t i) {
     synchronized(this) {
       this.index = i;
-      version(WEAKREF) {
-	_client = weakReference!SimEvent(event);
+      version(NOWEAKREF) {
+	_client = event;
       }
       else {
-	_client = event;
+	hook(event);
       }
     }
   }
 
   private final SimEvent client() {
     synchronized(this) {
-      version(WEAKREF) {
-	if (_client.alive()) {
-	  return _client.target();
-	}
-	else {
-	  return null;
-	}
-      }
-      else {
+      version(NOWEAKREF) {
 	return _client;
       }
+      else {
+	auto obj = cast(SimEvent)cast(void*)
+	  (atomicLoad(*cast(shared)&_client)^MASK);
+	// we've moved obj into the GC-scanned stack space, so it's now
+	// safe to ask the GC whether the object is still alive.
+	// note that even if the cast and assignment of the obj local
+	// doesn't put the object on the stack, this call will.
+	// so, either way, this is safe.
+	if (obj !is null && GC.addrOf(cast(void*)obj)) return obj;
+	else return null;
+      }
+    }
+  }
+
+  version(NOWEAKREF) {}
+  else {
+    private void hook (Object obj) @trusted {
+      if (obj !is null) {
+	//auto ptr = cast(size_t)cast(void*)obj;
+	// fix from Andrej Mitrovic
+	auto ptr = cast(size_t)*(cast(void**)&obj);
+	// we use atomics because not all architectures may guarantee atomic store and load of these values
+	atomicStore(*cast(shared)&_client, ptr^MASK);
+	// only assigned once, so no atomics
+	// _ptr = ptr^MASK;
+	// _hash = typeid(T).getHash(&obj);
+	rt_attachDisposeEvent(obj, &unhook);
+	GC.setAttr(cast(void*)this, GC.BlkAttr.NO_SCAN);
+      } else {
+	atomicStore(*cast(shared)&_client, cast(size_t)0^MASK);
+      }
+    }
+
+    private void unhook (Object obj) @trusted {
+      rt_detachDisposeEvent(obj, &unhook);
+      // this assignment is important.
+      // if we don't null _client when it is collected, the check
+      // in object could return false positives where the GC has
+      // reused the memory for a new object.
+      atomicStore(*cast(shared)&_client, cast(size_t)0^MASK);
     }
   }
 }
