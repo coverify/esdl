@@ -168,6 +168,7 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
   this () {
 
     // static if (BINS != "") {
+    debug (CVRPARSER) pragma(msg, doParse!T(BINS));
     mixin(doParse!T(BINS));
     // }
     // else {
@@ -184,6 +185,8 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
     _curr_wild_hits.length = _wildbins.length;
     if (_bins.length == 0 && _ill_bins.length == 0) {
       import std.conv;
+      debug (CVRPARSER) pragma(msg, doParse!T("bins [64] a = {[" ~ T.min.to!string() ~
+					      ":" ~ T.max.to!string() ~ "]};"));
       mixin(doParse!T("bins [64] a = {[" ~ T.min.to!string() ~
 		      ":" ~ T.max.to!string() ~ "]};"));
       procStaticBins(_bins, _sbins, _sbinsNum);

@@ -908,6 +908,20 @@ struct Vector(T, string NAME, size_t MINCAP=8, bool SCRATCH=false)
     package T[] _reserved() {
       return _payload[_size.._capacity];
     }
+
+    size_t insertBack(string r)
+    {
+      immutable size_t rLength = r.length;
+      if (rLength > 0) {
+	if (_capacity <= _size + rLength) {
+	  growCapacity((_size + rLength) * 2);
+	}
+	_payload[_size.._size+rLength] = r;
+	_size += rLength;
+	return rLength;
+      }
+      else return 0;
+    }
   }
 
   /**

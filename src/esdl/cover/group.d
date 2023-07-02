@@ -2,6 +2,7 @@ module esdl.cover.group;
 import esdl.cover.point;
 import esdl.base.core: addCoverGroup;
 import esdl.base.rand: rand;
+import esdl.data.vector: Vector;
 
 abstract class _esdl__BaseCoverGroup: rand.disable {
   this() {
@@ -12,18 +13,37 @@ abstract class _esdl__BaseCoverGroup: rand.disable {
 
 struct CoverGroupParser
 {
+  bool druRun = true;
+  size_t bufLen = 0;
+  
   size_t srcCursor = 0;
   size_t srcLine = 0;
   string S;
 
-  string outBuffer = "";
-  
-  void fill(in string source) {
-    outBuffer ~= source;
+  Vector!(char, "outBuffer") outBuffer;
+  string buffer() {return cast(string) outBuffer[];}
+  // void fill(in string source) {
+  //   outBuffer ~= source;
+  // }
+
+  void fill(T...)(T strs) {
+    foreach (str; strs) {
+      if (druRun) bufLen += str.length;
+      else outBuffer ~= str;
+    }
   }
+  
   this(string s) {
     S = s;
   }
+
+  void setUp() {
+    outBuffer.reserve(bufLen);
+    srcCursor = 0;
+    srcLine = 0;
+    druRun = false;
+  }
+
   size_t parseName() {
     auto start = srcCursor;
     while (S[srcCursor] != ';' &&
@@ -243,7 +263,7 @@ struct CoverGroupParser
     return start;
   }
   
-  string parse() {    
+  void parse() {    
     parseSpace();
     int cpCount = 0;
     string[] cp_names;
@@ -313,12 +333,10 @@ struct CoverGroupParser
 	else {
 	  cp_name = cp_names[$-1];
 	}
-	outBuffer ~= "alias " ~ cp_name ~ "_class = " ~
-	  coverpointName ~ ";\n";
-	outBuffer ~= cp_name ~ "_class " ~ cp_name ~ ";\n";
-	outBuffer ~= "class " ~ cp_name ~ "_override : " ~
-	  cp_name ~ "_class { \n override _esdl__T _esdl__t() { return " ~ name ~ "; }\n }\n";
-
+	fill("alias ", cp_name, "_class = ", coverpointName, ";\n");
+	fill(cp_name, "_class ", cp_name, ";\n");
+	fill("class ", cp_name, "_override : ", cp_name,
+	     "_class { \n override _esdl__T _esdl__t() { return ", name, "; }\n }\n");
 	cpCount += 1;
       }
       else if (parseCrossDecl()) { // TODO
@@ -345,50 +363,42 @@ struct CoverGroupParser
       }
       parseSpace();
     }
-    outBuffer ~= "this () { \n";
-    foreach (cp_name; cp_names) {
-      outBuffer ~= cp_name ~ " = new " ~ cp_name ~
-	"_override();\n";
-    }
-    outBuffer ~= "}\n";
-    outBuffer ~= "void sample(";
+    fill("this () { \n");
+    foreach (cp_name; cp_names)
+      fill(cp_name, " = new ", cp_name, "_override();\n");
+    fill("}\n");
+    fill("void sample(");
     for (int i = 0; i != sampleArgs.length; ++i) {
-      if (i != 0) outBuffer ~= ",\n            ";
-      outBuffer ~= sampleArgTypes[i];
-      outBuffer ~= sampleArgs[i];
+      if (i != 0) fill(",\n            ");
+      fill(sampleArgTypes[i], sampleArgs[i]);
     }
-    outBuffer ~= ") { \n";
+    fill(") { \n");
     for (int i = 0; i != sampleArgs.length; ++i) {
-      outBuffer ~= "  this.";
-      outBuffer ~= sampleArgs[i];
-      outBuffer ~= " = ";
-      outBuffer ~= sampleArgs[i];
-      outBuffer ~= ";\n";
+      fill("  this.", sampleArgs[i], " = ", sampleArgs[i], ";\n");
     }
     foreach (cp_name; cp_names) {
-      outBuffer ~= "  ";
-      outBuffer ~= cp_name;
-      outBuffer ~= ".sample();\n";
+      fill("  ", cp_name, ".sample();\n");
     }
-    outBuffer ~= "}\n";
-    outBuffer ~= "override double get_coverage() {
+    fill("}\n");
+    fill("override double get_coverage() {
       double total = 0;
-      size_t weightSum = 0;\n";
+      size_t weightSum = 0;\n");
     foreach (cp_name; cp_names) {
-      outBuffer ~= "total += " ~ cp_name ~ ".get_coverage() * " ~
-	cp_name ~ ".get_weight();\n";
-      outBuffer ~= "weightSum += " ~ cp_name ~ ".get_weight();\n";
+      fill("total += ", cp_name, ".get_coverage() * ",
+	   cp_name, ".get_weight();\n");
+      fill("weightSum += ", cp_name, ".get_weight();\n");
     }
-    outBuffer ~= "
-    return total/weightSum; }\n";
-    return outBuffer;
+    fill("\n    return total/weightSum; }\n");
   }
 }
 
 string _esdl__parseCoverGroupString(string S)
 {
   CoverGroupParser parser = CoverGroupParser(S);
-  return parser.parse();
+  parser.parse();
+  parser.setUp();
+  parser.parse();
+  return parser.buffer();
 }
 
 // mixin template CoverGroup (string S) {

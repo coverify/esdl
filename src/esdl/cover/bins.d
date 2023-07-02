@@ -2,26 +2,48 @@
 // import esdl.data.bvec;
 
 module esdl.cover.bins;
+import esdl.data.vector: Vector;
 
 static string doParse(T)(string Bins) {
   parser!T Parser = parser!T(Bins);
-  return Parser.parse();
+  Parser.parse();
+  Parser.setUp();
+  Parser.parse();
+  
+  return Parser.buffer();
 }
 
 struct parser (T)
 {
+  bool druRun = true;
+  size_t bufLen = 0;
+  
   enum BinType: byte {SINGLE, DYNAMIC, STATIC};
   size_t srcCursor = 0;
   size_t srcLine = 0;
-  string outBuffer = "";
   string BINS;
+
+  Vector!(char, "outBuffer") outBuffer;
+  string buffer() {return cast(string) outBuffer[];}
 
   this(string bins) {
     BINS = bins;
   }
-  void fill(in string source) {
-    outBuffer ~= source;
+
+  void setUp() {
+    outBuffer.reserve(bufLen);
+    srcCursor = 0;
+    srcLine = 0;
+    druRun = false;
   }
+
+  void fill(T...)(T strs) {
+    foreach (str; strs) {
+      if (druRun) bufLen += str.length;
+      else outBuffer ~= str;
+    }
+  }
+  
   void parseComma() {
     if (BINS[srcCursor] != ',') {
       import std.conv;
@@ -338,7 +360,7 @@ struct parser (T)
           min = T.max.stringof;
         }
         else if (BINS[srcTag] == '$') {
-          min = "N["~BINS[srcTag+1 .. srcCursor]~"]";
+          min = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
         }
         else {
           min = BINS[srcTag .. srcCursor];
@@ -353,7 +375,7 @@ struct parser (T)
           max = T.max.stringof;
         }
         else if (BINS[srcTag] == '$') {
-          max = "N["~BINS[srcTag+1 .. srcCursor]~"]";
+          max = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
         }
         else {
           max = BINS[srcTag .. srcCursor];
@@ -361,7 +383,7 @@ struct parser (T)
         if (!isInclusive) {
           max ~= "-1";
         }
-        fill(BinType ~"[$-1].addRange(" ~ min ~ ", " ~ max ~ ");\n");
+        fill(BinType, "[$-1].addRange(", min, ", ", max, ");\n");
         parseSpace();
         if (BINS[srcCursor] != ']') {
 	  import std.conv;
@@ -378,13 +400,13 @@ struct parser (T)
           val = T.max.stringof;
         }
         else if (BINS[srcTag] == '$') {
-          val = "N["~BINS[srcTag+1 .. srcCursor]~"]";
+          val = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
         }
         else {
           val = BINS[srcTag .. srcCursor];
         }
         //makeBins ~= 
-        fill(BinType ~ "[$-1].addRange(" ~ val ~ ");\n");
+        fill(BinType, "[$-1].addRange(", val, ");\n");
         parseSpace();
       }
       if (BINS[srcCursor] == '}') {
@@ -404,13 +426,13 @@ struct parser (T)
       parseSpace();
       if (isDefault()) {
 	if (type == "_ig") {
-	  fill("_default = DefaultBin(Type.IGNORE, \"" ~ name ~ "\");");
+	  fill("_default = DefaultBin(Type.IGNORE, \"", name, "\");");
 	}
 	else if (type == "_ill") {
-	  fill("_default = DefaultBin(Type.ILLEGAL, \"" ~ name ~ "\");");
+	  fill("_default = DefaultBin(Type.ILLEGAL, \"", name, "\");");
 	}
 	else {
-	  fill("_default = DefaultBin(Type.BIN, \"" ~ name ~ "\");");
+	  fill("_default = DefaultBin(Type.BIN, \"", name, "\");");
 	}
 	if (BINS[srcCursor] != ';') {
 	  import std.conv;
@@ -422,7 +444,7 @@ struct parser (T)
 	return;
       }
       else if (BINS[srcCursor] == '{') {
-	fill(type ~ "_bins ~= Bin!T( \"" ~ name ~ "\");\n");
+	fill(type, "_bins ~= Bin!T( \"", name, "\");\n");
 	parseCurlyOpen();
 	parseSpace();
 	parseBin(type ~ "_bins");
@@ -464,12 +486,12 @@ struct parser (T)
       parseSpace();
       auto srcTag = parseName();
       if (type == "_ig") {
-        fill(type ~ "_bins ~= Bin!T( \"" ~
-	     BINS[srcTag .. srcCursor] ~ "\");\n");	
+        fill(type, "_bins ~= Bin!T( \"",
+	     BINS[srcTag .. srcCursor], "\");\n");	
       }
       else {
-        fill(type ~ "_dbins ~= Bin!T( \"" ~
-	     BINS[srcTag .. srcCursor] ~ "\");\n");
+        fill(type, "_dbins ~= Bin!T( \"",
+	     BINS[srcTag .. srcCursor], "\");\n");
       }
       parseSpace();
       parseEqual();
@@ -489,20 +511,20 @@ struct parser (T)
       parseSpace();
       if (BINS[srcCursor] != ']') {
 	import std.conv;
-        assert (false, "error in writing bins at line "~ srcLine.to!string);
+        assert (false, "error in writing bins at line " ~ srcLine.to!string);
       }
       ++srcCursor;
       parseSpace();
       srcTag = parseName();
       if (type == "_ig") { //no need for arrays in ignore bins
-        fill(type ~ "_bins ~= Bin!T( \"" ~
-	     BINS[srcTag .. srcCursor] ~ "\");\n");
-        // fill(type ~ "_sbinsNum ~= " ~ arrSize ~ "; \n");
+        fill(type, "_bins ~= Bin!T( \"",
+	     BINS[srcTag .. srcCursor], "\");\n");
+        // fill(type, "_sbinsNum,= ", arrSize, "; \n");
       }
       else {
-        fill(type ~ "_sbins ~= Bin!T( \"" ~
-	     BINS[srcTag .. srcCursor] ~ "\");\n");
-        fill(type ~ "_sbinsNum ~= " ~ arrSize ~ "; \n");
+        fill(type, "_sbins ~= Bin!T( \"",
+	     BINS[srcTag .. srcCursor], "\");\n");
+        fill(type, "_sbinsNum ~= ", arrSize, "; \n");
       }
       parseSpace();
       parseEqual();
@@ -550,8 +572,8 @@ struct parser (T)
     if (srcTag == BINS.length) {
       assert (false, "incomplete statement");
     }
-    fill(type ~ "_wildbins ~= WildCardBin!(T)( \"" ~
-	 name ~ "\", \"" ~ BINS[srcCursor .. srcTag] ~ "\" );\n"); 
+    fill(type, "_wildbins ~= WildCardBin!(T)( \"",
+	 name, "\", \"", BINS[srcCursor .. srcTag], "\" );\n"); 
     srcCursor = srcTag;
     parseSpace();
     ++srcCursor;
@@ -575,8 +597,7 @@ struct parser (T)
       srcCursor ++;
     }
     srcCursor++;
-    fill(BINS[srcTag .. srcCursor]);
-    fill("\n");
+    fill(BINS[srcTag .. srcCursor], "\n");
   }
   void parseOption() {
     parseTillEqual();
@@ -587,7 +608,7 @@ struct parser (T)
       val = T.max.stringof;
     }
     else if (BINS[srcTag] == '$') {
-      val = "N["~BINS[srcTag+1 .. srcCursor]~"]";
+      val = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
     }
     else {
       val = BINS[srcTag .. srcCursor];
@@ -597,10 +618,10 @@ struct parser (T)
       import std.conv;
       assert (false, "';' expected, not found at line " ~ srcLine.to!string);
     }
-    fill(val ~ ";");
+    fill(val, ";");
     srcCursor++;
   }
-  string parse() {
+  void parse() {
     parseSpace();
     while (srcCursor < BINS.length) {
       if (isTypeStatement()) {
@@ -618,7 +639,6 @@ struct parser (T)
       }
       parseSpace();
     }
-    return outBuffer;
   }
 }
 
@@ -656,6 +676,10 @@ struct WildCardBin(T)
 
 struct Bin(T)
 {
+  import std.typecons: Tuple, tuple;
+
+  alias TRange = Tuple!(T, "min", T, "max");
+  
   string _name;
   uint _hits;
   T [] _ranges;
