@@ -34,7 +34,7 @@ import esdl.rand.domain: CstVecValue, CstLogicValue;
 import esdl.rand.proxy;
 import esdl.rand.cstr;
 import esdl.rand.func;
-import esdl.rand.cover: _esdl__BaseCoverGroup;
+import esdl.cover.group: _esdl__BaseCoverGroup;
 
 import esdl.base.rand: _esdl__RandGen, getRandGen;
 // import esdl.base.alloc: make;
@@ -69,7 +69,7 @@ template _esdl__RandProxyType(T, int I, P, int PI)
   import std.traits;
   alias L = typeof(T.tupleof[I]);
   enum rand RAND = getRandAttr!(T, I);
-  // pragma(msg, "Looking at: ", T.tupleof[I].stringof);
+ // pragma(msg, "Looking at: ", T.tupleof[I].stringof);
   static if (_esdl__randIgnore!(__traits(getAttributes, T.tupleof[I]))
 	     || is (L: rand.disable)) {
     alias _esdl__RandProxyType = _esdl__NotMappedForRandomization;
@@ -324,7 +324,9 @@ void _esdl__doInitCoverageElems(P, int I=0)(P p) {
   }
   else {
     alias E = typeof (p.tupleof[I]);
-    // pragma(msg, E.stringof);
+    debug(CVRPARSER) {
+      pragma(msg, E.stringof);
+    }
     static if (is (E: _esdl__BaseCoverGroup)) {
       if (p.tupleof[I] is null) {
 	p.tupleof[I] = p.new E();
@@ -937,10 +939,25 @@ mixin template Randomization()
   }
   
   static if (is (typeof(this) == class)) {
-    import esdl.rand.cover: _esdl__BaseCoverGroup;
+    import esdl.cover.group: _esdl__BaseCoverGroup, _esdl__parseCoverGroupString;
+    import esdl.cover;
     class covergroup(string CoverSpec): _esdl__BaseCoverGroup {
       // alias _esdl__CG_OUTER = typeof(this.outer);
-      pragma (msg, _esdl__parseCoverGroupString(CoverSpec));
+      debug(CVRPARSER) {
+	pragma (msg, _esdl__parseCoverGroupString(CoverSpec));
+      }
+      void start() {
+	foreach (ref elem; this.tupleof) {
+	  static if (is (typeof(elem): _esdl__CoverPointIf))
+	    elem.start();
+	}
+      }
+      void stop() {
+	foreach (ref elem; this.tupleof) {
+	  static if (is (typeof(elem): _esdl__CoverPointIf))
+	    elem.stop();
+	}
+      }
       mixin(_esdl__parseCoverGroupString(CoverSpec));
     }
 

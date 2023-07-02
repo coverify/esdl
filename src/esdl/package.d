@@ -7,5 +7,6 @@ public import esdl.sys;
 version(ESDL_NORAND) {}
  else {
    public import esdl.rand;
+   public import esdl.cover;
    public import esdl.solver;
  }

@@ -21,7 +21,7 @@ public import esdl.data.vector;
 public import esdl.base.comm;
 public import esdl.base.rand: RandomGen;
 import esdl.data.bvec: isBitVector;
-import esdl.rand.cover: _esdl__BaseCoverGroup;
+import esdl.cover.group: _esdl__BaseCoverGroup;
 
 // use atomicStore and atomicLoad
 // This would get redundant later when share construct gets functional

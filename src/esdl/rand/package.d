@@ -2,7 +2,6 @@ module esdl.rand;
 
 public import esdl.rand.agent;
 public import esdl.rand.base;
-public import esdl.rand.cover;
 public import esdl.rand.cstr;
 public import esdl.rand.domain;
 public import esdl.rand.expr;
