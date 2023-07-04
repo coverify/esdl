@@ -165,17 +165,15 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
   Parameters option;
   
   static StaticParameters type_option;
-  this () {
 
-    // static if (BINS != "") {
-    debug (CVRPARSER) pragma(msg, doParse!T(BINS));
-    mixin(doParse!T(BINS));
-    // }
-    // else {
-    //   import std.conv;
-    //   mixin(doParse!T("bins [64] a = {[" ~ T.min.to!string() ~ ":" ~ T.max.to!string() ~ "]};"));
-    // }
+  debug (CVRPARSER) pragma(msg, doParse!T(BINS));
+  mixin(doParse!T(BINS));
 
+  // this () {
+  //   this._esdl__initBins();
+  // }
+
+  void _esdl__initBins() {
     procDyanamicBins(_bins, _dbins);
     procDyanamicBins(_ill_bins, _ill_dbins);
     procStaticBins(_bins, _sbins, _sbinsNum);
@@ -183,27 +181,27 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
     procIgnoreBins();
     _curr_hits.length = _bins.length; 
     _curr_wild_hits.length = _wildbins.length;
-    if (_bins.length == 0 && _ill_bins.length == 0) {
-      import std.conv;
-      debug (CVRPARSER) pragma(msg, doParse!T("bins [64] a = [[" ~ T.min.to!string() ~
-					      ":" ~ T.max.to!string() ~ "]];"));
-      mixin(doParse!T("bins [64] a = [[" ~ T.min.to!string() ~
-		      ":" ~ T.max.to!string() ~ "]];"));
-      procStaticBins(_bins, _sbins, _sbinsNum);
-      _curr_hits.length = _bins.length; 
-    }
+    // if (_bins.length == 0 && _ill_bins.length == 0) {
+    //   import std.conv;
+    //   debug (CVRPARSER) pragma(msg, doParse!T("bins [64] _esdl__defaultBin = [[" ~ T.min.to!string() ~
+    // 					      ":" ~ T.max.to!string() ~ "]];"));
+    //   mixin(doParse!T("bins [64] _esdl__defaultBin = [[" ~ T.min.to!string() ~
+    // 		      ":" ~ T.max.to!string() ~ "]];"));
+    //   procStaticBins(_bins, _sbins, _sbinsNum);
+    //   _curr_hits.length = _bins.length; 
+    // }
   }
   
   size_t [] _sbinsNum;
   size_t [] _ig_sbinsNum;
   size_t [] _ill_sbinsNum;
-  Bin!(T)[] _bins;
-  Bin!(T)[] _sbins;
-  Bin!(T)[] _dbins;
-  Bin!(T)[] _ig_bins;
-  Bin!(T)[] _ill_bins;
-  Bin!(T)[] _ill_sbins;
-  Bin!(T)[] _ill_dbins;
+  EsdlBinIntf!(T)[] _bins;
+  EsdlBinIntf!(T)[] _sbins;
+  EsdlBinIntf!(T)[] _dbins;
+  EsdlBinIntf!(T)[] _ig_bins;
+  EsdlBinIntf!(T)[] _ill_bins;
+  EsdlBinIntf!(T)[] _ill_sbins;
+  EsdlBinIntf!(T)[] _ill_dbins;
   WildCardBin!(T)[] _wildbins;
   WildCardBin!(T)[] _ig_wildbins;
   WildCardBin!(T)[] _ill_wildbins;
@@ -230,8 +228,8 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
     //   bin.and(_ig_bins[0][]);
     // }
   }
-  void procDyanamicBins(ref Bin!(T) [] alias_bins,
-			ref Bin!(T) [] alias_dbins) {
+  void procDyanamicBins(ref EsdlBinIntf!(T) [] alias_bins,
+			ref EsdlBinIntf!(T) [] alias_dbins) {
     // foreach (tempBin; alias_dbins ) {
     //   auto ranges = tempBin.getRanges();
     //   size_t num = 0;
@@ -239,7 +237,7 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
     //     for (T j = ranges[i]; j <= ranges[i+1]; j++) {
     // 	  import std.conv;
     //       string tempname = tempBin.getName ~ "[" ~ to!string(num) ~ "]";
-    //       alias_bins ~= Bin!T(tempname); 
+    //       alias_bins ~= EsdlBinIntf!T(tempname); 
     //       alias_bins[$ - 1].addRange(j);
     //       ++num;
     //     }
@@ -247,8 +245,8 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
     // }
     // alias_dbins.length = 0;
   }
-  void procStaticBins(ref Bin!(T) [] alias_bins,
-		      ref Bin!(T) [] alias_sbins,
+  void procStaticBins(ref EsdlBinIntf!(T) [] alias_bins,
+		      ref EsdlBinIntf!(T) [] alias_sbins,
 		      ref size_t [] alias_sbinsNum) {
     import std.conv;
     // foreach (index, tempBin; alias_sbins) {
@@ -260,7 +258,7 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
     //   size_t binNum = 0;
     //   T binleft = Binsize;
     //   for (size_t i = 0; i < arrSize; i++) {
-    //     alias_bins ~= Bin!T(tempBin.getName ~ "[" ~ to!string(i) ~ "]");
+    //     alias_bins ~= EsdlBinIntf!T(tempBin.getName ~ "[" ~ to!string(i) ~ "]");
     //   }
     //   if (Binsize == 0) {
     //     assert (false, "array size created more than the number " ~

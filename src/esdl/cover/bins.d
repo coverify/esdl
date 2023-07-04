@@ -3,46 +3,77 @@
 
 module esdl.cover.bins;
 import esdl.data.vector: Vector;
+import esdl.data.bvec: isBitVector;
+import std.traits: isIntegral;
+import std.conv: parse;
 
 static string doParse(T)(string Bins) {
   parser!T Parser = parser!T(Bins);
-  Parser.parse();
+  Parser.parseAllBins();
   Parser.setUp();
-  Parser.parse();
+  Parser.parseAllBins();
   
   return Parser.buffer();
 }
 
 struct parser (T)
 {
-  bool druRun = true;
-  size_t bufLen = 0;
+  bool dryRun = true;
+  size_t ctrLen = 0;
+  size_t declLen = 0;
   
   enum BinType: byte {SINGLE, DYNAMIC, STATIC};
   size_t srcCursor = 0;
   size_t srcLine = 0;
   string BINS;
 
-  Vector!(char, "outBuffer") outBuffer;
-  string buffer() {return cast(string) outBuffer[];}
+  size_t ctrCursor;
+  size_t declCursor;
+  
+  char[] outBuffer;
+  string buffer() {return cast(string) outBuffer;}
 
   this(string bins) {
     BINS = bins;
   }
 
   void setUp() {
-    outBuffer.reserve(bufLen);
+    outBuffer.length =ctrLen+declLen;
     srcCursor = 0;
     srcLine = 0;
-    druRun = false;
+    declCursor = 0;
+    ctrCursor = declLen;
+    dryRun = false;
   }
 
-  void fill(T...)(T strs) {
+  void fillCtr(T...)(T strs) {
     foreach (str; strs) {
-      if (druRun) bufLen += str.length;
-      else outBuffer ~= str;
+      if (dryRun) ctrLen += str.length;
+      else {
+	size_t newCursor = ctrCursor+str.length;
+	outBuffer[ctrCursor..newCursor] = str;
+	ctrCursor = newCursor;
+      }
     }
   }
+  
+  void fillDecl(T...)(T strs) {
+    foreach (str; strs) {
+      if (dryRun) declLen += str.length;
+      else {
+	size_t newCursor = declCursor+str.length;
+	outBuffer[declCursor..newCursor] = str;
+	declCursor = newCursor;
+      }
+    }
+  }
+  
+  // void fillDecl(T...)(T strs) {
+  //   foreach (str; strs) {
+  //     if (dryRun) declLen += str.length;
+  //     else outBuffer ~= str;
+  //   }
+  // }
   
   void parseComma() {
     if (BINS[srcCursor] != ',') {
@@ -355,7 +386,7 @@ struct parser (T)
     return false;
   }
 
-  void parseBin(string BinType) {
+  void parseNamedBin(string binName) {
     size_t srcTag;
     while (true) {
       if (BINS[srcCursor] == '[') {
@@ -366,9 +397,9 @@ struct parser (T)
         if (BINS[srcTag .. srcCursor] == "$") {
           min = T.max.stringof;
         }
-        else if (BINS[srcTag] == '$') {
-          min = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
-        }
+        // else if (BINS[srcTag] == '$') {
+        //   min = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
+        // }
         else {
           min = BINS[srcTag .. srcCursor];
         }
@@ -381,16 +412,16 @@ struct parser (T)
         if (BINS[srcTag .. srcCursor] == "$") {
           max = T.max.stringof;
         }
-        else if (BINS[srcTag] == '$') {
-          max = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
-        }
+        // else if (BINS[srcTag] == '$') {
+        //   max = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
+        // }
         else {
           max = BINS[srcTag .. srcCursor];
         }
         if (!isInclusive) {
           max ~= "-1";
         }
-        fill(BinType, "[$-1].addRange(", min, ", ", max, ");\n");
+        fillCtr(binName, ".addRange(", min, ", ", max, ");\n");
         parseSpace();
         if (BINS[srcCursor] != ']') {
 	  import std.conv;
@@ -406,14 +437,39 @@ struct parser (T)
         if (BINS[srcTag .. srcCursor] == "$") {
           val = T.max.stringof;
         }
-        else if (BINS[srcTag] == '$') {
-          val = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
-        }
+        // else if (BINS[srcTag] == '$') {
+        //   val = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
+        // }
         else {
           val = BINS[srcTag .. srcCursor];
         }
+	static if (isBitVector!T) {
+	  ulong intVal = parse!(ulong, string)(val);
+	  auto bvecVal = intVal.to!T;
+	  assert (bvecVal == intVal, "Value " ~ val ~ " can not be of type " ~ T.stringof);
+	  fillCtr(binName, ".addElem(" ~ val ~ ".to!T);\n");
+	}
+	else {
+	  if (val.length >=2 &&
+	      (val[0..2] == "0x" || val[0..2] == "0X")) {
+	    string strval = val[2..$].dup;
+	    ulong intVal = parse!(ulong, string)(strval, 16);
+	    assert (cast(T) intVal == intVal, "Value " ~ val ~ " can not be of type " ~ T.stringof);
+	  }
+	  else if (val.length >=2 &&
+		   (val[0..2] == "0b" || val[0..2] == "0B")) {
+	    string strval = val[2..$].dup;
+	    ulong intVal = parse!(ulong, string)(strval, 2);
+	    assert (cast(T) intVal == intVal, "Value " ~ val ~ " can not be of type " ~ T.stringof);
+	  }
+	  else if (val[0] <= '9' && val[0] >= '0') {
+	    string strval = val.dup;
+	    ulong intVal = parse!(ulong, string)(strval, 10);
+	    assert (cast(T) intVal == intVal, "Value " ~ val ~ " can not be of type " ~ T.stringof);
+	  }
+	  fillCtr(binName, ".addElem(cast(T) " ~ val ~ ");\n");
+	}	  
         //makeBins ~= 
-        fill(BinType, "[$-1].addRange(", val, ");\n");
         parseSpace();
       }
       if (BINS[srcCursor] == ']') {
@@ -421,6 +477,75 @@ struct parser (T)
       }
       parseComma();
     }
+  }
+
+  void parseBin(string BinType) {
+    size_t srcTag;
+    while (true) {
+      if (BINS[srcCursor] == '[') {
+        ++srcCursor;
+        parseSpace();
+        srcTag = parseLiteral();
+        string min;
+        if (BINS[srcTag .. srcCursor] == "$") {
+          min = T.max.stringof;
+        }
+        // else if (BINS[srcTag] == '$') {
+        //   min = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
+        // }
+        else {
+          min = BINS[srcTag .. srcCursor];
+        }
+        //min = to!T(BINS[srcTag .. srcCursor]);
+        parseSpace();
+        bool isInclusive = parseRangeType();
+        parseSpace();
+        srcTag = parseLiteral();
+        string max;
+        if (BINS[srcTag .. srcCursor] == "$") {
+          max = T.max.stringof;
+        }
+        // else if (BINS[srcTag] == '$') {
+        //   max = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
+        // }
+        else {
+          max = BINS[srcTag .. srcCursor];
+        }
+        if (!isInclusive) {
+          max ~= "-1";
+        }
+        fillCtr(BinType, "[$-1].addRange(", min, ", ", max, ");\n");
+        parseSpace();
+        if (BINS[srcCursor] != ']') {
+	  import std.conv;
+          assert (false, "range not ended after two elements at line " ~
+		  srcLine.to!string);
+        }
+        ++srcCursor;
+        parseSpace();
+      }
+      else {
+        srcTag = parseLiteral();
+        string val;
+        if (BINS[srcTag .. srcCursor] == "$") {
+          val = T.max.stringof;
+        }
+        // else if (BINS[srcTag] == '$') {
+        //   val = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
+        // }
+        else {
+          val = BINS[srcTag .. srcCursor];
+        }
+        //makeBins ~= 
+        fillCtr(BinType, "[$-1].addElem(", val, ");\n");
+        parseSpace();
+      }
+      if (BINS[srcCursor] == ']') {
+        break;
+      }
+      parseComma();
+    }
+
   }
 
   void parseBinOfType(string type) {
@@ -433,13 +558,13 @@ struct parser (T)
       parseSpace();
       if (isDefault()) {
 	if (type == "_ig") {
-	  fill("_default = DefaultBin(Type.IGNORE, \"", name, "\");");
+	  fillCtr("_default = DefaultBin(Type.IGNORE, \"", name, "\");");
 	}
 	else if (type == "_ill") {
-	  fill("_default = DefaultBin(Type.ILLEGAL, \"", name, "\");");
+	  fillCtr("_default = DefaultBin(Type.ILLEGAL, \"", name, "\");");
 	}
 	else {
-	  fill("_default = DefaultBin(Type.BIN, \"", name, "\");");
+	  fillCtr("_default = DefaultBin(Type.BIN, \"", name, "\");");
 	}
 	if (BINS[srcCursor] != ';') {
 	  import std.conv;
@@ -451,11 +576,14 @@ struct parser (T)
 	return;
       }
       else if (BINS[srcCursor] == '[') {
-	fill(type, "_bins ~= new Bin!T( \"", name, "\");\n");
+	string binName = "_esdl__bin_" ~ name;
+	fillDecl("EsdlRangeBin!T ", binName, ";\n");
+	fillCtr(binName, " = new EsdlRangeBin!T( \"", name, "\");\n");
+	fillCtr(type, "_bins ~= ", binName, ";\n");
 	parseSquareOpen();
 	parseSpace();
-	parseBin(type ~ "_bins");
-	fill(type, "_bins[$-1].procRanges();\n");
+	parseNamedBin(binName);
+	fillCtr(type, "_bins[$-1].processBin();\n");
       }
       else {
 	size_t markParen;
@@ -494,11 +622,11 @@ struct parser (T)
       parseSpace();
       auto srcTag = parseName();
       if (type == "_ig") {
-        fill(type, "_bins ~= new Bin!T( \"",
+        fillCtr(type, "_bins ~= new EsdlRangeBin!T( \"",
 	     BINS[srcTag .. srcCursor], "\");\n");	
       }
       else {
-        fill(type, "_dbins ~= new Bin!T( \"",
+        fillCtr(type, "_dbins ~= new EsdlRangeBin!T( \"",
 	     BINS[srcTag .. srcCursor], "\");\n");
       }
       parseSpace();
@@ -516,6 +644,7 @@ struct parser (T)
     else {
       auto srcTag = parseLiteral();
       string arrSize = BINS[srcTag .. srcCursor];
+      string binName;
       parseSpace();
       if (BINS[srcCursor] != ']') {
 	import std.conv;
@@ -525,14 +654,20 @@ struct parser (T)
       parseSpace();
       srcTag = parseName();
       if (type == "_ig") { //no need for arrays in ignore bins
-        fill(type, "_bins ~= new Bin!T( \"",
-	     BINS[srcTag .. srcCursor], "\");\n");
-        // fill(type, "_sbinsNum,= ", arrSize, "; \n");
+	binName = BINS[srcTag .. srcCursor];
+	fillDecl("EsdlRangeBin!T _esdl__bin_", binName, ";\n");
+        fillCtr("_esdl__bin_", binName, " = new EsdlRangeBin!T( \"",
+	     binName, "\");\n");
+        fillCtr(type, "_bins ~= _esdl__bin_", binName, ";\n");
+        // fillCtr(type, "_sbinsNum,= ", arrSize, "; \n");
       }
       else {
-        fill(type, "_sbins ~= new Bin!T( \"",
-	     BINS[srcTag .. srcCursor], "\");\n");
-        fill(type, "_sbinsNum ~= ", arrSize, "; \n");
+	binName = BINS[srcTag .. srcCursor];
+	fillDecl("EsdlRangeBin!T _esdl__bin_", binName, ";\n");
+        fillCtr("_esdl__bin_", binName, " = new EsdlRangeBin!T( \"",
+	     binName, "\");\n");
+        fillCtr(type, "_sbins ~= _esdl__bin_", binName, ";\n");
+        fillCtr(type, "_sbinsNum ~= ", arrSize, "; \n");
       }
       parseSpace();
       parseEqual();
@@ -540,10 +675,10 @@ struct parser (T)
       parseSquareOpen();
       parseSpace();
       if (type == "_ig") {
-        parseBin(type ~ "_bins");
+        parseNamedBin("_esdl__bin_" ~ binName);
       }
       else {
-        parseBin(type ~ "_sbins");
+        parseNamedBin("_esdl__bin_" ~ binName);
       }
     }
     ++srcCursor;
@@ -581,7 +716,7 @@ struct parser (T)
     if (srcTag == BINS.length) {
       assert (false, "incomplete statement");
     }
-    fill(type, "_wildbins ~= WildCardBin!(T)( \"",
+    fillCtr(type, "_wildbins ~= WildCardBin!(T)( \"",
 	 name, "\", \"", BINS[srcCursor .. srcTag], "\" );\n"); 
     srcCursor = srcTag;
     parseSpace();
@@ -606,7 +741,7 @@ struct parser (T)
       srcCursor ++;
     }
     srcCursor++;
-    fill(BINS[srcTag .. srcCursor], "\n");
+    fillCtr(BINS[srcTag .. srcCursor], "\n");
   }
 
   void parseOption() {
@@ -617,9 +752,9 @@ struct parser (T)
     if (BINS[srcTag .. srcCursor] == "$") {
       val = T.max.stringof;
     }
-    else if (BINS[srcTag] == '$') {
-      val = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
-    }
+    // else if (BINS[srcTag] == '$') {
+    //   val = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
+    // }
     else {
       val = BINS[srcTag .. srcCursor];
     }
@@ -628,17 +763,21 @@ struct parser (T)
       import std.conv;
       assert (false, "';' expected, not found at line " ~ srcLine.to!string);
     }
-    fill(val, ";");
+    fillCtr(val, ";");
     srcCursor++;
   }
   
-  void parse() {
+  void parseAllBins() {
+    import std.conv: to;
+    uint binsCount;
+    fillCtr("this () {\n");
     parseSpace();
     while (srcCursor < BINS.length) {
       if (isTypeStatement()) {
 	parseOption();
       }
       else {
+	binsCount += 1;
 	if (parseIsWild()) {
 	  string type = parseBinDeclaration();
 	  parseWildcardBins(type);
@@ -650,6 +789,15 @@ struct parser (T)
       }
       parseSpace();
     }
+    if (binsCount == 0) {
+      // Add default bin
+      fillDecl("EsdlRangeBin!T _esdl__bin__esdl__defaultBin;\n");
+      fillCtr("_esdl__bin__esdl__defaultBin = new EsdlRangeBin!T( q{_esdl__defaultBin});\n");
+      fillCtr("_sbins ~= _esdl__bin__esdl__defaultBin;\n");
+      fillCtr("_sbinsNum ~= 64;\n");
+      fillCtr("_esdl__bin__esdl__defaultBin.addRange(", T.min.to!string(), ", ", T.max.to!string(), ");\n");
+    }
+    fillCtr("this._esdl__initBins();\n}\n");
   }
 }
 
@@ -685,17 +833,21 @@ struct WildCardBin(T)
   }
 }
 
-interface BinIntf(T)
+interface EsdlBinIntf(T)
 {
   void sample(T val);
   double getCoverage();
   
   string getName();
   string describe();
+
+  void addElem (T val);
+  void addRange (T min, T max);
+  void processBin();
 }
 
 
-class Bin(T): BinIntf!T
+class EsdlRangeBin(T): EsdlBinIntf!T
 {
   // import std.typecons: Tuple, tuple;
 
@@ -735,9 +887,8 @@ class Bin(T): BinIntf!T
     _name = name;
   }
   
-  void addRange (T val) {
+  void addElem (T val) {
     this.addRange(val, cast(T) (val+1));
-
     // T [] b = [val, val];
     // or(b);
   }
@@ -748,7 +899,7 @@ class Bin(T): BinIntf!T
     // or(b);
   }
 
-  void procRanges() {
+  void processBin() {
     import std.stdio: writeln;
     import std.algorithm.sorting: sort;
     sort(_ranges);
