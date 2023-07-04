@@ -74,6 +74,12 @@ struct parser (T)
     }
     ++ srcCursor;
   }
+  void parseSquareOpen() {
+    if (BINS[srcCursor] != '[') {
+      assert (false);
+    }
+    ++ srcCursor;
+  }
   void parseEqual() {
     if (BINS[srcCursor] != '=') {
       assert (false);
@@ -348,6 +354,7 @@ struct parser (T)
     }
     return false;
   }
+
   void parseBin(string BinType) {
     size_t srcTag;
     while (true) {
@@ -409,7 +416,7 @@ struct parser (T)
         fill(BinType, "[$-1].addRange(", val, ");\n");
         parseSpace();
       }
-      if (BINS[srcCursor] == '}') {
+      if (BINS[srcCursor] == ']') {
         break;
       }
       parseComma();
@@ -443,11 +450,12 @@ struct parser (T)
 	parseSpace();
 	return;
       }
-      else if (BINS[srcCursor] == '{') {
-	fill(type, "_bins ~= Bin!T( \"", name, "\");\n");
-	parseCurlyOpen();
+      else if (BINS[srcCursor] == '[') {
+	fill(type, "_bins ~= new Bin!T( \"", name, "\");\n");
+	parseSquareOpen();
 	parseSpace();
 	parseBin(type ~ "_bins");
+	fill(type, "_bins[$-1].procRanges();\n");
       }
       else {
 	size_t markParen;
@@ -486,17 +494,17 @@ struct parser (T)
       parseSpace();
       auto srcTag = parseName();
       if (type == "_ig") {
-        fill(type, "_bins ~= Bin!T( \"",
+        fill(type, "_bins ~= new Bin!T( \"",
 	     BINS[srcTag .. srcCursor], "\");\n");	
       }
       else {
-        fill(type, "_dbins ~= Bin!T( \"",
+        fill(type, "_dbins ~= new Bin!T( \"",
 	     BINS[srcTag .. srcCursor], "\");\n");
       }
       parseSpace();
       parseEqual();
       parseSpace();
-      parseCurlyOpen();
+      parseSquareOpen();
       parseSpace();
       if (type == "_ig") {
         parseBin(type ~ "_bins");
@@ -517,19 +525,19 @@ struct parser (T)
       parseSpace();
       srcTag = parseName();
       if (type == "_ig") { //no need for arrays in ignore bins
-        fill(type, "_bins ~= Bin!T( \"",
+        fill(type, "_bins ~= new Bin!T( \"",
 	     BINS[srcTag .. srcCursor], "\");\n");
         // fill(type, "_sbinsNum,= ", arrSize, "; \n");
       }
       else {
-        fill(type, "_sbins ~= Bin!T( \"",
+        fill(type, "_sbins ~= new Bin!T( \"",
 	     BINS[srcTag .. srcCursor], "\");\n");
         fill(type, "_sbinsNum ~= ", arrSize, "; \n");
       }
       parseSpace();
       parseEqual();
       parseSpace();
-      parseCurlyOpen();
+      parseSquareOpen();
       parseSpace();
       if (type == "_ig") {
         parseBin(type ~ "_bins");
@@ -554,7 +562,7 @@ struct parser (T)
     parseSpace();
     parseEqual();
     parseSpace();
-    parseCurlyOpen();
+    parseSquareOpen();
     parseSpace();
     while (srcCursor < BINS.length && BINS[srcCursor] != 'b')
       srcCursor++;
@@ -599,6 +607,7 @@ struct parser (T)
     srcCursor++;
     fill(BINS[srcTag .. srcCursor], "\n");
   }
+
   void parseOption() {
     parseTillEqual();
     parseSpace();
@@ -621,6 +630,7 @@ struct parser (T)
     fill(val, ";");
     srcCursor++;
   }
+  
   void parse() {
     parseSpace();
     while (srcCursor < BINS.length) {
@@ -674,233 +684,76 @@ struct WildCardBin(T)
   }
 }
 
-struct Bin(T)
+interface BinIntf(T)
 {
-  import std.typecons: Tuple, tuple;
+  void sample(T val);
+  double getCoverage();
+  
+  string getName();
+  string describe();
+}
 
-  alias TRange = Tuple!(T, "min", T, "max");
+
+class Bin(T): BinIntf!T
+{
+  // import std.typecons: Tuple, tuple;
+
+  // alias TRange = Tuple!(T, "min", T, "max");
+
+  struct BinRange(T)
+  {
+    size_t _count;	  // how much the previous ranges have covered
+
+    T _min;
+    T _max;
+
+    int opCmp(ref const BinRange!T other) const {
+      if (this._min > other._min) {
+	return +1;
+      }
+      else if (this._min < other._min) {
+	return -1;
+      }
+      else if (this._max == other._max) {
+	return 0;
+      }
+      else if (other._max == T.min ||
+	       other._max > this._max) {
+	return -1;
+      }
+      else return +1;
+    }
+  }
   
   string _name;
-  uint _hits;
-  T [] _ranges;
+  BinRange!T[] _ranges;
+  
+  uint[] _hits;
+  
   this(string name) {
     _name = name;
-    _hits = 0;
-  }
-  size_t length () {
-    return _ranges.length;
-  }
-  ref T opIndex(size_t index) {
-    return _ranges[index];
-  }
-  size_t binarySearch (T val) { // lower_bound, first element greater than or equal to
-
-    size_t count = _ranges.length, step;
-    size_t first = 0, last = _ranges.length, it;
-    while (count > 0) {
-      it = first;
-      step = count / 2;
-      it += step;
-      if (_ranges[it] < val) {
-        first = ++it;
-        count -= step + 1;
-      }
-      else {
-        count = step;
-      }
-    }
-    return first;
   }
   
-  bool checkHit(T val) {
-    if (val < _ranges[0] || val > _ranges[$-1]) {
-      return false;
-    }
-    size_t idx = binarySearch(val);
-    if (idx % 2 == 1 || _ranges[idx] == val) {
-      return true;
-    }
-    return false;
-  }
   void addRange (T val) {
-    T [] b = [val, val];
-    or(b);
+    this.addRange(val, cast(T) (val+1));
+
+    // T [] b = [val, val];
+    // or(b);
   }
+
   void addRange (T min, T max) {
-    T [] b = [min, max];
-    or(b);
+    _ranges ~= BinRange!T(0L, min, max);
+    // T [] b = [min, max];
+    // or(b);
   }
 
-  bool fallsIn(T x, T [] a, size_t pos) {
-    for (size_t i = pos; i < a.length; i++) {
-      T elem = a[i];
-      if (x < elem) {
-        if (i % 2==0) {
-          return false;
-        }
-        return true;
-      }
-      if (x == elem) {
-        return true;
-      }
-    }
-    return false;
+  void procRanges() {
+    import std.stdio: writeln;
+    import std.algorithm.sorting: sort;
+    sort(_ranges);
+    writeln(_ranges);
   }
-
-  void or (Bin!T other) {
-    or(other._ranges);
-  }
-  T [] opSlice() {
-    return _ranges;
-  }
-  void slice(size_t start, size_t end) {
-    assert (start <= end);
-    _ranges = _ranges[start .. end];
-  }
-  void del (size_t n) {
-    _ranges.length -= n;
-  }
-  void opOpAssign(string op)(T r) if (op == "~") {
-    _ranges ~= r;
-  }
-  void opOpAssign(string op)(T [] r) if (op == "~") {
-    _ranges ~= r;
-  }
-  size_t opDollar() const @safe nothrow {
-    return _ranges.length;
-  }
-
-  void negateBin() {
-    if (_ranges[0] == T.min) {
-      _ranges = _ranges[1 .. $];
-    }
-    else {
-      this ~= _ranges[$-1];
-      for (size_t i = _ranges.length-2; i > 0; --i) {
-        _ranges[i] = _ranges[i-1];
-      }
-      _ranges[0] = T.max;
-    }
-    if (_ranges[$-1] == T.max) {
-      _ranges.length --;
-    }
-    else {
-      this ~= T.min;
-    }
-    for (size_t i = 0; i < _ranges.length; ++i) {
-      if (i % 2 == 0) {
-        _ranges[i] ++;
-      }
-      else {
-        _ranges[i] --;
-      }
-    }
-  }
-  void or(T [] b) {
-    size_t a1 = 0;
-    size_t b1 = 0;
-    size_t len = _ranges.length;
-    while (a1 < len || b1 < b.length) {
-      if (a1 >= len) {
-        size_t temp = this.length - len;
-        if ((temp != 0) && (temp % 2 == 0) &&
-	    ((this[$-1] == b[b1]-1) || (this[$-1] == b[b1]))) {
-          this.del(1);
-          b1 ++;
-        }
-        while (b1 < b.length) {
-          this ~= b[b1];
-          b1++;
-        }
-        continue;
-      }
-      else if (b1 >= b.length) {
-        size_t temp = this.length - len;
-        if ((temp != 0) && (temp % 2 == 0) &&
-	    ((this[$-1] == this[a1]-1) || (this[$-1] == this[a1]))) {
-          this.del(1);
-          a1 ++;
-        }
-        while (a1 < len) {
-          this ~= this[a1];
-          a1++;
-        }
-        continue;
-      }
-      if (this[a1] < b[b1]) {
-        if (!fallsIn(this[a1], b, b1)) {
-          size_t temp = this.length - len;
-          if ((temp != 0) && (temp % 2 == 0) &&
-	      ((this[$-1] == this[a1]-1) || (this[$-1] == this[a1]-1))) {
-            this.del(1);
-          }
-          else {
-            this ~= this[a1];
-          }
-        }
-        a1++;
-      }
-      else if (this[a1] > b[b1]) {
-        if (!fallsIn(b[b1], this[], a1)) {
-          size_t temp = this.length - len;
-          if ((temp != 0) && (temp % 2 == 0) &&
-	      ((this[$-1] == b[b1] -1) || (this[$-1] == b[b1]))) {
-            this.del(1);
-          }
-          else {
-            this ~= b[b1];
-          }
-        }
-        b1++;
-      }
-      else {
-        if ((a1+b1)%2==0) {
-          this ~= this[a1];
-          a1++;
-          b1++;
-        }
-        else {
-          a1++;
-          b1++;
-        }
-      }
-    }
-    this.slice(len, _ranges.length);
-  }
-
-  void and(T [] b) {
-    size_t a1 = 0;
-    size_t b1 = 0;
-    size_t len = _ranges.length;
-    while (a1 != len && b1 != b.length) {
-      if (this[a1] < b[b1]) {
-        if (fallsIn(this[a1], b, b1)) {
-          this ~= this[a1];
-        }
-        a1++;
-      }
-      else if (this[a1] > b[b1]) {
-        if (fallsIn(b[b1], this[], a1)) {
-          this ~= b[b1];
-        }
-        b1++;
-      }
-      else {
-        if ((a1+b1)%2==0) {
-          this ~= this[a1];
-          a1++;
-          b1++;
-        }
-        else {
-          this ~= this[a1];
-          this ~= this[a1];
-          a1++;
-          b1++;
-        }
-      }
-    }
-    this.slice(len, _ranges.length);
-  }
+  
   string getName() {
     return _name;    
   }
@@ -908,23 +761,23 @@ struct Bin(T)
     return _ranges;
   }
 
+  void sample(T val) { 
+  }
+
+  double getCoverage() {
+    return 0.0;
+  }
+
   string describe()
   {
     string s = "Name : " ~ _name ~ "\n";
-    foreach (elem; _ranges)
-      {
-	import std.conv;
-	s ~= to!string(elem) ~ ", ";
-      }
+    // foreach (elem; _ranges)
+    //   {
+    // 	import std.conv;
+    // 	s ~= to!string(elem) ~ ", ";
+    //   }
     s ~= "\n";
     return s;
-  }
-  size_t count() {
-    size_t c = 0;
-    for (size_t i = 0; i < _ranges.length - 1; i += 2) {
-      c += (1uL + _ranges[i+1]) - _ranges[i];
-    }
-    return c;
   }
 }
 
