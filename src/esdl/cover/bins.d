@@ -564,9 +564,10 @@ struct parser (T)
     parseSpace();
     parseSquareOpen();
     parseSpace();
-    while (srcCursor < BINS.length && BINS[srcCursor] != 'b')
-      srcCursor++;
-    srcCursor++;
+    if (srcCursor > BINS.length - 2 || BINS[srcCursor..srcCursor+2] != "0b")
+      assert (false, "wildcard bin specification must start with 0b");
+    srcCursor += 2;
+
     srcTag = srcCursor;
     /* char [] possible_chars = ['1', '0', '?', 'x', 'z']; */
     while (srcTag < BINS.length &&
