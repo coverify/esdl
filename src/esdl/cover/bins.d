@@ -576,7 +576,7 @@ struct parser (T)
 	return;
       }
       else if (BINS[srcCursor] == '[') {
-	string binName = "_esdl__bin_" ~ name;
+	string binName = name;
 	fillDecl("EsdlRangeBin!T ", binName, ";\n");
 	fillCtr(binName, " = new EsdlRangeBin!T( \"", name, "\");\n");
 	fillCtr(type, "_bins ~= ", binName, ";\n");
@@ -655,18 +655,18 @@ struct parser (T)
       srcTag = parseName();
       if (type == "_ig") { //no need for arrays in ignore bins
 	binName = BINS[srcTag .. srcCursor];
-	fillDecl("EsdlRangeBin!T _esdl__bin_", binName, ";\n");
-        fillCtr("_esdl__bin_", binName, " = new EsdlRangeBin!T( \"",
+	fillDecl("EsdlRangeBin!T ", binName, ";\n");
+        fillCtr(binName, " = new EsdlRangeBin!T( \"",
 	     binName, "\");\n");
-        fillCtr(type, "_bins ~= _esdl__bin_", binName, ";\n");
+        fillCtr(type, "_bins ~= ", binName, ";\n");
         // fillCtr(type, "_sbinsNum,= ", arrSize, "; \n");
       }
       else {
 	binName = BINS[srcTag .. srcCursor];
-	fillDecl("EsdlRangeBin!T _esdl__bin_", binName, ";\n");
-        fillCtr("_esdl__bin_", binName, " = new EsdlRangeBin!T( \"",
+	fillDecl("EsdlRangeBin!T ", binName, ";\n");
+        fillCtr(binName, " = new EsdlRangeBin!T( \"",
 	     binName, "\");\n");
-        fillCtr(type, "_sbins ~= _esdl__bin_", binName, ";\n");
+        fillCtr(type, "_sbins ~= ", binName, ";\n");
         fillCtr(type, "_sbinsNum ~= ", arrSize, "; \n");
       }
       parseSpace();
@@ -674,12 +674,7 @@ struct parser (T)
       parseSpace();
       parseSquareOpen();
       parseSpace();
-      if (type == "_ig") {
-        parseNamedBin("_esdl__bin_" ~ binName);
-      }
-      else {
-        parseNamedBin("_esdl__bin_" ~ binName);
-      }
+      parseNamedBin(binName);
     }
     ++srcCursor;
     parseSpace();
@@ -841,8 +836,6 @@ interface EsdlBinIntf(T)
   string getName();
   string describe();
 
-  void addElem (T val);
-  void addRange (T min, T max);
   void processBin();
 }
 
