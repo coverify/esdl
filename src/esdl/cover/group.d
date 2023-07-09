@@ -315,7 +315,7 @@ struct CoverGroupParser
 	  srcCursor ++;
 	  srcTag = nextEndCurlyBrace();
 	  coverpointName = "CoverPoint!(typeof(" ~ name ~
-	    "), \" " ~ S[srcTag .. srcCursor-1] ~ "\")";
+	    "), q{ " ~ S[srcTag .. srcCursor-1] ~ "})";
 	}
 	else {
 	  if (S[srcCursor] != ';') {
