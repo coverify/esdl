@@ -701,8 +701,8 @@ enum ULogic!1 LOGIC_Z = cast(ULogic!1)bin!"Z";
 
 public auto bin(string VAL)() {
   enum bool L = isStr4State(VAL);
-  alias vector_t = _bvec!(true, L, stringBitSize(VAL, 2));
-  vector_t result = vector_t(_bvec!(true, L, VAL, 2)(0));
+  alias vector_t = _bvec!(false, L, stringBitSize(VAL, 2));
+  vector_t result = vector_t(_bvec!(false, L, VAL, 2)(0));
   return result;
 }
 

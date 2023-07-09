@@ -8,15 +8,38 @@ import std.traits: isIntegral;
 import std.conv: parse;
 
 static string doParse(T)(string Bins) {
-  parser!T Parser = parser!T(Bins);
-  Parser.parseAllBins();
-  Parser.setUp();
-  Parser.parseAllBins();
+  EsdlBinsParser!T binsParser = EsdlBinsParser!T(Bins);
+  binsParser.parseAllBins();
+  binsParser.setUp();
+  binsParser.parseAllBins();
   
-  return Parser.buffer();
+  return binsParser.buffer();
 }
 
-struct parser (T)
+// A context strutcture only to be used while parsing
+struct ParsedBin(T)
+{
+  string _name;
+  
+  bool _isIllegal;
+  bool _isIgnore;
+  bool _isTransition;
+  bool _isWildcard;
+
+  bool _isArray;
+
+  // _arrayLen != 0 if static array
+  uint _arrayLen;
+
+  void checkAttribs() {
+    if (_isIllegal && _isIgnore)
+      assert (false, "A bin can not have illegal as well as ignore attributes");
+    if (_isIgnore && _isWildcard)
+      assert (false, "A bin can not have ignore as well as wildcard attributes");
+  }
+}
+
+struct EsdlBinsParser (T)
 {
   bool dryRun = true;
   size_t ctrLen = 0;
@@ -142,12 +165,9 @@ struct parser (T)
       return BinType.SINGLE;
     }
   }
-  size_t parseLiteral() {
+
+  size_t parseIntLiteral(bool isPositive=false) {
     size_t start = srcCursor;
-    if (BINS[srcCursor] == '$') {
-      ++srcCursor;
-      return parseLiteral()-1;
-    }
     // check for - sign
     if (BINS[srcCursor] == '-') {
       ++srcCursor;
@@ -210,37 +230,14 @@ struct parser (T)
         }
       }
     }
+    if (BINS[start] == '-' && isPositive) {
+      assert(false, "Expecting only positive number, found negative: " ~ BINS[start..srcCursor]);
+    }
     return start;
   }
-  bool parseIsWild() {
-    if (srcCursor + 8 < BINS.length &&
-	BINS[srcCursor .. srcCursor+8] == "wildcard") {
-      srcCursor += 8;
-      parseSpace();
-      return true;
-    }
-    return false;
-  }
+
   string parseBinDeclaration() {
-    if (srcCursor + 4 < BINS.length &&
-	BINS[srcCursor .. srcCursor+4] == "bins") {
-      srcCursor += 4;
-      return "";
-    }
-    else if (srcCursor + 11 < BINS.length &&
-	     BINS[srcCursor .. srcCursor + 11] == "ignore_bins") {
-      srcCursor += 11;
-      return "_ig";
-    }
-    else if (srcCursor + 12 < BINS.length &&
-	     BINS[srcCursor .. srcCursor + 12] == "illegal_bins") {
-      srcCursor += 12;
-      return "_ill";
-    }
-    else {
-      import std.conv;
-      assert (false, "error in writing bins at line " ~ srcLine.to!string);
-    }
+    return "";
   }
   size_t parseSpace() {
     size_t start = srcCursor;
@@ -386,90 +383,134 @@ struct parser (T)
     return false;
   }
 
+  bool checkValue(string val) {
+    size_t maxbits = 0;
+    size_t bitcount;
+    string pval = val;
+    if (val[0] == '-') pval = val[1..$];
+    static if (isBitVector!T) maxbits = T.SIZE;
+    else maxbits = T.sizeof * 8;
+    if (pval.length >=2 &&
+	(pval[0..2] == "0x" || pval[0..2] == "0X")) {
+      bool started = false;
+      foreach (d; pval[2..$]) {
+	if (started is false) {
+	  if (d == '0' || d == '_') continue;
+	  else {
+	    started = true;
+	    if (d == '1') bitcount = 1;
+	    else if (d == '2' || d == '3') bitcount = 2;
+	    else if (d == '4' || d == '5' ||
+		     d == '6' || d == '7') bitcount = 3;
+	    else bitcount = 4;
+	  }
+	}
+	else {
+	  if (d == '_') continue;
+	  else bitcount += 4;
+	}
+      }
+      if (bitcount > maxbits) assert (false, "Value " ~ val ~ " is not be of type " ~ T.stringof);
+      else return true;
+    }
+    if (pval.length >=2 &&
+	(pval[0..2] == "0b" || pval[0..2] == "0B")) {
+      bool started = false;
+      foreach (d; pval[2..$]) {
+	if (started is false) {
+	  if (d == '0' || d == '_') continue;
+	  else {
+	    started = true;
+	    bitcount = 1;
+	  }
+	}
+	else {
+	  if (d == '_') continue;
+	  else bitcount += 1;
+	}
+      }
+      if (bitcount > maxbits) assert (false, "Value " ~ val ~ " is not be of type " ~ T.stringof);
+    }
+    else if (pval[0] <= '9' && pval[0] >= '0') {
+      string strval = pval.dup;
+      ulong intVal = parse!(ulong, string)(strval, 10);
+      assert (cast(T) intVal == intVal, "Value " ~ pval ~ " can not be of type " ~ T.stringof);
+    }
+    return true;
+  }
+  
   void parseNamedBin(string binName) {
     size_t srcTag;
     while (true) {
       if (BINS[srcCursor] == '[') {
+        string min;
+        string max;
         ++srcCursor;
         parseSpace();
-        srcTag = parseLiteral();
-        string min;
-        if (BINS[srcTag .. srcCursor] == "$") {
+	if (BINS[srcCursor] == '$') {
           min = T.max.stringof;
-        }
-        // else if (BINS[srcTag] == '$') {
-        //   min = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
-        // }
-        else {
+	  srcCursor += 1;
+	}
+	else {
+	  srcTag = parseIntLiteral();
           min = BINS[srcTag .. srcCursor];
         }
         //min = to!T(BINS[srcTag .. srcCursor]);
         parseSpace();
         bool isInclusive = parseRangeType();
         parseSpace();
-        srcTag = parseLiteral();
-        string max;
-        if (BINS[srcTag .. srcCursor] == "$") {
+	if (BINS[srcCursor] == '$') {
           max = T.max.stringof;
-        }
-        // else if (BINS[srcTag] == '$') {
-        //   max = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
-        // }
-        else {
+	  srcCursor += 1;
+	}
+	else {
+	  srcTag = parseIntLiteral();
           max = BINS[srcTag .. srcCursor];
         }
-        if (!isInclusive) {
-          max ~= "-1";
-        }
-        fillCtr(binName, ".addRange(", min, ", ", max, ");\n");
+	checkValue(min);
+	checkValue(max);
+	static if (isBitVector!T) {
+	  if (!isInclusive) {
+	    fillCtr(binName, ".addRange(", min, ".to!T, (", max, "-1).to!T);\n");
+	  }
+	  else {
+	    fillCtr(binName, ".addRange(", min, ".to!T, ", max, ".to!T);\n");
+	  }
+	}
+	else {
+	  if (!isInclusive) {
+	    fillCtr(binName, ".addRange(cast(T) ", min, ", cast(T) (", max, "-1));\n");
+	  }
+	  else {
+	    fillCtr(binName, ".addRange(cast(T) ", min, ", cast(T) ", max, ");\n");
+	  }
+	}
         parseSpace();
         if (BINS[srcCursor] != ']') {
 	  import std.conv;
           assert (false, "range not ended after two elements at line " ~
 		  srcLine.to!string);
         }
-        ++srcCursor;
+        srcCursor += 1;
         parseSpace();
       }
       else {
-        srcTag = parseLiteral();
         string val;
-        if (BINS[srcTag .. srcCursor] == "$") {
+	if (BINS[srcCursor] == '$') {
           val = T.max.stringof;
-        }
-        // else if (BINS[srcTag] == '$') {
-        //   val = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
-        // }
-        else {
+	  srcCursor += 1;
+	}
+	else {
+	  srcTag = parseIntLiteral();
           val = BINS[srcTag .. srcCursor];
         }
+	checkValue(val);
 	static if (isBitVector!T) {
-	  ulong intVal = parse!(ulong, string)(val);
-	  auto bvecVal = intVal.to!T;
-	  assert (bvecVal == intVal, "Value " ~ val ~ " can not be of type " ~ T.stringof);
 	  fillCtr(binName, ".addElem(" ~ val ~ ".to!T);\n");
 	}
 	else {
-	  if (val.length >=2 &&
-	      (val[0..2] == "0x" || val[0..2] == "0X")) {
-	    string strval = val[2..$].dup;
-	    ulong intVal = parse!(ulong, string)(strval, 16);
-	    assert (cast(T) intVal == intVal, "Value " ~ val ~ " can not be of type " ~ T.stringof);
-	  }
-	  else if (val.length >=2 &&
-		   (val[0..2] == "0b" || val[0..2] == "0B")) {
-	    string strval = val[2..$].dup;
-	    ulong intVal = parse!(ulong, string)(strval, 2);
-	    assert (cast(T) intVal == intVal, "Value " ~ val ~ " can not be of type " ~ T.stringof);
-	  }
-	  else if (val[0] <= '9' && val[0] >= '0') {
-	    string strval = val.dup;
-	    ulong intVal = parse!(ulong, string)(strval, 10);
-	    assert (cast(T) intVal == intVal, "Value " ~ val ~ " can not be of type " ~ T.stringof);
-	  }
 	  fillCtr(binName, ".addElem(cast(T) " ~ val ~ ");\n");
 	}	  
-        //makeBins ~= 
         parseSpace();
       }
       if (BINS[srcCursor] == ']') {
@@ -477,75 +518,6 @@ struct parser (T)
       }
       parseComma();
     }
-  }
-
-  void parseBin(string BinType) {
-    size_t srcTag;
-    while (true) {
-      if (BINS[srcCursor] == '[') {
-        ++srcCursor;
-        parseSpace();
-        srcTag = parseLiteral();
-        string min;
-        if (BINS[srcTag .. srcCursor] == "$") {
-          min = T.max.stringof;
-        }
-        // else if (BINS[srcTag] == '$') {
-        //   min = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
-        // }
-        else {
-          min = BINS[srcTag .. srcCursor];
-        }
-        //min = to!T(BINS[srcTag .. srcCursor]);
-        parseSpace();
-        bool isInclusive = parseRangeType();
-        parseSpace();
-        srcTag = parseLiteral();
-        string max;
-        if (BINS[srcTag .. srcCursor] == "$") {
-          max = T.max.stringof;
-        }
-        // else if (BINS[srcTag] == '$') {
-        //   max = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
-        // }
-        else {
-          max = BINS[srcTag .. srcCursor];
-        }
-        if (!isInclusive) {
-          max ~= "-1";
-        }
-        fillCtr(BinType, "[$-1].addRange(", min, ", ", max, ");\n");
-        parseSpace();
-        if (BINS[srcCursor] != ']') {
-	  import std.conv;
-          assert (false, "range not ended after two elements at line " ~
-		  srcLine.to!string);
-        }
-        ++srcCursor;
-        parseSpace();
-      }
-      else {
-        srcTag = parseLiteral();
-        string val;
-        if (BINS[srcTag .. srcCursor] == "$") {
-          val = T.max.stringof;
-        }
-        // else if (BINS[srcTag] == '$') {
-        //   val = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
-        // }
-        else {
-          val = BINS[srcTag .. srcCursor];
-        }
-        //makeBins ~= 
-        fillCtr(BinType, "[$-1].addElem(", val, ");\n");
-        parseSpace();
-      }
-      if (BINS[srcCursor] == ']') {
-        break;
-      }
-      parseComma();
-    }
-
   }
 
   void parseBinOfType(string type) {
@@ -583,7 +555,7 @@ struct parser (T)
 	parseSquareOpen();
 	parseSpace();
 	parseNamedBin(binName);
-	fillCtr(type, "_bins[$-1].processBin();\n");
+	// fillCtr(type, "_bins[$-1].processBin();\n");
       }
       else {
 	size_t markParen;
@@ -634,15 +606,15 @@ struct parser (T)
       parseSpace();
       parseSquareOpen();
       parseSpace();
-      if (type == "_ig") {
-        parseBin(type ~ "_bins");
-      }
-      else {
-        parseBin(type ~ "_dbins");
-      }
+      // if (type == "_ig") {
+      //   parseBin(type ~ "_bins");
+      // }
+      // else {
+      //   parseBin(type ~ "_dbins");
+      // }
     }
     else {
-      auto srcTag = parseLiteral();
+      auto srcTag = parseIntLiteral();
       string arrSize = BINS[srcTag .. srcCursor];
       string binName;
       parseSpace();
@@ -666,8 +638,8 @@ struct parser (T)
 	fillDecl("EsdlRangeBin!T ", binName, ";\n");
         fillCtr(binName, " = new EsdlRangeBin!T( \"",
 	     binName, "\");\n");
-        fillCtr(type, "_sbins ~= ", binName, ";\n");
-        fillCtr(type, "_sbinsNum ~= ", arrSize, "; \n");
+        fillCtr(type, "_bins ~= ", binName, ";\n");
+        // fillCtr(type, "_sbinsNum ~= ", arrSize, "; \n");
       }
       parseSpace();
       parseEqual();
@@ -685,36 +657,38 @@ struct parser (T)
     ++srcCursor;
     parseSpace();
   }
-  void parseWildcardBins(string type) {
-    parseSpace();
-    auto srcTag = parseName();
-    string name = BINS[srcTag .. srcCursor];
-    parseSpace();
-    parseEqual();
-    parseSpace();
+
+  void parseWildcardBins(string type, string name) {
     parseSquareOpen();
     parseSpace();
-    if (srcCursor > BINS.length - 2 || BINS[srcCursor..srcCursor+2] != "0b")
-      assert (false, "wildcard bin specification must start with 0b");
+    if (srcCursor > BINS.length - 2 || BINS[srcCursor] != '"')
+      assert (false, "wildcard bin specification must start with '\"'");
     srcCursor += 2;
 
-    srcTag = srcCursor;
+    size_t srcTag = srcCursor;
     /* char [] possible_chars = ['1', '0', '?', 'x', 'z']; */
-    while (srcTag < BINS.length &&
-	   (BINS[srcTag] == '1' ||
-	    BINS[srcTag] == '0' ||
-	    BINS[srcTag] == '?' ||
-	    BINS[srcTag] == 'x' ||
-	    BINS[srcTag] == 'z') ) {
-      srcTag++;
+    while (srcCursor < BINS.length &&
+	   (BINS[srcCursor] == '1' ||
+	    BINS[srcCursor] == '0' ||
+	    BINS[srcCursor] == '_' ||
+	    BINS[srcCursor] == '?' ||
+	    BINS[srcCursor] == 'x' ||
+	    BINS[srcCursor] == 'X' ||
+	    BINS[srcCursor] == 'z' ||
+	    BINS[srcCursor] == 'Z') ) {
+      srcCursor++;
     }
-    if (srcTag == BINS.length) {
-      assert (false, "incomplete statement");
+    if (BINS[srcCursor] != '"') {
+      assert (false, "Wildcard Bin should be a string");
     }
-    fillCtr(type, "_wildbins ~= WildCardBin!(T)( \"",
-	 name, "\", \"", BINS[srcCursor .. srcTag], "\" );\n"); 
-    srcCursor = srcTag;
+    fillCtr(type, "_bins ~= new WildcardBin!(T)( \"",
+	    name, "\", \"", BINS[srcTag .. srcCursor], "\" );\n"); 
+    srcCursor += 1;
     parseSpace();
+    if (BINS[srcCursor] != ']') {
+      import std.conv;
+      assert (false, "']' expected, not found at line " ~ srcLine.to!string);
+    }
     ++srcCursor;
     parseSpace();
     if (BINS[srcCursor] != ';') {
@@ -724,6 +698,7 @@ struct parser (T)
     ++srcCursor;
     parseSpace();
   }
+
   bool isTypeStatement() {
     if (BINS[srcCursor] == 'o' || BINS[srcCursor] == 't') {
       return true;
@@ -740,17 +715,15 @@ struct parser (T)
   }
 
   void parseOption() {
+    string val;
     parseTillEqual();
     parseSpace();
-    size_t srcTag = parseLiteral();
-    string val;
-    if (BINS[srcTag .. srcCursor] == "$") {
+    if (BINS[srcCursor] == '$') {
       val = T.max.stringof;
+      srcCursor += 1;
     }
-    // else if (BINS[srcTag] == '$') {
-    //   val = "N[" ~ BINS[srcTag+1 .. srcCursor] ~ "]";
-    // }
     else {
+      size_t srcTag = parseIntLiteral();
       val = BINS[srcTag .. srcCursor];
     }
     parseSpace();
@@ -773,14 +746,7 @@ struct parser (T)
       }
       else {
 	binsCount += 1;
-	if (parseIsWild()) {
-	  string type = parseBinDeclaration();
-	  parseWildcardBins(type);
-	}
-	else {
-	  string type = parseBinDeclaration();
-	  parseBinOfType(type);
-	}
+	parseABin();
       }
       parseSpace();
     }
@@ -788,15 +754,107 @@ struct parser (T)
       // Add default bin
       fillDecl("EsdlRangeBin!T _esdl__bin__esdl__defaultBin;\n");
       fillCtr("_esdl__bin__esdl__defaultBin = new EsdlRangeBin!T( q{_esdl__defaultBin});\n");
-      fillCtr("_sbins ~= _esdl__bin__esdl__defaultBin;\n");
-      fillCtr("_sbinsNum ~= 64;\n");
+      fillCtr("_bins ~= _esdl__bin__esdl__defaultBin;\n");
+      // fillCtr("_sbinsNum ~= 64;\n");
       fillCtr("_esdl__bin__esdl__defaultBin.addRange(", T.min.to!string(), ", ", T.max.to!string(), ");\n");
     }
     fillCtr("this._esdl__initBins();\n}\n");
   }
+
+  size_t parseIdentifier() {
+    size_t start = srcCursor;
+    if (srcCursor < BINS.length) {
+      char c = BINS[srcCursor];
+      if ((c >= 'A' && c <= 'Z') ||
+	  (c >= 'a' && c <= 'z') ||
+	  (c == '_')) {
+	++srcCursor;
+      }
+      else {
+	return start;
+      }
+    }
+    while (srcCursor < BINS.length) {
+      char c = BINS[srcCursor];
+      if ((c >= 'A' && c <= 'Z') ||
+	  (c >= 'a' && c <= 'z') ||
+	  (c >= '0' && c <= '9') ||
+	  c == '_') {
+	++srcCursor;
+      }
+      else {
+	break;
+      }
+    }
+    return start;
+  }
+
+  string parseBinAttrib() {
+    srcCursor += 1;
+    size_t srcTag = parseIdentifier();
+    return BINS[srcTag..srcCursor];
+  }
+
+  void parseBinAttribs(ref ParsedBin!T bin) {
+    while (BINS[srcCursor] == '@') {
+      string attr = parseBinAttrib();
+      if (attr == "ignore") bin._isIgnore = true;
+      else if (attr == "illegal") bin._isIllegal = true;
+      else if (attr == "wildcard") bin._isWildcard = true;
+      else if (attr == "transition") bin._isTransition = true;
+      else assert (false, "Unknown Attribute: @" ~ attr);
+      parseSpace();
+    }
+    bin.checkAttribs();
+  }
+  
+  void parseABin() {
+    ParsedBin!T bin;
+    parseBinAttribs(bin);
+    parseSpace();
+
+    if (srcCursor + 4 < BINS.length &&
+	BINS[srcCursor .. srcCursor+4] == "bins") {
+      srcCursor += 4;
+      parseSpace();
+    }
+    else {
+      auto srcTag = parseIdentifier();
+      if (srcTag != srcCursor)
+	assert (false, "Expected keyword 'bins', found " ~
+		BINS[srcTag..srcCursor] ~ " instead");
+      else 
+	assert (false, "Expected keyword 'bins' not found");
+    }
+    if (BINS[srcCursor] == '[') {
+      bin._isArray = true;
+      srcCursor += 1;
+      parseSpace();
+      parseIntLiteral(true);
+    }
+    
+    if (bin._isWildcard) {
+      string type = parseBinDeclaration();
+      parseSpace();
+      auto srcTag = parseName();
+      string name = BINS[srcTag .. srcCursor];
+      parseSpace();
+      parseEqual();
+      parseSpace();
+      parseWildcardBins(type, name);
+    }
+    else {
+      string type = parseBinDeclaration();
+      parseBinOfType(type);
+    }
+  }
+
+  
+
 }
 
-struct WildCardBin(T)
+
+class WildcardBin(T): EsdlBaseBin!T
 {
   string _bin;
   string _name;
@@ -819,28 +877,85 @@ struct WildCardBin(T)
       i -= 1;
     }
   }
-  bool checkHit(T val) {
-    if ((val & _ones) == _ones && (val & _zeroes) == 0) {
-      return true;
-    }
-    else 
-      return false;
+  override string getName() {
+    return _name;    
   }
+
+  override void sample(T val) { }
+
+  override double getCoverage() {
+    return 0.0;
+  }
+
+  override string describe()
+  {
+    string s = "Name : " ~ _name ~ "\n";
+    // foreach (elem; _ranges)
+    //   {
+    // 	import std.conv;
+    // 	s ~= to!string(elem) ~ ", ";
+    //   }
+    s ~= "\n";
+    return s;
+  }
+  
 }
 
-interface EsdlBinIntf(T)
+enum EsdlBinAttr: uint {
+  ILLEGAL        = 0b000001,
+  IGNORE         = 0b000010,
+  WILDCARD       = 0b000100,
+  TRANSITION     = 0b001000,
+  DYNAMICARRAY   = 0b010000,
+  STATICARRAY    = 0b100000
+}
+
+abstract class EsdlBaseBin(T)
 {
+  uint _attributes;
+
+  void addAttribute(EsdlBinAttr attr) {
+    _attributes |= attr;
+  }
+  
   void sample(T val);
   double getCoverage();
   
   string getName();
   string describe();
 
-  void processBin();
+  bool isIllegal() {
+    return (EsdlBinAttr.ILLEGAL & _attributes) != 0;
+  }
+
+  bool isIgnore() {
+    return (EsdlBinAttr.IGNORE & _attributes) != 0;
+  }
+
+  bool isWildcard() {
+    return (EsdlBinAttr.WILDCARD & _attributes) != 0;
+  }
+
+  bool isTransition() {
+    return (EsdlBinAttr.TRANSITION & _attributes) != 0;
+  }
+
+  bool isDynamicArray() {
+    return (EsdlBinAttr.DYNAMICARRAY & _attributes) != 0;
+  }
+
+  bool isStaticArray() {
+    return (EsdlBinAttr.STATICARRAY & _attributes) != 0;
+  }
+
+  bool isArray() {
+    return ((EsdlBinAttr.STATICARRAY & _attributes) |
+	    (EsdlBinAttr.DYNAMICARRAY & _attributes)) != 0;
+  }
 }
 
 
-class EsdlRangeBin(T): EsdlBinIntf!T
+class EsdlRangeBin(T): EsdlBaseBin!T
 {
   // import std.typecons: Tuple, tuple;
 
@@ -899,21 +1014,21 @@ class EsdlRangeBin(T): EsdlBinIntf!T
     writeln(_ranges);
   }
   
-  string getName() {
+  override string getName() {
     return _name;    
   }
   auto getRanges() {
     return _ranges;
   }
 
-  void sample(T val) { 
+  override void sample(T val) { 
   }
 
-  double getCoverage() {
+  override double getCoverage() {
     return 0.0;
   }
 
-  string describe()
+  override string describe()
   {
     string s = "Name : " ~ _name ~ "\n";
     // foreach (elem; _ranges)

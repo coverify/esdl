@@ -324,9 +324,6 @@ void _esdl__doInitCoverageElems(P, int I=0)(P p) {
   }
   else {
     alias E = typeof (p.tupleof[I]);
-    debug(CVRPARSER) {
-      pragma(msg, E.stringof);
-    }
     static if (is (E: _esdl__BaseCoverGroup)) {
       if (p.tupleof[I] is null) {
 	p.tupleof[I] = p.new E();
