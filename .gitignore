@@ -3,3 +3,6 @@
 /examples/data/randarr
 /examples/data/randomize
 /examples/data/testcstx
+/examples/*
+*~
+*.o
