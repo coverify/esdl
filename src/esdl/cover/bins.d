@@ -236,9 +236,6 @@ struct EsdlBinsParser (T)
     return start;
   }
 
-  string parseBinDeclaration() {
-    return "";
-  }
   size_t parseSpace() {
     size_t start = srcCursor;
     while (srcCursor < BINS.length) {
@@ -520,7 +517,7 @@ struct EsdlBinsParser (T)
     }
   }
 
-  void parseBinOfType(string type) {
+  void parseBinOfType() {
     BinType bintype = parseType();
     if (bintype == BinType.SINGLE) {
       auto srcTag = parseName();
@@ -529,15 +526,8 @@ struct EsdlBinsParser (T)
       parseEqual();
       parseSpace();
       if (isDefault()) {
-	if (type == "_ig") {
-	  fillCtr("_default = DefaultBin(Type.IGNORE, \"", name, "\");");
-	}
-	else if (type == "_ill") {
-	  fillCtr("_default = DefaultBin(Type.ILLEGAL, \"", name, "\");");
-	}
-	else {
-	  fillCtr("_default = DefaultBin(Type.BIN, \"", name, "\");");
-	}
+	fillCtr("_default = DefaultBin(Type.BIN, \"", name, "\");");
+
 	if (BINS[srcCursor] != ';') {
 	  import std.conv;
 	  assert (false, "';' expected, not found at line " ~
@@ -551,7 +541,7 @@ struct EsdlBinsParser (T)
 	string binName = name;
 	fillDecl("EsdlRangeBin!T ", binName, ";\n");
 	fillCtr(binName, " = new EsdlRangeBin!T( \"", name, "\");\n");
-	fillCtr(type, "_bins ~= ", binName, ";\n");
+	fillCtr("_bins ~= ", binName, ";\n");
 	parseSquareOpen();
 	parseSpace();
 	parseNamedBin(binName);
@@ -593,14 +583,8 @@ struct EsdlBinsParser (T)
     else if (bintype == BinType.DYNAMIC) {
       parseSpace();
       auto srcTag = parseName();
-      if (type == "_ig") {
-        fillCtr(type, "_bins ~= new EsdlRangeBin!T( \"",
-	     BINS[srcTag .. srcCursor], "\");\n");	
-      }
-      else {
-        fillCtr(type, "_dbins ~= new EsdlRangeBin!T( \"",
-	     BINS[srcTag .. srcCursor], "\");\n");
-      }
+      fillCtr("_bins ~= new EsdlRangeBin!T( \"",
+	      BINS[srcTag .. srcCursor], "\");\n");
       parseSpace();
       parseEqual();
       parseSpace();
@@ -625,22 +609,12 @@ struct EsdlBinsParser (T)
       ++srcCursor;
       parseSpace();
       srcTag = parseName();
-      if (type == "_ig") { //no need for arrays in ignore bins
-	binName = BINS[srcTag .. srcCursor];
-	fillDecl("EsdlRangeBin!T ", binName, ";\n");
-        fillCtr(binName, " = new EsdlRangeBin!T( \"",
-	     binName, "\");\n");
-        fillCtr(type, "_bins ~= ", binName, ";\n");
-        // fillCtr(type, "_sbinsNum,= ", arrSize, "; \n");
-      }
-      else {
-	binName = BINS[srcTag .. srcCursor];
-	fillDecl("EsdlRangeBin!T ", binName, ";\n");
-        fillCtr(binName, " = new EsdlRangeBin!T( \"",
-	     binName, "\");\n");
-        fillCtr(type, "_bins ~= ", binName, ";\n");
-        // fillCtr(type, "_sbinsNum ~= ", arrSize, "; \n");
-      }
+      binName = BINS[srcTag .. srcCursor];
+      fillDecl("EsdlRangeBin!T ", binName, ";\n");
+      fillCtr(binName, " = new EsdlRangeBin!T( \"",
+	      binName, "\");\n");
+      fillCtr("_bins ~= ", binName, ";\n");
+      // fillCtr(type, "_sbinsNum ~= ", arrSize, "; \n");
       parseSpace();
       parseEqual();
       parseSpace();
@@ -658,7 +632,7 @@ struct EsdlBinsParser (T)
     parseSpace();
   }
 
-  void parseWildcardBins(string type, string name) {
+  void parseWildcardBins(string name) {
     parseSquareOpen();
     parseSpace();
     if (srcCursor > BINS.length - 2 || BINS[srcCursor] != '"')
@@ -681,7 +655,7 @@ struct EsdlBinsParser (T)
     if (BINS[srcCursor] != '"') {
       assert (false, "Wildcard Bin should be a string");
     }
-    fillCtr(type, "_bins ~= new WildcardBin!(T)( \"",
+    fillCtr("_bins ~= new WildcardBin!(T)( \"",
 	    name, "\", \"", BINS[srcTag .. srcCursor], "\" );\n"); 
     srcCursor += 1;
     parseSpace();
@@ -834,18 +808,16 @@ struct EsdlBinsParser (T)
     }
     
     if (bin._isWildcard) {
-      string type = parseBinDeclaration();
       parseSpace();
       auto srcTag = parseName();
       string name = BINS[srcTag .. srcCursor];
       parseSpace();
       parseEqual();
       parseSpace();
-      parseWildcardBins(type, name);
+      parseWildcardBins(name);
     }
     else {
-      string type = parseBinDeclaration();
-      parseBinOfType(type);
+      parseBinOfType();
     }
   }
 
