@@ -384,6 +384,12 @@ private template VecParams(size_t SIZE, bool S=true) {
   // Word size of the Most Significant word
   // Make sure that MSWSIZE is never 0(is equal to WORDSIZE instead)
   private enum size_t MSWSIZE = ((SIZE-1) % WORDSIZE) + 1;
+  private enum size_t NUMBYTES = ((SIZE-1) % 8) + 1;
+  private enum size_t MSNUMBYTES = NUMBYTES % StoreT.sizeof;
+
+  static if (MSNUMBYTES == 0) private enum size_t MSBYTEOFFSET = 0;
+  else size_t MSBYTEOFFSET = StoreT.sizeof - MSNUMBYTES;
+
   static if(MSWSIZE == WORDSIZE)	// All ones
     // Shift by WORDSIZE is erroneous -- D gives compile time error
     {
@@ -768,6 +774,10 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
     enum size_t  WORDSIZE   = VecParams!(SIZE,S).WORDSIZE;
     enum store_t UMASK      = VecParams!(SIZE,S).UMASK;
     enum store_t SMASK      = VecParams!(SIZE,S).SMASK;
+
+    enum size_t  BYTENUM    = VecParams!(SIZE,S).NUMBYTES;
+    enum size_t  BYTEOFFSET = VecParams!(SIZE,S).MSBYTEOFFSET;
+
     enum bool    IS4STATE   = L;
     enum bool    ISSIGNED   = S;
     enum         DIMENSIONS = N;
@@ -882,9 +892,20 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       return _aval;
     }
 
+    public const (ubyte)[] aValBytes() { // assume little-endian
+      ubyte* _bytes;
+      _bytes = (cast(ubyte*) _aval.ptr) + BYTEOFFSET;
+      return _bytes[0..BYTENUM];
+    }
+
     static if (L) {
       public const (store_t)[] bVal() {
 	return _bval;
+      }
+      public const (ubyte)[] bvalBytes() { // assume little-endian
+	ubyte* _bytes;
+	_bytes = (cast(ubyte*) _bval.ptr) + BYTEOFFSET;
+	return _bytes[0..BYTENUM];
       }
     }
     
