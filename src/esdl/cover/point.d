@@ -174,25 +174,25 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
   // }
 
   void _esdl__initBins() {
-    procStaticBins(_bins);
+    procStaticBins(_esdl__allBins);
     // procIgnoreBins();
-    _curr_hits.length = _bins.length; 
+    _curr_hits.length = _esdl__allBins.length; 
     // _curr_wild_hits.length = _wildbins.length;
-    // if (_bins.length == 0 && _ill_bins.length == 0) {
+    // if (_esdl__allBins.length == 0 && _ill_bins.length == 0) {
     //   import std.conv;
     //   debug (CVRPARSER) pragma(msg, doParse!T("bins [64] _esdl__defaultBin = [[" ~ T.min.to!string() ~
     // 					      ":" ~ T.max.to!string() ~ "]];"));
     //   mixin(doParse!T("bins [64] _esdl__defaultBin = [[" ~ T.min.to!string() ~
     // 		      ":" ~ T.max.to!string() ~ "]];"));
-    //   procStaticBins(_bins, _sbins, _sbinsNum);
-    //   _curr_hits.length = _bins.length; 
+    //   procStaticBins(_esdl__allBins, _sbins, _sbinsNum);
+    //   _curr_hits.length = _esdl__allBins.length; 
     // }
   }
   
   // size_t [] _sbinsNum;
   // size_t [] _ig_sbinsNum;
   // size_t [] _ill_sbinsNum;
-  EsdlBaseBin!(T)[] _bins;
+  EsdlBaseBin!(T)[] _esdl__allBins;
   // EsdlBaseBin!(T)[] _sbins;
   // EsdlBaseBin!(T)[] _dbins;
   // EsdlBaseBin!(T)[] _ig_bins;
@@ -202,13 +202,11 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
   // WildcardBin!(T)[] _wildbins;
   // WildcardBin!(T)[] _ig_wildbins;
   // WildcardBin!(T)[] _ill_wildbins;
-  DefaultBin _default;
-  uint _defaultCount;
   
   int _pos;
 
   auto getBins() {
-    return _bins;
+    return _esdl__allBins;
   }
 
   
@@ -221,7 +219,7 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
     //   _ig_bins.length --;
     // }
     // _ig_bins[0].negateBin();
-    // foreach (ref bin; _bins) {
+    // foreach (ref bin; _esdl__allBins) {
     //   bin.and(_ig_bins[0][]);
     // }
   }
@@ -290,7 +288,7 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
   }
   string describe() {
     string s = "";
-    foreach (bin; _bins) {
+    foreach (bin; _esdl__allBins) {
       s ~= bin.describe();
     }
     s ~= "\n";
@@ -311,7 +309,7 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
     //   }
     // }
     // _num_curr_hits = 0;
-    // foreach (i, ref bin;_bins) {
+    // foreach (i, ref bin;_esdl__allBins) {
     //   _curr_hits[i] = false;
     //   if (bin.checkHit(tval)) {
     // 	// writeln("bin hit, bin = ", bin.describe());
@@ -354,10 +352,10 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
     // }
   }
   override double get_coverage() {
-    return cast(double)(_num_hits)/_bins.length;
+    return cast(double)(_num_hits)/_esdl__allBins.length;
   }
   override double get_curr_coverage() {
-    return cast(double)(_num_curr_hits)/_bins.length;
+    return cast(double)(_num_curr_hits)/_esdl__allBins.length;
   }
   override void start() { }
   override void stop() { }
