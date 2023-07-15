@@ -3,9 +3,10 @@
 
 module esdl.cover.bins;
 import esdl.data.vector: Vector;
-import esdl.data.bvec: isBitVector;
+import esdl.data.bvec: isBitVector, ulvec;
 import std.traits: isIntegral;
 import std.conv: parse;
+import esdl.cover.wild;
 
 static string doParse(T)(string Bins) {
   EsdlBinsParser!T binsParser = EsdlBinsParser!T(Bins);
@@ -17,30 +18,34 @@ static string doParse(T)(string Bins) {
 }
 
 // A context strutcture only to be used while parsing
-struct ParsedBin(T)
-{
-  string _name;
-  
-  bool _isIllegal;
-  bool _isIgnore;
-  bool _isTransition;
-  bool _isWildcard;
-
-  bool _isArray;
-
-  // _arrayLen != 0 if static array
-  string _arrayLen;
-
-  void checkAttribs() {
-    if (_isIllegal && _isIgnore)
-      assert (false, "A bin can not have illegal as well as ignore attributes");
-    if (_isIgnore && _isWildcard)
-      assert (false, "A bin can not have ignore as well as wildcard attributes");
-  }
-}
-
 struct EsdlBinsParser (T)
 {
+  struct ParsedBin
+  {
+    string _name;
+  
+    bool _isIllegal;
+    bool _isIgnore;
+    bool _isTransition;
+    bool _isWildcard;
+
+    bool _isArray;
+
+    size_t _arrayDim;
+
+    string _filter;
+
+    // _arrayLen != 0 if static array
+    string _arrayLen;
+
+    void checkAttribs() {
+      if (_isIllegal && _isIgnore)
+	assert (false, "A bin can not have illegal as well as ignore attributes");
+      if (_isIgnore && _isWildcard)
+	assert (false, "A bin can not have ignore as well as wildcard attributes");
+    }
+  }
+
   bool dryRun = true;
   size_t ctrLen = 0;		// constructor
   size_t declLen = 0;		// declarations
@@ -91,82 +96,6 @@ struct EsdlBinsParser (T)
     }
   }
   
-  // void fillDecl(T...)(T strs) {
-  //   foreach (str; strs) {
-  //     if (dryRun) declLen += str.length;
-  //     else outBuffer ~= str;
-  //   }
-  // }
-  
-  void parseComma() {
-    if (BINS[srcCursor] != ',') {
-      import std.conv;
-      assert (false, "did not find comma while parsing " ~ BINS[srcCursor..$]);
-    }
-    ++srcCursor;
-    parseSpace();
-  }
-  bool parseRangeType() {
-    if (BINS[srcCursor] == ':') {
-      ++ srcCursor;
-      return true;
-    }
-    else if (BINS[srcCursor] == '.' && BINS[srcCursor+1] == '.') {
-      srcCursor += 2;
-      return false;
-    }
-    else {
-      import std.conv;
-      assert (false, "error in writing bins at line "~ srcLine.to!string ~
-	      " " ~ BINS[srcCursor]);
-    }
-  }
-  void parseCurlyOpen() {
-    if (BINS[srcCursor] != '{') {
-      assert (false);
-    }
-    ++ srcCursor;
-  }
-  void parseSquareOpen() {
-    if (BINS[srcCursor] != '[') {
-      assert (false);
-    }
-    ++ srcCursor;
-  }
-
-  void parseEqual() {
-    if (BINS[srcCursor] != '=') {
-      assert (false, "Expecting '=' found: " ~ BINS[srcCursor..$]);
-    }
-    ++ srcCursor;
-  }
-
-  size_t parseName() {
-    auto start = srcCursor;
-    while (BINS[srcCursor] != ' ' &&
-	   BINS[srcCursor] != '=' &&
-	   BINS[srcCursor] != '\n'&&
-	   BINS[srcCursor] != '\t' ) {
-      ++srcCursor;
-    }
-    return start;
-  }
-  
-  BinType parseType() {
-    if (BINS[srcCursor] == '[') {
-      srcCursor ++;
-      parseSpace();
-      if (BINS[srcCursor] == ']') {
-        ++srcCursor;
-        return BinType.DYNAMIC;
-      }
-      return BinType.STATIC;
-    }
-    else {
-      return BinType.SINGLE;
-    }
-  }
-
   size_t parseIntLiteral(bool isPositive=false) {
     size_t start = srcCursor;
     // check for - sign
@@ -371,21 +300,63 @@ struct EsdlBinsParser (T)
       return start;
     }
   }
-  bool isDefault() {
-    if (srcCursor + 7 < BINS.length &&
-	BINS[srcCursor .. srcCursor+7] == "default") {
-      srcCursor += 7;
-      parseSpace();
-      return true;
+
+  void procBinOfType(ref ParsedBin bin) {
+    parseSpace();
+    if (BINS[srcCursor] == '[') {
+      if (bin._isWildcard)
+	procWildcardBins(bin);
+      else
+	procRangeBins(bin);
     }
-    return false;
+    else if (srcCursor + 7 < BINS.length &&
+	     BINS[srcCursor .. srcCursor+7] == "default")
+      procDefaultBins(bin);
+    else {
+      procFunction(bin);
+    }
+    if (bin._filter != "") {
+      fillCtr(bin._name, ".addFilter(&" ~ bin._filter ~ ");\n");
+    }
+
+    if (bin._isIllegal) {
+      // fillCtr(bin._name, ".markIllegal();\n");
+      fillCtr("_esdl__illBins ~= ", bin._name, ";\n");
+    }
+    else if (bin._isIgnore) {
+      // fillCtr(bin._name, ".markIgnore();\n");
+      fillCtr("_esdl__ignBins ~= ", bin._name, ";\n");
+    }
+    else {
+      fillCtr("_esdl__cvrBins ~= ", bin._name, ";\n");
+    }
+  }
+
+  bool checkWildcard(string val) {
+    import std.conv: to;
+    size_t maxbits;
+    size_t bitcount;
+    static if (isBitVector!T) maxbits = T.SIZE;
+    else maxbits = T.sizeof * 8;
+    foreach (d; val[1..$-1]) {
+      if (d == '_') continue;
+      else bitcount += 1;
+    }
+    if (bitcount != maxbits) assert (false, "Wildcard " ~ val ~
+				     " should match exact number of bits: " ~
+				     maxbits.to!string);
+    return true;
   }
 
   bool checkValue(string val) {
     size_t maxbits = 0;
     size_t bitcount;
+    bool negative = false;
     string pval = val;
-    if (val[0] == '-') pval = val[1..$];
+    if (val[0] == '-') {
+      pval = val[1..$];
+      negative = true;
+    }
     static if (isBitVector!T) maxbits = T.SIZE;
     else maxbits = T.sizeof * 8;
     if (pval.length >=2 &&
@@ -432,201 +403,213 @@ struct EsdlBinsParser (T)
     else if (pval[0] <= '9' && pval[0] >= '0') {
       string strval = pval.dup;
       ulong intVal = parse!(ulong, string)(strval, 10);
-      assert (cast(T) intVal == intVal, "Value " ~ pval ~ " can not be of type " ~ T.stringof);
+      static if (isIntegral!T) {
+	if (negative) {
+	  assert (cast(T) (- intVal) == (- intVal), "Value -" ~ pval ~ " can not be of type " ~ T.stringof);
+	}
+	else {
+	  assert (cast(T) intVal == intVal, "Value " ~ pval ~ " can not be of type " ~ T.stringof);
+	}
+      }
+      else {
+	import esdl.data.bvec: to;
+	import std.format: format;
+	if (negative) {
+	  assert ((- intVal).to!(T) == (- intVal), "Value -" ~ pval ~ " can not be of type " ~ T.stringof);
+	}
+	else {
+	  assert (intVal.to!(T) == intVal, "Value " ~ pval ~ " can not be of type " ~ T.stringof);
+	}
+      }
     }
     return true;
   }
   
-  void parseNamedBin(string binName) {
+  bool procRangeElem(ref ParsedBin bin) {
+    string min;
+    string max;
     size_t srcTag;
-    while (true) {
-      string min;
-      string max;
+    parseSpace();
+    if (BINS[srcCursor] == '$') {
+      min = T.max.stringof;
+      srcCursor += 1;
+    }
+    else {
+      srcTag = parseIntLiteral();
+      min = BINS[srcTag .. srcCursor];
+    }
+    checkValue(min);
+    parseSpace();
+    if (BINS.length > srcCursor + 2 &&
+	BINS[srcCursor..srcCursor+2] == "..") {
+      srcCursor += 2;
+      parseSpace();
       if (BINS[srcCursor] == '$') {
-	min = T.max.stringof;
+	max = T.max.stringof;
 	srcCursor += 1;
       }
       else {
 	srcTag = parseIntLiteral();
-	min = BINS[srcTag .. srcCursor];
+	max = BINS[srcTag .. srcCursor];
       }
-      checkValue(min);
-      parseSpace();
-      if (BINS.length > srcCursor + 2 &&
-	  BINS[srcCursor..srcCursor+2] == "..") {
-	srcCursor += 2;
-	parseSpace();
-	if (BINS[srcCursor] == '$') {
-	  max = T.max.stringof;
-	  srcCursor += 1;
-	}
-	else {
-	  srcTag = parseIntLiteral();
-	  max = BINS[srcTag .. srcCursor];
-	}
-	checkValue(max);
-	static if (isBitVector!T)
-	  fillCtr(binName, ".addRange(", min, ".to!T, (", max, "-1).to!T);\n");
-	else
-	  fillCtr(binName, ".addRange(cast(T) ", min, ", cast(T) (", max, "-1));\n");
-      }
-      else if (BINS.length > srcCursor + 1 &&
-	       BINS[srcCursor] == ':') {
-	srcCursor += 1;
-	parseSpace();
-	if (BINS[srcCursor] == '$') {
-	  max = T.max.stringof;
-	  srcCursor += 1;
-	}
-	else {
-	  srcTag = parseIntLiteral();
-	  max = BINS[srcTag .. srcCursor];
-	}
-	checkValue(max);
-	static if (isBitVector!T) 
-	  fillCtr(binName, ".addRange(", min, ".to!T, ", max, ".to!T);\n");
-	else fillCtr(binName, ".addRange(cast(T) ", min, ", cast(T) ", max, ");\n");
-      }
-      else {
-	static if (isBitVector!T)
-	  fillCtr(binName, ".addElem(" ~ min ~ ".to!T);\n");
-	else fillCtr(binName, ".addElem(cast(T) " ~ min ~ ");\n");
-      }
-      parseSpace();
-      if (BINS[srcCursor] == ']') {
-	srcCursor += 1;
-	parseSpace();
-	if (BINS[srcCursor] == ';') {
-	  srcCursor += 1;
-	}
-	else {
-	  assert (false, "Expected ';' not found. Parsing: " ~ BINS[srcCursor..$]);
-	}
-        break;
-      }
-      else {
-	parseComma();
-      }
-      parseSpace();
+      checkValue(max);
+      static if (isBitVector!T)
+	fillCtr(bin._name, ".addRange(", min, ".to!_esdl__T, (", max, "-1).to!_esdl__T);\n");
+      else
+	fillCtr(bin._name, ".addRange(cast(_esdl__T) ", min, ", cast(_esdl__T) (", max, "-1));\n");
     }
-  }
-
-  void parseBinOfType(ref ParsedBin!T bin) {
-    string binName = bin._name;
-
-    parseSpace();
-
-    if (isDefault()) {
-      fillDecl("EsdlDefaultBin!T ", binName, ";\n");
-      fillCtr(binName, " = new EsdlDefaultBin!T( Type.BIN, \"", binName, "\");\n");
-      fillCtr("_esdl__allBins ~= ", binName, ";\n");
-
-      if (BINS[srcCursor] != ';') {
-	import std.conv;
-	assert (false, "';' expected, not found at line " ~
-		srcLine.to!string);
-      }
-      ++srcCursor;
-      parseSpace();
-      return;
-    }
-    else if (BINS[srcCursor] == '[') {
-      fillDecl("EsdlRangeBin!T ", binName, ";\n");
-      fillCtr(binName, " = new EsdlRangeBin!T( \"", binName, "\");\n");
-      fillCtr("_esdl__allBins ~= ", binName, ";\n");
+    else if (BINS.length > srcCursor + 1 &&
+	     BINS[srcCursor] == ':') {
       srcCursor += 1;
       parseSpace();
-      parseNamedBin(binName);
-      parseSpace();
-      if (BINS[srcCursor] == ';') {
-	srcCursor ++;
-	parseSpace();
+      if (BINS[srcCursor] == '$') {
+	max = T.max.stringof;
+	srcCursor += 1;
       }
-      // fillCtr(type, "_esdl__allBins[$-1].processBin();\n");
+      else {
+	srcTag = parseIntLiteral();
+	max = BINS[srcTag .. srcCursor];
+      }
+      checkValue(max);
+      static if (isBitVector!T) 
+	fillCtr(bin._name, ".addRange(", min, ".to!_esdl__T, ", max, ".to!_esdl__T);\n");
+      else fillCtr(bin._name, ".addRange(cast(_esdl__T) ", min, ", cast(_esdl__T) ", max, ");\n");
     }
     else {
-      size_t markParen;
-      size_t markLastParen;
-      size_t srcTag = srcCursor;
-      while (BINS[srcCursor] != ';') {
-	size_t srcMark = srcCursor;
-	parseSpace();
-	if (srcMark == srcCursor) {
-	  if (BINS[srcCursor] != ';') {
-	    if (srcCursor < BINS.length) {
-	      markParen = srcCursor;
-	      if (BINS[srcCursor] == '(') {
-		srcCursor += 1;
-		parseSpace();
-		if (BINS[srcCursor] == ')') { // empty parens
-		  srcCursor += 1;
-		  markLastParen = markParen;
-		}
-	      }
-	      else {
-		srcCursor += 1;
-	      }
-	    }
-	    else {
-	      import std.conv: to;
-	      assert (false, "expected ; at line " ~ srcLine.to!string);
-	    }
-	  }
-	}
-      }
-      srcCursor += 1;
+      static if (isBitVector!T)
+	fillCtr(bin._name, ".addElem(" ~ min ~ ".to!_esdl__T);\n");
+      else fillCtr(bin._name, ".addElem(cast(_esdl__T) " ~ min ~ ");\n");
+    }
+    parseSpace();
+    if (BINS[srcCursor] == ',') return true;
+    else if (BINS[srcCursor] == ']') return false;
+    else {
+      import std.conv;
+      assert (false, "']' expected, not found at line " ~ srcLine.to!string);
     }
   }
 
-  void parseWildcardBins(ref ParsedBin!T bin) {
-    string binName = bin._name;
-    fillDecl("EsdlWildcardBin!T ", binName, ";\n");
-    fillCtr(binName, " = new EsdlWildcardBin!T( \"", binName, "\");\n");
-    fillCtr("_esdl__allBins ~= ", binName, ";\n");
+  void procDefaultBins(ref ParsedBin bin) {
+    srcCursor += 7;
+    parseSpace();
+    fillDecl("EsdlDefaultBin!_esdl__T ", bin._name, ";\n");
+    fillCtr(bin._name, " = new EsdlDefaultBin!_esdl__T( Type.BIN, \"", bin._name, "\");\n");
+    if (BINS[srcCursor] != ';') {
+      import std.conv;
+      assert (false, "';' expected, not found at line " ~
+	      srcLine.to!string);
+    }
+    ++srcCursor;
+    parseSpace();
+  }
+
+  void procRangeBins(ref ParsedBin bin) {
+    fillDecl("EsdlRangeBin!_esdl__T ", bin._name, ";\n");
+    fillCtr(bin._name, " = new EsdlRangeBin!_esdl__T( \"", bin._name, "\");\n");
     if (BINS[srcCursor] != '[') assert (false, "Error parsing bins: " ~ BINS[srcCursor..$]);
     srcCursor += 1;
     parseSpace();
-    while (true) {
-      if (srcCursor > BINS.length - 1 || BINS[srcCursor] != '"')
-	assert (false, "Error parsing bins: " ~ BINS[srcCursor..$]);
-      srcCursor += 1;
-      size_t srcTag = srcCursor;
-      /* char [] possible_chars = ['1', '0', '?', 'x', 'z']; */
-      while (srcCursor < BINS.length &&
-	     (BINS[srcCursor] == '1' ||
-	      BINS[srcCursor] == '0' ||
-	      BINS[srcCursor] == '_' ||
-	      BINS[srcCursor] == '?' ||
-	      BINS[srcCursor] == 'x' ||
-	      BINS[srcCursor] == 'X' ||
-	      BINS[srcCursor] == 'z' ||
-	      BINS[srcCursor] == 'Z') ) {
-	srcCursor++;
-      }
-      if (BINS[srcCursor] != '"') {
-	assert (false, "Wildcard Bin should be a string");
-      }
-      fillCtr(binName, ".addWildCard(\"", BINS[srcTag .. srcCursor], "\");\n");
-      srcCursor += 1;
-      parseSpace();
-      if (BINS[srcCursor] == ',') {
-        srcCursor += 1;
-        parseSpace();
-        continue;
-      }
-      else if (BINS[srcCursor] == ']') {
-        srcCursor += 1;
-        break;
-      }
-      else {
-	import std.conv;
-	assert (false, "']' expected, not found at line " ~ srcLine.to!string);
-      }
+    while (procRangeElem(bin)) {
+      srcCursor += 1; 		// for comma
       parseSpace();
     }
+    srcCursor += 1; 		// for the closing brace
     if (BINS[srcCursor] != ';') {
       import std.conv;
-      assert (false, "';' expected, not found at line " ~ srcLine.to!string);
+      assert (false, "';' expected, not found at line " ~ BINS[srcCursor..$]);
+    }
+    ++srcCursor;
+    parseSpace();
+  }
+
+  void procFunction(ref ParsedBin bin) {
+    size_t srcTag = srcCursor;
+    string funcName = parseIdentifierChain();
+    if (bin._isWildcard) {
+      fillDecl("EsdlWildcardArrBin!_esdl__T ", bin._name, ";\n");
+      fillCtr(bin._name, " = new EsdlWildcardArrBin!_esdl__T( \"", bin._name, "\");\n");
+    }
+    else {
+      fillDecl("EsdlValArrBin!_esdl__T ", bin._name, ";\n");
+      fillCtr(bin._name, " = new EsdlValArrBin!_esdl__T( \"", bin._name, "\");\n");
+    }
+    fillCtr(bin._name, ".addArrDG(&" ~ BINS[srcTag..srcCursor] ~ ");\n");
+    parseSpace();
+    if (BINS[srcCursor] == '(') {
+      srcCursor += 1;
+      parseSpace();
+      if (BINS[srcCursor] == ')') {
+	srcCursor += 1;
+      }
+      else {
+	assert (false, "expected ')' but found " ~ BINS[srcCursor..$]);
+      }
+    }
+    parseSpace();
+    if (BINS[srcCursor] == ';') {
+      srcCursor += 1;
+    }
+    else {
+      assert (false, "expected ';' but found " ~ BINS[srcCursor..$]);
+    }
+  }
+  
+  // returns false when this is the last element
+  bool procWildcardElem(ref ParsedBin bin) {
+    parseSpace();
+    size_t srcTag = srcCursor;
+    if (srcCursor > BINS.length - 1 || BINS[srcCursor] != '"')
+      assert (false, "Error parsing bins: " ~ BINS[srcCursor..$]);
+    srcCursor += 1;
+    uint bitlen = 0;
+    while (true) {
+      if (srcCursor < BINS.length &&
+	  (BINS[srcCursor] == '1' ||
+	   BINS[srcCursor] == '0' ||
+	   BINS[srcCursor] == '?' ||
+	   BINS[srcCursor] == 'x' ||
+	   BINS[srcCursor] == 'X' ||
+	   BINS[srcCursor] == 'z' ||
+	   BINS[srcCursor] == 'Z') ) {
+	bitlen += 1;
+	srcCursor += 1;
+      }
+      else if (BINS[srcCursor] == '_') {
+	srcCursor += 1;
+	continue;
+      }
+      else if (BINS[srcCursor] == '"') {
+	srcCursor += 1;
+	break;
+      }
+      else assert (false, "Error parsing wildcard bin: " ~
+		   BINS[srcCursor..$]);
+    }
+    checkWildcard(BINS[srcTag .. srcCursor]);
+    fillCtr(bin._name, ".addWildCard(", BINS[srcTag..srcCursor], ");\n");
+    parseSpace();
+    if (BINS[srcCursor] == ',') return true;
+    else if (BINS[srcCursor] == ']') return false;
+    else {
+      import std.conv;
+      assert (false, "']' expected, not found at line " ~ srcLine.to!string);
+    }
+  }
+  
+  void procWildcardBins(ref ParsedBin bin) {
+    fillDecl("EsdlWildcardBin!_esdl__T ", bin._name, ";\n");
+    fillCtr(bin._name, " = new EsdlWildcardBin!_esdl__T( \"", bin._name, "\");\n");
+    if (BINS[srcCursor] != '[') assert (false, "Error parsing bins: " ~ BINS[srcCursor..$]);
+    srcCursor += 1;
+    parseSpace();
+    while (procWildcardElem(bin)) {
+      srcCursor += 1; 		// for comma
+      parseSpace();
+    }
+    srcCursor += 1; 		// for the closing brace
+    if (BINS[srcCursor] != ';') {
+      import std.conv;
+      assert (false, "';' expected, not found at line " ~ BINS[srcCursor..$]);
     }
     ++srcCursor;
     parseSpace();
@@ -684,9 +667,9 @@ struct EsdlBinsParser (T)
     }
     if (binsCount == 0) {
       // Add default bin
-      fillDecl("EsdlRangeBin!T _esdl__bin__esdl__defaultBin;\n");
-      fillCtr("_esdl__bin__esdl__defaultBin = new EsdlRangeBin!T( q{_esdl__defaultBin});\n");
-      fillCtr("_esdl__allBins ~= _esdl__bin__esdl__defaultBin;\n");
+      fillDecl("EsdlRangeBin!_esdl__T _esdl__bin__esdl__defaultBin;\n");
+      fillCtr("_esdl__bin__esdl__defaultBin = new EsdlRangeBin!_esdl__T( q{_esdl__defaultBin});\n");
+      fillCtr("_esdl__cvrBins ~= _esdl__bin__esdl__defaultBin;\n");
       // fillCtr("_sbinsNum ~= 64;\n");
       fillCtr("_esdl__bin__esdl__defaultBin.addRange(", T.min.to!string(), ", ", T.max.to!string(), ");\n");
     }
@@ -722,18 +705,37 @@ struct EsdlBinsParser (T)
   }
 
   string parseBinAttrib() {
-    srcCursor += 1;
     size_t srcTag = parseIdentifier();
     return BINS[srcTag..srcCursor];
   }
 
-  void parseBinAttribs(ref ParsedBin!T bin) {
+  void parseBinAttribs(ref ParsedBin bin) {
     while (BINS[srcCursor] == '@') {
+      srcCursor += 1;
       string attr = parseBinAttrib();
       if (attr == "ignore") bin._isIgnore = true;
       else if (attr == "illegal") bin._isIllegal = true;
       else if (attr == "wildcard") bin._isWildcard = true;
       else if (attr == "transition") bin._isTransition = true;
+      else if (attr == "filter") {
+	parseSpace();
+	if (BINS[srcCursor] != '(') {
+	  assert (false, "Error looking for '(', found: " ~
+		  BINS[srcCursor..$]);
+	}
+	else {
+	  srcCursor += 1;
+	  parseSpace();
+	  string filter = parseIdentifierChain();
+	  bin._filter = filter;
+	}
+	parseSpace();
+	if (BINS[srcCursor] != ')') {
+	  assert (false, "Error looking for ')', found: " ~
+		  BINS[srcCursor..$]);
+	}
+	srcCursor += 1;
+      }
       else assert (false, "Unknown Attribute: @" ~ attr);
       parseSpace();
     }
@@ -741,7 +743,7 @@ struct EsdlBinsParser (T)
   }
   
   void parseABin() {
-    ParsedBin!T bin;
+    ParsedBin bin;
     parseSpace();
 
     parseBinAttribs(bin);
@@ -779,15 +781,48 @@ struct EsdlBinsParser (T)
     string name = BINS[srcTag .. srcCursor];
     bin._name = name;
     parseSpace();
-    parseEqual();
+    if (BINS[srcCursor] != '=')
+      assert (false, "Expected '=' not found. Found " ~ BINS[srcCursor..$]);
+    srcCursor += 1;
     parseSpace();
 
-    if (bin._isWildcard) {
-      parseWildcardBins(bin);
+    procBinOfType(bin);
+  }
+
+  // look for square brackets and report dim
+  // can only be one or two
+  void parseBinsArrDim(ref ParsedBin bin) {
+    size_t start = srcCursor;
+    size_t dim = 0;
+    while (true) {
+      if (BINS[srcCursor] == '[') {
+	srcCursor += 1;
+	dim += 1;
+	parseSpace();
+      }
+      else break;
     }
-    else {
-      parseBinOfType(bin);
+    bin._arrayDim = dim;
+  }
+
+  string parseIdentifierChain() {
+    size_t srcUpto;
+    size_t start = srcCursor;
+    parseIdentifier();
+    srcUpto = srcCursor;
+    if (start < srcCursor) {
+      parseSpace();
+      if (BINS.length > srcCursor && BINS[srcCursor] == '.') {
+	srcCursor += 1;
+	parseSpace();
+	parseIdentifierChain();
+	srcUpto = srcCursor;
+      }
+      else {
+	srcCursor = srcUpto;
+      }
     }
+    return BINS[start..srcUpto];
   }
 }
 
@@ -795,7 +830,6 @@ class EsdlWildcardBin(T): EsdlBaseBin!T
 {
   string _name;
   size_t _hits = 0;
-  T _ones = 0, _zeroes = 0;
 
   this(string name) {
     import std.conv;
@@ -830,20 +864,36 @@ class EsdlWildcardBin(T): EsdlBaseBin!T
 }
 
 enum EsdlBinAttr: uint {
-  ILLEGAL        = 0b000001,
-  IGNORE         = 0b000010,
   WILDCARD       = 0b000100,
   TRANSITION     = 0b001000,
+  ILLEGAL        = 0b000001,
+  IGNORE         = 0b000010,
   DYNAMICARRAY   = 0b010000,
   STATICARRAY    = 0b100000
 }
 
 abstract class EsdlBaseBin(T)
 {
+  alias FilterDG = bool delegate(T val);
+
   uint _attributes;
+
+  FilterDG _filter;
+  
+  void addFilter(FilterDG filter) {
+    _filter = filter;
+  }
 
   void addAttribute(EsdlBinAttr attr) {
     _attributes |= attr;
+  }
+
+  void markIgnore() {
+    _attributes |= EsdlBinAttr.IGNORE;
+  }
+  
+  void markIllegal() {
+    _attributes |= EsdlBinAttr.ILLEGAL;
   }
   
   abstract void sample(T val);
@@ -855,6 +905,7 @@ abstract class EsdlBaseBin(T)
   bool isIllegal() {
     return (EsdlBinAttr.ILLEGAL & _attributes) != 0;
   }
+
 
   bool isIgnore() {
     return (EsdlBinAttr.IGNORE & _attributes) != 0;
@@ -968,6 +1019,172 @@ class EsdlRangeBin(T): EsdlBaseBin!T
     return s;
   }
 }
+
+class EsdlValArrBin(T): EsdlBaseBin!T
+{
+  // import std.typecons: Tuple, tuple;
+
+  // alias TRange = Tuple!(T, "min", T, "max");
+
+  alias Array1DG = T[] delegate();
+  alias Array2DG = T[][] delegate();
+
+  Array1DG _arr1dg;
+  Array2DG _arr2dg;
+
+  void addArrDG(Array1DG dg) {
+    _arr1dg = dg;
+  }
+
+  void addArrDG(Array2DG dg) {
+    _arr2dg = dg;
+  }
+
+  struct BinRange(T)
+  {
+    size_t _count;	  // how much the previous ranges have covered
+
+    T _min;
+    T _max;
+
+    int opCmp(ref const BinRange!T other) const {
+      if (this._min > other._min) {
+	return +1;
+      }
+      else if (this._min < other._min) {
+	return -1;
+      }
+      else if (this._max == other._max) {
+	return 0;
+      }
+      else if (other._max == T.min ||
+	       other._max > this._max) {
+	return -1;
+      }
+      else return +1;
+    }
+  }
+  
+  string _name;
+  BinRange!T[] _ranges;
+  
+  uint[] _hits;
+  
+  this(string name) {
+    _name = name;
+  }
+  
+  void addElem (T val) {
+    this.addRange(val, cast(T) (val+1));
+    // T [] b = [val, val];
+    // or(b);
+  }
+
+  void addRange (T min, T max) {
+    _ranges ~= BinRange!T(0L, min, max);
+    // T [] b = [min, max];
+    // or(b);
+  }
+
+  void processBin() {
+    import std.stdio: writeln;
+    import std.algorithm.sorting: sort;
+    sort(_ranges);
+    writeln(_ranges);
+  }
+  
+  override string getName() {
+    return _name;    
+  }
+  auto getRanges() {
+    return _ranges;
+  }
+
+  override void sample(T val) { 
+  }
+
+  override double getCoverage() {
+    return 0.0;
+  }
+
+  override string describe()
+  {
+    string s = "Name : " ~ _name ~ "\n";
+    // foreach (elem; _ranges)
+    //   {
+    // 	import std.conv;
+    // 	s ~= to!string(elem) ~ ", ";
+    //   }
+    s ~= "\n";
+    return s;
+  }
+}
+
+class EsdlWildcardArrBin(T): EsdlBaseBin!T
+{
+  string _name;
+  size_t _hits = 0;
+
+  static if (isIntegral!T) enum size_t BITNUM = T.sizeof * 8;
+  static if (isBitVector!T) enum size_t BITNUM = T.SIZE;
+
+  alias LT = ulvec!BITNUM;
+  
+  alias Array1DG = LT[] delegate();
+  alias Array2DG = LT[][] delegate();
+
+
+  Array1DG _arr1dg;
+  Array2DG _arr2dg;
+
+  void addArrDG(Array1DG dg) {
+    import std.stdio: writeln;
+    auto arr = dg();
+    writeln(arr);
+    foreach (wc; arr) {
+      writeln("Adding Wildcard: ", Wildcard!BITNUM(wc));
+    }
+    _arr1dg = dg;
+  }
+
+  void addArrDG(Array2DG dg) {
+    _arr2dg = dg;
+  }
+
+  this(string name) {
+    import std.conv;
+    _name = name;
+  }
+
+  void addWildCard(string wc) {
+    import std.stdio: writeln;
+    writeln("Adding Wildcard: ", Wildcard!BITNUM(wc));
+  }
+
+  override string getName() {
+    return _name;    
+  }
+
+  override void sample(T val) { }
+
+  override double getCoverage() {
+    return 0.0;
+  }
+
+  override string describe()
+  {
+    string s = "Name : " ~ _name ~ "\n";
+    // foreach (elem; _ranges)
+    //   {
+    // 	import std.conv;
+    // 	s ~= to!string(elem) ~ ", ";
+    //   }
+    s ~= "\n";
+    return s;
+  }
+  
+}
+
 
 enum Type: ubyte {IGNORE, ILLEGAL, BIN};
 

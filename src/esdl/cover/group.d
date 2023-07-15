@@ -1,5 +1,6 @@
 module esdl.cover.group;
 import esdl.cover.point;
+import esdl.cover.bins;
 import esdl.base.core: addCoverGroup;
 import esdl.base.rand: rand;
 import esdl.data.vector: Vector;
@@ -310,12 +311,13 @@ struct CoverGroupParser
 	string name = S[srcTag .. srcCursor];
 	parseSpace();
 	string coverpointName = "";
+	string BINS;
 	if (S[srcCursor] == '{') {
 	  // goto next }
 	  srcCursor ++;
 	  srcTag = nextEndCurlyBrace();
-	  coverpointName = "CoverPoint!(typeof(" ~ name ~
-	    "), q{ " ~ S[srcTag .. srcCursor-1] ~ "})";
+	  BINS = S[srcTag .. srcCursor-1];
+	  coverpointName = "CoverPoint!(typeof(" ~ name ~ "))";
 	}
 	else {
 	  if (S[srcCursor] != ';') {
@@ -336,7 +338,10 @@ struct CoverGroupParser
 	fill("alias ", cp_name, "_class = ", coverpointName, ";\n");
 	fill(cp_name, "_class ", cp_name, ";\n");
 	fill("class ", cp_name, "_override : ", cp_name,
-	     "_class { \n override _esdl__T _esdl__t() { return ", name, "; }\n }\n");
+	     "_class { \n" ~
+	     " debug (CVRPARSER) pragma(msg, doParse!_esdl__T(q{" ~ BINS ~ "}));\n" ~
+	     " mixin(doParse!_esdl__T(q{" ~ BINS ~ "}));\n" ~
+	     " override _esdl__T _esdl__t() { return ", name, "; }\n }\n");
 	cpCount += 1;
       }
       else if (parseCrossDecl()) { // TODO

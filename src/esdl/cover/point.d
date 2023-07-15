@@ -152,7 +152,7 @@ struct StaticParameters {
   size_t goal = 90;
 }
 
-abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
+abstract class CoverPoint(T, N...): _esdl__CoverPointIf
 {
   import std.traits: isIntegral;
   T _esdl__t();
@@ -166,33 +166,34 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
   
   static StaticParameters type_option;
 
-  debug (CVRPARSER) pragma(msg, doParse!T(BINS));
-  mixin(doParse!T(BINS));
+  // mixin(doParse!T(BINS));
 
   // this () {
   //   this._esdl__initBins();
   // }
 
   void _esdl__initBins() {
-    procStaticBins(_esdl__allBins);
+    procStaticBins(_esdl__cvrBins);
     // procIgnoreBins();
-    _curr_hits.length = _esdl__allBins.length; 
+    _curr_hits.length = _esdl__cvrBins.length; 
     // _curr_wild_hits.length = _wildbins.length;
-    // if (_esdl__allBins.length == 0 && _ill_bins.length == 0) {
+    // if (_esdl__cvrBins.length == 0 && _ill_bins.length == 0) {
     //   import std.conv;
     //   debug (CVRPARSER) pragma(msg, doParse!T("bins [64] _esdl__defaultBin = [[" ~ T.min.to!string() ~
     // 					      ":" ~ T.max.to!string() ~ "]];"));
     //   mixin(doParse!T("bins [64] _esdl__defaultBin = [[" ~ T.min.to!string() ~
     // 		      ":" ~ T.max.to!string() ~ "]];"));
-    //   procStaticBins(_esdl__allBins, _sbins, _sbinsNum);
-    //   _curr_hits.length = _esdl__allBins.length; 
+    //   procStaticBins(_esdl__cvrBins, _sbins, _sbinsNum);
+    //   _curr_hits.length = _esdl__cvrBins.length; 
     // }
   }
   
   // size_t [] _sbinsNum;
   // size_t [] _ig_sbinsNum;
   // size_t [] _ill_sbinsNum;
-  EsdlBaseBin!(T)[] _esdl__allBins;
+  EsdlBaseBin!(T)[] _esdl__cvrBins;
+  EsdlBaseBin!(T)[] _esdl__illBins;
+  EsdlBaseBin!(T)[] _esdl__ignBins;
   // EsdlBaseBin!(T)[] _sbins;
   // EsdlBaseBin!(T)[] _dbins;
   // EsdlBaseBin!(T)[] _ig_bins;
@@ -206,7 +207,7 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
   int _pos;
 
   auto getBins() {
-    return _esdl__allBins;
+    return _esdl__cvrBins;
   }
 
   
@@ -219,7 +220,7 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
     //   _ig_bins.length --;
     // }
     // _ig_bins[0].negateBin();
-    // foreach (ref bin; _esdl__allBins) {
+    // foreach (ref bin; _esdl__cvrBins) {
     //   bin.and(_ig_bins[0][]);
     // }
   }
@@ -288,7 +289,7 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
   }
   string describe() {
     string s = "";
-    foreach (bin; _esdl__allBins) {
+    foreach (bin; _esdl__cvrBins) {
       s ~= bin.describe();
     }
     s ~= "\n";
@@ -309,7 +310,7 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
     //   }
     // }
     // _num_curr_hits = 0;
-    // foreach (i, ref bin;_esdl__allBins) {
+    // foreach (i, ref bin;_esdl__cvrBins) {
     //   _curr_hits[i] = false;
     //   if (bin.checkHit(tval)) {
     // 	// writeln("bin hit, bin = ", bin.describe());
@@ -352,10 +353,10 @@ abstract class CoverPoint(T, string BINS="", N...): _esdl__CoverPointIf
     // }
   }
   override double get_coverage() {
-    return cast(double)(_num_hits)/_esdl__allBins.length;
+    return cast(double)(_num_hits)/_esdl__cvrBins.length;
   }
   override double get_curr_coverage() {
-    return cast(double)(_num_curr_hits)/_esdl__allBins.length;
+    return cast(double)(_num_curr_hits)/_esdl__cvrBins.length;
   }
   override void start() { }
   override void stop() { }

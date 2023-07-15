@@ -43,6 +43,13 @@ struct Wildcard(uint LEN) if (LEN > 0)
     }
   }
 
+  this(ulvec!LEN vec) {
+    for (uint n; n!= BYTES; n += 1) {
+      _bval[n] = cast(ubyte) ~(vec.bvalBytes()[n]);
+      _aval[n] = vec.avalBytes()[n] & _bval[n];
+    }
+  }
+  
   string toString() {
     char[] str;
     str.length = LEN;
