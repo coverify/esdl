@@ -535,7 +535,7 @@ struct _bvec(bool S, bool L, string VAL, size_t RADIX) {
 
   private store_t[STORESIZE] _aval = void;
 
-  public bool aValMSB() {
+  public bool avalMSB() {
     static if(S) {
       if((this._aval[$-1] &
 	  (cast(store_t) 1) << ((SIZE-1) % WORDSIZE)))
@@ -549,7 +549,7 @@ struct _bvec(bool S, bool L, string VAL, size_t RADIX) {
 
   static if(L) {
     private store_t[STORESIZE] _bval = void;
-    public bool bValMSB() {
+    public bool bvalMSB() {
       static if(S) {
 	if((this._bval[$-1] &
 	    (cast(store_t) 1) << ((SIZE-1) % WORDSIZE)))
@@ -570,13 +570,13 @@ struct _bvec(bool S, bool L, string VAL, size_t RADIX) {
     static if(L) {
       _bval = mixin(stringToBits(extractBits!(false, RADIX)(VAL),
 				 store_t.sizeof, STORESIZE));
-      if(this.aValMSB) {
+      if(this.avalMSB) {
 	_aval[$-1] |= SMASK;
       }
       else {
 	_aval[$-1] &= UMASK;
       }
-      if(this.bValMSB) {
+      if(this.bvalMSB) {
 	_bval[$-1] |= SMASK;
       }
       else {
@@ -590,7 +590,7 @@ struct _bvec(bool S, bool L, string VAL, size_t RADIX) {
 				        store_t.sizeof, STORESIZE)))) {
 	_aval[i] &= ~n;
       }
-      if(this.aValMSB) {
+      if(this.avalMSB) {
 	_aval[$-1] |= SMASK;
       }
       else {
@@ -619,10 +619,10 @@ struct _bvec(bool S, bool L, string VAL, size_t RADIX) {
 	  }
 	}
 	// sign extension
-	if (result.aValMSB) result._aval[$-1] |= T.SMASK;
+	if (result.avalMSB) result._aval[$-1] |= T.SMASK;
 	else                  result._aval[$-1] &= T.UMASK;
 	static if (_L) {
-	  if (result.bValMSB) result._bval[$-1] |= T.SMASK;
+	  if (result.bvalMSB) result._bval[$-1] |= T.SMASK;
 	  else                  result._bval[$-1] &= T.UMASK;
 	}
       }
@@ -642,11 +642,11 @@ struct _bvec(bool S, bool L, string VAL, size_t RADIX) {
 	}
 	for (size_t i=STORESIZE; i != T.STORESIZE; ++i) {
 	  // if RHS is signed, extend its sign
-	  if (this.aValMSB) result._aval[i] = -1;
+	  if (this.avalMSB) result._aval[i] = -1;
 	  else                 result._aval[i] = 0;
 	  static if (_L) {
 	    static if (L) {
-	      if (this.bValMSB) result._bval[i] = -1;
+	      if (this.bvalMSB) result._bval[i] = -1;
 	      else                 result._bval[i] = 0;
 	    }
 	    else {
@@ -655,7 +655,7 @@ struct _bvec(bool S, bool L, string VAL, size_t RADIX) {
 	  }
 	  else {
 	    static if (L) // X/Z reduce to 0
-	      if (this.bValMSB) result._aval[i] = 0;
+	      if (this.bvalMSB) result._aval[i] = 0;
 	  }
 	}
 	static if (!_S) {	// If result is not signed
@@ -888,18 +888,18 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       (cast(ubyte*) _aval.ptr)[0..STORESIZE*store_t.sizeof][index] = val;
     }
 
-    public const (store_t)[] aVal() {
+    public const (store_t)[] aval() {
       return _aval;
     }
 
-    public const (ubyte)[] aValBytes() { // assume little-endian
+    public const (ubyte)[] avalBytes() { // assume little-endian
       ubyte* _bytes;
       _bytes = (cast(ubyte*) _aval.ptr) + BYTEOFFSET;
       return _bytes[0..BYTENUM];
     }
 
     static if (L) {
-      public const (store_t)[] bVal() {
+      public const (store_t)[] bval() {
 	return _bval;
       }
       public const (ubyte)[] bvalBytes() { // assume little-endian
@@ -953,7 +953,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       }
       // if MSB word
       if(word == (SIZE-1)/(T.sizeof*8)) {
-	if(aValMSB) this._aval[$-1] |= SMASK;
+	if(avalMSB) this._aval[$-1] |= SMASK;
 	else           this._aval[$-1] &= UMASK;
       }
     }
@@ -1210,10 +1210,10 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	this._aval[i] = uniform!store_t();
 	static if(L) this._bval[i] = 0;
       }
-      if(aValMSB) this._aval[$-1] |= SMASK;
+      if(avalMSB) this._aval[$-1] |= SMASK;
       else           this._aval[$-1] &= UMASK;
       static if(L) {
-	if(bValMSB) this._bval[$-1] |= SMASK;
+	if(bvalMSB) this._bval[$-1] |= SMASK;
 	else           this._bval[$-1] &= UMASK;
       }
     }
@@ -1224,15 +1224,15 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	this._aval[i] = uniform!store_t(urng);
 	static if(L) this._bval[i] = 0;
       }
-      if(aValMSB) this._aval[$-1] |= SMASK;
+      if(avalMSB) this._aval[$-1] |= SMASK;
       else           this._aval[$-1] &= UMASK;
       static if(L) {
-	if(bValMSB) this._bval[$-1] |= SMASK;
+	if(bvalMSB) this._bval[$-1] |= SMASK;
 	else           this._bval[$-1] &= UMASK;
       }
     }
 
-    public bool aValMSB() const {
+    public bool avalMSB() const {
       static if(S) {
 	if((this._aval[$-1] &
 	    (cast(store_t) 1) << ((SIZE-1) % WORDSIZE)))
@@ -1245,7 +1245,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
     }
 
     static if(L) {
-      public bool bValMSB() const {
+      public bool bvalMSB() const {
 	static if(S) {
 	  if((this._bval[$-1] &
 	      (cast(store_t) 1) << ((SIZE-1) % WORDSIZE)))
@@ -1271,10 +1271,10 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	    _aval[j] |=(cast(Unsigned!store_t) c) << k*8;
 	  }
 	}
-	if(aValMSB) this._aval[$-1] |= SMASK;
+	if(avalMSB) this._aval[$-1] |= SMASK;
 	else           this._aval[$-1] &= UMASK;
 	static if(L) {
-	  if(bValMSB) this._bval[$-1] |= SMASK;
+	  if(bvalMSB) this._bval[$-1] |= SMASK;
 	  else           this._bval[$-1] &= UMASK;
 	}
       }
@@ -1371,11 +1371,11 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	}
 	for(size_t i=V.STORESIZE; i != STORESIZE; ++i) {
 	  // if RHS is signed, extend its sign
-	  if(other.aValMSB && ISSIGNED) this._aval[i] = cast(store_t) -1;
+	  if(other.avalMSB && ISSIGNED) this._aval[i] = cast(store_t) -1;
 	  else                  this._aval[i] = 0;
 	  static if(L) {
 	    static if(_L) {
-	      if(other.bValMSB && ISSIGNED) this._bval[i] = cast(store_t) -1;
+	      if(other.bvalMSB && ISSIGNED) this._bval[i] = cast(store_t) -1;
 	      else                  this._bval[i] = 0;
 	    }
 	    else {
@@ -1383,10 +1383,10 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	    }
 	  }
 	}
-	if(aValMSB && ISSIGNED) this._aval[$-1] |= SMASK;
+	if(avalMSB && ISSIGNED) this._aval[$-1] |= SMASK;
 	else           this._aval[$-1] &= UMASK;
 	static if(L) {
-	  if(bValMSB && ISSIGNED) this._bval[$-1] |= SMASK;
+	  if(bvalMSB && ISSIGNED) this._bval[$-1] |= SMASK;
 	  else           this._bval[$-1] &= UMASK;
 	}
       }
@@ -1407,11 +1407,11 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	}
 	for(size_t i=V.STORESIZE; i != STORESIZE; ++i) {
 	  // if RHS is signed, extend its sign
-	  if(other.aValMSB && ISSIGNED) this._aval[i] = cast(store_t) -1;
+	  if(other.avalMSB && ISSIGNED) this._aval[i] = cast(store_t) -1;
 	  else                  this._aval[i] = 0;
 	  static if(L) {
 	    static if(_L) {
-	      if(other.bValMSB && ISSIGNED) this._bval[i] = cast(store_t) -1;
+	      if(other.bvalMSB && ISSIGNED) this._bval[i] = cast(store_t) -1;
 	      else                  this._bval[i] = 0;
 	    }
 	    else {
@@ -1419,10 +1419,10 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	    }
 	  }
 	}
-	if(aValMSB && ISSIGNED) this._aval[$-1] |= SMASK;
+	if(avalMSB && ISSIGNED) this._aval[$-1] |= SMASK;
 	else           this._aval[$-1] &= UMASK;
 	static if(L) {
-	  if(bValMSB && ISSIGNED) this._bval[$-1] |= SMASK;
+	  if(bvalMSB && ISSIGNED) this._bval[$-1] |= SMASK;
 	  else           this._bval[$-1] &= UMASK;
 	}
       }
@@ -1572,6 +1572,18 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       else {
 	return toCharString!(V, RADIX);
       }
+    }
+
+    const V to(V)(V v) if(isIntegral!V) {
+      static if (isSigned!V) {
+	alias R = BitVec!(8*V.sizeof);
+      }
+      else {
+	alias R = UBitVec!(8*V.sizeof);
+      }
+      R tmp = v;
+      B res = cast(B) tmp;
+      return res;
     }
 
     const string toString()() {
@@ -1768,18 +1780,18 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       static if (STORESIZE == 1) {
 	static if (other.IS4STATE) {
 	  static if (L) {
-	    if (other.aVal[0]) this._aval[0] |= (1L << i);
+	    if (other.aval[0]) this._aval[0] |= (1L << i);
 	    else this._aval[0] &= ~(1L << i);
-	    if (other.bVal[0]) this._bval[0] |= (1L << i);
+	    if (other.bval[0]) this._bval[0] |= (1L << i);
 	    else this._bval[0] &= ~(1L << i);
 	  }
 	  else {
-	    if (other.aVal[0] && !(other.bVal[0])) this._aval[0] |= (1L << i);
+	    if (other.aval[0] && !(other.bval[0])) this._aval[0] |= (1L << i);
 	    else this._aval[0] &= ~(1L << i);
 	  }
 	}
 	else {
-	  if (other.aVal[0])
+	  if (other.aval[0])
 	    this._aval[0] |= (1L << i);
 	  else this._aval[0] &= ~(1L << i);
 	  static if (L) {
@@ -1792,18 +1804,18 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	auto j_ = i / WORDSIZE;
 	static if(other.IS4STATE) {
 	  static if(L) {
-	    if (other.aVal[0]) this._aval[j_] |= (1L << i_);
+	    if (other.aval[0]) this._aval[j_] |= (1L << i_);
 	    else this._aval[j_] &= ~(1L << i_);
-	    if (other.bVal[0]) this._bval[j_] |= (1L << i_);
+	    if (other.bval[0]) this._bval[j_] |= (1L << i_);
 	    else this._bval[j_] &= ~(1L << i_);
 	  }
 	  else {
-	    if (other.aVal[0] && !(other.bVal[0])) this._aval[j_] |= (1L << i_);
+	    if (other.aval[0] && !(other.bval[0])) this._aval[j_] |= (1L << i_);
 	    else this._aval[j_] &= ~(1L << i_);
 	  }
 	}
 	else {
-	  if (other.aVal[0])
+	  if (other.aval[0])
 	    this._aval[j_] |= (1L << i_);
 	  else this._aval[j_] &= ~(1L << i_);
 	  static if(L) {
@@ -1814,18 +1826,18 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
       // else {
       // 	static if(other.IS4STATE) {
       // 	  static if(L) {
-      // 	    if(other.aVal) bts((cast(size_t*) _aval.ptr), i);
+      // 	    if(other.aval) bts((cast(size_t*) _aval.ptr), i);
       // 	    else btr((cast(size_t*) _aval.ptr), i);
-      // 	    if(other.bVal) bts((cast(size_t*) _bval.ptr), i);
+      // 	    if(other.bval) bts((cast(size_t*) _bval.ptr), i);
       // 	    else btr((cast(size_t*) _bval.ptr), i);
       // 	  }
       // 	  else {
-      // 	    if(other.aVal && !(other.bVal)) bts((cast(size_t*) _aval.ptr), i);
+      // 	    if(other.aval && !(other.bval)) bts((cast(size_t*) _aval.ptr), i);
       // 	    else btr((cast(size_t*) _aval.ptr), i);
       // 	  }
       // 	}
       // 	else {
-      // 	  if(other.aVal) bts((cast(size_t*) _aval.ptr), i);
+      // 	  if(other.aval) bts((cast(size_t*) _aval.ptr), i);
       // 	  else btr((cast(size_t*) _aval.ptr), i);
       // 	  static if(L) {
       // 	    btr((cast(size_t*) _bval.ptr), i);
@@ -1974,10 +1986,10 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	      }
 	    }
 	  }
-	  if(this.aValMSB) this._aval[$-1] |= SMASK;
+	  if(this.avalMSB) this._aval[$-1] |= SMASK;
 	  else                this._aval[$-1] &= UMASK;
 	  static if(L) {
-	    if(this.bValMSB) this._bval[$-1] |= SMASK;
+	    if(this.bvalMSB) this._bval[$-1] |= SMASK;
 	    else                this._bval[$-1] &= UMASK;
 	  }
 	}
@@ -1994,10 +2006,10 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	  static if(L) {
 	    this._bval[i] &= ~ (rhs._aval[i]);
 	  }
-	  if(this.aValMSB) this._aval[$-1] |= SMASK;
+	  if(this.avalMSB) this._aval[$-1] |= SMASK;
 	  else                this._aval[$-1] &= UMASK;
 	  static if(L) {
-	    if(this.bValMSB) this._bval[$-1] |= SMASK;
+	    if(this.bvalMSB) this._bval[$-1] |= SMASK;
 	    else                this._bval[$-1] &= UMASK;
 	  }
 	}
@@ -2013,10 +2025,10 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	  static if(V.IS4STATE && IS4STATE) {
 	    this._bval[i] |= rhs._bval[i];
 	  }
-	  if(this.aValMSB) this._aval[$-1] |= SMASK;
+	  if(this.avalMSB) this._aval[$-1] |= SMASK;
 	  else                this._aval[$-1] &= UMASK;
 	  static if(L) {
-	    if(this.bValMSB) this._bval[$-1] |= SMASK;
+	    if(this.bvalMSB) this._bval[$-1] |= SMASK;
 	    else                this._bval[$-1] &= UMASK;
 	  }
 	}
@@ -2071,41 +2083,42 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
     public V opCast(V)() const if (isIntegral!V ||
 				   isBoolean!V ||
 				   isSomeChar!V) {
-      union U {
-	V _value;
-	store_t[STORESIZE] _val;
-      }
-      U u;
+      V _value;
+      store_t[STORESIZE] _val;
+
       for (uint i=0; i != STORESIZE; ++i) {
 	static if (L) {
-	  u._val[i] = cast(store_t)(this._aval[i] & ~this._bval[i]);
+	  _val[i] = cast(store_t)(this._aval[i] & ~this._bval[i]);
 	}
 	else {
-	  u._val[i] = this._aval[i];
+	  _val[i] = this._aval[i];
 	}
       }
+
+      _value = *(cast(V*) cast(void*) &_val);
+
       static if ((! isBoolean!V) && V.sizeof * 8 > SIZE) {
 	static if (isSigned!V) {
 	  if (this._aval[STORESIZE-1] < 0) {
 	    V mask = cast (V) -1;
 	    mask <<= SIZE;
-	    u._value |= mask;
+	    _value |= mask;
 	  }
 	  else {
 	    V mask = cast(V) 1;
 	    mask <<= SIZE;
 	    mask -= 1;
-	    u._value &= mask;
+	    _value &= mask;
 	  }
 	}
 	else {
 	  V mask = cast(V) 1;
 	  mask <<= SIZE;
 	  mask -= 1;
-	  u._value &= mask;
+	  _value &= mask;
 	}
       }
-      return u._value;
+      return _value;
     }
 
     public V opCast(V)()
@@ -2180,10 +2193,10 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	    }
 	  }
 	  // sign extension
-	  if(result.aValMSB) result._aval[$-1] |= V.SMASK;
+	  if(result.avalMSB) result._aval[$-1] |= V.SMASK;
 	  else                  result._aval[$-1] &= V.UMASK;
 	  static if(_L) {
-	    if(result.bValMSB) result._bval[$-1] |= V.SMASK;
+	    if(result.bvalMSB) result._bval[$-1] |= V.SMASK;
 	    else                  result._bval[$-1] &= V.UMASK;
 	  }
 	}
@@ -2203,11 +2216,11 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	  }
 	  for(size_t i=STORESIZE; i != V.STORESIZE; ++i) {
 	    // if RHS is signed, extend its sign
-	    if(this.aValMSB) result._aval[i] = -1;
+	    if(this.avalMSB) result._aval[i] = -1;
 	    else                 result._aval[i] = 0;
 	    static if(_L) {
 	      static if(L) {
-		if(this.bValMSB) result._bval[i] = -1;
+		if(this.bvalMSB) result._bval[i] = -1;
 		else                 result._bval[i] = 0;
 	      }
 	      else {
@@ -2216,7 +2229,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	    }
 	    else {
 	      static if(L)		// X/Z reduce to 0
-		if(this.bValMSB) result._aval[i] = 0;
+		if(this.bvalMSB) result._aval[i] = 0;
 	    }
 	  }
 	  static if(!_S) {		// If result is not signed
@@ -2609,7 +2622,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	      carry = _r >> WORDSIZE;
 	    }
 	  }
-	  if(this.aValMSB) {
+	  if(this.avalMSB) {
 	    _aval[$-1] |= SMASK;
 	  }
 	  else {
@@ -2630,7 +2643,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	return this;
       }
 
-    public auto opUnary(string op)() const
+    public typeof(this) opUnary(string op)() 
       if(op == "-") {
 	typeof(this) result = 0;
 	result -= this;
@@ -2688,8 +2701,8 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	  uint[] a = cast(uint[]) this._aval;
 	  uint[] b = cast(uint[]) other._aval;
 
-	  bool aNegative = this.aValMSB();
-	  bool bNegative = other.aValMSB();
+	  bool aNegative = this.avalMSB();
+	  bool bNegative = other.avalMSB();
 
 	  uint _a = void;
 	  uint _b = void;
@@ -2728,7 +2741,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	  }
 	}
 	result._aval[$-1] &= result.UMASK;
-	if (result.aValMSB) result._aval[$-1] |= result.SMASK;
+	if (result.avalMSB) result._aval[$-1] |= result.SMASK;
 	return result;
       }
 
@@ -2749,7 +2762,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	  uint[] r = cast(uint[]) result._aval;
 	  divModInternal(r, null, a, b);
 	}
-	if (result.aValMSB) result._aval[$-1] |= result.SMASK;
+	if (result.avalMSB) result._aval[$-1] |= result.SMASK;
 	return result;
       }
     
@@ -2771,7 +2784,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	  uint[] temp = [];
 	  divModInternal(temp, r, a, b);
 	}
-	if (result.aValMSB) result._aval[$-1] |= result.SMASK;
+	if (result.avalMSB) result._aval[$-1] |= result.SMASK;
 	return result;
       }
 
@@ -2805,10 +2818,10 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	  }
 	}
 	// UMASK out the unused bits
-	if(this.aValMSB) _aval[$-1] |= SMASK;
+	if(this.avalMSB) _aval[$-1] |= SMASK;
 	else		     _aval[$-1] &= UMASK;
 	static if(L) {
-	  if(this.bValMSB) _bval[$-1] |= SMASK;
+	  if(this.bvalMSB) _bval[$-1] |= SMASK;
 	  else		     _bval[$-1] &= UMASK;
 	}
       }
@@ -2824,7 +2837,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	    if(i+wordShift < STORESIZE) _aval[i] = _aval[i+wordShift];
 	    else {
 	      static if(op == ">>") {
-		if(this.aValMSB) _aval[i] = cast(store_t) -1;
+		if(this.avalMSB) _aval[i] = cast(store_t) -1;
 		else             _aval[i] = 0;
 	      }
 	      static if(op == ">>>") {
@@ -2835,7 +2848,7 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	      if(i+wordShift < STORESIZE) _bval[i] = _bval[i+wordShift];
 	      else {
 		static if(op == ">>") {
-		  if(this.bValMSB) _bval[i] = ~0;
+		  if(this.bvalMSB) _bval[i] = ~0;
 		  else                 _bval[i] = 0;
 		}
 		static if(op == ">>>") {
@@ -2858,12 +2871,12 @@ struct _bvec(bool S, bool L, N...) if(CheckVecParams!N)
 	    else {
 	      static if(op == ">>") _aval[i] >>= bitShift;
 	      static if(op == ">>>") _aval[i] >>>= bitShift;
-	      if(this.aValMSB) _aval[$-1] |= SMASK;
+	      if(this.avalMSB) _aval[$-1] |= SMASK;
 	      else                 _aval[$-1] &= UMASK;
 	      static if(L) {
 		static if(op == ">>") _bval[i] >>= bitShift;
 		static if(op == ">>>") _bval[i] >>>= bitShift;
-		if(this.bValMSB) _bval[$-1] |= SMASK;
+		if(this.bvalMSB) _bval[$-1] |= SMASK;
 		else                 _bval[$-1] &= UMASK;
 	      }
 	    }
@@ -3230,7 +3243,7 @@ public auto toBits(T)(T val) {
 public void fromBits(T, B)(ref T val, B bv)
   if(isBitVector!B && 8*T.sizeof == B.SIZE) {
     static if(B.IS4STATE) {
-      assert(bv.bVal == 0);
+      assert(bv.bval == 0);
     }
     // static if(T.sizeof >= 8) {
     //   enum WSIZE = (T.sizeof+7)/8;
