@@ -7,7 +7,7 @@ import std.traits: isIntegral, isBoolean, isArray, KeyType,
   isStaticArray, isDynamicArray, isAssociativeArray;
 
 import esdl.rand.misc;
-import esdl.rand.base: CstValue, CstVecTerm, CstIterator,
+import esdl.rand.base: CstVecTerm, CstIterator,
   CstDomBase, CstDomSet, CstVarNodeIntf, CstVecNodeIntf,
   CstObjArrIntf, CstVarGlobIntf, CstObjectVoid, CstObjArrVoid,
   CstDepIntf, CstObjectIntf, CstObjSetIntf, CstObjSet, CstObjStub;
@@ -1612,7 +1612,7 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	return _parentsDepsAreResolved && _nodeIsMapped;
       }
 
-      final override RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
+      final RV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
 	if (_resolvedCycle != proc._cycle) {
 	  auto parent = _parent._esdl__getResolvedNode(proc);
 	  if (_indexExpr) {

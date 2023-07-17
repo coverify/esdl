@@ -822,7 +822,7 @@ class CstArrLength(RV): CstVecDomain!(uint, RV.RAND), CstVecTerm, CstVecPrim
   //   _parent.setLen(cast(size_t) v);
   // }
 
-  CstVecTerm _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
+  override CstArrLength!RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     return _parent._esdl__unroll(iter, n, proc).arrLen();
   }
 
@@ -1089,13 +1089,13 @@ class CstArrHierLength(RV): CstVecDomain!(uint, rand(false, false)), CstVecTerm,
   //   _parent.setLen(cast(size_t) v);
   // }
 
-  CstVecTerm _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
-    return _parent._esdl__unroll(iter, n, proc).arrLen();
+  override CstArrHierLength!RV _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
+    return _parent._esdl__unroll(iter, n, proc).arrHierLen();
   }
 
   override AV _esdl__getResolvedNode(_esdl__CstProcessor proc) {
     if (_parent._esdl__depsAreResolved()) return this;
-    else return _parent._esdl__getResolvedNode(proc).arrHierLen;
+    else return _parent._esdl__getResolvedNode(proc).arrHierLen();
   }
 
   override bool _esdl__depsAreResolved() {
@@ -1219,6 +1219,10 @@ class CstLogicValue: CstValue, CstLogicTerm
     return _val;
   }
 
+  final bool isConst() { return true; }
+
+  final bool isIterator() { return false; }
+
   string describe(bool descExpr=false) {
     import std.conv: to;
     return _val.to!string();
@@ -1237,7 +1241,7 @@ class CstLogicValue: CstValue, CstLogicTerm
   }
 
   void setDomainContext(CstPredicate pred, DomainContextEnum context) {
-    pred.addVal(this, context);
+    // pred.addVal(this, context);
   }
 
   void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) { }
@@ -1265,9 +1269,11 @@ class CstLogicValue: CstValue, CstLogicTerm
   override CstDistSolverBase getDist() { assert(false); }
   override bool isCompatWithDist(CstDomBase A) { assert(false); }
   override void visit(CstDistSolverBase solver, _esdl__CstProcessor proc) { assert(false); }
-  override CstLogicValue _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) { return this; }
+  CstLogicValue _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) { return this; }
   override void setDistPredContext(CstPredicate pred) { }
   override CstDomBase getDomain() { return null; }
+  override void _esdl__scan(_esdl__CstProcessor proc) { }
+
 }
 
 class CstVecValue(T): CstVecValueBase
@@ -1373,7 +1379,7 @@ class CstVecValue(T): CstVecValueBase
   }
 
   void setDomainContext(CstPredicate pred, DomainContextEnum context) {
-    pred.addVal(this, context);
+    // pred.addVal(this, context);
   }
 
   void annotate(CstSolverAgent agent, _esdl__CstProcessor proc) { }

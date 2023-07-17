@@ -29,9 +29,6 @@ interface CstVarNodeIntf {
   bool _esdl__isStatic();
   bool _esdl__isRolled(_esdl__CstProcessor proc);
   bool _esdl__depsAreResolved();
-  CstVarNodeIntf _esdl__getResolvedNode(_esdl__CstProcessor proc);
-  CstVarNodeIntf _esdl__unroll(CstIterator iter, ulong n,
-			       _esdl__CstProcessor proc);
   
   // used for solve a before b
   void _esdl__setOrder(SolveOrder order);
@@ -694,6 +691,11 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
   abstract string describe(bool descExpr=false);
 
   void _esdl__scan(_esdl__CstProcessor proc) { }
+  override CstDomBase _esdl__unroll(CstIterator iters, ulong n,
+				    _esdl__CstProcessor proc) {
+    return this;
+  }
+  
   CstDomBase getDomain() { return this; }
 
   final void visit(CstSolver solver, _esdl__CstProcessor proc) {
@@ -702,33 +704,26 @@ abstract class CstDomBase: CstVecVoid, CstTerm, CstVectorIntf
 
 }
 
-abstract class CstValue: CstTerm
+interface CstValue
 {
-  bool isConst() { return true; }
-
-  bool isIterator() { return false; }
-
-
-  CstValue _esdl__unroll(CstIterator iters, ulong n,
-			 _esdl__CstProcessor proc) {
-    return this;
-  }
-
-  abstract bool isBool();
-  abstract long value();
-  abstract bool getBool();
+  bool isBool();
+  long value();
+  bool getBool();
   // abstract bool signed();
   // abstract uint bitcount();
-  
-  void _esdl__scan(_esdl__CstProcessor proc) { }
-
+  void _esdl__scan(_esdl__CstProcessor proc);
 }
 
-abstract class CstVecValueBase: CstValue, CstVecTerm {
+abstract class CstVecValueBase: CstVecTerm, CstValue {
   final override bool isConst() { return true; }
   final override bool isIterator() { return false; }
   final override CstDomBase getDomain() { return null; }
   final override bool isDistVar() { return false; }
+  CstVecValueBase _esdl__unroll(CstIterator iters, ulong n,
+				_esdl__CstProcessor proc) {
+    return this;
+  }
+  final override void _esdl__scan(_esdl__CstProcessor proc) { }
 }
 
 
@@ -1462,22 +1457,18 @@ interface CstLogicTerm: CstTerm
   
   CstLogicTerm opUnary(string op)() if(op == "*")
     {
-      static if(op == "*") {	// "!" in parser is translated as "*"
-	CstInsideArrExpr expr = cast(CstInsideArrExpr) this;
-	if (expr !is null) {
-	  CstInsideArrExpr notExpr =  expr.dup();
-	  notExpr.negate();
-	  return notExpr;
-	}
-	else return new CstNotLogicExpr(this);
+      CstInsideArrExpr expr = cast(CstInsideArrExpr) this;
+      if (expr !is null) {
+	CstInsideArrExpr notExpr =  expr.dup();
+	notExpr.negate();
+	return notExpr;
       }
+      else return new CstNotLogicExpr(this);
     }
 
   CstLogicTerm opUnary(string op)() if(op == "~")
     {
-      static if(op == "~") {	// "!" in parser is translated as "*"
-	return new CstNotLogicExpr(this);
-      }
+      return new CstNotLogicExpr(this);
     }
 
   final CstLogicTerm implies(CstLogicTerm other)

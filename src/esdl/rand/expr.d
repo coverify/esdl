@@ -10,7 +10,7 @@ import esdl.rand.misc: rand, isVecSigned, Unconst, CstVecType,
 // import esdl.base.alloc: make;
 import esdl.rand.base: DomDistEnum, CstTerm, CstDomBase, CstDomSet,
   CstIterator, CstVecNodeIntf, CstVarNodeIntf, CstVecArrIntf,
-  CstVecPrim, CstValue, CstVecTerm, CstLogicTerm, CstDepIntf;
+  CstVecPrim, CstVecTerm, CstLogicTerm, CstDepIntf;
 import esdl.rand.pred: CstPredicate, Hash;
 import esdl.rand.agent: CstSolverAgent;
 
@@ -1272,7 +1272,7 @@ class CstLogicDistExpr(T): CstLogicExpr
     foreach (dist; _dists) {
       dists ~= dist._esdl__unroll(iter, n, proc);
     }
-    return new CstLogicDistExpr!T(cast (CstDomBase) (_vec._esdl__unroll(iter, n, proc)), dists);
+    return new CstLogicDistExpr!T(_vec._esdl__unroll(iter, n, proc), dists);
   }
 
   override void setDistPredContext(CstPredicate pred) {
@@ -1413,7 +1413,7 @@ class CstVecDistExpr(T): CstLogicExpr
     foreach (dist; _dists) {
       dists ~= dist._esdl__unroll(iter, n, proc);
     }
-    return new CstVecDistExpr!T(cast (CstDomBase) (_vec._esdl__unroll(iter, n, proc)), dists);
+    return new CstVecDistExpr!T(_vec._esdl__unroll(iter, n, proc), dists);
   }
 
   override void setDistPredContext(CstPredicate pred) {
@@ -2203,7 +2203,7 @@ class CstInsideArrExpr: CstLogicExpr
   }
 
   bool isCompatWithDist(CstDomBase dom) {
-    CstTerm term = cast(CstTerm) _term;
+    CstTerm term = _term;
     if (_notinside && term == dom) return true;
     else return false;
   }

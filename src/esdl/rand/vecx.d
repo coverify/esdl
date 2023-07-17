@@ -9,7 +9,7 @@ import std.traits: isIntegral, isBoolean, isArray, KeyType,
 
 import esdl.rand.misc;
 import esdl.rand.base: CstVecPrim, CstVecTerm, CstIterator, CstDomBase,
-  CstDomSet, CstVarNodeIntf, CstVecNodeIntf, CstVarGlobIntf, CstValue,
+  CstDomSet, CstVarNodeIntf, CstVecNodeIntf, CstVarGlobIntf,
   CstLogicTerm, CstDepIntf;
 import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy, _esdl__CstProcessor;
@@ -305,8 +305,8 @@ abstract class CstVector(V, rand RAND_ATTR, int N) if (N == 0):
       }
 
       // RV
-      RV _esdl__unroll(CstIterator iter, ulong n,
-		       _esdl__CstProcessor proc) {
+      override RV _esdl__unroll(CstIterator iter, ulong n,
+				_esdl__CstProcessor proc) {
 	return this;
       }
 
