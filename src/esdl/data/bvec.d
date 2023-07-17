@@ -388,7 +388,7 @@ private template VecParams(size_t SIZE, bool S=true) {
   private enum size_t MSNUMBYTES = NUMBYTES % StoreT.sizeof;
 
   static if (MSNUMBYTES == 0) private enum size_t MSBYTEOFFSET = 0;
-  else size_t MSBYTEOFFSET = StoreT.sizeof - MSNUMBYTES;
+  else private enum size_t MSBYTEOFFSET = StoreT.sizeof - MSNUMBYTES;
 
   static if(MSWSIZE == WORDSIZE)	// All ones
     // Shift by WORDSIZE is erroneous -- D gives compile time error
