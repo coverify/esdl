@@ -857,71 +857,6 @@ alias randomization = Randomization;
 
 mixin template Randomization()
 {
-  struct _esdl__RandInfo
-  {
-    import core.memory: pureMalloc, pureFree;
-    import esdl.data.bvec: ubvec;
-
-    alias malloc = pureMalloc;
-    alias free = pureFree;
-
-    enum uint PTRSIZE = cast(uint) size_t.sizeof * 8;
-
-    bool malloced = false;
-    union {
-      ubvec!PTRSIZE _bvecRandModes;
-      size_t* _ptrRandModes;
-    }
-
-    bool randMode(int PINDX, uint RANDNUM)() {
-      static if (RANDNUM <= PTRSIZE) {
-	if (! _bvecRandModes[PINDX]) return true;
-	else return false;
-      }
-      else {
-	import core.bitop: bt;
-	if (_ptrRandModes is null) return true;
-	else {
-	  if (bt(_ptrRandModes, PINDX)) return false;
-	  else return true;
-	}
-      }
-    }
-      
-    void randMode(int PINDX, uint RANDNUM)(bool mode) {
-      static if (RANDNUM <= PTRSIZE) {
-	if (mode is true) _bvecRandModes[PINDX] = false;
-	else _bvecRandModes[PINDX] = true;
-      }
-      else {
-	import core.bitop: btr, bts;
-	import core.stdc.string : memset;
-	if (_ptrRandModes is null) {
-	  enum size_t nbytes = PTRSIZE/8 * ((RANDNUM/PTRSIZE)+1);
-	  _ptrRandModes = cast (size_t*) malloc(nbytes);
-	  memset(_ptrRandModes, 0, nbytes);
-	  malloced = true;
-	}
-	if (mode is true) btr(_ptrRandModes, PINDX);
-	else bts(_ptrRandModes, PINDX);
-      }
-    }
-
-    ~this() {
-      if (malloced && _ptrRandModes !is null) free(_ptrRandModes);
-    }
-      
-    // bool[] _randModes;
-
-
-    _esdl__RandGen _randGen;
-
-    // This instance would be populated only to avoid
-    // proxy duplication -- in cases where proxy objects
-    // are instanciated inside other proxy objects
-    // CstRootProxy!T _esdl__proxyRootInst;
-  }
-
   import esdl.base.rand: _esdl__RandGen, getRandGen;
   enum bool _esdl__HasRandomizationMixin = true;
   // While making _esdl__ProxyRand class non-static nested class
@@ -945,13 +880,13 @@ mixin template Randomization()
       }
       void start() {
 	foreach (ref elem; this.tupleof) {
-	  static if (is (typeof(elem): _esdl__CoverPointIf))
+	  static if (is (typeof(elem): _esdl__BaseCoverPoint))
 	    elem.start();
 	}
       }
       void stop() {
 	foreach (ref elem; this.tupleof) {
-	  static if (is (typeof(elem): _esdl__CoverPointIf))
+	  static if (is (typeof(elem): _esdl__BaseCoverPoint))
 	    elem.stop();
 	}
       }
@@ -2013,6 +1948,72 @@ template _esdl__ListRandMixin(int N, alias A) {
       "@rand typeof(AA[" ~ N.stringof ~ "]) *" ~ var ~ ";\n";
   }
 }
+
+static struct _esdl__RandInfo
+{
+  import core.memory: pureMalloc, pureFree;
+  import esdl.data.bvec: ubvec;
+
+  alias malloc = pureMalloc;
+  alias free = pureFree;
+
+  enum uint PTRSIZE = cast(uint) size_t.sizeof * 8;
+
+  bool malloced = false;
+  union {
+    ubvec!PTRSIZE _bvecRandModes;
+    size_t* _ptrRandModes;
+  }
+
+  bool randMode(int PINDX, uint RANDNUM)() {
+    static if (RANDNUM <= PTRSIZE) {
+      if (! _bvecRandModes[PINDX]) return true;
+      else return false;
+    }
+    else {
+      import core.bitop: bt;
+      if (_ptrRandModes is null) return true;
+      else {
+	if (bt(_ptrRandModes, PINDX)) return false;
+	else return true;
+      }
+    }
+  }
+      
+  void randMode(int PINDX, uint RANDNUM)(bool mode) {
+    static if (RANDNUM <= PTRSIZE) {
+      if (mode is true) _bvecRandModes[PINDX] = false;
+      else _bvecRandModes[PINDX] = true;
+    }
+    else {
+      import core.bitop: btr, bts;
+      import core.stdc.string : memset;
+      if (_ptrRandModes is null) {
+	enum size_t nbytes = PTRSIZE/8 * ((RANDNUM/PTRSIZE)+1);
+	_ptrRandModes = cast (size_t*) malloc(nbytes);
+	memset(_ptrRandModes, 0, nbytes);
+	malloced = true;
+      }
+      if (mode is true) btr(_ptrRandModes, PINDX);
+      else bts(_ptrRandModes, PINDX);
+    }
+  }
+
+  ~this() {
+    if (malloced && _ptrRandModes !is null) free(_ptrRandModes);
+  }
+      
+  // bool[] _randModes;
+
+
+  _esdl__RandGen _randGen;
+
+  // This instance would be populated only to avoid
+  // proxy duplication -- in cases where proxy objects
+  // are instanciated inside other proxy objects
+  // CstRootProxy!T _esdl__proxyRootInst;
+}
+
 
 // mixin template _esdl__ListRandMixin(alias A)
 // {
