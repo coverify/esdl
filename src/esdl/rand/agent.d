@@ -13,7 +13,7 @@ import esdl.rand.pred: CstPredicate, Hash;
 import esdl.rand.base: CstDomBase, CstDomSet, CstIterCallback,
   CstDepCallback, CstScope, CstIterator, CstVecNodeIntf,
   CstVecTerm, CstLogicTerm, CstDepIntf;
-import esdl.rand.base: CstValue, CstVarNodeIntf;
+import esdl.rand.base: CstVarNodeIntf;
 
 
 class CstSolverAgent			// agent of related predicates

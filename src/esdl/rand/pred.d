@@ -15,7 +15,7 @@ import esdl.rand.agent: CstSolverAgent;
 import esdl.rand.base: CstDomBase, CstDomSet, CstIterCallback,
   CstDepCallback, CstScope, CstIterator, CstVecNodeIntf,
   CstVecTerm, CstLogicTerm, CstDepIntf;
-import esdl.rand.base: CstValue, CstVarNodeIntf;
+import esdl.rand.base: CstVarNodeIntf;
 
 import esdl.solver.base;
 // import esdl.base.alloc: make;
@@ -585,11 +585,11 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
     if (! _dists[].canFind(dist)) _dists ~= dist;
   }
-  Vector!(CstValue, "vals")  _vals;
-  void addVal(CstValue val,
-	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
-    if (! _vals[].canFind(val)) _vals ~= val;
-  }
+  // Vector!(CstValue, "vals")  _vals;
+  // void addVal(CstValue val,
+  // 	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
+  //   if (! _vals[].canFind(val)) _vals ~= val;
+  // }
   Vector!(CstDepIntf, "deps") _deps;
   void addDep(CstDepIntf dep,
 	      DomainContextEnum context=DomainContextEnum.DEFAULT) {
@@ -649,9 +649,9 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
     return _unresolvedVarArrs[];
   }
 
-  final CstValue[] getVals() {
-    return _vals[];
-  }
+  // final CstValue[] getVals() {
+  //   return _vals[];
+  // }
 
   final CstDomBase[] getRnds() {
     return _resolvedRnds[];
@@ -988,12 +988,12 @@ class CstPredicate: CstIterCallback, CstDepCallback, CstDepIntf
 	description ~= "\t" ~ var._esdl__getFullName() ~ "\n";
       }
     }
-    if (_vals.length > 0) {
-      description ~= "    Values: \n";
-      foreach (val; _vals) {
-	description ~= "\t" ~ val.describe() ~ "\n";
-      }
-    }
+    // if (_vals.length > 0) {
+    //   description ~= "    Values: \n";
+    //   foreach (val; _vals) {
+    // 	description ~= "\t" ~ val.describe() ~ "\n";
+    //   }
+    // }
     if (_idxs.length > 0) {
       description ~= "    Indexes: \n";
       foreach (idx; _idxs) {
