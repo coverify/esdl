@@ -561,28 +561,28 @@ class CstObject(V, rand RAND_ATTR, int N) if (N != 0):
 	else return _parent._esdl__isDomainInRange() && _parent.inRangeIndex(_pindex);
       }
 
-      override bool opEquals(Object other) {
-	auto rhs = cast (RV) other;
-	if (rhs is null) return false;
-	else return (_parent == rhs._parent && _indexExpr == _indexExpr);
-      }
+      // override bool opEquals(Object other) {
+      // 	auto rhs = cast (RV) other;
+      // 	if (rhs is null) return false;
+      // 	else return (_parent == rhs._parent && _indexExpr == _indexExpr);
+      // }
       
       final bool _esdl__isStatic() {
-	return ((_indexExpr is null ||
-		 _indexExpr.isIterator ||
-		 _indexExpr.isConst) &&
-		_parent._esdl__isStatic());
+	return (_indexExpr is null ||
+		_indexExpr.isIterator ||
+		_indexExpr.isConst) &&
+	  _parent._esdl__isStatic();
       }
 
       final bool _esdl__isReal() {
-	return (_indexExpr is null &&
-		_parent._esdl__isReal());
+	return _indexExpr is null &&
+	  _parent._esdl__isReal();
       }
 
       final bool _esdl__isRolled(_esdl__CstProcessor proc) {
-	return ((_indexExpr !is null &&
-		 _indexExpr.isIterator) ||
-		_parent._esdl__isRolled(proc));
+	return (_indexExpr !is null &&
+		_indexExpr.isIterator) ||
+	  _parent._esdl__isRolled(proc);
       }
 
       final override string _esdl__getFullName() {
@@ -1030,13 +1030,27 @@ class CstObjArrProxy(V, rand RAND_ATTR, int N)
   // abstract
   final size_t mapIndex(ulong index) { return _stub.mapIndex(index); }
 
+  // virtual elements
+  EV[CstVecTerm] _exprElems;
+
+  // assoc array elements
+  static if (isAssociativeArray!V) {
+    EV[ulong] _assocElems;
+  }
+
   final EV opIndex(CstVecTerm indexExpr) {
     if (indexExpr.isConst()) {
       ulong index = indexExpr.evaluate();
       return this[index];
     }
     else {
-      return createElem(indexExpr, false);
+      EV* eptr = indexExpr in _exprElems;
+      if (eptr is null) {
+	EV elem = createElem(indexExpr, false);
+	_exprElems[indexExpr] = elem;
+	return elem;
+      }
+      else return *eptr;
     }
   }
 
@@ -1049,7 +1063,13 @@ class CstObjArrProxy(V, rand RAND_ATTR, int N)
     // import std.stdio;
     // writeln(this._esdl__getFullName());
     static if (isAssociativeArray!V) {
-      return createElem(cast(int) index, false);
+      EV* eptr = index in _assocElems;
+      if (eptr is null) {
+	EV elem = createElem(cast (uint) index, false);
+	_assocElems[index] = elem;
+	return elem;
+      }
+      else return *eptr;
     }
     else {
       if (index > uint.max/2) { // negative index
@@ -1560,11 +1580,11 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
 	else return _parent._esdl__isDomainInRange() && _parent.inRangeIndex(_pindex);
       }
 
-      final override bool opEquals(Object other) {
-	auto rhs = cast (RV) other;
-	if (rhs is null) return false;
-	else return (_parent == rhs._parent && _indexExpr == _indexExpr);
-      }
+      // final override bool opEquals(Object other) {
+      // 	auto rhs = cast (RV) other;
+      // 	if (rhs is null) return false;
+      // 	else return (_parent == rhs._parent && _indexExpr == _indexExpr);
+      // }
       
       final bool _esdl__isRolled(_esdl__CstProcessor proc) {
 	return (_indexExpr !is null &&
@@ -1573,15 +1593,15 @@ class CstObjArr(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       final bool _esdl__isStatic() {
-	return ((_indexExpr is null  ||
-		 _indexExpr.isIterator ||
-		 _indexExpr.isConst) &&
-		_parent._esdl__isStatic());
+	return (_indexExpr is null  ||
+		_indexExpr.isIterator ||
+		_indexExpr.isConst) &&
+	  _parent._esdl__isStatic();
       }
 
       final bool _esdl__isReal() {
-	return (_indexExpr is null &&
-		_parent._esdl__isReal());
+	return _indexExpr is null &&
+	  _parent._esdl__isReal();
       }
 
       final string _esdl__getFullName() {

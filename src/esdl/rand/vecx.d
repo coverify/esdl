@@ -409,32 +409,32 @@ class CstVector(V, rand RAND_ATTR, int N) if (N != 0):
 	}
       }
 
-      override bool opEquals(Object other) {
-	auto rhs = cast (RV) other;
-	if (rhs is null) return false;
-	else {
-	  if (_indexExpr is null) {
-	    if (rhs._indexExpr !is null) return false;
-	    else return (_parent == rhs._parent && _pindex == rhs._pindex);
-	  }
-	  else {
-	    if (rhs._indexExpr is null) return false;
-	    else return (_parent == rhs._parent && _indexExpr == rhs._indexExpr);
-	  }
-	}
-      }
+      // override bool opEquals(Object other) {
+      // 	auto rhs = cast (RV) other;
+      // 	if (rhs is null) return false;
+      // 	else {
+      // 	  if (_indexExpr is null) {
+      // 	    if (rhs._indexExpr !is null) return false;
+      // 	    else return (_parent == rhs._parent && _pindex == rhs._pindex);
+      // 	  }
+      // 	  else {
+      // 	    if (rhs._indexExpr is null) return false;
+      // 	    else return (_parent == rhs._parent && _indexExpr == rhs._indexExpr);
+      // 	  }
+      // 	}
+      // }
       
+      final override bool _esdl__isRolled(_esdl__CstProcessor proc) {
+	return (_indexExpr !is null &&
+		_indexExpr.isIterator) ||
+	  _parent._esdl__isRolled(proc);
+      }
+
       final override bool _esdl__isStatic() {
 	return ((_indexExpr is null ||
 		 _indexExpr.isIterator ||
 		 _indexExpr.isConst) &&
 		_parent._esdl__isStatic());
-      }
-
-      final override bool _esdl__isRolled(_esdl__CstProcessor proc) {
-	return ((_indexExpr !is null &&
-		 _indexExpr.isIterator) ||
-		_parent._esdl__isRolled(proc));
       }
 
       final override string _esdl__getFullName() {
@@ -794,13 +794,27 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
   abstract ulong mapIter(size_t iter);
   abstract size_t mapIndex(ulong index);
 
+  // virtual elements
+  EV[CstVecTerm] _exprElems;
+
+  // assoc array elements
+  static if (isAssociativeArray!V) {
+    EV[ulong] _assocElems;
+  }
+
   EV opIndex(CstVecTerm indexExpr) {
     if (indexExpr.isConst()) {
       ulong index = indexExpr.evaluate();
       return this[index];
     }
     else {
-      return createElem(indexExpr, false);
+      EV* eptr = indexExpr in _exprElems;
+      if (eptr is null) {
+	EV elem = createElem(indexExpr, false);
+	_exprElems[indexExpr] = elem;
+	return elem;
+      }
+      else return *eptr;
     }
   }
 
@@ -813,7 +827,13 @@ abstract class CstVecArrBase(V, rand RAND_ATTR, int N)
     // import std.stdio;
     // writeln(this._esdl__getFullName());
     static if (isAssociativeArray!V) {
-      return createElem(cast(int) index, false);
+      EV* eptr = index in _assocElems;
+      if (eptr is null) {
+	EV elem = createElem(cast (uint) index, false);
+	_assocElems[index] = elem;
+	return elem;
+      }
+      else return *eptr;
     }
     else {
       if (index > uint.max/2) { // negative index
@@ -1252,20 +1272,20 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
 	}
       }
 
-      override bool opEquals(Object other) {
-	auto rhs = cast (RV) other;
-	if (rhs is null) return false;
-	else {
-	  if (_indexExpr is null) {
-	    if (rhs._indexExpr !is null) return false;
-	    else return (_parent == rhs._parent && _pindex == rhs._pindex);
-	  }
-	  else {
-	    if (rhs._indexExpr is null) return false;
-	    else return (_parent == rhs._parent && _indexExpr == rhs._indexExpr);
-	  }
-	}
-      }
+      // override bool opEquals(Object other) {
+      // 	auto rhs = cast (RV) other;
+      // 	if (rhs is null) return false;
+      // 	else {
+      // 	  if (_indexExpr is null) {
+      // 	    if (rhs._indexExpr !is null) return false;
+      // 	    else return (_parent == rhs._parent && _pindex == rhs._pindex);
+      // 	  }
+      // 	  else {
+      // 	    if (rhs._indexExpr is null) return false;
+      // 	    else return (_parent == rhs._parent && _indexExpr == rhs._indexExpr);
+      // 	  }
+      // 	}
+      // }
       
       final bool _esdl__isRolled(_esdl__CstProcessor proc) {
 	return (_indexExpr !is null &&
@@ -1274,10 +1294,10 @@ class CstVecArr(V, rand RAND_ATTR, int N) if (N != 0):
       }
 
       final bool _esdl__isStatic() {
-	return ((_indexExpr is null  ||
-		 _indexExpr.isIterator ||
-		 _indexExpr.isConst) &&
-		_parent._esdl__isStatic());
+	return (_indexExpr is null ||
+		_indexExpr.isIterator ||
+		_indexExpr.isConst) &&
+	  _parent._esdl__isStatic();
       }
 
       final string _esdl__getFullName() {

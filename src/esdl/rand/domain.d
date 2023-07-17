@@ -599,11 +599,11 @@ class CstArrIterator(RV): CstIterator
   // while an iterator is a singleton wrt to an array, the array
   // itself could have multiple object instances in case it is not
   // concrete -- eg foo[foo.iter].iter
-  override bool opEquals(Object other) {
-    auto rhs = cast(typeof(this)) other;
-    if (rhs is null) return false;
-    else return (_arrVar == rhs._arrVar);
-  }
+  // override bool opEquals(Object other) {
+  //   auto rhs = cast(typeof(this)) other;
+  //   if (rhs is null) return false;
+  //   else return (_arrVar == rhs._arrVar);
+  // }
 
   CstVecTerm _esdl__unroll(CstIterator iter, ulong n, _esdl__CstProcessor proc) {
     if(this !is iter) {
