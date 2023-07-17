@@ -192,8 +192,8 @@ struct Packer
 
   void pack_(T)(T t, size_t count, bool bigEndian)
     if(isBitVector!T && T.IS4STATE) {
-      this.pack_(t.aVal, count, bigEndian);
-      this.pack_(t.bVal, count, bigEndian);
+      this.pack_(t.aval, count, bigEndian);
+      this.pack_(t.bval, count, bigEndian);
     }
   
   void unpack_(T)(ref T t, size_t count, bool bigEndian)
