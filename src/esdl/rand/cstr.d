@@ -74,9 +74,6 @@ abstract class _esdl__ConstraintBase: rand.disable
   abstract bool isLambdaConstraint();
   abstract bool isVisitorConstraint();
 
-  void _esdl__doSyncArgs() {
-    assert (false, "Overridden in _esdl__ConstraintWithImpl");
-  }
 }
 
 

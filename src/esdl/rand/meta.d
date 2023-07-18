@@ -8,6 +8,7 @@
 
 module esdl.rand.meta;
 
+import std.meta: AliasSeq;
 import std.traits: isIntegral, isBoolean, isArray, isSomeChar, isPointer,
   PointerTarget, OriginalType, isAssociativeArray, ValueType, KeyType,
   isSomeString;
@@ -124,6 +125,25 @@ template _esdl__RandProxyType(T, int I, P, int PI)
   else {
     alias _esdl__RandProxyType = _esdl__NotMappedForRandomization;
   }
+}
+
+template _esdl__LambdaArgProxyType(T, size_t I)
+{
+  static if (isRandomizable!T) {
+    alias _esdl__LambdaArgProxyType = CstVectorArg!(T, I);
+  }
+  else static if (isRandVectorSet!T) {
+    alias _esdl__LambdaArgProxyType = CstVecArrArg!(T, I);
+  }
+}
+
+template _esdl__LambdaArgProxyTypes(size_t I, ARGS...)
+{
+  static if (ARGS.length == 0)
+    alias _esdl__LambdaArgProxyTypes = AliasSeq!();
+  else
+    alias _esdl__LambdaArgProxyTypes =
+      AliasSeq!(_esdl__LambdaArgProxyType!(ARGS[0], I), _esdl__LambdaArgProxyTypes!(I+1, ARGS[1..$]));
 }
 
 void _esdl__doConstrainElems(P, int I=0)(P p, _esdl__CstProcessor proc) {
@@ -799,8 +819,6 @@ void _esdl__randomizeWith(T)(T t, _esdl__Proxy proxy,
     assert(proc !is null);
     version (CACHEDPROXIES) { proxyInst._esdl__doSetStub(); }
 
-    lambdaCst._esdl__doSyncArgs();
-  
     proc.reset();
     proxyInst._esdl__doConstrain(proc, false);
     foreach (pred; lambdaCst.getConstraintGuards()) {
@@ -832,7 +850,6 @@ void _esdl__randomizeWith(T) (ref T t, _esdl__Proxy proxy,
     _esdl__CstProcessor proc = proxy._esdl__getProc();
     assert(proc !is null);
     version (CACHEDPROXIES) { proxyInst._esdl__doSetStub(); }
-    lambdaCst._esdl__doSyncArgs();
   
     proc.reset();
     proxyInst._esdl__doConstrain(proc, false);
@@ -911,6 +928,27 @@ mixin template Randomization()
 	}
       }
     }
+    
+    // proxy class for randomize_with
+    // static class _esdl__ProxyRand(_esdl__T, string _esdl__CstString, string FILE, size_t LINE, ARGS...):
+    //   _esdl__ProxyRand!(_esdl__T)
+    // {
+    //   import std.typecons;
+
+    //   Tuple!(ARGS) _lambdaArgs;
+
+    //   CstVarNodeIntf[ARGS.length] _proxyLambdaArgs;
+
+    //   void lambdaArgs(ARGS...)(ARGS values) // if(allIntengral!ARGS)
+    //   {
+    // 	// static assert(ARGS.length == N);
+    // 	foreach (i, /*ref*/ v; values) {
+    // 	  _lambdaArgs[i] = v;
+    // 	}
+    //   }
+
+      
+    // }
     
     static class _esdl__ProxyRand(_esdl__T): _esdl__ProxyBase!_esdl__T
     {
@@ -1336,7 +1374,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 
     Tuple!(ARGS) _lambdaArgs;
 
-    CstVarNodeIntf[ARGS.length] _proxyLambdaArgs;
+    Tuple!(_esdl__LambdaArgProxyTypes!(0, ARGS)) _proxyLambdaArgs;
 
     void lambdaArgs(ARGS...)(ARGS values) // if(allIntengral!ARGS)
     {
@@ -1371,23 +1409,6 @@ mixin template _esdl__ProxyMixin(_esdl__T)
     mixin (CST_PARSE_DATA.guardInits);
     mixin (CST_PARSE_DATA.guardUpdts);
 
-    void _esdl__doSyncArgsElems(int I=0)() {
-      static if (I == ARGS.length) return;
-      else {
-	alias L = typeof(_lambdaArgs[I]);
-	static if (isRandomizable!L) {
-	  alias TYPE = CstVectorArg!(L, I);
-	}
-	else static if (isRandVectorSet!L) {
-	  alias TYPE = CstVecArrArg!(L, I);
-	}
-	auto vvar = cast (TYPE) (_proxyLambdaArgs[I]);
-      }
-    }
-
-    override void _esdl__doSyncArgs() {
-      _esdl__doSyncArgsElems();
-    }
   }
 
   void _esdl__with(string _esdl__CstString, string FILE, size_t LINE, ARGS...)(ARGS values) {
@@ -1399,7 +1420,6 @@ mixin template _esdl__ProxyMixin(_esdl__T)
 				       FILE, LINE, ARGS)(this, "lambdaConstraint", values);
     cstLambda.doSetDomainContext(proc);
     cstLambda.doProcDomainContext(proc);
-    // cstLambda.lambdaArgs(values);
     _esdl__lambdaCst = cstLambda;
     proc._esdl__setContextArgVisitors(proc);
   }
@@ -1621,8 +1641,9 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
     static if (isLvalue!V) {
       alias CstVecType = CstVectorGlob!(L, rand(true, true), V);
       CstVarGlobIntf global = parent._esdl__getGlobalLookup(V.stringof);
-      if (global !is null)
+      if (global !is null) {
 	return cast(CstVecType) global;
+      }
       else {
 	CstVecType obj = new CstVecType(parent);
 	parent._esdl__addGlobalLookup(obj, V.stringof);
@@ -1648,8 +1669,9 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
       alias CstObjType = CstObjectGlob!(U, rand(true, true), V);
     }
     CstVarGlobIntf global = parent._esdl__getGlobalLookup(V.stringof);
-    if (global !is null)
+    if (global !is null) {
       return cast(CstObjType) global;
+    }
     else {
       // pragma(msg, CstObjType.stringof);
       CstObjType obj = new CstObjType(parent);
@@ -1669,8 +1691,9 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
     static if (isLvalue!V) {
       alias CstVecArrType = CstVecArrGlob!(L, rand(true, true), V);
       CstVarGlobIntf global = parent._esdl__getGlobalLookup(V.stringof);
-      if (global !is null)
+      if (global !is null) {
 	return cast(CstVecArrType) global;
+      }
       else {
 	CstVecArrType obj = new CstVecArrType(parent);
 	parent._esdl__addGlobalLookup(obj, V.stringof);
@@ -1683,8 +1706,9 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
     else {
       alias CstVecArrType = CstVecArrGlobEnum!(L, rand(true, true));
       CstVarGlobIntf global = parent._esdl__getGlobalLookup(V.stringof);
-      if (global !is null)
+      if (global !is null) {
 	return cast(CstVecArrType) global;
+      }
       else {
 	CstVecArrType obj = new CstVecArrType(parent, V);
 	parent._esdl__addGlobalLookup(obj, V.stringof);
@@ -1700,8 +1724,9 @@ auto _esdl__sym(alias V, S)(string name, S parent) {
     // writeln("Creating VarVecArr, ", name);
     alias CstObjArrType = CstObjArrGlob!(L, rand(true, true), 0, V);
     CstVarGlobIntf global = parent._esdl__getGlobalLookup(V.stringof);
-    if (global !is null)
+    if (global !is null) {
       return cast(CstObjArrType) global;
+    }
     else {
       CstObjArrType obj = new CstObjArrType(parent);
       parent._esdl__addGlobalLookup(obj, V.stringof);
