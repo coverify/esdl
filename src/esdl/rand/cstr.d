@@ -19,6 +19,9 @@ abstract class _esdl__ConstraintBase: rand.disable
     _esdl__name = name;
     _constraint = constraint;
   }
+
+  __gshared uint _esdl__lambdaConstraintCount;
+
   immutable string _constraint;
   immutable string _esdl__name;
   protected bool _overridden = false;
@@ -102,6 +105,26 @@ struct Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=__LINE__)
   }
 
 }
+
+
+abstract class _esdl__ConstraintLambda(string CONSTRAINT, string FILE=__FILE__, size_t LINE=__LINE__):
+  _esdl__Constraint!(CONSTRAINT, FILE, LINE) {
+  this(_esdl__Proxy eng, string name) {
+    super(eng, name);
+  }
+  __gshared immutable uint _esdl__lambdaConstraintID;
+
+  pragma(crt_constructor)
+    extern(C) static void _esdl__setWithConstraintID() {
+    _esdl__lambdaConstraintID = _esdl__lambdaConstraintCount++;
+  }
+  
+  static uint _esdl__getLambdaConstraintID() {
+    return _esdl__lambdaConstraintID;
+  }
+  
+}
+
 
 abstract class _esdl__Constraint(string CONSTRAINT, string FILE=__FILE__, size_t LINE=__LINE__)
   : _esdl__ConstraintBase, rand.barrier

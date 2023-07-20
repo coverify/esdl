@@ -30,7 +30,8 @@ import esdl.rand.vecx: CstVectorIdx, CstVecArrIdx, CstVectorArg,
   CstVecArrArg, CstVectorGlob, CstVecArrGlob, CstVectorGlobEnum,
   CstVecArrGlobEnum;
 import esdl.rand.objx: CstObjectIdx, CstObjArrIdx, CstObjectGlob,
-  CstObjArrGlob, CstRootProxy, _esdl__ObjStub, _esdl__TypedStub;
+  CstObjArrGlob, CstRootProxy, CstRootLambdaProxy, _esdl__ObjStub,
+  _esdl__TypedStub;
 import esdl.rand.domain: CstVecValue, CstLogicValue;
 import esdl.rand.proxy;
 import esdl.rand.cstr;
@@ -644,6 +645,58 @@ void _esdl__postRandomize(T)(T t) {
   }
 }
 
+void _esdl__randomize(T) (T t) if (is (T == class))
+  {
+    debug (CSTSOLVER) {
+      import std.stdio;
+      writeln("Type of Randomized Object: ", T.stringof);
+    }
+
+    alias _esdl__ProxyType = _esdl__ProxyResolve!T;
+
+    CstRootProxy!T _esdl__createProxy() {
+      // import std.stdio;
+      // writeln("New: ", _esdl__ProxyType.stringof);
+      return new CstRootProxy!T(t);
+      // _esdl__ProxyType proxy =
+      // 	new _esdl__ProxyType(null, null, null);
+      // if (proxy is null) {
+      // 	assert (false, "Unable to allocate proxy instance");
+      // }
+      // return proxy;
+    }
+
+    CstRootProxy!T proxyRoot = _esdl__ProxyType._esdl__proxyRootInst;
+
+    if (proxyRoot is null) {
+      proxyRoot = _esdl__createProxy();
+      _esdl__ProxyType._esdl__proxyRootInst = proxyRoot;
+    }
+    else {
+      proxyRoot.updateRandObj(t);
+    }
+
+    _esdl__ProxyType proxyInst = _esdl__staticCast!(_esdl__ProxyType)
+      (proxyRoot._esdl__getProxy());
+
+    _esdl__CstProcessor proc = proxyInst._esdl__getProc();
+
+    assert(proc !is null);
+    proc._esdl__doResetLambdaPreds();
+
+    _esdl__preRandomize(t);
+
+    version (CACHEDPROXIES) { proxyInst._esdl__doSetStub(); }
+
+    proxyInst._esdl__lambdaCst = null;
+    proc.reset();
+    proxyInst._esdl__doConstrain(proc, false);
+    proc.solve();
+    proxyInst._esdl__doRandomize(t._esdl__virtualGetRandGen());
+    version (CACHEDPROXIES) { proxyInst._esdl__resetCaches(); }
+    // _esdl__postRandomize(t);
+  }
+
 void _esdl__randomize(T) (ref T t) if (is (T == struct))
   {
     debug (CSTSOLVER) {
@@ -696,111 +749,64 @@ void _esdl__randomize(T) (ref T t) if (is (T == struct))
     // _esdl__postRandomize(t);
   }
 
-void _esdl__randomize(T) (T t) if (is (T == class))
-  {
-    debug (CSTSOLVER) {
-      import std.stdio;
-      writeln("Type of Randomized Object: ", T.stringof);
-    }
+_esdl__Proxy _esdl__getLambdaProxyInst(T)(T t, uint cstID) if (is (T == class)) {
+  alias _esdl__LambdaProxyType = _esdl__LambdaProxyResolve!T;
 
-    alias _esdl__ProxyType = _esdl__ProxyResolve!T;
-
-    CstRootProxy!T _esdl__createProxy() {
-      // import std.stdio;
-      // writeln("New: ", _esdl__ProxyType.stringof);
-      return new CstRootProxy!T(t);
-      // _esdl__ProxyType proxy =
-      // 	new _esdl__ProxyType(null, null, null);
-      // if (proxy is null) {
-      // 	assert (false, "Unable to allocate proxy instance");
-      // }
-      // return proxy;
-    }
-
-    CstRootProxy!T proxyRoot = _esdl__ProxyType._esdl__proxyRootInst;
-
-    if (proxyRoot is null) {
-      proxyRoot = _esdl__createProxy();
-      _esdl__ProxyType._esdl__proxyRootInst = proxyRoot;
-    }
-    else {
-      proxyRoot.updateRandObj(t);
-    }
-
-    _esdl__ProxyType proxyInst = _esdl__staticCast!(_esdl__ProxyType)
-      (proxyRoot._esdl__getProxy());
-
-    _esdl__CstProcessor proc = proxyInst._esdl__getProc();
-    assert(proc !is null);
-    proc._esdl__doResetLambdaPreds();
-
-    _esdl__preRandomize(t);
-
-    version (CACHEDPROXIES) { proxyInst._esdl__doSetStub(); }
-
-    proxyInst._esdl__lambdaCst = null;
-    proc.reset();
-    proxyInst._esdl__doConstrain(proc, false);
-    proc.solve();
-    proxyInst._esdl__doRandomize(t._esdl__virtualGetRandGen());
-    version (CACHEDPROXIES) { proxyInst._esdl__resetCaches(); }
-    // _esdl__postRandomize(t);
-  }
-
-_esdl__Proxy _esdl__getProxyInst(T)(T t) if (is (T == class)) {
-  alias _esdl__ProxyType = _esdl__ProxyResolve!T;
-
-  CstRootProxy!T _esdl__createProxy(T t) {
+  CstRootLambdaProxy!T _esdl__createLambdaProxy(T t) {
     // import std.stdio;
-    // writeln("New: ", _esdl__ProxyType.stringof);
-    return new CstRootProxy!T(t);
-    // _esdl__ProxyType proxy =
-    //   new _esdl__ProxyType(null, null, null);
-    // if (proxy is null) {
-    //   assert (false, "Unable to allocate proxy instance");
+    // writeln("New: ", _esdl__LambdaProxyType.stringof);
+    return new CstRootLambdaProxy!T(t);
+    // _esdl__LambdaProxyType lambdaProxy =
+    //   new _esdl__LambdaProxyType(null, null, null);
+    // if (lambdaProxy is null) {
+    //   assert (false, "Unable to allocate lambdaProxy instance");
     // }
-    // return proxy;
+    // return lambdaProxy;
   }
 
-  CstRootProxy!T proxyRoot = _esdl__ProxyType._esdl__proxyRootInst;
+  CstRootLambdaProxy!T lambdaProxyRoot = _esdl__LambdaProxyType._esdl__lambdaProxyRootInst;
 
-  if (proxyRoot is null) {
-    proxyRoot = _esdl__createProxy(t);
-    _esdl__ProxyType._esdl__proxyRootInst = proxyRoot;
+  if (lambdaProxyRoot is null) {
+    lambdaProxyRoot = _esdl__createLambdaProxy(t);
+    _esdl__LambdaProxyType._esdl__lambdaProxyRootInst = lambdaProxyRoot;
   }
   else {
-    proxyRoot.updateRandObj(t);
+    lambdaProxyRoot.updateRandObj(t);
   }
 
-  return proxyRoot._esdl__getProxy();
+  _esdl__Proxy lambdaProxy = lambdaProxyRoot._esdl__getLambdaProxy(cstID);
+  assert (lambdaProxy !is null);
+  return lambdaProxy;
 }
 
-_esdl__Proxy _esdl__getProxyInst(T)(ref T t) if (is (T == struct)) {
-  alias _esdl__ProxyType = _esdl__ProxyResolve!T;
+_esdl__Proxy _esdl__getLambdaProxyInst(T)(ref T t, uint cstID) if (is (T == struct)) {
+  alias _esdl__LambdaProxyType = _esdl__LambdaProxyResolve!T;
 
-  CstRootProxy!T _esdl__createProxy(T* t) {
+  CstRootLambdaProxy!T _esdl__createLambdaProxy(T* t) {
     // import std.stdio;
-    // writeln("New: ", _esdl__ProxyType.stringof);
-    return new CstRootProxy!T(t);
-    // _esdl__ProxyType proxy =
-    //   new _esdl__ProxyType(null, null, null);
-    // if (proxy is null) {
-    //   assert (false, "Unable to allocate proxy instance");
+    // writeln("New: ", _esdl__LambdaProxyType.stringof);
+    return new CstRootLambdaProxy!T(t);
+    // _esdl__LambdaProxyType lambdaProxy =
+    //   new _esdl__LambdaProxyType(null, null, null);
+    // if (lambdaProxy is null) {
+    //   assert (false, "Unable to allocate lambdaProxy instance");
     // }
-    // return proxy;
+    // return lambdaProxy;
   }
 
-  CstRootProxy!T proxyRoot = _esdl__ProxyType._esdl__proxyRootInst;
+  CstRootLambdaProxy!T lambdaProxyRoot = _esdl__LambdaProxyType._esdl__lambdaProxyRootInst;
 
-  if (proxyRoot is null) {
-    proxyRoot = _esdl__createProxy(&t);
-    _esdl__ProxyType._esdl__proxyRootInst = proxyRoot;
+  if (lambdaProxyRoot is null) {
+    lambdaProxyRoot = _esdl__createLambdaProxy(&t);
+    _esdl__LambdaProxyType._esdl__lambdaProxyRootInst = lambdaProxyRoot;
   }
   else {
-    proxyRoot.updateRandObj(&t);
+    lambdaProxyRoot.updateRandObj(&t);
   }
 
-  return proxyRoot._esdl__getProxy();
+  _esdl__Proxy lambdaProxy = lambdaProxyRoot._esdl__getLambdaProxy(cstID);
+  assert (lambdaProxy !is null);
+  return lambdaProxy;
 }
 
 void _esdl__randomizeWith(T)(T t, _esdl__Proxy proxy,
@@ -811,16 +817,14 @@ void _esdl__randomizeWith(T)(T t, _esdl__Proxy proxy,
       writeln("Type of Randomized Object: ", T.stringof);
     }
 
-    alias _esdl__ProxyType = _esdl__ProxyResolve!T;
-    _esdl__ProxyType proxyInst = _esdl__staticCast!(_esdl__ProxyType)(proxy);
     _esdl__preRandomize(t);
 
     _esdl__CstProcessor proc = proxy._esdl__getProc();
     assert(proc !is null);
-    version (CACHEDPROXIES) { proxyInst._esdl__doSetStub(); }
+    version (CACHEDPROXIES) { proxy._esdl__doSetStub(); }
 
     proc.reset();
-    proxyInst._esdl__doConstrain(proc, false);
+    proxy._esdl__doConstrain(proc, false);
     foreach (pred; lambdaCst.getConstraintGuards()) {
       proc.addNewPredicate(pred);
     }
@@ -828,8 +832,8 @@ void _esdl__randomizeWith(T)(T t, _esdl__Proxy proxy,
       proc.addNewPredicate(pred);
     }
     proc.solve();
-    proxyInst._esdl__doRandomize(t._esdl__virtualGetRandGen());
-    version (CACHEDPROXIES) { proxyInst._esdl__resetCaches(); }
+    proxy._esdl__doRandomize(t._esdl__virtualGetRandGen());
+    version (CACHEDPROXIES) { proxy._esdl__resetCaches(); }
     // _esdl__postRandomize(t);
 
   }
@@ -842,17 +846,14 @@ void _esdl__randomizeWith(T) (ref T t, _esdl__Proxy proxy,
       writeln("Type of Randomized Object: ", T.stringof);
     }
 
-    alias _esdl__ProxyType = _esdl__ProxyResolve!T;
-    _esdl__ProxyType proxyInst = _esdl__staticCast!(_esdl__ProxyType)(proxy);
-
     _esdl__preRandomize(t);
 
     _esdl__CstProcessor proc = proxy._esdl__getProc();
     assert(proc !is null);
-    version (CACHEDPROXIES) { proxyInst._esdl__doSetStub(); }
+    version (CACHEDPROXIES) { proxy._esdl__doSetStub(); }
   
     proc.reset();
-    proxyInst._esdl__doConstrain(proc, false);
+    proxy._esdl__doConstrain(proc, false);
     foreach (pred; lambdaCst.getConstraintGuards()) {
       proc.addNewPredicate(pred);
     }
@@ -860,8 +861,8 @@ void _esdl__randomizeWith(T) (ref T t, _esdl__Proxy proxy,
       proc.addNewPredicate(pred);
     }
     proc.solve();
-    proxyInst._esdl__doRandomize(t._esdl__virtualGetRandGen());
-    version (CACHEDPROXIES) { proxyInst._esdl__resetCaches(); }
+    proxy._esdl__doRandomize(t._esdl__virtualGetRandGen());
+    version (CACHEDPROXIES) { proxy._esdl__resetCaches(); }
     // _esdl__postRandomize(t);
 
   }
@@ -930,25 +931,12 @@ mixin template Randomization()
     }
     
     // proxy class for randomize_with
-    // static class _esdl__ProxyRand(_esdl__T, string _esdl__CstString, string FILE, size_t LINE, ARGS...):
-    //   _esdl__ProxyRand!(_esdl__T)
-    // {
-    //   import std.typecons;
-
-    //   Tuple!(ARGS) _lambdaArgs;
-
-    //   CstVarNodeIntf[ARGS.length] _proxyLambdaArgs;
-
-    //   void lambdaArgs(ARGS...)(ARGS values) // if(allIntengral!ARGS)
-    //   {
-    // 	// static assert(ARGS.length == N);
-    // 	foreach (i, /*ref*/ v; values) {
-    // 	  _lambdaArgs[i] = v;
-    // 	}
-    //   }
-
-      
-    // }
+    static class _esdl__LambdaProxyRand(_esdl__T):
+      _esdl__ProxyRand!(_esdl__T)
+    {
+      this(CstObjStub obj) {super(obj);}
+      static CstRootLambdaProxy!_esdl__T _esdl__lambdaProxyRootInst;
+    }
     
     static class _esdl__ProxyRand(_esdl__T): _esdl__ProxyBase!_esdl__T
     {
@@ -977,6 +965,15 @@ mixin template Randomization()
     }
   }
   else static if (is (typeof(this) == struct)) {
+
+    // proxy class for randomize_with
+    static class _esdl__LambdaProxyRand(_esdl__T):
+      _esdl__ProxyRand!(_esdl__T)
+    {
+      this(CstObjStub obj) {super(obj);}
+      static CstRootLambdaProxy!_esdl__T _esdl__lambdaProxyRootInst;
+    }
+
     static class _esdl__ProxyRand(_esdl__T): _esdl__ProxyBase!_esdl__T
     {
       mixin _esdl__ProxyMixin!_esdl__T;
@@ -1005,27 +1002,6 @@ mixin template Randomization()
   else {
     static assert (false, "mixin Randomization is allowed only inside a class or a struct; not " ~
 		   typeof(this).stringof);
-  }
-
-  static class _esdl__ProxyRand(V, rand RAND_ATTR, int N): _esdl__ProxyRand!(LeafElementType!V)
-  {
-    alias LEAF = LeafElementType!V;
-    alias STUBT = _esdl__ObjStub!(V, RAND_ATTR, N);
-
-    this(CstObjStub obj) {
-      super(obj);
-    }
-
-    static if (is (LEAF == class)) {
-      LEAF _esdl__ref()() {
-	return cast(LEAF) _esdl__stub._esdl__refPtr();
-      }
-    }
-    else {
-      LEAF* _esdl__ref()() {
-	return cast(LEAF*) _esdl__stub._esdl__refPtr();
-      }
-    }  
   }
 
   alias _esdl__ProxyType = _esdl__ProxyResolve!(typeof(this));
@@ -1110,8 +1086,8 @@ mixin template Randomization()
     override void _esdl__virtualRandomize() {
       _esdl__randomize(this);
     }
-    override _esdl__Proxy _esdl__virtualGetProxyInst() {
-      return _esdl__getProxyInst(this);
+    override _esdl__Proxy _esdl__virtualGetLambdaProxyInst(uint cstID) {
+      return _esdl__getLambdaProxyInst(this, cstID);
     }
     override void _esdl__virtualRandomizeWith(_esdl__Proxy proxy,
 					      _esdl__ConstraintBase lambdaCst) {
@@ -1132,8 +1108,8 @@ mixin template Randomization()
     void _esdl__virtualRandomize() {
       _esdl__randomize(this);
     }
-    _esdl__Proxy _esdl__virtualGetProxyInst() {
-      return _esdl__getProxyInst(this);
+    _esdl__Proxy _esdl__virtualGetLambdaProxyInst(uint cstID) {
+      return _esdl__getLambdaProxyInst(this, cstID);
     }
     void _esdl__virtualRandomizeWith(_esdl__Proxy proxy,
 				     _esdl__ConstraintBase lambdaCst) {
@@ -1151,27 +1127,12 @@ mixin template Randomization()
   }
 }
 
-static class _esdl__ProxyNoRand(V, rand RAND_ATTR, int N): _esdl__ProxyNoRand!(LeafElementType!V)
+// proxy class for randomize_with
+class _esdl__LambdaProxyNoRand(_esdl__T):
+  _esdl__ProxyNoRand!(_esdl__T)
 {
-  alias LEAF = LeafElementType!V;
-  alias STUBT = _esdl__ObjStub!(V, RAND_ATTR, N);
-
-  this(CstObjStub obj) {
-    super(obj);
-  }
-
-  static if ((is (LEAF == class) && is (LEAF: Object)) ||
-	     (is (LEAF == U*, U) && is (U == struct)))
-    {
-      LEAF _esdl__ref()() {
-	return cast(LEAF) _esdl__stub._esdl__refPtr();
-      }
-    }
-  else {
-    LEAF* _esdl__ref()() {
-      return cast(LEAF*) _esdl__stub._esdl__refPtr();
-    }
-  }
+  this(CstObjStub obj) {super(obj);}
+  static CstRootLambdaProxy!_esdl__T _esdl__lambdaProxyRootInst;
 }
 
 class _esdl__ProxyNoRand(_esdl__T)
@@ -1368,7 +1329,7 @@ mixin template _esdl__ProxyMixin(_esdl__T)
   }
 
   class _esdl__ConstraintLambdaImpl(string _esdl__CstString, string FILE, size_t LINE, ARGS...): // size_t N):
-    _esdl__Constraint!(_esdl__CstString, FILE, LINE)
+    _esdl__ConstraintLambda!(_esdl__CstString, FILE, LINE)
   {
     import std.typecons;
 
@@ -1823,25 +1784,25 @@ template _esdl__ProxyResolve(T) {
   }
 }
 
-template _esdl__ProxyResolve(T, rand RAND_ATTR, int N) {
-  // pragma(msg, "_esdl__ProxyResolve called for: " ~ T.stringof);
+template _esdl__LambdaProxyResolve(T) {
+  // pragma(msg, "_esdl__LambdaProxyResolve called for: " ~ T.stringof);
   // static if(__traits(compiles, T._esdl__hasRandomization)) {
   static if (is (T == class) || is (T == struct)) {
     // pragma(msg, T.stringof);
     static if (__traits(compiles, T._esdl__HasRandomizationMixin)) {
       // pragma(msg, "ProxyRand: ", T.stringof);
-      alias _esdl__ProxyResolve = T._esdl__ProxyRand!(T, RAND_ATTR, N);
+      alias _esdl__LambdaProxyResolve = T._esdl__LambdaProxyRand!(T);
     }
     else {
       // pragma(msg, "ProxyNoRand: ", T.stringof);
-      alias _esdl__ProxyResolve = _esdl__ProxyNoRand!(T, RAND_ATTR, N);
+      alias _esdl__LambdaProxyResolve = _esdl__LambdaProxyNoRand!(T);
     }
   }
   // else static if (is (T == struct)) {
-  //   alias _esdl__ProxyResolve = _esdl__ProxyNoRand!T;
+  //   alias _esdl__LambdaProxyResolve = _esdl__LambdaProxyNoRand!T;
   // }
   else static if (is (T == U*, U) && is (U == struct)) {
-    alias _esdl__ProxyResolve = _esdl__ProxyNoRand!(T, RAND_ATTR, N);
+    alias _esdl__LambdaProxyResolve = _esdl__LambdaProxyNoRand!(T);
   }
   else {
     static assert(false, "Unable to resolve proxy for type: " ~ T.stringof);
@@ -1898,24 +1859,27 @@ void randomizeWith(string C, string FILE=__FILE__, size_t LINE=__LINE__, T, ARGS
     }
   }
 
-  alias _esdl__ProxyType = _esdl__ProxyResolve!T;
+  alias _esdl__LambdaProxyType = _esdl__LambdaProxyResolve!T;
 
-  _esdl__ProxyType proxyInst =
-    _esdl__staticCast!(_esdl__ProxyType)(t._esdl__virtualGetProxyInst());
+  uint cstID = _esdl__ConstraintLambda!(C, FILE, LINE)._esdl__getLambdaConstraintID();
+  
+  _esdl__LambdaProxyType lambdaProxyInst =
+    _esdl__staticCast!(_esdl__LambdaProxyType)(t._esdl__virtualGetLambdaProxyInst(cstID));
 
-  alias CONSTRAINT = proxyInst._esdl__ConstraintLambdaImpl!(C, FILE, LINE, ARGS);
+  alias CONSTRAINT = lambdaProxyInst._esdl__ConstraintLambdaImpl!(C, FILE, LINE, ARGS);
 
   CONSTRAINT cstLambda;
 
-  if (proxyInst._esdl__lambdaCst !is null)
-    cstLambda = cast (CONSTRAINT) proxyInst._esdl__lambdaCst;
+  if (lambdaProxyInst._esdl__lambdaCst !is null)
+    cstLambda = _esdl__staticCast!(CONSTRAINT)(lambdaProxyInst._esdl__lambdaCst);
+    
       
   if (cstLambda is null)
-    proxyInst._esdl__with!(C, FILE, LINE, ARGS)(values);
+    lambdaProxyInst._esdl__with!(C, FILE, LINE, ARGS)(values);
   else
     cstLambda.lambdaArgs(values);
 
-  t._esdl__virtualRandomizeWith(proxyInst, proxyInst._esdl__lambdaCst);
+  t._esdl__virtualRandomizeWith(lambdaProxyInst, lambdaProxyInst._esdl__lambdaCst);
  }
 
 auto randomize(AA...)() {

@@ -15,7 +15,7 @@ import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy, _esdl__CstProcessor;
 import esdl.rand.expr: CstRangeExpr;
 import esdl.rand.domain: CstArrIterator, CstArrLength, CstArrHierLength;
-import esdl.rand.meta: _esdl__ProxyResolve;
+import esdl.rand.meta: _esdl__ProxyResolve, _esdl__LambdaProxyResolve;
 import esdl.rand.misc: _esdl__staticCast;
 
 import std.algorithm.searching: canFind;
@@ -189,6 +189,53 @@ class CstObjectIdx(V, rand RAND_ATTR, VV, int IDX,
 
 
 }
+
+class CstRootLambdaProxy(V) if (is (V == class) || is (V == struct) ||
+				(is (V == S*, S) && is (S == struct))):
+  CstRootProxy!(V)
+    {
+      static if (is (V == class) || (is (V == S*, S) && is (S == struct))) {
+	this(V v) {super(v);}
+      }
+      else {
+	this(V* v) {super(v);}
+      }
+
+      _esdl__Proxy _esdl__getLambdaProxy(uint cstID) {
+	_cstID = cstID;
+	return _esdl__getProxy();
+      }
+
+      alias PROXYT = _esdl__LambdaProxyResolve!(LEAF);
+
+      // can not store _proxy as PROXYT since that results in
+      // cyclic type dependency
+      _esdl__Proxy[] _proxys;
+
+      _esdl__Proxy _esdl__getLambda()(uint _cstID) {
+	if (_proxys.length <= _cstID) _proxys.length = _cstID + 1;
+	_esdl__Proxy proxy = _proxys[_cstID];
+	if (proxy is null) {
+	  // version (CACHEDPROXIES) {
+	  //   proxy = PROXYT._esdl__make(this);
+	  // }
+	  // else {
+	  proxy = new PROXYT(this);
+	  // }
+	  _proxys[_cstID] = proxy;
+	}
+	return proxy;
+      }
+
+      uint _cstID;		// currently active cstID
+
+      override _esdl__Proxy _esdl__getProxy() {
+	return _esdl__getLambda(_cstID);
+      }
+
+
+    }
+
 
 class CstRootProxy(V) if (is (V == class) || is (V == struct) ||
 			  (is (V == S*, S) && is (S == struct))):
