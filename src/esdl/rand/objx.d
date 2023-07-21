@@ -15,7 +15,7 @@ import esdl.rand.pred: CstPredicate;
 import esdl.rand.proxy: _esdl__Proxy, _esdl__CstProcessor;
 import esdl.rand.expr: CstRangeExpr;
 import esdl.rand.domain: CstArrIterator, CstArrLength, CstArrHierLength;
-import esdl.rand.meta: _esdl__ProxyResolve, _esdl__LambdaProxyResolve;
+import esdl.rand.meta: _esdl__ProxyResolve;
 import esdl.rand.misc: _esdl__staticCast;
 
 import std.algorithm.searching: canFind;
@@ -206,21 +206,21 @@ class CstRootLambdaProxy(V) if (is (V == class) || is (V == struct) ||
 	return _esdl__getProxy();
       }
 
-      alias PROXYT = _esdl__LambdaProxyResolve!(LEAF);
+      alias _esdl__ProxyType = _esdl__ProxyResolve!(LEAF);
 
-      // can not store _proxy as PROXYT since that results in
+      // can not store _proxy as _esdl__ProxyType since that results in
       // cyclic type dependency
       _esdl__Proxy[] _proxys;
 
-      _esdl__Proxy _esdl__getLambda()(uint _cstID) {
+      _esdl__Proxy _esdl__getLambda()() {
 	if (_proxys.length <= _cstID) _proxys.length = _cstID + 1;
 	_esdl__Proxy proxy = _proxys[_cstID];
 	if (proxy is null) {
 	  // version (CACHEDPROXIES) {
-	  //   proxy = PROXYT._esdl__make(this);
+	  //   proxy = _esdl__ProxyType._esdl__make(this);
 	  // }
 	  // else {
-	  proxy = new PROXYT(this);
+	  proxy = new _esdl__ProxyType(this);
 	  // }
 	  _proxys[_cstID] = proxy;
 	}
@@ -230,9 +230,8 @@ class CstRootLambdaProxy(V) if (is (V == class) || is (V == struct) ||
       uint _cstID;		// currently active cstID
 
       override _esdl__Proxy _esdl__getProxy() {
-	return _esdl__getLambda(_cstID);
+	return _esdl__getLambda();
       }
-
 
     }
 
@@ -356,9 +355,9 @@ abstract class _esdl__ObjStub(V, rand RAND_ATTR, int N):
 
   alias LEAF = LeafElementType!V;
 
-  alias PROXYT = _esdl__ProxyResolve!(LEAF);
+  alias _esdl__ProxyType = _esdl__ProxyResolve!(LEAF);
 
-  // can not store _proxy as PROXYT since that results in
+  // can not store _proxy as _esdl__ProxyType since that results in
   // cyclic type dependency
   _esdl__Proxy _proxy;
   _esdl__Proxy _parent;
@@ -378,17 +377,17 @@ abstract class _esdl__ObjStub(V, rand RAND_ATTR, int N):
     assert (_proxy is null);
   }
   
-  PROXYT _esdl__get()() {
+  _esdl__ProxyType _esdl__get()() {
     if (_proxy is null) {
       // assert (_parent !is null);
       version (CACHEDPROXIES) {
-	_proxy = PROXYT._esdl__make(this);
+	_proxy = _esdl__ProxyType._esdl__make(this);
       }
       else {
-	_proxy = new PROXYT(this);
+	_proxy = new _esdl__ProxyType(this);
       }
     }
-    return _esdl__staticCast!PROXYT(_proxy);
+    return _esdl__staticCast!_esdl__ProxyType(_proxy);
   }
 
   _esdl__Proxy _esdl__getProxy() {
