@@ -2688,10 +2688,10 @@ alias AsyncEvent = EventWrapperStruct!(EventObj, true);
 
   final void initialize(string name, NamedComp parent=null) {
     synchronized {
-      if (RootThread.self !is null && parent is null) {
-	assert(false, "Must provide parent for EventType object " ~
-	       "\"initialize\" during elaboration for " ~ RootThread.self.getName);
-      }
+      // if (RootThread.self !is null && parent is null) {
+      // 	assert(false, "Must provide parent for EventType object " ~
+      // 	       "\"initialize\" during elaboration for " ~ RootThread.self.getName);
+      // }
       if (_eventObj is null) {
 	_eventObj = new EventType(parent, ASYNC);
       }
