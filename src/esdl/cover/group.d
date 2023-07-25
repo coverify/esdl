@@ -23,9 +23,6 @@ struct CoverGroupParser
 
   Vector!(char, "outBuffer") outBuffer;
   string buffer() {return cast(string) outBuffer[];}
-  // void fill(in string source) {
-  //   outBuffer ~= source;
-  // }
 
   void fill(T...)(T strs) {
     foreach (str; strs) {
@@ -51,6 +48,7 @@ struct CoverGroupParser
 	   S[srcCursor] != ':' &&
 	   S[srcCursor] != ' ' &&
 	   S[srcCursor] != '=' &&
+	   S[srcCursor] != ',' &&
 	   S[srcCursor] != '\n'&&
 	   S[srcCursor] != '\t' ) {
       ++srcCursor;
@@ -267,7 +265,10 @@ struct CoverGroupParser
   void parse() {    
     parseSpace();
     int cpCount = 0;
+    int crossCount = 0;
     string[] cp_names;
+    string[] cross_names;
+    string[][] cross_args;
     string[] sampleArgTypes;
     string[] sampleArgs;
     while (srcCursor < S.length) {
@@ -313,7 +314,6 @@ struct CoverGroupParser
 	string coverpointName = "";
 	string BINS;
 	if (S[srcCursor] == '{') {
-	  // goto next }
 	  srcCursor ++;
 	  srcTag = nextEndCurlyBrace();
 	  BINS = S[srcTag .. srcCursor-1];
@@ -344,9 +344,36 @@ struct CoverGroupParser
 	     " override _esdl__T _esdl__t() { return ", name, "; }\n }\n");
 	cpCount += 1;
       }
-      else if (parseCrossDecl()) { // TODO
-	
-	cpCount += 1;
+      else if (parseCrossDecl()) { 
+	string [] crossVars;
+	while(true) {
+	  parseSpace();
+	  auto srcTag = parseName();
+	  string name = S[srcTag .. srcCursor];
+	  crossVars ~= name;
+	  parseSpace();
+	  if (S[srcCursor] != ',')
+	    break;
+	  srcCursor ++;
+	}
+	if (S[srcCursor] != ';') {
+	  import std.conv;
+	  assert (false, "expected ; at line " ~ srcLine.to!string);
+	}
+	srcCursor ++;
+	if (cp_names.length == cpCount) {
+	  import std.conv;
+	  cp_name = "_esdl__cross_" ~ crossCount.to!string;
+	  cross_names ~= cp_name;
+	}
+	else {
+	  cp_name = cp_names[$-1];
+	  cross_names ~= cp_name;
+	  cp_names.length -= 1;
+	}
+	fill("Cross ", cp_name, ";\n");
+	cross_args ~= crossVars;
+	crossCount += 1;
       }
       else {
 	if (cp_names.length > cpCount) {
@@ -371,6 +398,13 @@ struct CoverGroupParser
     fill("this () { \n");
     foreach (cp_name; cp_names)
       fill(cp_name, " = new ", cp_name, "_override();\n");
+    foreach (i, cross_name; cross_names) {
+      fill(cross_name, " = new Cross([");
+      foreach (cv; cross_args[i]) {
+	fill(cv, ", ");
+      }
+      fill("]);\n");
+    }
     fill("}\n");
     fill("void sample(");
     for (int i = 0; i != sampleArgs.length; ++i) {
@@ -384,6 +418,9 @@ struct CoverGroupParser
     foreach (cp_name; cp_names) {
       fill("  ", cp_name, ".sample();\n");
     }
+    foreach (cross_name; cross_names) {
+      fill("  ", cross_name, ".sample();\n");
+    }
     fill("}\n");
     fill("override double get_coverage() {
       double total = 0;
@@ -392,6 +429,11 @@ struct CoverGroupParser
       fill("total += ", cp_name, ".get_coverage() * ",
 	   cp_name, ".get_weight();\n");
       fill("weightSum += ", cp_name, ".get_weight();\n");
+    }
+    foreach (cross_name; cross_names) {
+      fill("total += ", cross_name, ".get_coverage() * ",
+	   cross_name, ".get_weight();\n");
+      fill("weightSum += ", cross_name, ".get_weight();\n");
     }
     fill("\n    return total/weightSum; }\n");
   }

@@ -7,13 +7,16 @@ import esdl.data.bvec: isBitVector, ulvec;
 import std.traits: isIntegral;
 import std.conv: parse;
 import esdl.cover.wild;
+import esdl.cover.point: CoverPoint;
+
+
+const uint maxArrayDymanicLength = 64;
 
 static string doParse(T)(string Bins) {
   EsdlBinsParser!T binsParser = EsdlBinsParser!T(Bins);
   binsParser.parseAllBins();
   binsParser.setUp();
-  binsParser.parseAllBins();
-  
+  binsParser.parseAllBins();  
   return binsParser.buffer();
 }
 
@@ -30,13 +33,14 @@ struct EsdlBinsParser (T)
     bool _isWildcard;
 
     bool _isArray;
+    bool _hasRange;
 
     size_t _arrayDim;
 
     string _filter;
 
     // _arrayLen != 0 if static array
-    string _arrayLen;
+    size_t _arrayLen;
 
     void checkAttribs() {
       if (_isIllegal && _isIgnore)
@@ -201,6 +205,7 @@ struct EsdlBinsParser (T)
     }
     return start;
   }
+  
   size_t parseWhiteSpace() {
     auto start = srcCursor;
     while (srcCursor < BINS.length) {
@@ -318,13 +323,25 @@ struct EsdlBinsParser (T)
     if (bin._filter != "") {
       fillCtr(bin._name, ".addFilter(&" ~ bin._filter ~ ");\n");
     }
-
+    if (bin._isArray) { 
+      if (bin._arrayLen == 0) { // dynamic array
+	fillCtr(bin._name, ".calculateLength();\n");
+      }
+      else { // static array
+	import std.conv: to;
+	fillCtr(bin._name, ".setBinArrLength(", bin._arrayLen.to!string,");\n");
+      }
+    }
+    else { // non-array
+      fillCtr(bin._name, ".setBinArrLength(1);\n");
+    }
+    
     if (bin._isIllegal) {
-      // fillCtr(bin._name, ".markIllegal();\n");
+      fillCtr(bin._name, ".markIllegal();\n");
       fillCtr("_esdl__illBins ~= ", bin._name, ";\n");
     }
     else if (bin._isIgnore) {
-      // fillCtr(bin._name, ".markIgnore();\n");
+      fillCtr(bin._name, ".markIgnore();\n");
       fillCtr("_esdl__ignBins ~= ", bin._name, ";\n");
     }
     else {
@@ -453,10 +470,11 @@ struct EsdlBinsParser (T)
 	max = BINS[srcTag .. srcCursor];
       }
       checkValue(max);
+      bin._hasRange = true;
       static if (isBitVector!T)
-	fillCtr(bin._name, ".addRange(", min, ".to!_esdl__T, (", max, "-1).to!_esdl__T);\n");
+	fillCtr("_esdl__addRange(", min, ".to!_esdl__T, (", max, "-1).to!_esdl__T);\n");
       else
-	fillCtr(bin._name, ".addRange(cast(_esdl__T) ", min, ", cast(_esdl__T) (", max, "-1));\n");
+	fillCtr("_esdl__addRange(cast(_esdl__T) ", min, ", cast(_esdl__T) (", max, "-1));\n");
     }
     else if (BINS.length > srcCursor + 1 &&
 	     BINS[srcCursor] == ':') {
@@ -471,14 +489,16 @@ struct EsdlBinsParser (T)
 	max = BINS[srcTag .. srcCursor];
       }
       checkValue(max);
+      bin._hasRange = true;
       static if (isBitVector!T) 
-	fillCtr(bin._name, ".addRange(", min, ".to!_esdl__T, ", max, ".to!_esdl__T);\n");
-      else fillCtr(bin._name, ".addRange(cast(_esdl__T) ", min, ", cast(_esdl__T) ", max, ");\n");
+	fillCtr("_esdl__addRange(", min, ".to!_esdl__T, ", max, ".to!_esdl__T);\n");
+      else
+	fillCtr("_esdl__addRange(cast(_esdl__T) ", min, ", cast(_esdl__T) ", max, ");\n");
     }
     else {
       static if (isBitVector!T)
-	fillCtr(bin._name, ".addElem(" ~ min ~ ".to!_esdl__T);\n");
-      else fillCtr(bin._name, ".addElem(cast(_esdl__T) " ~ min ~ ");\n");
+	fillCtr("_esdl__addElem(" ~ min ~ ".to!_esdl__T);\n");
+      else fillCtr("_esdl__addElem(cast(_esdl__T) " ~ min ~ ");\n");
     }
     parseSpace();
     if (BINS[srcCursor] == ',') return true;
@@ -492,8 +512,15 @@ struct EsdlBinsParser (T)
   void procDefaultBins(ref ParsedBin bin) {
     srcCursor += 7;
     parseSpace();
-    fillDecl("EsdlDefaultBin!_esdl__T ", bin._name, ";\n");
-    fillCtr(bin._name, " = new EsdlDefaultBin!_esdl__T( Type.BIN, \"", bin._name, "\");\n");
+    fillDecl("EsdlRangeBin!_esdl__T ", bin._name, ";\n");
+    import std.conv: to;
+    string min = T.min.to!string();
+    string max = T.max.to!string();
+    static if (isBitVector!T) 
+      fillCtr("_esdl__addRange(", min, ".to!_esdl__T, ", max, ".to!_esdl__T);\n");
+    else
+      fillCtr("_esdl__addRange(cast(_esdl__T) ", min, ", cast(_esdl__T) ", max, ");\n");
+    fillCtr(bin._name, " = new EsdlRangeBin!_esdl__T( \"", bin._name, "\", this);\n");
     if (BINS[srcCursor] != ';') {
       import std.conv;
       assert (false, "';' expected, not found at line " ~
@@ -503,35 +530,74 @@ struct EsdlBinsParser (T)
     parseSpace();
   }
 
+  
   void procRangeBins(ref ParsedBin bin) {
-    fillDecl("EsdlRangeBin!_esdl__T ", bin._name, ";\n");
-    fillCtr(bin._name, " = new EsdlRangeBin!_esdl__T( \"", bin._name, "\");\n");
     if (BINS[srcCursor] != '[') assert (false, "Error parsing bins: " ~ BINS[srcCursor..$]);
     srcCursor += 1;
     parseSpace();
-    while (procRangeElem(bin)) {
-      srcCursor += 1; 		// for comma
+    if (BINS[srcCursor] == '[') {
+      srcCursor += 1;
       parseSpace();
+      proc2DRangeBins(bin);
     }
-    srcCursor += 1; 		// for the closing brace
+    else {
+      proc1DRangeBins(bin);
+    }
     if (BINS[srcCursor] != ';') {
       import std.conv;
       assert (false, "';' expected, not found at line " ~ BINS[srcCursor..$]);
     }
-    ++srcCursor;
+    fillDecl("EsdlRangeBin!_esdl__T ", bin._name, ";\n");
+    fillCtr(bin._name, " = new EsdlRangeBin!_esdl__T( \"", bin._name, "\", this);\n");
+    srcCursor += 1;
     parseSpace();
+  }
+  
+  void proc2DRangeBins(ref ParsedBin bin) {
+    while (true) {
+      proc1DRangeBins(bin);
+      parseSpace();
+      fillCtr("_esdl__addDelimiter();\n");
+      if (BINS[srcCursor] == ',') {
+	srcCursor += 1;
+	parseSpace();
+	if (BINS[srcCursor] != '[') {
+	  import std.conv;
+	  assert (false, "'[' expected, not found at line " ~ srcLine.to!string);
+	}
+	srcCursor += 1;
+	parseSpace();
+	continue;
+      }
+      else if (BINS[srcCursor] == ']') {
+	srcCursor += 1;
+	break;
+      }
+      else {
+	import std.conv;
+	assert (false, "']' expected, not found at line " ~ srcLine.to!string);
+      }
+    }
+  }
+  
+  void proc1DRangeBins(ref ParsedBin bin) {
+    while (procRangeElem(bin)) {
+      srcCursor += 1; 		// for comma
+      parseSpace();
+    }
+    srcCursor += 1; // for the closing brace
   }
 
   void procFunction(ref ParsedBin bin) {
     size_t srcTag = srcCursor;
     string funcName = parseIdentifierChain();
     if (bin._isWildcard) {
-      fillDecl("EsdlWildcardArrBin!_esdl__T ", bin._name, ";\n");
-      fillCtr(bin._name, " = new EsdlWildcardArrBin!_esdl__T( \"", bin._name, "\");\n");
+      fillDecl("EsdlWildcardBin!_esdl__T ", bin._name, ";\n");
+      fillCtr(bin._name, " = new EsdlWildcardBin!_esdl__T( \"", bin._name, "\", this);\n");
     }
     else {
-      fillDecl("EsdlValArrBin!_esdl__T ", bin._name, ";\n");
-      fillCtr(bin._name, " = new EsdlValArrBin!_esdl__T( \"", bin._name, "\");\n");
+      fillDecl("EsdlRangeBin!_esdl__T ", bin._name, ";\n");
+      fillCtr(bin._name, " = new EsdlRangeBin!_esdl__T( \"", bin._name, "\", this);\n");
     }
     fillCtr(bin._name, ".addArrDG(&" ~ BINS[srcTag..srcCursor] ~ ");\n");
     parseSpace();
@@ -586,7 +652,7 @@ struct EsdlBinsParser (T)
 		   BINS[srcCursor..$]);
     }
     checkWildcard(BINS[srcTag .. srcCursor]);
-    fillCtr(bin._name, ".addWildCard(", BINS[srcTag..srcCursor], ");\n");
+    fillCtr("_esdl__addWildcard(", BINS[srcTag..srcCursor], ");\n");
     parseSpace();
     if (BINS[srcCursor] == ',') return true;
     else if (BINS[srcCursor] == ']') return false;
@@ -598,22 +664,61 @@ struct EsdlBinsParser (T)
   
   void procWildcardBins(ref ParsedBin bin) {
     fillDecl("EsdlWildcardBin!_esdl__T ", bin._name, ";\n");
-    fillCtr(bin._name, " = new EsdlWildcardBin!_esdl__T( \"", bin._name, "\");\n");
     if (BINS[srcCursor] != '[') assert (false, "Error parsing bins: " ~ BINS[srcCursor..$]);
     srcCursor += 1;
     parseSpace();
-    while (procWildcardElem(bin)) {
-      srcCursor += 1; 		// for comma
+    if (BINS[srcCursor] == '[') {
+      srcCursor += 1;
       parseSpace();
+      proc2DWildcardBins(bin);
     }
-    srcCursor += 1; 		// for the closing brace
+    else {
+      proc1DWildcardBins(bin);
+    }
     if (BINS[srcCursor] != ';') {
       import std.conv;
       assert (false, "';' expected, not found at line " ~ BINS[srcCursor..$]);
     }
-    ++srcCursor;
+    fillCtr(bin._name, " = new EsdlWildcardBin!_esdl__T( \"", bin._name, "\", this);\n");
+    srcCursor += 1;
     parseSpace();
   }
+
+  void proc2DWildcardBins(ref ParsedBin bin) {
+    while (true) {
+      proc1DWildcardBins(bin);
+      parseSpace();
+      fillCtr("_esdl__addDelimiter();\n");
+      if (BINS[srcCursor] == ',') {
+	srcCursor += 1;
+	parseSpace();
+	if (BINS[srcCursor] != '[') {
+	  import std.conv;
+	  assert (false, "'[' expected, not found at line " ~ srcLine.to!string);
+	}
+	srcCursor += 1;
+	parseSpace();
+	continue;
+      }
+      else if (BINS[srcCursor] == ']') {
+	srcCursor += 1;
+	break;
+      }
+      else {
+	import std.conv;
+	assert (false, "']' expected, not found at line " ~ srcLine.to!string);
+      }
+    }
+  }
+  
+  void proc1DWildcardBins(ref ParsedBin bin) {
+    while (procWildcardElem(bin)) {
+      srcCursor += 1; 		// for comma
+      parseSpace();
+    }
+    srcCursor += 1; // for the closing brace
+  }
+
 
   bool isTypeStatement() {
     if (BINS[srcCursor] == 'o' || BINS[srcCursor] == 't') {
@@ -668,10 +773,17 @@ struct EsdlBinsParser (T)
     if (binsCount == 0) {
       // Add default bin
       fillDecl("EsdlRangeBin!_esdl__T _esdl__bin__esdl__defaultBin;\n");
-      fillCtr("_esdl__bin__esdl__defaultBin = new EsdlRangeBin!_esdl__T( q{_esdl__defaultBin});\n");
+      fillCtr("_esdl__addRange(cast(_esdl__T) ", T.min.to!string(), ", cast(_esdl__T) ", T.min.to!string(), ");\n");
+      fillCtr("_esdl__bin__esdl__defaultBin = new EsdlRangeBin!_esdl__T( q{_esdl__defaultBin}, this);\n");
+      if (T.max - cast(size_t)(T.min) > maxArrayDymanicLength) {
+	fillCtr("_esdl__bin__esdl__defaultBin.setBinArrLength(" ~ maxArrayDymanicLength.to!string ~ ");\n");
+      }
+      else {
+	fillCtr("_esdl__bin__esdl__defaultBin.setBinArrLength(" ~ (T.max - T.min).to!string ~ ");\n");
+      }
       fillCtr("_esdl__cvrBins ~= _esdl__bin__esdl__defaultBin;\n");
       // fillCtr("_sbinsNum ~= 64;\n");
-      fillCtr("_esdl__bin__esdl__defaultBin.addRange(", T.min.to!string(), ", ", T.max.to!string(), ");\n");
+      import std.conv: to;
     }
     fillCtr("this._esdl__initBins();\n}\n");
   }
@@ -767,11 +879,17 @@ struct EsdlBinsParser (T)
       bin._isArray = true;
       srcCursor += 1;
       parseSpace();
-      size_t srcTag = parseIntLiteral(true);
-      bin._arrayLen = BINS[srcTag .. srcCursor];
-      parseSpace();
-      if (BINS[srcCursor] != ']')
-	assert (false, "Expected ']' not found. Found " ~ BINS[srcCursor..$]);
+      if (BINS[srcCursor] == ']') {
+	bin._arrayLen = 0;
+      }
+      else {
+	size_t srcTag = parseIntLiteral(true);
+	import std.conv: to;
+	bin._arrayLen = BINS[srcTag .. srcCursor].to!(size_t);
+	parseSpace();
+	if (BINS[srcCursor] != ']')
+	  assert (false, "Expected ']' not found. Found " ~ BINS[srcCursor..$]);
+      }
       srcCursor += 1;
       parseSpace();
     }
@@ -787,10 +905,10 @@ struct EsdlBinsParser (T)
     parseSpace();
 
     procBinOfType(bin);
+    
+    
   }
 
-  // look for square brackets and report dim
-  // can only be one or two
   void parseBinsArrDim(ref ParsedBin bin) {
     size_t start = srcCursor;
     size_t dim = 0;
@@ -824,42 +942,6 @@ struct EsdlBinsParser (T)
     }
     return BINS[start..srcUpto];
   }
-}
-
-class EsdlWildcardBin(T): EsdlBaseBin!T
-{
-  string _name;
-  size_t _hits = 0;
-
-  this(string name) {
-    import std.conv;
-    _name = name;
-  }
-
-  void addWildCard(string wc) {
-  }
-
-  override string getName() {
-    return _name;    
-  }
-
-  override void sample(T val) { }
-
-  override double getCoverage() {
-    return 0.0;
-  }
-
-  override string describe()
-  {
-    string s = "Name : " ~ _name ~ "\n";
-    // foreach (elem; _ranges)
-    //   {
-    // 	import std.conv;
-    // 	s ~= to!string(elem) ~ ", ";
-    //   }
-    s ~= "\n";
-    return s;
-  }
   
 }
 
@@ -878,9 +960,24 @@ abstract class EsdlBaseBin(T)
 
   uint _attributes;
 
+  size_t _length;
+  size_t _offset;
+
+  bool _hasFilter = false;
   FilterDG _filter;
+
+  CoverPoint!T _esdl__CP;
+
+  string _name = "";
+
+  void setBinArrLength(size_t len) {
+    _length = len;
+  }
+
+  abstract void calculateLength();
   
   void addFilter(FilterDG filter) {
+    _hasFilter = true;
     _filter = filter;
   }
 
@@ -897,9 +994,11 @@ abstract class EsdlBaseBin(T)
   }
   
   abstract void sample(T val);
-  abstract double getCoverage();
+
+  string getName() {
+    return _name;    
+  }
   
-  abstract string getName();
   abstract string describe();
 
   bool isIllegal() {
@@ -936,18 +1035,21 @@ abstract class EsdlBaseBin(T)
 
 class EsdlRangeBin(T): EsdlBaseBin!T
 {
-  // import std.typecons: Tuple, tuple;
 
-  // alias TRange = Tuple!(T, "min", T, "max");
+  import std.traits;
+  
+  alias Array1DG = T[] delegate();
+  alias Array2DG = T[][] delegate();
+  // alias UT = Unsigned!(T);
+  
+  struct BinRange {
 
-  struct BinRange(T)
-  {
-    size_t _count;	  // how much the previous ranges have covered
+    size_t _countBefore;
 
     T _min;
     T _max;
 
-    int opCmp(ref const BinRange!T other) const {
+    int opCmp(ref const BinRange other) const {
       if (this._min > other._min) {
 	return +1;
       }
@@ -957,252 +1059,422 @@ class EsdlRangeBin(T): EsdlBaseBin!T
       else if (this._max == other._max) {
 	return 0;
       }
-      else if (other._max == T.min ||
-	       other._max > this._max) {
+      else if (other._max-1 > this._max-1) {
 	return -1;
       }
       else return +1;
     }
+
+    int opCmp(ref const T other) const {
+      if (this._min > other) return 1;
+      else if (this._min < other) return -1;
+      else return 0;
+    }
   }
   
-  string _name;
-  BinRange!T[] _ranges;
+  bool _hasRanges;
+  bool is1d;
   
-  uint[] _hits;
+  size_t _rangeCount;
   
-  this(string name) {
+  union arrays {
+    BinRange[] d1Ranges;
+    BinRange[][] d2Ranges;
+    T[] d1Values;
+    T[][] d2Values;
+  };
+  
+  arrays _arrs;
+
+
+  // in case of dynamic arrays
+  override void calculateLength(){
+    if (_hasRanges) {
+      if (is1d) {
+	_length = _rangeCount;
+	if (_length > maxArrayDymanicLength) {
+	  _length = maxArrayDymanicLength;
+	}
+      }
+      else {
+	_length = _arrs.d2Ranges.length;
+      }
+    }
+    else {
+      if (is1d) {
+	_length = _rangeCount;
+	if (_length > maxArrayDymanicLength) {
+	  _length = maxArrayDymanicLength;
+	}
+      }
+      else {
+	_length = _arrs.d2Values.length;
+      }
+    }
+  }
+  
+  this(string name, CoverPoint!T cp) {
+    
     _name = name;
+    _esdl__CP = cp;
+
+    if (cp._esdl__container._mins.length != cp._esdl__container._maxs.length) assert (false);
+
+    
+    _hasRanges = cp._esdl__container._mins.length > 0;
+    
+    if (cp._esdl__container._mins.length + cp._esdl__container._elems.length == 0) {
+      // expecting function, this is a really bad way to do this stuff btw
+      return;
+    }
+      
+    if (cp._esdl__container._delims.length > 0) {
+      is1d = false;
+      size_t p_range_num = 0;
+      size_t p_val_num = 0;
+      foreach (ref delim; cp._esdl__container._delims) {
+	this.addArray();
+	size_t range_num = delim[0];
+	size_t val_num = delim[1];
+	for (size_t n = p_range_num; n != range_num; n += 1) {
+	  this.addRange(cp._esdl__container._mins[n], cp._esdl__container._maxs[n]);
+	}
+	for (size_t n = p_val_num; n != val_num; n += 1) {
+	  this.addElem(cp._esdl__container._elems[n]);
+	}
+	p_range_num = range_num;
+	p_val_num = val_num;
+      }
+    }    
+    else {
+      is1d = true;      
+      for (uint n=0; n != cp._esdl__container._mins.length; n += 1) {
+	this.addRange(cp._esdl__container._mins[n], cp._esdl__container._maxs[n]);
+      }
+      for (uint n=0; n != cp._esdl__container._elems.length; n += 1) {
+	this.addElem(cp._esdl__container._elems[n]);
+      }
+    }
+  
+    processBins();
+    
+    cp._esdl__container.reset();
   }
   
-  void addElem (T val) {
-    this.addRange(val, cast(T) (val+1));
-    // T [] b = [val, val];
-    // or(b);
+  void addArray () {
+    assert(!is1d);
+    if (_hasRanges) {
+      _arrs.d2Ranges ~= new BinRange[](0);
+    }
+    else {
+      _arrs.d2Values ~= new T[](0);
+    }
   }
-
+  
   void addRange (T min, T max) {
-    _ranges ~= BinRange!T(0L, min, max);
-    // T [] b = [min, max];
-    // or(b);
+    if (is1d) {
+      _arrs.d1Ranges ~= BinRange(0L, min, max);
+    }
+    else {
+      _arrs.d2Ranges[$-1] ~= BinRange(0L, min, max);
+    }
   }
 
-  void processBin() {
-    import std.stdio: writeln;
-    import std.algorithm.sorting: sort;
-    sort(_ranges);
-    writeln(_ranges);
+  void addElem (T val) {
+    if (_hasRanges) {
+      this.addRange(val, cast(T) (val+1));
+    }
+    if (is1d) {
+      _arrs.d1Values ~= val;
+    }
+    else {
+      _arrs.d2Values[$-1] ~= val;
+    }
   }
-  
-  override string getName() {
-    return _name;    
-  }
-  auto getRanges() {
-    return _ranges;
-  }
-
-  override void sample(T val) { 
-  }
-
-  override double getCoverage() {
-    return 0.0;
-  }
-
-  override string describe()
-  {
-    string s = "Name : " ~ _name ~ "\n";
-    // foreach (elem; _ranges)
-    //   {
-    // 	import std.conv;
-    // 	s ~= to!string(elem) ~ ", ";
-    //   }
-    s ~= "\n";
-    return s;
-  }
-}
-
-class EsdlValArrBin(T): EsdlBaseBin!T
-{
-  // import std.typecons: Tuple, tuple;
-
-  // alias TRange = Tuple!(T, "min", T, "max");
-
-  alias Array1DG = T[] delegate();
-  alias Array2DG = T[][] delegate();
-
-  Array1DG _arr1dg;
-  Array2DG _arr2dg;
 
   void addArrDG(Array1DG dg) {
-    _arr1dg = dg;
+    _arrs.d1Values = dg();
+    is1d = true;
+    processBins();
   }
 
   void addArrDG(Array2DG dg) {
-    _arr2dg = dg;
+    _arrs.d2Values = dg();
+    is1d = false;
+    processBins();
   }
 
-  struct BinRange(T)
-  {
-    size_t _count;	  // how much the previous ranges have covered
+  T [] sortAndRemoveOverlaps (T [] arr) {
+    
+    import std.algorithm.sorting: sort;
 
-    T _min;
-    T _max;
+    sort(arr);
+    T [] narr;
+    narr ~= arr[0];
+    foreach (val; arr[1..$]) {
+      if (narr[$-1] != val) {
+	narr ~= val;
+      }
+    }
+    return narr;
+    
+  }
 
-    int opCmp(ref const BinRange!T other) const {
-      if (this._min > other._min) {
-	return +1;
+  BinRange [] sortAndRemoveOverlaps (BinRange [] ranges) {
+
+    import std.algorithm.sorting: sort;
+        
+    sort(ranges);
+    import std.stdio: writeln;
+    writeln(ranges.length);
+    BinRange[] newRanges;
+    writeln(BinRange.sizeof);
+    writeln(newRanges.length);
+    newRanges.length = 1;
+    newRanges[0] = ranges[0];
+    writeln(newRanges.length);
+    foreach (range; ranges[1..$]) {
+      if (newRanges[$-1]._max >= range._min) {
+	newRanges[$-1]._max = range._max;
       }
-      else if (this._min < other._min) {
-	return -1;
+      else {
+	newRanges ~= range;
       }
-      else if (this._max == other._max) {
-	return 0;
+    }
+    return newRanges;
+    
+  }
+
+  void processBins() {
+    if (_hasRanges) {
+      if (is1d) {
+	_arrs.d1Ranges = sortAndRemoveOverlaps(_arrs.d1Ranges);
+	size_t cumsum = 0;
+	foreach (ref range; _arrs.d1Ranges) {
+	  range._countBefore = cumsum;
+	  cumsum += range._max - range._min;
+	}
+	_rangeCount = cumsum;
       }
-      else if (other._max == T.min ||
-	       other._max > this._max) {
-	return -1;
+      else {
+	foreach (ref arr; _arrs.d2Ranges) {
+	  arr = sortAndRemoveOverlaps(arr);
+	}
+	_rangeCount = 0;	
       }
-      else return +1;
+    }
+    else {
+      if (is1d) {
+	_arrs.d1Values = sortAndRemoveOverlaps(_arrs.d1Values);
+	_rangeCount = _arrs.d1Values.length;
+      }
+      else {
+	foreach (ref arr; _arrs.d2Values) {
+	  arr = sortAndRemoveOverlaps(arr);
+	}
+	_rangeCount = 0;
+      }
     }
   }
-  
-  string _name;
-  BinRange!T[] _ranges;
-  
-  uint[] _hits;
-  
-  this(string name) {
-    _name = name;
+    
+  size_t getBinNumber (size_t count) {
+    return (count * _length) / _rangeCount;
   }
   
-  void addElem (T val) {
-    this.addRange(val, cast(T) (val+1));
-    // T [] b = [val, val];
-    // or(b);
-  }
+  override void sample(T val) {
 
-  void addRange (T min, T max) {
-    _ranges ~= BinRange!T(0L, min, max);
-    // T [] b = [min, max];
-    // or(b);
-  }
-
-  void processBin() {
-    import std.stdio: writeln;
-    import std.algorithm.sorting: sort;
-    sort(_ranges);
-    writeln(_ranges);
-  }
-  
-  override string getName() {
-    return _name;    
-  }
-  auto getRanges() {
-    return _ranges;
-  }
-
-  override void sample(T val) { 
-  }
-
-  override double getCoverage() {
-    return 0.0;
+    
+    if (_hasFilter && (!_filter(val))) {
+      return;
+    }
+    
+    import std.algorithm.sorting;
+    import std.range;
+    
+    if (_hasRanges) {
+      if (is1d) {
+	auto sr = assumeSorted(_arrs.d1Ranges);
+	size_t idx = _arrs.d1Ranges.length - sr.upperBound!(SearchPolicy.binarySearch, T)(val).length;
+	if (idx == 0)
+	  return;
+	idx --;
+	if (val <= (_arrs.d1Ranges[idx]._max-1)) {
+	  size_t count = _arrs.d1Ranges[idx]._countBefore + (val - _arrs.d1Ranges[idx]._min);
+	  _esdl__CP.addHit(getBinNumber(count) + _offset);
+	}
+      }
+      else {
+	foreach (i, ref ar; _arrs.d2Ranges) {
+	  auto sr = assumeSorted(ar);
+	  size_t idx = ar.length - sr.upperBound(val).length;
+	  if (idx == 0)
+	    continue;
+	  idx --;
+	  if (val <= (ar[idx]._max-1)) {
+	    _esdl__CP.addHit(i + _offset);
+	  }
+	}
+      }
+    }
+    else {
+      if (is1d) {
+	auto sr = assumeSorted(_arrs.d1Values);
+	auto ub = sr.upperBound(val);
+	if (ub.length != 0 && ub[0] == val) {
+	  size_t idx = _arrs.d1Values.length - ub.length;
+	  _esdl__CP.addHit(getBinNumber(idx) + _offset);
+	}
+      }
+      else {
+	foreach (i, ref ar; _arrs.d2Values) {
+	  auto sr = assumeSorted(ar);
+	  auto ub = sr.upperBound(val);
+	  if (ub.length != 0 && ub[0] == val) {
+	    _esdl__CP.addHit(i + _offset);
+	  }
+	}
+      }
+    }
   }
 
   override string describe()
   {
     string s = "Name : " ~ _name ~ "\n";
-    // foreach (elem; _ranges)
-    //   {
-    // 	import std.conv;
-    // 	s ~= to!string(elem) ~ ", ";
-    //   }
-    s ~= "\n";
     return s;
   }
 }
 
-class EsdlWildcardArrBin(T): EsdlBaseBin!T
+class EsdlWildcardBin(T): EsdlBaseBin!T
 {
-  string _name;
-  size_t _hits = 0;
 
   static if (isIntegral!T) enum size_t BITNUM = T.sizeof * 8;
   static if (isBitVector!T) enum size_t BITNUM = T.SIZE;
-
+  
   alias LT = ulvec!BITNUM;
   
   alias Array1DG = LT[] delegate();
   alias Array2DG = LT[][] delegate();
 
+  union arrays {
+    Wildcard!T [] d1;
+    Wildcard!T [][] d2;
+  };
+  arrays _arrs;
 
-  Array1DG _arr1dg;
-  Array2DG _arr2dg;
+  bool is1d = true;
+  
+  // in case of dynamic arrays
+  override void calculateLength(){
+    if (is1d) {
+      _length = _arrs.d1.length;
+      if (_length > maxArrayDymanicLength) {
+	_length = maxArrayDymanicLength;
+      }
+    }
+    else {
+      _length = _arrs.d2.length;
+    }
+  }
 
   void addArrDG(Array1DG dg) {
-    import std.stdio: writeln;
+    is1d = true;
     auto arr = dg();
-    writeln(arr);
-    foreach (wc; arr) {
-      writeln("Adding Wildcard: ", Wildcard!BITNUM(wc));
+    foreach (ref wc; arr) {
+      _arrs.d1 ~= Wildcard!T(wc);
     }
-    _arr1dg = dg;
   }
 
   void addArrDG(Array2DG dg) {
-    _arr2dg = dg;
+    is1d = false;
+    auto arr = dg();
+    foreach (ref arr1; arr) {
+      _arrs.d2 ~= new Wildcard!T[](0);
+      foreach (ref wc; arr1) {
+	_arrs.d2[$-1] ~= Wildcard!T(wc);
+      }
+    }
   }
-
-  this(string name) {
-    import std.conv;
+      
+  this(string name, CoverPoint!T cp) {
+    
     _name = name;
+    _esdl__CP = cp;
+
+    if (cp._esdl__container._wildcards.length == 0) {
+      // expecting function, this is a really bad way to do this stuff btw
+      return;
+    }
+
+    if (cp._esdl__container._delims.length > 0) {
+      is1d = false;
+      size_t p_num = 0;
+      foreach (ref delim; cp._esdl__container._delims) {
+	this.addArray();
+	size_t num = delim[0];
+	for (size_t n = p_num; n != num; n += 1) {
+	  this.addWildcard(cp._esdl__container._wildcards[n]);
+	}
+	p_num = num;
+      }
+    }
+    else {
+      is1d = true;
+      foreach (wc; cp._esdl__container._wildcards) {
+	this.addWildcard(wc);
+      }
+    }
+    cp._esdl__container.reset();
   }
 
-  void addWildCard(string wc) {
-    import std.stdio: writeln;
-    writeln("Adding Wildcard: ", Wildcard!BITNUM(wc));
+  void addArray () {
+    assert(!is1d);
+    _arrs.d2 ~= new Wildcard!T[](0);
   }
 
-  override string getName() {
-    return _name;    
+    
+  void addWildcard(string wc) {
+    if (is1d) {
+      _arrs.d1 ~= Wildcard!T(wc);
+    }
+    else {
+      _arrs.d2[$-1] ~= Wildcard!T(wc);
+    }
   }
 
-  override void sample(T val) { }
+  
+  override void sample(T val) {
 
-  override double getCoverage() {
-    return 0.0;
+    if (_hasFilter && (!_filter(val))) {
+      return;
+    }
+    
+    if (is1d) {
+      for (size_t i = 0; i < _arrs.d1.length; i ++) {
+	if (_arrs.d1[i].checkHit(val)) {
+	  size_t hit = (i * _length) / _arrs.d1.length;
+	  _esdl__CP.addHit(hit + _offset);
+	  // goto next hit
+	  size_t next_hit = hit + 1;
+	  size_t next_i = (_arrs.d1.length * next_hit) / _length;
+	  i = next_i - 1;
+	}
+      }
+    }
+    else {
+      foreach (i, ref arr; _arrs.d2) {
+	foreach (ref wc; arr) {
+	  if (wc.checkHit(val)) {
+	    _esdl__CP.addHit(i + _offset);
+	    break;
+	  }
+	}
+      }
+    }
   }
 
   override string describe()
   {
     string s = "Name : " ~ _name ~ "\n";
-    // foreach (elem; _ranges)
-    //   {
-    // 	import std.conv;
-    // 	s ~= to!string(elem) ~ ", ";
-    //   }
-    s ~= "\n";
     return s;
-  }
-  
-}
-
-
-enum Type: ubyte {IGNORE, ILLEGAL, BIN};
-
-class EsdlDefaultBin(T): EsdlBaseBin!T
-{
-  Type _type = Type.IGNORE;
-  bool _curr_hit;
-  string _name = "";
-  uint _hits = 0;
-  this (Type t, string n) {
-    _type = t;
-    _name = n;
-  }
-
-  override void sample(T val) {}
-  override double getCoverage() {return 0.0;}
-
-  override string getName() {return _name;}
-  override string describe() {return "";}
-
+  } 
 }
