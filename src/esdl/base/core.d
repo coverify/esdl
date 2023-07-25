@@ -5216,18 +5216,20 @@ class BaseWork: Process
 {
   SimThread _thread;
 
+  private static BaseWork _self;
+
   static BaseWork self() {
-    return staticCast!(BaseWork)(Process._self);
+    return _self;
   }
 
   override void fn_wrap(void function() fn) {
-    Process._self = this;
+    _self = this;
     SimThread._self = _thread;
     super.fn_wrap(fn);
   }
 
   override void dg_wrap(void delegate() dg) {
-    Process._self = this;
+    _self = this;
     SimThread._self = _thread;
     super.dg_wrap(dg);
   }
@@ -5302,9 +5304,11 @@ class BaseWorker: Process
   AsyncLock _defunctLock; 		// lock to wait on at the end of thread
 
   uint _cpuCore = 0;
+
+  static private BaseWorker _self;
   
   static BaseWorker self() {
-    return staticCast!(BaseWorker)(_self);
+    return _self;
   }
 
   void setCpuCore(uint fcore) {
@@ -5317,7 +5321,7 @@ class BaseWorker: Process
     try {
       stickToCpuCore(_cpuCore);
 
-      Process._self = this;
+      _self = this;
       super.fn_wrap(fn);
       _defunctLock.wait();
     }
@@ -5360,7 +5364,7 @@ class BaseWorker: Process
     try {
       stickToCpuCore(_cpuCore);
 
-      Process._self = this;
+      _self = this;
       super.dg_wrap(dg);
       _defunctLock.wait();
     }
@@ -6866,17 +6870,19 @@ class RootThread: SimThread, Procedure
   }
 
 
-  this(RootEntity root, void function() fn,
+  this(EsdlExecutor executor, RootEntity root, void function() fn,
        size_t fcore=0, size_t sz = 0 ) {
     synchronized(this) {
+      _executor = executor;
       _randGen = new _esdl__RandGen(uniform!int());
     }
     super("RootThread", root, () {fn_wrap(fn, fcore);}, SimThreadType.ROOT, sz);
   }
 
-  this(RootEntity root, void delegate() dg,
+  this(EsdlExecutor executor, RootEntity root, void delegate() dg,
        size_t fcore=0, size_t sz = 0 ) {
     synchronized(this) {
+      _executor = executor;
       _randGen = new _esdl__RandGen(uniform!int());
     }
     super("RootThread", root, () {dg_wrap(dg, fcore);}, SimThreadType.ROOT, sz);
@@ -6927,6 +6933,43 @@ class RootThread: SimThread, Procedure
       _esdl__elabMems(l);
     }
   }
+
+  EsdlExecutor _executor;
+
+  private final void execTaskProcesses() {
+    // First set affinity
+    // executor._poolThreadInitBarrier.wait();
+    // stickToCpuCore((getRoot().getThreadCoreList()[_poolIndex]) % CPU_COUNT());
+
+    // while (true) {
+    //   // wait for next cycle
+    //   executor._poolThreadExecBarrier.wait();
+    //   // this._waitLock.wait();
+
+    //   if (this._hasHalted()) {
+    // 	executor._poolThreadHaltBarrier.wait();
+    // 	break;
+    //   }
+
+    foreach (proc; _executor._terminalTasksGroups[0]) {
+      if (proc._state >= _KILLED) {
+	proc._execute();
+      }
+    }
+    foreach (proc; _executor._runnableTasksGroups[0]) {
+      if (proc._state == ProcState.RUNNING) {
+	proc._execute();
+      }
+    }
+    // // executor._poolThreadPostBarrier.wait();
+    // // foreach (proc; executor._runnableTasksGroups[_poolIndex]) {
+    // // 	proc.postExecute();
+    // // }
+    // // executor._runnableTasksGroups[_poolIndex].length = 0;
+    // // executor._terminalTasksGroups[_poolIndex].length = 0;
+    // executor._poolThreadDoneBarrier.wait();
+  }
+
 }
 
 
@@ -7179,7 +7222,6 @@ void execElab(T)(T t)
 	enforce(t._esdl__noUnboundPorts, "Error: There are unbound ports");
 
 	t.getSimulator._executor.initPoolThreads();
-	t.getSimulator._executor._poolThreadInitBarrier.wait();
 
 	t.getSimulator.setPhase = SimPhase.INIT;
 	t.getSimulator._executor.resetStage();
@@ -7205,6 +7247,7 @@ interface EsdlExecutorIf
 class EsdlExecutor: EsdlExecutorIf
 {
   private EsdlSimulator _simulator;
+  private RootThread _rootThread;
   // class ProcessMonitor {}
   import core.sync.semaphore: Semaphore;
   import core.sync.barrier: Barrier;
@@ -7216,7 +7259,7 @@ class EsdlExecutor: EsdlExecutorIf
   // private Barrier _poolThreadPostBarrier;
   private Barrier _poolThreadHaltBarrier;
   private Barrier _poolThreadInitBarrier;
-  // private size_t _numThreads;
+  private size_t _numThreads;
   // private ProcessMonitor _monitor;
   // private Semaphore _termSemaphore;
   // private Barrier _termBarrier;
@@ -7267,6 +7310,10 @@ class EsdlExecutor: EsdlExecutorIf
   private int _stage;
   private int _stageIndex = -1; // basically _stage - _minStage
 
+  final void setRootThread(RootThread rootThread) {
+    _rootThread = rootThread;
+  }
+
   final int stage() {
     synchronized(this) {
       return _stage;
@@ -7313,22 +7360,27 @@ class EsdlExecutor: EsdlExecutorIf
   
   private final void createPoolThreads(size_t numThreads,
 				       size_t stackSize) {
-    _poolThreads.length = numThreads;
     _runnableTasksGroups.length = numThreads;
     _terminalTasksGroups.length = numThreads;
-    for (uint i=0; i!=numThreads; ++i) {
-      debug(THREAD) {
-	import std.stdio;
-	stderr.writeln("Creating Pool Threads: ", i);
+    if (numThreads > 1) {
+      _poolThreads.length = numThreads;
+      for (uint i=0; i!=numThreads; ++i) {
+	debug(THREAD) {
+	  import std.stdio;
+	  stderr.writeln("Creating Pool Threads: ", i);
+	}
+	_poolThreads[i] = new PoolThread(_simulator.getRoot(), i, stackSize);
+	_poolThreadGroup.add(_poolThreads[i]);
       }
-      _poolThreads[i] = new PoolThread(_simulator.getRoot(), i, stackSize);
-      _poolThreadGroup.add(_poolThreads[i]);
     }
   }
 
   private final void initPoolThreads() {
     foreach (i, rt; _poolThreads) {
       rt.initialize();
+    }
+    if (_numThreads > 1) {
+      _poolThreadInitBarrier.wait();
     }
   }
 
@@ -7732,6 +7784,7 @@ class EsdlExecutor: EsdlExecutorIf
 
   private final void threadCount(size_t numThreads=1) {
     synchronized(this) {
+      _numThreads = numThreads;
       debug(THREAD) {
 	import std.stdio: stderr;
 	stderr.writeln("Creating an Executor with ", numThreads, " active threads.");
@@ -7742,24 +7795,26 @@ class EsdlExecutor: EsdlExecutorIf
       else {
 	_procSemaphore = new Semaphore(cast(uint)numThreads);
       }
-      debug(BARRIER) {
-	_poolThreadExecBarrier = new DebugBarrier(cast(uint)numThreads + 1,
-						  "_poolThreadExecBarrier");
-	_poolThreadDoneBarrier = new DebugBarrier(cast(uint)numThreads + 1,
-						  "_poolThreadDoneBarrier");
-	// _poolThreadPostBarrier = new DebugBarrier(cast(uint)numThreads + 1,
-	// 					  "_poolThreadPostBarrier");
-	_poolThreadHaltBarrier = new DebugBarrier(cast(uint)numThreads + 1,
-						  "_poolThreadHaltBarrier");
-	_poolThreadInitBarrier = new DebugBarrier(cast(uint)numThreads + 1,
-						  "_poolThreadInitBarrier");
-      }
-      else {
-	_poolThreadExecBarrier = new Barrier(cast(uint)numThreads + 1);
-	_poolThreadDoneBarrier = new Barrier(cast(uint)numThreads + 1);
-	// _poolThreadPostBarrier = new Barrier(cast(uint)numThreads + 1);
-	_poolThreadHaltBarrier = new Barrier(cast(uint)numThreads + 1);
-	_poolThreadInitBarrier = new Barrier(cast(uint)numThreads + 1);
+      if (numThreads > 1) {
+	debug(BARRIER) {
+	  _poolThreadExecBarrier = new DebugBarrier(cast(uint)numThreads + 1,
+						    "_poolThreadExecBarrier");
+	  _poolThreadDoneBarrier = new DebugBarrier(cast(uint)numThreads + 1,
+						    "_poolThreadDoneBarrier");
+	  // _poolThreadPostBarrier = new DebugBarrier(cast(uint)numThreads + 1,
+	  // 					  "_poolThreadPostBarrier");
+	  _poolThreadHaltBarrier = new DebugBarrier(cast(uint)numThreads + 1,
+						    "_poolThreadHaltBarrier");
+	  _poolThreadInitBarrier = new DebugBarrier(cast(uint)numThreads + 1,
+						    "_poolThreadInitBarrier");
+	}
+	else {
+	  _poolThreadExecBarrier = new Barrier(cast(uint)numThreads + 1);
+	  _poolThreadDoneBarrier = new Barrier(cast(uint)numThreads + 1);
+	  // _poolThreadPostBarrier = new Barrier(cast(uint)numThreads + 1);
+	  _poolThreadHaltBarrier = new Barrier(cast(uint)numThreads + 1);
+	  _poolThreadInitBarrier = new Barrier(cast(uint)numThreads + 1);
+	}
       }
       // _termBarrier = new Barrier(// cast(uint)tasks.length +
       //			 1);
@@ -7769,12 +7824,17 @@ class EsdlExecutor: EsdlExecutorIf
   }
 
   final void execTasks() {
-    // all threads start here
-    _poolThreadExecBarrier.wait();
-    // wait for all threads to end
-    // _poolThreadPostBarrier.wait();
-    // wait for postExecute() to end
-    _poolThreadDoneBarrier.wait();
+    if (_numThreads == 1) {
+      _rootThread.execTaskProcesses();
+    }
+    else {
+      // all threads start here
+      _poolThreadExecBarrier.wait();
+      // wait for all threads to end
+      // _poolThreadPostBarrier.wait();
+      // wait for postExecute() to end
+      _poolThreadDoneBarrier.wait();
+    }
     foreach (ref runnableTasksGroup; _runnableTasksGroups) {
       foreach (proc; runnableTasksGroup) {
 	proc.postExecute();
@@ -7787,15 +7847,20 @@ class EsdlExecutor: EsdlExecutorIf
 
   final void joinPoolThreads() {
     _simulator.getRoot.message("Shutting down all the Routine threads");
-    foreach (ref _poolThread; this._poolThreads) {
-      _poolThread._halt();
-      _poolThread._waitLock.notify();
+    if (_numThreads == 1) {
+      _rootThread.execTaskProcesses();
     }
-    // start all the threads in the pool
-    _poolThreadExecBarrier.wait();
-    // wait for all the threads in the pool to finish
-    _poolThreadHaltBarrier.wait();
-    // _poolThreadGroup.joinAll();
+    else {
+      foreach (ref _poolThread; this._poolThreads) {
+	_poolThread._halt();
+	_poolThread._waitLock.notify();
+      }
+      // start all the threads in the pool
+      _poolThreadExecBarrier.wait();
+      // wait for all the threads in the pool to finish
+      _poolThreadHaltBarrier.wait();
+      // _poolThreadGroup.joinAll();
+    }
   }
 
   // final void joinSimThreads() {
@@ -9546,6 +9611,7 @@ class EsdlSimulator: EntityIntf
     this._executor = new EsdlExecutor(this);
 
     _executor.threadCount(count);
+
     _executor.createPoolThreads(count, 0);
     // We do this to make dure that all the routine threads are up
     // and running before we attempt to create other threads. For
@@ -9553,7 +9619,7 @@ class EsdlSimulator: EntityIntf
     // if we do not take care of this
 
     synchronized(this) {
-      _rootThread = new RootThread(t, {
+      _rootThread = new RootThread(_executor, t, {
 	  try {
 	    simLoop(t);
 	  }
@@ -9567,6 +9633,7 @@ class EsdlSimulator: EntityIntf
       _rootThread._esdl__setParent(this);
       _rootThread._esdl__setName("rootThread");
     }
+    _executor.setRootThread(_rootThread);
     this.triggerElab();
   }
 
