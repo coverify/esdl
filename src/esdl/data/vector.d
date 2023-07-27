@@ -394,7 +394,7 @@ private struct RangeT(A)
  * `Vector` must be sliced to get a range (for example, use `array[].map!`
  * instead of `array.map!`). The container itself is not a range.
  */
-struct Vector(T, string NAME, size_t MINCAP=8, bool SCRATCH=false)
+struct Vector(T, string NAME=null, size_t MINCAP=8, bool SCRATCH=false)
 // if (is(T == class))
 {
   // import std.internal.memory : malloc, realloc;
