@@ -978,7 +978,7 @@ interface HierComp: NamedComp, ConfigContext
 
     ParContext _esdl__parInheritFrom() {
       auto parent = cast(HierComp) this.getParent();
-      assert(parent !is null);
+      assert (parent !is null);
       return parent;
     }
 
@@ -998,7 +998,7 @@ interface HierComp: NamedComp, ConfigContext
       else {
 	assert (_esdl__multicoreConfig is null);
 	auto pconf = getParent._esdl__getMulticoreConfig();
-	assert(pconf !is null);
+	assert (pconf !is null);
 	_esdl__multicoreConfig = linfo.makeCfg(pconf);
       }
 
@@ -1613,9 +1613,9 @@ interface ElabContext: HierComp
 	      l = t.new L();
 	    }
 	    else {
-	      static assert(false,
-			    "Unable to instantiate " ~
-			    t.tupleof[I].stringof);
+	      static assert (false,
+			     "Unable to instantiate " ~
+			     t.tupleof[I].stringof);
 	    }
 	}
       }
@@ -1637,7 +1637,7 @@ interface ElabContext: HierComp
 
   static void _esdl__elab(size_t I, string S="", T, L)
     (T t, ref L l, uint[] indices=null) {
-    debug(ELABORATE) {
+    debug (ELABORATE) {
       import std.stdio;
       stderr.writeln("** ElabContext: Elaborating " ~
 		     t.tupleof[I].stringof ~ ":" ~
@@ -1645,9 +1645,9 @@ interface ElabContext: HierComp
     }
     l._esdl__inst!I(t, l);
     synchronized(l) {
-      static assert(is (T unused: ElabContext),
-		    "Only ElabContext components are allowed to instantiate " ~
-		    "other ElabContext components");
+      static assert (is (T unused: ElabContext),
+		     "Only ElabContext components are allowed to instantiate " ~
+		     "other ElabContext components");
       static if (is (T unused: ElabContext)) {
 	t._esdl__addChildObj(l);
 	t._esdl__addChildComp(l);
@@ -2688,10 +2688,9 @@ alias AsyncEvent = EventWrapperStruct!(EventObj, true);
 
   final void initialize(string name, NamedComp parent=null) {
     synchronized {
-      // if (RootThread.self !is null && parent is null) {
-      // 	assert(false, "Must provide parent for EventType object " ~
-      // 	       "\"initialize\" during elaboration for " ~ RootThread.self.getName);
-      // }
+      assert (getSimPhase() == SimPhase.SIMULATE ||
+	      parent !is null, "Must provide parent for MutexObj being " ~
+	      "initialized during elaboration");
       if (_eventObj is null) {
 	_eventObj = new EventType(parent, ASYNC);
       }

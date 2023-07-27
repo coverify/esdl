@@ -317,7 +317,7 @@ public class PortObj(IF, size_t N=1, size_t M=N) if(N == 1) : BasePort
       // bind method
       final void bind(IF channel) {
 	// if (simPhase == SimPhase.BINDPORTS) {
-	// import std.exception;
+	import std.exception;
 	enforce(this._channel is IF.init, "Re-binding a port if not allowed: " ~
 		this.getFullName);
 	synchronized(this) {
@@ -912,10 +912,9 @@ class MutexObj: MutexIF, NamedComp
 
   public final void initialize(string name, NamedComp parent=null) {
     synchronized {
-      if(RootThread.self !is null && parent is null) {
-	assert(false, "Must provide parent for MutexObj being " ~
-	       "\"initialize\" during elaboration");
-      }
+      assert (getSimPhase() == SimPhase.SIMULATE ||
+	      parent !is null, "Must provide parent for MutexObj being " ~
+	      "\"initialize\" during elaboration");
       if(_mutexObj is null) {
 	_mutexObj = new MutexObj(parent);
       }
