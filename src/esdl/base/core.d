@@ -6239,10 +6239,6 @@ abstract class Process: Procedure, HierComp, EventClient
     }
   }
 
-  // this is looked at the time thread enters waiting state
-  private ProcState _reqState; // requested state
-  private bool _reqIsRec; // recursive request
-
   private ProcState _state = ProcState.STARTING;
   private ProcState _origState;
   private ProcState _nextState;	// Right after the process yields
@@ -6251,55 +6247,12 @@ abstract class Process: Procedure, HierComp, EventClient
   private ProcWaitType _waitType; // TIMED, EVENT, or FOREVER
   private SimTime _waitTime;	  // only if wait time is TIMED
 
-  protected final ProcState requestState() {
-    synchronized(this) {
-      debug(PROC) {
-	import std.stdio;
-	stderr.writeln(this.procID, " Thread has request for ", _reqState);
-      }
-      return _reqState;
-    }
-  }
-
-  protected final ProcState _requestState() {
+  private final void requestState(ProcState state, bool rec = false) {
     debug(PROC) {
       import std.stdio;
-      stderr.writeln(this.procID, " Thread has request for ", _reqState);
+      stderr.writeln(this.procID, " Requesting Thread to ", state);
     }
-    return _reqState;
-  }
-
-  private final void requestState(ProcState s, bool rec = false) {
-    synchronized(this) {
-      debug(PROC) {
-	import std.stdio;
-	stderr.writeln(this.procID, " Requesting Thread to ", s);
-      }
-      _reqState = s;
-      _reqIsRec = rec;
-    }
-    getSimulator().reqUpdateProc(this);
-  }
-
-  private final void _requestState(ProcState s, bool rec = false) {
-    debug(PROC) {
-      import std.stdio;
-      stderr.writeln(this.procID, " Requesting Thread to ", s);
-    }
-    _reqState = s;
-    _reqIsRec = rec;
-    getSimulator().reqUpdateProc(this);
-  }
-
-  protected final bool reqIsRec() {
-    synchronized(this) {
-      debug(PROC) {
-	import std.stdio;
-	stderr.writeln(this.procID, " Thread has request that is Recursive: ",
-		       _reqIsRec);
-      }
-      return _reqIsRec;
-    }
+    getSimulator()._executor.reqProcState(this, state, rec);
   }
 
   final ProcState status() {
@@ -7234,13 +7187,18 @@ interface EsdlExecutorIf
 {
   void addRunnableProcess(Process task);
   void reqRegisterProcess(Process task, int reqStage=0);
-  void reqUpdateProcess(Process task);
   void reqPurgeProcess(Process task);
   // ref Process[] getRunnableProcs();
   size_t executableWorksCount();
   size_t executableTasksCount();
   size_t executableThreadsCount();
   void processRegistered();
+}
+
+struct EsdlProcState {		// Process and Requested State
+  Process _process;
+  ProcState _state;
+  bool _isRecursive;
 }
 
 class EsdlExecutor: EsdlExecutorIf
@@ -7279,28 +7237,37 @@ class EsdlExecutor: EsdlExecutorIf
       }
   }
 
-  private Process[] _runnableWorks;
-  private Process[] _terminalWorks;
+  private Vector!Process _runnableWorks;
+  private Vector!Process _terminalWorks;
 
-  private Process[] _executableTasks;
-  private Process[][] _runnableTasksGroups;
-  private Process[][] _terminalTasksGroups;
+  private Vector!Process _executableTasks;
+  private Vector!Process[] _runnableTasksGroups;
+  private Vector!Process[] _terminalTasksGroups;
 
   // Before adding them to _runnableWorks, make a check whether
   // these tasks are dontInit
-  private Process[][] _registeredProcesses;
-  private Process[] _updateProcs;
-  private Process[] _purgeProcs;
+  private Vector!Process[] _registeredProcesses;
+
+  private Vector!EsdlProcState[] _reqProcStates;
+  bool _reqProcStatePending;
+  
+  private Vector!Process[] _purgeProcs;
+  bool _purgeProcsPending;
+
+  private Vector!Process _activeProcs;
+
+  private Vector!Process _scheduledWorks;
+  private Vector!Process _scheduledWorksAlt;
 
   private PoolThread[] _poolThreads = null;
 
   ThreadGroup _poolThreadGroup;
   ThreadGroup _workThreadGroup;
 
-  SimThread[] _procThreads;
+  Vector!SimThread _procThreads;
 
-  private BaseWorker[] _runningWorkers;
-  private BaseWorker[] _newWorkers;
+  private Vector!BaseWorker _runningWorkers;
+  private Vector!BaseWorker _newWorkers;
   ThreadGroup _workerThreadGroup;
   
 
@@ -7361,6 +7328,8 @@ class EsdlExecutor: EsdlExecutorIf
 				       size_t stackSize) {
     _runnableTasksGroups.length = numThreads;
     _terminalTasksGroups.length = numThreads;
+    _reqProcStates.length = numThreads;
+    _purgeProcs.length = numThreads;
     if (numThreads > 1) {
       _poolThreads.length = numThreads;
       for (uint i=0; i!=numThreads; ++i) {
@@ -7449,6 +7418,28 @@ class EsdlExecutor: EsdlExecutorIf
     }
   }
 
+  final void reqProcState(Process proc, ProcState state, bool rec) {
+    if (proc._esdl__poolIndex != -1) {
+      this._reqProcStates[proc._esdl__poolIndex %
+			 _simulator.getRoot().getThreadCoreList().length] ~= EsdlProcState(proc, state, rec);
+    }
+    else {
+      this._reqProcStates[proc._esdl__multicoreConfig.getPoolThreadIndex()] ~= EsdlProcState(proc, state, rec);
+    }
+    _reqProcStatePending = true;
+  }
+
+  final void reqPurgeProcess(Process proc) {
+    if (proc._esdl__poolIndex != -1) {
+      this._purgeProcs[proc._esdl__poolIndex %
+		       _simulator.getRoot().getThreadCoreList().length] ~= proc;
+    }
+    else {
+      this._purgeProcs[proc._esdl__multicoreConfig.getPoolThreadIndex()] ~= proc;
+    }
+    _purgeProcsPending = true;
+  }
+
   final void addTerminalProcess(Process proc) {
     if (proc.isTerminalWork) {
       this._terminalWorks ~= proc;
@@ -7460,6 +7451,7 @@ class EsdlExecutor: EsdlExecutorIf
   }
 
   final void executeProcs() {
+    _activeProcs.length = 0;
     debug(SCHEDULER) {
       import std.stdio: stderr;
       stderr.writeln(" > Executing Works and Tasks: ");
@@ -7470,7 +7462,7 @@ class EsdlExecutor: EsdlExecutorIf
 	proc.preExecute();
       }
     }
-    Process[] runProcs;
+
     if (executableWorksCount > 0) {
       // process workers
       foreach (worker; _newWorkers) {
@@ -7484,7 +7476,8 @@ class EsdlExecutor: EsdlExecutorIf
       _newWorkers.length = 0;
 
       // process Works
-      runProcs = execWorks();
+      execWorks();
+
       debug(SCHEDULER) {
 	import std.stdio: stderr;
 	stderr.writeln(" > Done executing works");
@@ -7500,7 +7493,7 @@ class EsdlExecutor: EsdlExecutorIf
     }
     // change the state of the Works only after we are also
     // done with the tasks
-    foreach (proc; runProcs) {
+    foreach (proc; _activeProcs) {
       proc.postExecute();
     }
     foreach (procthread; _procThreads) {
@@ -7567,7 +7560,7 @@ class EsdlExecutor: EsdlExecutorIf
 	    if (i > delta) {
 	      _registeredProcesses[i-1] = _registeredProcesses[i-1-delta];
 	    } else {
-	      _registeredProcesses[i-1] = [];
+	      _registeredProcesses[i-1].length = 0;
 	    }
 	  }
 	}
@@ -7593,102 +7586,98 @@ class EsdlExecutor: EsdlExecutorIf
     }
   }
 
-  final void reqUpdateProcess(Process task) {
-    synchronized(this) {
-      this._updateProcs ~= task;
-    }
-  }
-
-  final void reqPurgeProcess(Process task) {
-    synchronized(this) {
-      this._purgeProcs ~= task;
-    }
-  }
-
   final void updateProcs() {
     // expand the list by recursion
-    Process[] expandedList;
-    foreach (proc; _purgeProcs) {
-      if (proc.isDynamic()) {
-	proc.getParent.removeProcess(proc);
+    if (_purgeProcsPending) {
+      foreach (ref procVec; _purgeProcs) {
+	foreach (proc; procVec) {
+	  if (proc.isDynamic()) {
+	    proc.getParent.removeProcess(proc);
+	  }
+	  else {
+	    // For dynamic processes _endedTree is triggered by the
+	    // removeProcess function
+	    proc._endedTree.notify();
+	  }
+	}
+	procVec.length = 0;
       }
-      else {
-	// For dynamic processes _endedTree is triggered by the
-	// removeProcess function
-	proc._endedTree.notify();
-      }
+      _purgeProcsPending = false;
     }
 
-    _purgeProcs.length = 0;
-
-    foreach (proc; _updateProcs) {
-      expandedList ~= proc;
-      if (proc._reqIsRec) {
-	auto childProcs = proc._esdl__getChildProcsHier();
-	foreach (p; childProcs) {
-	  p._reqState = proc._reqState;
+    if (_reqProcStatePending) {
+      foreach (ref pStateVec; _reqProcStates) {
+	foreach (ref pState; pStateVec) {
+	  final switch (pState._state) {
+	  case ProcState.STARTING:
+	  case ProcState.RUNNING:
+	    assert (false, "Illegal Process Requested State");
+	  case ProcState.RESUMED:
+	    if (pState._isRecursive) {
+	      foreach (proc; pState._process._esdl__getChildProcs()) {
+		if (_stage == proc._stage && proc.requestResume()) addRunnableProcess(proc);
+	      }
+	    }
+	    auto proc = pState._process;
+	    if (_stage == proc._stage && proc.requestResume()) addRunnableProcess(proc);
+	    break;
+	  case ProcState.ENABLED:
+	    if (pState._isRecursive) {
+	      foreach (proc; pState._process._esdl__getChildProcs()) {
+		if (_stage == proc._stage) proc.requestEnable();
+	      }
+	    }
+	    auto proc = pState._process;
+	    if (_stage == proc._stage) proc.requestEnable();
+	    break;
+	  case ProcState.SUSPENDED:
+	    if (pState._isRecursive) {
+	      foreach (proc; pState._process._esdl__getChildProcs()) {
+		if (_stage == proc._stage) proc.requestSuspend();
+	      }
+	    }
+	    auto proc = pState._process;
+	    if (_stage == proc._stage) proc.requestSuspend();
+	    break;
+	  case ProcState.DISABLED:
+	    if (pState._isRecursive) {
+	      foreach (proc; pState._process._esdl__getChildProcs()) {
+		if (_stage == proc._stage) proc.requestDisable();
+	      }
+	    }
+	    auto proc = pState._process;
+	    if (_stage == proc._stage) proc.requestDisable();
+	    break;
+	  case ProcState.ABORTED:
+	    if (pState._isRecursive) {
+	      foreach (proc; pState._process._esdl__getChildProcs()) {
+		if (_stage == proc._stage) proc.requestAbort(this);
+	      }
+	    }
+	    auto proc = pState._process;
+	    if (_stage == proc._stage) proc.requestAbort(this);
+	    break;
+	  case ProcState.KILLED:
+	    if (pState._isRecursive) {
+	      foreach (proc; pState._process._esdl__getChildProcs()) {
+		if (_stage == proc._stage) proc.requestKill(this);
+	      }
+	    }
+	    auto proc = pState._process;
+	    if (_stage == proc._stage) proc.requestKill(this);
+	    break;
+	  case ProcState.NONE:
+	  case ProcState.PURGE:
+	  case ProcState.WAITING:
+	  case ProcState.FINISHED:
+	  case ProcState.EXCEPTION:
+	    assert (false, "Illegal Process Requested State -- NONE");
+	  }	  
 	}
-	expandedList ~= childProcs;
+	pStateVec.length = 0;
       }
+      _reqProcStatePending = false;
     }
-
-    debug (PROC) {
-      import std.stdio;
-      stderr.writeln("Updating ", expandedList.length, " processes....");
-      foreach (proc; expandedList) {
-	stderr.writeln(proc._reqState, "/", proc.procID);
-      }
-    }
-
-    // first create a list of tasks that require temination
-    foreach (proc; expandedList) {
-      final switch (proc.requestState) {
-      case ProcState.STARTING:
-      case ProcState.RUNNING:
-	assert (false);
-      case ProcState.RESUMED:
-	if (_stage == proc._stage && proc.requestResume()) {
-	  addRunnableProcess(proc);
-	}
-	break;
-      case ProcState.ENABLED:
-	if (_stage == proc._stage) {
-	  proc.requestEnable();
-	}
-	break;
-      case ProcState.SUSPENDED:
-	if (_stage == proc._stage) {
-	  proc.requestSuspend();
-	}
-	break;
-      case ProcState.DISABLED:
-	if (_stage == proc._stage) {
-	  proc.requestDisable();
-	}
-	break;
-      case ProcState.ABORTED:
-	if (_stage == proc._stage) {
-	  proc.requestAbort(this);
-	}
-	break;
-      case ProcState.KILLED:
-	proc.requestKill(this);
-	break;
-      case ProcState.NONE:
-      case ProcState.PURGE:
-      case ProcState.WAITING:
-      case ProcState.FINISHED:
-      case ProcState.EXCEPTION:
-	assert (false, "Illegal Process Requested State -- NONE");
-      }
-
-      // If I uncomment the next line, I get a crash :-(
-      // proc.requestState = ProcState.NONE;
-    }
-    foreach (proc; expandedList) {
-      proc.requestState(ProcState.NONE, false);
-    }
-    _updateProcs.length = 0;
   }
 
   static class DebugBarrier: Barrier
@@ -7840,8 +7829,9 @@ class EsdlExecutor: EsdlExecutorIf
       }
       runnableTasksGroup.length = 0;
     }
-    foreach (ref terminalTasksGroup; _terminalTasksGroups)
+    foreach (ref terminalTasksGroup; _terminalTasksGroups) {
       terminalTasksGroup.length = 0;
+    }
   }
 
   final void joinPoolThreads() {
@@ -7871,17 +7861,16 @@ class EsdlExecutor: EsdlExecutorIf
   // }
 
   void terminateWorks() {
-    Process[] runProcs;
+    _activeProcs.length = 0;
 
     foreach (ref work; this._runnableWorks) {
       work.preExecute();
       if (work._state == ProcState.RUNNING ||
 	 work._state == ProcState.STARTING) {
-	runProcs ~= work;
+	_activeProcs ~= work;
       }
     }
 
-    auto procs = runProcs;
     this._runnableWorks.length = 0;
 
     foreach (work; this._terminalWorks) {
@@ -7891,22 +7880,22 @@ class EsdlExecutor: EsdlExecutorIf
 		       work.procID, " (ID) ", work.state, "(status)");
       }
       if (work._state >= _KILLED) {
-	runProcs ~= work;
+	_activeProcs ~= work;
       }
     }
 
     this._terminalWorks.length = 0;
 
     debug(BARRIER) {
-      _workBarrier = new DebugBarrier(cast(uint) runProcs.length + 1,
+      _workBarrier = new DebugBarrier(cast(uint) _activeProcs.length + 1,
 				      "_workBarrier");
     }
     else {
-      _workBarrier = new Barrier(cast(uint) runProcs.length + 1);
+      _workBarrier = new Barrier(cast(uint) _activeProcs.length + 1);
     }
-    // _workBarrier.reset(cast(uint)runProcs.length + 1);
+    // _workBarrier.reset(cast(uint)_activeProcs.length + 1);
 
-    foreach (ref work; runProcs) {
+    foreach (ref work; _activeProcs) {
       work._execute();
     }
 
@@ -7923,8 +7912,7 @@ class EsdlExecutor: EsdlExecutorIf
     }
   }
 
-  final Process[] execWorks() {
-    Process[] runProcs;
+  final void execWorks() {
     debug(EXECUTOR) {
       import std.stdio: stderr;
       stderr.writeln("Creating a barrier of size: ",
@@ -7945,12 +7933,12 @@ class EsdlExecutor: EsdlExecutorIf
       }
       work.preExecute();
       if (work._state == ProcState.RUNNING ||
-	 work._state == ProcState.STARTING) {
-	runProcs ~= work;
+	  work._state == ProcState.STARTING) {
+	_activeProcs ~= work;
+	_scheduledWorks ~= work;
       }
     }
 
-    auto procs = runProcs;
     this._runnableWorks.length = 0;
 
     foreach (work; this._terminalWorks) {
@@ -7960,37 +7948,37 @@ class EsdlExecutor: EsdlExecutorIf
 		       work.procID, " (ID) ", work.state, "(status)");
       }
       if (work._state >= _KILLED) {
-	runProcs ~= work;
+	_scheduledWorks ~= work;
       }
     }
 
     this._terminalWorks.length = 0;
 
     debug(BARRIER) {
-      _workBarrier = new DebugBarrier(cast(uint) runProcs.length + 1,
+      _workBarrier = new DebugBarrier(cast(uint) _scheduledWorks.length + 1,
 				      "_workBarrier");
     }
     else {
-      _workBarrier = new Barrier(cast(uint) runProcs.length + 1);
+      _workBarrier = new Barrier(cast(uint) _scheduledWorks.length + 1);
     }
-    // _workBarrier.reset(cast(uint)runProcs.length + 1);
+    // _workBarrier.reset(cast(uint)_scheduledWorks.length + 1);
 
-    while (runProcs.length != 0) {
-      Process[] works = runProcs;
-      runProcs.length = 0;
-      foreach (ref work; works) {
+    while (_scheduledWorks.length != 0) {
+      _scheduledWorksAlt.length = 0;
+      _scheduledWorksAlt.swap(_scheduledWorks);
+      foreach (ref work; _scheduledWorksAlt) {
 	this._procSemaphore.wait();
 	if (work._esdl__parLock is null ||
-	   work._esdl__parLock.tryWait) {
+	    work._esdl__parLock.tryWait) {
 	  work._execute();
 	}
 	else {			// postpone
-	  runProcs ~= work;
+	  _scheduledWorks ~= work;
 	  this._procSemaphore.notify();
 	  debug(EXECUTOR) {
 	    import std.stdio: stderr;
 	    stderr.writeln("######## Could not get lock -- Postponing Process ",
-			   runProcs.length, " works");
+			   _scheduledWorks.length, " works");
 	  }
 	}
       }
@@ -8007,7 +7995,6 @@ class EsdlExecutor: EsdlExecutorIf
       import std.stdio: stderr;
       stderr.writeln("All works done with executing");
     }
-    return procs;
   }
 
 
@@ -8069,22 +8056,22 @@ abstract class EsdlScheduler
 {
   private EsdlSimulator _simulator;
 
-  private TimedEvent[] _deltaQueue;
-  private TimedEvent[] _deltaQueueAlt;
-  private TimedEvent[] _immediateQueue;
-  private TimedEvent[] _immediateQueueAlt;
+  private Vector!TimedEvent _deltaQueue;
+  private Vector!TimedEvent _deltaQueueAlt;
+  private Vector!TimedEvent _immediateQueue;
+  private Vector!TimedEvent _immediateQueueAlt;
   // used only when running in slave mode
   // private SimTime _masterTime = SimTime(0);
   // private bool _asyncMasterWaits = true;
 
   private bool _asyncDeltaFlag = false;
-  private TimedEvent[] _asyncDeltaQueue;
+  private Vector!TimedEvent _asyncDeltaQueue;
 
   private bool _asyncNoticeFlag = false;
   private SimTime _asyncLastTime;
   private int     _asyncDelta = 1;
-  private AsyncEventNotice[] _asyncNoticeQueue;
-  private AsyncEventNotice[] _asyncNoticeQueueAlt;
+  private Vector!AsyncEventNotice _asyncNoticeQueue;
+  private Vector!AsyncEventNotice _asyncNoticeQueueAlt;
 
   // void cancel(EventNotice e);
   // An EventObj can be queued up
@@ -8208,7 +8195,7 @@ abstract class EsdlScheduler
 	}
 	this._asyncDeltaQueue[e._eventQueueIndex] = this._asyncDeltaQueue[$-1];
 	// reduce the event queue
-	this._asyncDeltaQueue.length -= 1;
+	this._asyncDeltaQueue.length = this._asyncDeltaQueue.length - 1;
       }
     }
   }
@@ -8225,7 +8212,7 @@ abstract class EsdlScheduler
 	}
 	this._immediateQueue[e._eventQueueIndex] = this._immediateQueue[$-1];
 	// reduce the event queue
-	this._immediateQueue.length -= 1;
+	this._immediateQueue.length = this._immediateQueue.length - 1;
       }
     }
   }
@@ -8242,7 +8229,7 @@ abstract class EsdlScheduler
 	}
 	this._deltaQueue[e._eventQueueIndex] = this._deltaQueue[$-1];
 	// reduce the event queue
-	this._deltaQueue.length -= 1;
+	this._deltaQueue.length = this._deltaQueue.length - 1;
       }
     }
   }
@@ -8263,9 +8250,7 @@ abstract class EsdlScheduler
 		     " delta events to trigger");
     }
 
-    auto _exec = _deltaQueue;
-    _deltaQueue = _deltaQueueAlt;
-    _deltaQueueAlt = _exec;
+    _deltaQueue.swap(_deltaQueueAlt);
 
     _deltaQueue.length = 0;
 
@@ -8318,9 +8303,8 @@ abstract class EsdlScheduler
       stderr.writeln("There are ", this._immediateQueue.length,
 		     " events to trigger");
     }
-    auto immediate = _immediateQueue;
-    _immediateQueue = _immediateQueueAlt;
-    _immediateQueueAlt = immediate;
+
+    _immediateQueue.swap(_immediateQueueAlt);
 
     _immediateQueue.length = 0;
 
@@ -8477,9 +8461,7 @@ class EsdlHeapScheduler : EsdlScheduler
 
   final override void assimilateAsyncNotices() {
     synchronized (this) {
-      auto asyncNoticeQueueSwap = _asyncNoticeQueueAlt;
-      _asyncNoticeQueueAlt = _asyncNoticeQueue;
-      _asyncNoticeQueue = asyncNoticeQueueSwap;
+      _asyncNoticeQueue.swap(_asyncNoticeQueueAlt);
       assert(_asyncNoticeQueue.length == 0);
     }
     foreach (ref anotice; this._asyncNoticeQueueAlt) {
@@ -9146,9 +9128,7 @@ class EsdlSimulator: EntityIntf
   }
 
   private final void clearChannelUpdateReqs() {
-    synchronized(this) {
-      _channelUpdateReqs.length = 0;
-    }
+    _channelUpdateReqs.length = 0;
   }
 
   private final void updateChannels() {
@@ -9212,15 +9192,11 @@ class EsdlSimulator: EntityIntf
   }
 
   final long updateCount() {
-    synchronized(this) {
-      return _updateCount;
-    }
+    return _updateCount;
   }
 
   final void incrUpdateCount() {
-    synchronized(this) {
-      _updateCount += 1;
-    }
+    _updateCount += 1;
   }
 
   final void triggerElab() {
@@ -9523,10 +9499,6 @@ class EsdlSimulator: EntityIntf
   final Semaphore simExitLock() {
     // synchronized(this) // effectively immutable
     return _simExitLock;
-  }
-
-  final void reqUpdateProc(Process task) {
-    this._executor.reqUpdateProcess(task);
   }
 
   final void reqPurgeProc(Process task) {
